@@ -1,0 +1,252 @@
+# Changelog
+
+## 1.0.0 – Fase 10: test, verifiche e distribuzione (2026-11-20)
+Prima versione completa: gioco arcade con spada, combo statiche, nemici, tre livelli e boss, come previsto per la 1.0.
+### Aggiunto – test (ora inclusi nel progetto)
+- **`npm test`**: 308 controlli unitari in 11 file (`tests/unit/`), eseguiti in Node in meno di un secondo. Comprendono i test scritti nelle fasi precedenti (movimento, combattimento, IA, livelli, boss, oggetti, interfaccia, effetti, regressioni) e nuove suite: coerenza di tutte le configurazioni (ogni sprite, animazione, combo e livello), velocità coerente a 20-144 FPS, rendering e fisica, regole statiche del codice.
+- **`npm run test:browser`**: 165 controlli in Chromium (richiede Playwright, non incluso nel progetto). Aprono la **build reale con `file://`**, provano **17 combinazioni di finestra e scala di sistema**, fanno giocare **un bot che usa solo eventi di tastiera veri fino alla vittoria**, eseguono **120.000 frame di tasti a caso**, verificano la palette su ogni schermata, la pausa, il Game Over, il record dopo il ricaricamento, l'assenza di audio e di richieste di rete, e la velocità con carico artificiale.
+- **`TESTING.md`**: che cosa è verificato, come ripetere le prove, mappa dei requisiti di qualità, difetti trovati, limiti.
+### Corretto (difetti trovati dalle verifiche)
+- **L'altezza del salto dipendeva dagli FPS** (45,8 px a 20 FPS, 52,3 a 144 FPS): la gravità ora si integra con la velocità media del frame (`CollisionSystem.applyGravityAndMove`). Altezza 53,4 px a tutte le frequenze (valore teorico 53,4). Il salto a 60 FPS è passato da 50,8 a 53,4 px: livelli e bilanciamento verificati di nuovo.
+- **Colori fuori palette in gioco**: le colline della foresta usavano altezze frazionarie e il browser sfumava i bordi. `Renderer.fillRect` ora arrotonda tutti e quattro i bordi.
+- **Pixel irregolari con la scala di sistema frazionaria (125%, 150%...)**: la scala intera ora si calcola in **pixel fisici** (`devicePixelRatio`). Prima, con il 150%, 3 pixel CSS per pixel di gioco erano 4,5 pixel fisici.
+- Il giocatore poteva essere spinto fuori dalla mappa da un blocco al bordo in una situazione estrema: dopo la risoluzione sull'asse X si riapplica il limite della mappa.
+### Modificato
+- Versione portata a 1.0.0 (`package.json`, `GAME_CONFIG.version`, manuali).
+- Manuali aggiornati: `GAME_MANUAL` (dimensione della finestra), `INSTALLATION` (comandi di test, archivi), `CODE_MANUAL` (cartella `tests/`, nuove funzioni), `ARCHITECTURE` (rendering in pixel fisici, integrazione della gravità, test), `FEATURES` (stati aggiornati, compatibilità browser e prova con persone indicate come "Da implementare"), `BALANCE` (misure rifatte).
+### Distribuzione
+- `IRON_AND_SHADOW_v1.0.0.zip`: progetto completo (sorgenti, test, strumenti, manuali, `package-lock.json`, `dist/`), senza `node_modules`.
+- `IRON_AND_SHADOW_v1.0.0_gioco.zip`: solo la versione giocabile e un `LEGGIMI.txt`.
+- Verifica da archivio pulito: estratto lo ZIP in una cartella vuota, `npm ci`, `npm run typecheck`, `npm test`, `npm run build` e apertura di `dist/index.html` con `file://` (vedi `TESTING.md`).
+### Problemi noti e limiti
+- **Provato solo in Chromium** (su Linux). Firefox, Safari, Edge e browser mobili non sono stati provati.
+- **Nessuna partita giocata da una persona**: il bilanciamento è misurato con un bot semplice (vedi `BALANCE.md`).
+- Finestra sotto 256×240 pixel fisici: il gioco viene tagliato (non esiste scala frazionaria, per scelta di stile).
+- Con la scala di sistema 150% e 300% il bordo del canvas può sfumare di 1 pixel fisico (invisibile a occhio).
+- Sotto i 22 FPS il gioco rallenta invece di saltare i frame (tetto del delta time, voluto).
+- Il record dipende dal browser e dalla posizione del file; la classifica con più punteggi non c'è.
+- Un solo boss nel gioco; la difficoltà ha tre livelli di configurazione ma non un selettore in gioco; niente audio (escluso dal progetto).
+- `npm audit` segnala 2 vulnerabilità nel server di sviluppo (`vite`/`esbuild`): non riguardano il gioco compilato (vedi `INSTALLATION.md`).
+
+## 0.9.1 – Correzione di due difetti (2026-11-20)
+Segnalati durante una prova di gioco.
+### Corretto
+- **Il goblin del livello 3 ributtava il giocatore nell'abisso.** Il goblin aspetta al bordo dell'abisso (non cammina nel vuoto) e, appena il giocatore atterra, attacca: il rinculo spingeva il cavaliere indietro, giù dal bordo. Riprodotto con la simulazione: su 15 salti riusciti sull'abisso 900-936, il giocatore veniva ributtato nel vuoto **15 volte su 15**.
+  - **Causa:** il rinculo non teneva conto del terreno.
+  - **Correzione:** durante lo stordimento il rinculo si ferma se oltre il bordo non c'è terreno entro 48 px (`knockbackLedgeCheckDepth`). Ora 0 volte su 15 (il danno si subisce comunque). La protezione vale per tutti i nemici e per il boss, in qualsiasi livello.
+  - **In più:** il goblin del livello 3 è stato spostato da x=980 a x=1040 (a più di 100 px dal bordo dell'abisso).
+- **Il cavaliere continuava ad attaccare dopo aver smesso di premere.** Premendo l'attacco a raffica, gli attacchi continuavano per circa 0,65 secondi dopo l'ultima pressione.
+  - **Causa:** un effetto collaterale di una correzione della 0.8.0. Il buffer degli attacchi non scadeva mai mentre il cavaliere era impegnato: un tasto premuto all'inizio di una sequenza lunga restava in coda e partiva molto dopo.
+  - **Correzione:** un attacco si memorizza solo se può partire entro 200 ms (`attackBufferMs`) e il buffer scade sempre dopo 200 ms. Premere molto prima non serve più (il tasto viene ignorato); il concatenamento delle combo con una cadenza normale o a raffica continua a funzionare (almeno 4 attacchi in 2 secondi premendo ogni 100 ms).
+### Verificato
+- Nuova suite di regressione (21 test): **12 falliscono sul codice con i difetti e tutti passano sul codice corretto** (così i test misurano davvero i difetti).
+- Prova nel browser con il motore reale: raffica di 40 pressioni a ~50 ms → l'ultimo attacco parte 133 ms dopo l'ultima pressione e dopo 1,5 s non c'è nessun attacco in corso; cavaliere sul bordo dell'abisso del livello 3 colpito dal goblin (100 → 84 HP) senza cadere.
+- Tutte le suite precedenti e `npm run verify-docs` (11 esempi) ancora verdi; `npm run balance` rieseguito (vedi `BALANCE.md`).
+### Modificato
+- `attackBufferMs`: nuovo significato (finestra degli ultimi 200 ms prima di poter attaccare). Un test della Fase 4 che premeva l'attacco a 100 ms dall'inizio è stato aggiornato: quel tasto ora è troppo anticipato e viene ignorato per scelta.
+### Limiti
+- Il goblin che attende al bordo e attacca chi atterra resta una situazione difficile (si subiscono 8 HP) ma non più letale.
+
+## 0.9.0 – Fase 9 (2026-11-20)
+### Aggiunto – documentazione
+- `GAME_MANUAL.md`: storia, ambientazione, controlli, regole, combattimento, combo, nemici, boss, livelli, oggetti, punteggio, consigli. I dati (statistiche, punteggio massimo di 5900, numero di nemici per livello) sono stati ricavati dal codice.
+- `CODE_MANUAL.md`: struttura dei file e variazioni rispetto alla struttura iniziale, ogni modulo con classi, interfacce, variabili e funzioni principali, tabelle di tutte le configurazioni, flussi di esecuzione, relazioni tra i componenti e **11 esempi pratici** (salute, velocità, salto, danno della spada, combo, nuovo nemico, comportamento di un nemico, nuovo oggetto, nuovo livello, nuovo boss, nuova animazione).
+- `ARCHITECTURE.md`: obiettivi e compromessi, game loop, stati, input, rendering, entità, combattimento, boss, livelli, **punti di estensione futuri** (con l'indicazione esplicita che non sono implementati) e un progetto per i modificatori di statistiche dei futuri power-up.
+- `INSTALLATION.md` completo (requisiti, installazione, comandi, configurazione, compilazione, distribuzione, avvisi di `npm audit`, problemi comuni).
+- `FEATURES.md` riscritto: ogni funzionalità con uno stato (Implementata, In sviluppo, Da implementare, Pianificata, Non prevista).
+### Aggiunto – verifica degli esempi
+- `npm run verify-docs` (`tools/verifyManualExamples.mjs`): applica ogni esempio del manuale a una copia del progetto, controlla che il "codice originale" compaia una sola volta, che il codice modificato compili e che il comportamento sia quello descritto. Il controllo viene eseguito anche sul codice originale, dove **deve fallire**: così si sa che misura davvero la modifica. Opzione `--export <n> <cartella>` per ottenere una copia del progetto con l'esempio già applicato.
+### Modificato – per rendere possibili gli esempi
+- **Catalogo dei boss** (`BOSS_CATALOG`): ogni livello può scegliere il boss con `bossId`; sprite e animazioni si generano per ogni boss con il prefisso del suo id (`blackKnightIdle1`...). Prima c'era un solo boss cablato nel codice.
+- **Barra della salute dell'HUD:** ora ha sempre 10 segmenti (prima ne aveva uno ogni 10 HP e, con più salute massima, sbordava sul testo centrale).
+- Aggiornati commenti ormai obsoleti nel codice (riferimenti a fasi passate).
+### Verificato
+- `npm run verify-docs`: **11 esempi su 11** verificati (originale unico, compilazione, comportamento, il controllo fallisce sul codice originale).
+- Lo script è stato messo alla prova con errori introdotti di proposito (valore sbagliato, codice originale non corrispondente, codice che non compila): li ha segnalati tutti.
+- Gli esempi 6, 8, 9, 10 e 11 provati anche nel browser con il motore reale: il Bruto compare e ferisce, l'elisir cura, il livello aggiunto porta al boss e alla vittoria, il Re Scheletro mostra due tacche sulla barra, l'esultanza blocca i comandi. Nessun errore in console.
+- Typecheck, build, `file://` e tutte le suite di test precedenti ancora verdi.
+### Limiti
+- Gli esempi verificano compilazione e comportamento in Node; l'aspetto grafico è stato guardato nel browser solo per gli esempi sopra citati.
+- Non è stato esteso il supporto per boss con forma diversa o attacchi nuovi (richiede di estendere `bossSprites.ts` e `Boss.ts`): è scritto nel manuale.
+
+## 0.8.0 – Fase 8 (2026-11-20)
+**Audio non implementato per scelta del progetto** (non richiesto): `AudioManager` non esiste e non ci sono musiche né effetti sonori.
+### Aggiunto – effetti grafici (`EffectsManager`)
+- Scintille ai colpi, esplosione di particelle alla morte dei nemici e del boss, polvere all'atterraggio e alla schivata, scintillio alla raccolta degli oggetti.
+- Scritte che salgono: "+100" per i nemici, "+50 / +200" per monete e gemme, "+30 HP" per le pozioni.
+- **Tremolio dello schermo** (a pixel interi, solo mondo, non HUD) quando si subisce un colpo, alla morte dei nemici e del boss.
+- **Hit-stop**: una pausa di 40 ms (75 ms per i colpi pesanti, 70 ms quando si viene colpiti) dà peso agli impatti. Gli input premuti durante la pausa non vanno persi.
+- **Lampo bianco** sul nemico colpito (e sul boss).
+- Parametri raccolti in `EFFECT_CONFIG` (`GameEngine.ts`).
+### Aggiunto – rifiniture di gioco
+- **Coyote time** (80 ms: si può saltare subito dopo aver lasciato un bordo) e **salto anticipato** (100 ms: un salto premuto poco prima di atterrare viene eseguito all'atterraggio).
+- **Cura a fine livello**: +30 HP (non nell'ultimo livello), mostrata nel messaggio.
+### Modificato – bilanciamento (vedi `BALANCE.md`)
+- Nuovo parametro `attackInterruptWindowMs`: i colpi interrompono gli attacchi nemici solo all'inizio della preparazione (scheletro 150 ms; goblin e soldato mai).
+- Goblin: raggio d'attacco 14 → 18.
+- Boss: salute 300 → 290, fendente 25 → 20, carica 20 → 16, pausa 1200 → 1500 ms, fase 2 con pausa x0,75.
+- `ItemManager.collectItems` restituisce gli oggetti raccolti (non più il numero).
+### Aggiunto – strumenti
+- `npm run balance`: simulatore di bilanciamento con bot (`tools/balance.mjs`). Documentazione in `BALANCE.md`.
+### Verificato
+- Typecheck, build, `file://` senza errori.
+- Test di logica: movimento 13, combattimento 36, IA 32, livelli/boss/oggetti 51, interfaccia 28, effetti e salto 21.
+- Prova nel browser con il motore vero: hit-stop osservato (circa 40-75 ms), particelle, popup, tremolio ±3 px dopo un colpo subito, pozione +30, +30 HP a fine livello 1, nessuna cura dopo il boss, nessun errore in console.
+- Simulazioni di bilanciamento prima e dopo le modifiche (tabelle in `BALANCE.md`).
+### Limiti
+- Il bilanciamento è stato misurato solo con un bot semplice; non è stato provato da persone.
+- Il bot non sfrutta bene la schivata: l'efficacia della schivata nel gioco è verificata dai test di logica, non dalle simulazioni.
+- Il livello 3 è volutamente il più difficile; potrebbe risultare duro per chi non schiva.
+
+## 0.7.0 – Fase 7 (2026-11-20)
+### Aggiunto
+- **Vite** (`LivesManager`, 3 iniziali): alla morte si perde una vita e si ricomincia il livello; a zero vite c'è il **Game Over** (con "RIPROVA" e "TORNA AL TITOLO").
+- **HUD** (`HUDManager`): barra superiore con salute a segmenti (lampeggia sotto il 30%), vite con icona dell'elmo, punteggio a 6 cifre, gemme, numero del livello e barra del boss con la tacca della fase 2. Riquadri per i messaggi di livello.
+- **Record locale** (`HighScoreManager`): il miglior punteggio si salva nel browser (localStorage) a fine partita e compare su titolo, Game Over e vittoria con la scritta "NUOVO RECORD!". Se l'archivio non è disponibile funziona solo in memoria, senza errori.
+- **Menu** (`MenuManager`): navigazione circolare con W/S o frecce, cursore a due lati.
+- **Schermate rifinite** (`ScreenManager`): titolo con castello animato, logo con ombra e cavaliere; controlli con i tasti disegnati; pausa con **retino a scacchi** (oscuramento senza trasparenze, in stile 8 bit); Game Over; Vittoria con storia finale, punteggio, gemme e record.
+- Icona dell'elmo e glifo `^` nel font.
+### Correzioni
+- **Punteggio dopo la morte:** tornava al valore al momento della morte invece che a quello di inizio livello (errore di ordine delle chiamate introdotto in Fase 6), permettendo di accumulare punti morendo. Ora si ripristina il valore a inizio livello. Individuato dalla prova nel browser.
+- Schermata dei controlli: una riga usciva dallo schermo (258 px su 256).
+### Modificato
+- `ScreenManager` non gestisce più direttamente le voci di menu (delegate a `MenuManager`).
+- `ScreenManager.render` riceve un oggetto `ScreenData` (punteggio, record, gemme) invece di una stringa.
+- L'HUD provvisorio è stato rimosso.
+### Verificato
+- Typecheck, build, `file://` senza errori.
+- Test di logica: 13 (movimento) + 36 (combattimento) + 29 (IA) + 51 (livelli/boss/oggetti) + 28 nuovi (vite, record con archivio normale/guasto/assente/corrotto, menu, transizioni di stato, font).
+- Prova nel browser con il motore reale: tre morti consecutive (vite 3 -> 2 -> 1 -> 0) -> Game Over, record salvato, "Riprova" riparte con 3 vite e punteggio a zero, vittoria con nuovo record, **record ancora presente dopo il ricaricamento della pagina**, comandi di gioco bloccati in pausa, nessun errore in console.
+- Screenshot controllati: titolo, controlli, HUD (anche con salute bassa), pausa, Game Over, vittoria.
+### Limiti
+- Il record è un solo valore: la classifica con più punteggi è pianificata.
+- Il record è legato al browser e alla posizione del file: aprendo `index.html` da un'altra cartella o con un altro browser il record riparte da zero.
+- Nessuna partita completa giocata da una persona: il bilanciamento è da rifinire (Fase 8).
+
+## 0.6.0 – Fase 6 (2026-11-20)
+### Aggiunto
+- **Tre livelli completi** (`LEVEL_CONFIG`): Foresta Oscura (1536 px), Castello Medievale (1792 px), Dungeon Sotterraneo (1536 px) con abissi, piattaforme sospese, blocchi e gradini. Ogni livello ha nemici, oggetti e una condizione di completamento.
+- **Sfondi con parallasse** (`BackgroundRenderer`), disegnati solo con rettangoli: foresta (luna, colline, pini), castello (stelle, castello lontano, colonne con stendardi), dungeon (mattoni, archi con sbarre, torce che tremolano, catene).
+- **Progressione:** messaggio di inizio livello, completamento (porta d'uscita o boss sconfitto), bonus di 500 punti, livello successivo e schermata di **vittoria** dopo l'ultimo. Il punteggio finale è mostrato in vittoria e Game Over.
+- **Boss "Cavaliere Nero"** (`Boss`, 300 HP): fendente e carica con preparazione visibile (700 ms), non viene stordito dai colpi (lampeggia in bianco), resta vulnerabile dopo la carica. Due fasi: sotto il 50% è più veloce e carica più spesso. Barra della salute dedicata e sprite 24x40.
+- **Arena del boss:** quando il giocatore entra, un cancello a sbarre si chiude alle sue spalle.
+- **Oggetti raccoglibili** (`ItemManager`, `ITEM_CONFIG`): pozione (+30 HP), moneta (+50), gemma (+200 e conteggio collezionabili).
+- **Cadute:** ora costano 15 HP e il giocatore riparte dall'ultimo punto sicuro (prima si ripartiva dall'inizio del livello).
+- `SpriteManager`: sagome bianche per il lampo di danno.
+### Modificato
+- `BOSS_CONFIG` ora è un `BossDefinition` completo con fasi (`phases`).
+- Dopo la morte si ricomincia il livello corrente (dalla 0.7.0 con vite e Game Over; il ripristino del punteggio era errato fino alla 0.6.x).
+- La "porta di uscita" e il cancello sono disegnati con rettangoli (nessun asset esterno).
+### Verificato
+- Typecheck, build, `file://` senza errori in console.
+- Test di logica: movimento 13, combattimento 36, IA 29, e 51 nuovi (dati dei livelli, boss, oggetti, danno da caduta).
+- **Validazione dei livelli:** abissi <= 36 px, piattaforme raggiungibili (<= 44 px di salita), nemici e oggetti appoggiati sulle superfici, uscita e boss su terreno.
+- **Bot di attraversamento:** con la fisica reale raggiunge l'uscita (o l'arena) in tutti e tre i livelli senza cadere, saltando abissi e blocchi.
+- Prova nel browser con il motore reale: completamento di livello 1 e 2, passaggio al livello 3, chiusura del cancello, boss attivo, impossibilità di tornare indietro, boss sconfitto -> completamento -> vittoria; screenshot delle tre ambientazioni e del boss in entrambe le fasi.
+### Non verificato / limiti
+- Nessuna partita completa giocata da una persona: bilanciamento e difficoltà dei livelli vanno ancora rifiniti (Fase 8).
+- Il bot di attraversamento ignora i nemici; le piattaforme sospese sono verificate con regole geometriche, non percorse dal bot.
+- Il test con il motore completo è stato eseguito in una pagina di prova che accede alle variabili interne; il gioco distribuito non espone nulla.
+
+## 0.5.0 – Fase 5 (2026-11-20)
+### Aggiunto
+- **Nemici** (`Enemy`) guidati da `ENEMY_CONFIG`: salute, danno, velocità, raggio di individuazione, distanza di attacco, fasi dell'attacco, rinculo, ricompensa. Si generano dalle posizioni del livello (`LevelManager.createEnemies()`) e applicano i moltiplicatori di difficoltà.
+- **Tre comportamenti** (`EnemyAISystem`):
+  - *patrol* (Scheletro Guerriero): pattuglia una zona di ±60 px; se vede il giocatore lo affronta restando nella zona;
+  - *chase* (Goblin): aspetta, poi insegue il giocatore entro 110 px e smette oltre 1,5x il raggio;
+  - *guard* (Soldato Nemico): fermo, si volta verso il giocatore e attacca se è a portata.
+- Nessun nemico cammina nel vuoto o attraversa i muri (sonde davanti ai piedi).
+- **Attacchi dei nemici** in tre fasi (preparazione, colpo, recupero) con un solo colpo per attacco. La schivata del giocatore evita il danno.
+- **Morte del nemico:** animazione, rimozione dopo 700 ms e **punteggio** (`ScoreManager`, mostrato in alto a destra).
+- Sprite e animazioni di Scheletro, Goblin e Soldato (idle, camminata, attacco, danno, morte). Il Soldato è una variante cromatica del cavaliere.
+- `AnimationDefinition.frameDurationsMs`: durata diversa per ogni frame.
+- Strumenti di disegno sprite condivisi in `rendering/sprites/spriteTools.ts`.
+- Livelli 1-3: nemici posizionati (il livello 1 li mostra tutti e tre).
+### Rimosso
+- I manichini di prova della Fase 4.
+### Modificato
+- `soldier`: hitbox 12x24 (prima 14x26).
+- Dopo la morte del giocatore si riparte dall'inizio del livello con nemici e punteggio azzerati (vite e Game Over in Fase 7).
+### Verificato
+- Typecheck, build, `file://` senza errori; sprite registrati correttamente nel browser.
+- 29 test di logica sull'IA e i combattimenti + le suite precedenti (movimento 13/13, combattimento 35/35).
+- Prova nel browser: scheletro che attacca e danneggia il giocatore, barra della salute, lampeggio d'invulnerabilità.
+### Non verificato nel browser
+- Uccisione di un nemico con assegnazione del punteggio: coperta dai test di logica ma non da una partita completa.
+- Bilanciamento: valori iniziali, da rifinire in Fase 8.
+
+## 0.4.0 – Fase 4 (2026-11-20)
+### Aggiunto
+- **Attacchi della spada:** leggero (Spazio) e pesante (J). Ogni attacco in `ATTACK_DEFINITIONS` ha danno, durata, finestra attiva (`hitStartMs`/`hitEndMs`), recupero (`cooldownMs`), area d'urto e animazione.
+- **Combo statiche** (`COMBO_DEFINITIONS`): `tripleSlash` = Spazio, Spazio, Spazio (15, 15, 30 di danno). `ComboManager` fa avanzare la sequenza entro la finestra di tempo, altrimenti riparte.
+- **Input anticipato (buffer):** un attacco premuto durante quello in corso viene eseguito appena possibile.
+- **Schivata** (K): scatto di circa 48 px con invulnerabilità per tutta la durata e tempo di recupero (700 ms).
+- **Sistema di danni:** `Player.takeDamage()` con rinculo, stordimento, invulnerabilità temporanea di 1 s con lampeggio, e morte a 0 HP. `CombatSystem` applica i colpi ai bersagli (`Damageable`), una sola volta per attacco.
+- Hitbox degli attacchi specchiata quando il cavaliere guarda a sinistra (`getAttackWorldHitbox`).
+- Sprite e animazioni: tre attacchi leggeri, attacco pesante, danno, schivata, morte. Le durate dei frame di attacco derivano dalla durata dell'attacco (restano sincronizzate se si modifica il bilanciamento).
+- Hook per il futuro: `Player.getDamageMultiplier()` e `CombatSystem.calculateDamage()` sono i punti dove inserire power-up e danni elementali.
+### Provvisorio (verrà sostituito)
+- Due `TrainingDummy` nel livello 1 servono da bersaglio: spariranno con i nemici veri (Fase 5).
+- Barra della salute in alto a sinistra: HUD completo in Fase 7.
+- Dopo la morte il cavaliere riparte dall'inizio con salute piena dopo 1,5 s: vite e Game Over in Fase 7.
+### Comportamento di gioco
+- A terra, durante un attacco non ci si muove né si salta né si cambia direzione; in aria si può attaccare e controllare il movimento.
+- Non si può schivare durante un attacco o in aria.
+### Verificato
+- Typecheck, build, `file://` senza errori in console.
+- 35 test di logica (combo, finestra di tempo, buffer, danno 15/15/30, pesante, hitbox specchiata, schivata e cooldown, invulnerabilità, rinculo, morte e ripartenza, sincronizzazione animazioni) + 13 test del movimento della Fase 3.
+- Prova nel browser: combo a tre colpi sul manichino, pesante, schivata, pausa senza input di gioco.
+- Un difetto trovato durante i test e corretto: il buffer degli input scadeva prima della fine dell'attacco.
+### Non verificato
+- Subire danno da nemici veri (non esistono ancora): `takeDamage` è testato solo da codice.
+
+## 0.3.0 – Fase 3 (2026-11-20)
+### Aggiunto
+- `GameObject` (posizione, velocità, direzione, hitbox) e `Player` (movimento, salto, gravità, stati, animazioni).
+- Salto variabile: rilasciando il tasto in salita il salto si accorcia (`jumpCutMultiplier`).
+- `CollisionSystem`: collisioni a assi separati (X poi Y), piattaforme solide e **sospese** (`oneWay`: si attraversano dal basso e ci si atterra sopra), limiti della mappa, `isOnGround`.
+- Gestione delle cadute: cadendo sotto la mappa si riparte dall'inizio del livello (la perdita di vite arriva in Fase 7).
+- `Camera` laterale che segue il giocatore ed è limitata ai bordi della mappa.
+- `LevelManager` minimale: carica un livello da `LEVEL_CONFIG` e disegna terreno e piattaforme per ambientazione (`THEME_STYLES`).
+- `SpriteManager` (sprite descritti come testo, con versione specchiata) e `AnimationPlayer` (`AnimationManager.ts`).
+- Sprite del cavaliere (16x24): idle (2 frame), camminata (4), salto, caduta. Animazioni in `animationConfig.ts`.
+- Interfaccia `InputSource`, che permette di testare le entità senza tastiera.
+- Livello 1 con abisso, piattaforme sospese e un blocco solido per provare il movimento.
+### Modificato
+- La scena segnaposto della Fase 2 è stata sostituita dal livello reale.
+- Nuove costanti: `GAME_CONFIG.maxFallSpeed`, `PLAYER_CONFIG.spriteWidth/spriteHeight/jumpCutMultiplier`.
+### Non ancora presente
+- Animazioni attacco, danno, schivata, morte (Fase 4); la corsa non è prevista.
+- Sfondi decorativi (Fase 6): per ora cielo a tinta unita.
+- Nemici, oggetti e boss del livello sono solo dati: non vengono ancora creati.
+### Verificato
+- Typecheck, build, apertura `file://` senza errori in console.
+- 13 test di logica con input simulato: atterraggio, camminata ~80 px/s, direzione, altezza salto (~51 px), salto variabile, niente doppio salto, stati jump/fall, limite mappa, muro solido, piattaforma sospesa, abisso, indipendenza dagli FPS (30 vs 120 fps).
+- Prova visiva nel browser: idle, camminata, salto, scorrimento camera.
+
+## 0.2.0 – Fase 2 (2026-11-20)
+### Aggiunto
+- `GameLoop`: requestAnimationFrame con delta time in secondi (limitato a `maxDeltaTimeSeconds`).
+- `GameState`: macchina a stati (title, controls, playing, paused, gameOver, victory) con transizioni validate.
+- `InputManager`: tasti centralizzati, pressione singola senza auto-repeat, tenuto/rilasciato, contesti `gameplay`/`menu` che bloccano i comandi non pertinenti, rilascio tasti alla perdita del focus.
+- `Renderer`: canvas 256x240, scala intera, rettangoli e testo.
+- `BitmapFont`: font bitmap 5x7 nitido (il testo nativo del canvas è sfocato e rovinerebbe lo stile 8 bit).
+- `ScreenManager`: schermate titolo, controlli, pausa, game over e vittoria con menu da tastiera.
+- `GameEngine`: coordina i moduli; pausa automatica se la finestra perde il focus.
+- Nuove azioni `menuUp` / `menuDown` (W/S, frecce) e `INPUT_CONTEXT_ACTIONS` in `controlsConfig.ts`.
+### Note
+- La scena "playing" è un segnaposto (quadrato animato) per dimostrare il delta time: sarà sostituita in Fase 3.
+- Game Over e Vittoria sono implementate come schermate ma non ancora raggiungibili dal gioco (arrivano con vite e livelli).
+### Verificato
+- Typecheck e build; apertura `file://` senza errori; flusso menu/pausa/ripresa da tastiera; tempo di gioco fermo in pausa; spazio ignorato nei menu; delta time (primo frame 0, limite 0.05 s); validità dei glifi.
+
+## 0.1.0 – Fase 1 (2026-11-20)
+### Aggiunto
+- Progetto npm + TypeScript (strict) + Vite.
+- Struttura cartelle `src/`, `public/assets/`, `documentation/`.
+- Configurazioni: gioco, palette, giocatore, attacchi/combo, nemici, boss, controlli, livelli, difficoltà.
+- Tipi condivisi in `src/types/`.
+- Build compatibile con apertura `index.html` via doppio clic.
+- Canvas 256x240 con scala intera (schermata di prova).
+### Problemi noti
+- Il gioco non è ancora giocabile (motore in Fase 2).

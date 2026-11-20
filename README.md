@@ -1,0 +1,41 @@
+# IRON & SHADOW
+*Medieval Action Arcade* in pixel art a 8 bit – TypeScript, HTML5 Canvas, Vite. Nessun audio, nessuna dipendenza di esecuzione.
+
+**Versione 1.0.0** – gioco completo e giocabile dall'inizio alla vittoria: spada, combo, schivata, tre nemici, tre livelli, boss a due fasi, vite, record, HUD e menu.
+Provato solo in Chromium (vedi `documentation/TESTING.md`).
+
+## Giocare
+Apri **`dist/index.html`** con un browser moderno (doppio clic). Non serve installare nulla.
+
+Controlli: **A/D** o frecce per muoversi · **W**/↑ salto · **Spazio** attacco (×3 = combo) · **J** attacco pesante · **K** schivata · **Esc** pausa · **Invio** conferma.
+Per ingrandire il gioco usa il pieno schermo del browser (F11).
+
+## Sviluppare
+```bash
+npm install
+npm run dev
+```
+
+| Comando | Funzione |
+|---|---|
+| `npm run dev` | server di sviluppo |
+| `npm run typecheck` | controllo dei tipi (strict) |
+| `npm run build` | build distribuibile in `dist/` |
+| `npm run preview` | anteprima della build |
+| `npm test` | 308 test unitari (meno di 1 secondo) |
+| `npm run test:browser` | 165 test nel browser (richiede Playwright, vedi `TESTING.md`) |
+| `npm run balance` | simulatore di bilanciamento |
+| `npm run verify-docs` | verifica gli esempi del manuale del codice |
+
+## Documentazione (`documentation/`)
+
+| File | Per chi | Contenuto |
+|---|---|---|
+| `GAME_MANUAL.md` | chi gioca | storia, regole, controlli, nemici, boss, livelli, consigli |
+| `INSTALLATION.md` | chi installa | requisiti, comandi, build, distribuzione, problemi comuni |
+| `CODE_MANUAL.md` | chi modifica | file, classi, configurazioni, flussi, **11 esempi verificati** |
+| `ARCHITECTURE.md` | chi vuole capire il progetto | game loop, rendering, input, combattimento, livelli, estensioni future |
+| `FEATURES.md` | tutti | cosa è implementato, cosa è pianificato o non provato |
+| `TESTING.md` | chi verifica | cosa è stato testato, come ripetere le prove, limiti |
+| `BALANCE.md` | chi regola la difficoltà | valori, misure, come ripeterle |
+| `CHANGELOG.md` | tutti | storia delle versioni e problemi noti |

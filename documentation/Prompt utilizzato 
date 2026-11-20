@@ -1,0 +1,618 @@
+IRON & SHADOW
+MEDIEVAL RETRO ACTION ARCADE
+MASTER PROJECT PROMPT – VERSIONE 1.0
+1. RUOLO E OBIETTIVO
+Agisci come un team professionale di sviluppo videogiochi composto da:
+
+* Senior Game Developer specializzato in TypeScript.
+* Software Architect.
+* Game Designer specializzato in giochi arcade.
+* Pixel Artist specializzato in grafica 8 bit.
+* UI/UX Designer.
+* Technical Writer specializzato nella documentazione software.
+
+Il tuo compito è progettare e sviluppare un videogioco action arcade medievale chiamato IRON & SHADOW.
+Il risultato deve essere un videogioco completo, funzionante, giocabile e accompagnato da una documentazione tecnica sufficientemente dettagliata da consentire a un utente di comprenderne il funzionamento e modificarne autonomamente il codice.
+Il progetto deve essere pensato per uno sviluppo progressivo: inizialmente dovrà essere un gioco arcade semplice ma completo, mentre la sua architettura dovrà consentire l'aggiunta di nuove funzionalità nel tempo.
+Non limitarti a fornire esempi o suggerimenti teorici: realizza concretamente il progetto e i relativi file.
+2. CONCEPT DEL GIOCO
+Titolo: IRON & SHADOW.
+Genere: Medieval Action Arcade.
+Ambientazione: mondo medievale fantasy caratterizzato da castelli, dungeon, foreste oscure, rovine e creature mostruose.
+Visuale: laterale, side-scrolling.
+Stile grafico: pixel art 8 bit ispirata ai videogiochi arcade e alle console degli anni '80.
+Gameplay: combattimento arcade, progressione attraverso livelli, raccolta di oggetti, scontri con nemici e boss.
+Il protagonista è un cavaliere medievale che deve affrontare creature e avversari per liberare il regno da una minaccia oscura.
+La storia deve essere semplice e funzionale al gameplay, senza lunghi dialoghi o interruzioni che rallentino l'azione.
+3. TECNOLOGIE OBBLIGATORIE
+Utilizzare esclusivamente tecnologie semplici, accessibili e facilmente mantenibili.
+Stack tecnologico:
+
+* TypeScript: linguaggio principale per tutta la logica applicativa.
+* HTML5: struttura dell'applicazione.
+* HTML5 Canvas: rendering grafico.
+* CSS3: interfaccia e schermate.
+* Vite: ambiente di sviluppo e sistema di compilazione.
+* npm: gestione delle dipendenze.
+* ES Modules: organizzazione dei moduli.
+
+Non utilizzare JavaScript classico per scrivere direttamente la logica applicativa.
+Il JavaScript prodotto dalla compilazione TypeScript è naturalmente consentito.
+Configurare TypeScript con strict mode abilitata.
+Evitare framework complessi, motori di gioco sovradimensionati e dipendenze non necessarie.
+Il progetto deve essere indipendente da servizi online e utilizzare risorse locali.
+4. MODALITÀ DI UTILIZZO
+Prevedere due modalità distinte.
+4.1 Modalità giocatore
+Il gioco deve poter essere distribuito come applicazione web statica.
+L'utente finale deve poter:
+
+1. Aprire la cartella del gioco.
+2. Avviare il file index.html tramite un browser moderno.
+3. Giocare immediatamente.
+
+Non deve essere necessario installare:
+
+* Node.js.
+* TypeScript.
+* npm.
+* Framework.
+* Motori di gioco.
+
+La distribuzione deve includere tutti i file necessari.
+Verificare che il caricamento degli asset e il funzionamento del gioco siano compatibili con la modalità di avvio prevista.
+Se alcune funzionalità richiedono un server locale, predisporre una modalità di avvio semplificata e documentarla chiaramente. Non dichiarare compatibile con il doppio clic una funzionalità che richiede un server HTTP.
+4.2 Modalità sviluppatore
+Per modificare il codice utilizzare Node.js, npm e un editor come Visual Studio Code.
+Prevedere i seguenti comandi:
+
+* npm install
+* npm run dev
+* npm run build
+* npm run preview
+* npm run typecheck
+
+La procedura deve essere descritta nel manuale di installazione.
+5. DIREZIONE ARTISTICA
+Realizzare una grafica pixel art autenticamente 8 bit.
+Caratteristiche:
+
+* Risoluzione interna indicativa: 256x240 pixel.
+* Palette cromatica limitata.
+* Sprite semplici e riconoscibili.
+* Animazioni essenziali.
+* Pixel nitidi senza sfocature.
+* Scaling tramite moltiplicatori interi.
+* Interfaccia coerente con l'estetica arcade.
+
+Evitare effetti grafici moderni che compromettano lo stile 8 bit.
+5.1 Personaggi
+Realizzare almeno:
+
+* Cavaliere protagonista.
+* Scheletro guerriero.
+* Goblin.
+* Nemico medievale umano.
+* Boss principale.
+
+5.2 Ambientazioni
+Prevedere almeno tre ambientazioni iniziali:
+
+1. Foresta oscura.
+2. Castello medievale.
+3. Dungeon sotterraneo.
+
+Ogni ambientazione deve avere fondali, piattaforme e caratteristiche visive coerenti.
+5.3 Animazioni
+Il protagonista deve avere almeno queste animazioni:
+
+* Idle.
+* Camminata.
+* Corsa, se prevista.
+* Salto.
+* Caduta.
+* Attacco.
+* Danno ricevuto.
+* Schivata.
+* Morte.
+
+I nemici devono avere animazioni adeguate ai rispettivi comportamenti.
+6. GAMEPLAY E MOVIMENTO
+Implementare un sistema di gioco side-scrolling.
+Funzionalità:
+
+* Movimento orizzontale.
+* Salto.
+* Gravità.
+* Collisioni con terreno e piattaforme.
+* Limiti della mappa.
+* Camera laterale.
+* Animazioni legate allo stato del personaggio.
+* Gestione delle cadute.
+* Sistema di danni.
+
+Il movimento deve essere fluido e coerente con la natura arcade del gioco.
+Utilizzare un Game Loop basato su requestAnimationFrame e delta time per evitare che la velocità di gioco dipenda direttamente dal numero di fotogrammi al secondo.
+7. CONTROLLI DA TASTIERA
+Il gioco deve essere completamente giocabile utilizzando esclusivamente la tastiera.
+Configurazione iniziale:
+
+* A / D: movimento orizzontale.
+* Freccia SINISTRA / DESTRA: movimento alternativo.
+* W oppure FRECCIA SU: salto.
+* SPAZIO: attacco.
+* J: attacco pesante.
+* K: schivata.
+* ESC: pausa.
+
+La gestione degli input deve essere centralizzata in InputManager.
+Prevedere la possibilità di modificare successivamente i tasti tramite un file di configurazione.
+Gestire:
+
+* Pressione singola.
+* Pressione prolungata.
+* Rilascio del tasto.
+* Prevenzione di input ripetuti indesiderati.
+* Blocco dei comandi quando il gioco è in pausa o in schermata di menu.
+
+8. SISTEMA DI COMBATTIMENTO – VERSIONE INIZIALE
+La prima versione deve utilizzare una sola arma: la spada.
+Il combattimento deve essere semplice e immediato, ma sufficientemente interessante da offrire una componente arcade.
+Implementare:
+
+* Attacco leggero.
+* Attacco pesante.
+* Combo statiche predefinite.
+* Schivata.
+* Collisioni tra arma e nemici.
+* Sistema di danno.
+* Tempo di recupero degli attacchi.
+* Animazioni di combattimento.
+* Invulnerabilità temporanea dopo aver ricevuto un colpo, se prevista dal bilanciamento.
+
+Le combo devono essere predefinite e configurabili.
+Esempio:
+SPAZIO → SPAZIO → SPAZIO
+Sequenza di tre attacchi concatenati.
+Ogni attacco deve poter avere:
+
+* Danno.
+* Durata.
+* Animazione.
+* Area di collisione.
+* Tempo di recupero.
+
+Non implementare inizialmente sistemi di combo personalizzabili o alberi di abilità complessi.
+9. ARCHITETTURA PREDISPOSTA ALLE ESPANSIONI
+Il sistema di combattimento deve essere progettato in modo da consentire future espansioni.
+Predisporre punti di estensione per:
+
+* Nuove combo.
+* Nuove armi.
+* Attacchi speciali.
+* Magie.
+* Abilità.
+* Power-up.
+* Potenziamenti permanenti.
+* Effetti elementali.
+
+Non implementare queste funzionalità nella versione iniziale, salvo le strutture minime necessarie a consentirne l'aggiunta futura.
+Il codice non deve essere sovra-ingegnerizzato.
+10. FUTURO SISTEMA DI POWER-UP E ABILITÀ
+Progettare l'architettura affinché in futuro sia possibile aggiungere potenziamenti temporanei e permanenti.
+Esempi futuri:
+
+* BerserkPowerUp: aumenta il danno.
+* SpeedPowerUp: aumenta la velocità.
+* ShieldPowerUp: riduce i danni ricevuti.
+* FirePowerUp: aggiunge danni elementali.
+* HealthPowerUp: recupera salute.
+
+Ogni power-up dovrà poter definire:
+
+* Identificativo.
+* Nome.
+* Descrizione.
+* Tipo.
+* Effetto.
+* Durata.
+* Eventuali requisiti.
+
+Il sistema dovrà distinguere chiaramente i valori originali delle statistiche del personaggio dai modificatori temporanei.
+La scadenza di un power-up deve ripristinare correttamente i valori precedenti senza perdere altri potenziamenti attivi.
+11. NEMICI E INTELLIGENZA ARTIFICIALE
+Realizzare nemici con comportamenti differenti.
+Ogni nemico dovrà poter gestire:
+
+* Salute.
+* Danno.
+* Velocità.
+* Raggio di individuazione del giocatore.
+* Distanza di attacco.
+* Stato corrente.
+* Animazioni.
+* Ricompense.
+
+Implementare almeno tre comportamenti:
+
+1. Nemico che pattuglia una zona.
+2. Nemico che insegue il giocatore.
+3. Nemico che attacca quando il giocatore entra nel suo raggio.
+
+Prevedere la possibilità di aggiungere nuovi tipi di nemico tramite configurazioni e moduli dedicati.
+12. BOSS
+Realizzare almeno un boss per la versione iniziale.
+Il boss deve avere:
+
+* Salute superiore ai nemici normali.
+* Animazioni dedicate.
+* Attacchi specifici.
+* Comportamento distinto.
+* Indicatore della salute.
+* Condizioni di vittoria.
+
+Prevedere una struttura che permetta successivamente di aggiungere boss con più fasi di combattimento.
+13. SISTEMA DI LIVELLI
+Realizzare una progressione attraverso livelli differenti.
+Ogni livello deve poter definire:
+
+* Nome.
+* Ambientazione.
+* Dimensione della mappa.
+* Nemici presenti.
+* Posizioni di generazione.
+* Oggetti raccoglibili.
+* Punto di partenza.
+* Condizioni di completamento.
+* Eventuale boss finale.
+
+Centralizzare le configurazioni dei livelli in modo che sia possibile crearne di nuovi senza modificare il motore di gioco.
+14. SISTEMA DI SALUTE, VITE E PUNTEGGIO
+Implementare:
+
+* Salute del giocatore.
+* Salute massima.
+* Vite disponibili.
+* Punteggio corrente.
+* Punteggio ottenuto sconfiggendo nemici.
+* Bonus per oggetti raccolti.
+* Condizioni di morte.
+* Game Over.
+
+Prevedere la possibilità di aggiungere successivamente classifiche e record locali.
+15. OGGETTI RACCOGLIBILI
+Prevedere inizialmente:
+
+* Recupero salute.
+* Bonus punteggio.
+* Eventuali oggetti collezionabili.
+
+L'architettura deve consentire di aggiungere successivamente nuovi oggetti e power-up senza riscrivere il sistema di raccolta.
+16. INTERFACCIA
+Realizzare le seguenti schermate:
+
+* Schermata iniziale.
+* Nuova partita.
+* Schermata di gioco.
+* HUD.
+* Pausa.
+* Game Over.
+* Vittoria.
+* Schermata dei controlli.
+
+L'HUD deve mostrare:
+
+* Salute.
+* Vite.
+* Punteggio.
+* Eventuali indicatori aggiuntivi necessari.
+
+L'interfaccia deve mantenere l'estetica 8 bit.
+Tutte le schermate devono essere utilizzabili da tastiera.
+17. AUDIO
+Il sistema audio non è importate non deve avere audio il gioco.
+18. ARCHITETTURA DEL CODICE
+Organizzare il codice in moduli TypeScript indipendenti.
+Struttura iniziale proposta:
+IRON_AND_SHADOW/
+├── index.html ├── package.json ├── package-lock.json ├── tsconfig.json ├── vite.config.ts │ ├── public/ │ └── assets/ │ ├── sprites/ │ ├── backgrounds/ │ ├── audio/ │ └── fonts/ │ ├── src/ │ ├── main.ts │ │ │ ├── config/ │ │ ├── gameConfig.ts │ │ ├── playerConfig.ts │ │ ├── enemyConfig.ts │ │ ├── controlsConfig.ts │ │ └── levelConfig.ts │ │ │ ├── core/ │ │ ├── GameEngine.ts │ │ ├── GameLoop.ts │ │ ├── GameState.ts │ │ └── InputManager.ts │ │ │ ├── entities/ │ │ ├── GameObject.ts │ │ ├── Player.ts │ │ ├── Enemy.ts │ │ └── Boss.ts │ │ │ ├── combat/ │ │ ├── CombatSystem.ts │ │ ├── ComboManager.ts │ │ └── AttackDefinition.ts │ │ │ ├── systems/ │ │ ├── CollisionSystem.ts │ │ ├── EnemyAISystem.ts │ │ ├── LevelManager.ts │ │ ├── ItemManager.ts │ │ ├── ScoreManager.ts │ │ └── AudioManager.ts │ │ │ ├── rendering/ │ │ ├── Renderer.ts │ │ ├── SpriteManager.ts │ │ ├── AnimationManager.ts │ │ └── Camera.ts │ │ │ ├── ui/ │ │ ├── MenuManager.ts │ │ ├── HUDManager.ts │ │ └── ScreenManager.ts │ │ │ └── types/ │ ├── GameTypes.ts │ ├── EntityTypes.ts │ └── LevelTypes.ts │ ├── documentation/ │ ├── GAME_MANUAL.md │ ├── CODE_MANUAL.md │ ├── FEATURES.md │ ├── ARCHITECTURE.md │ ├── INSTALLATION.md │ └── CHANGELOG.md │ └── README.md
+La struttura può essere adattata durante lo sviluppo, ma ogni variazione deve essere motivata e documentata.
+19. STANDARD DI PROGRAMMAZIONE TYPESCRIPT
+Utilizzare TypeScript con strict mode abilitata.
+Regole obbligatorie:
+
+* Non utilizzare any salvo eccezioni motivate e documentate.
+* Utilizzare interfacce e tipi espliciti.
+* Definire i tipi di ritorno delle funzioni.
+* Utilizzare enum o union types quando opportuno.
+* Separare configurazione, logica e rendering.
+* Evitare variabili globali non necessarie.
+* Evitare duplicazioni.
+* Utilizzare classi quando migliorano la leggibilità.
+* Preferire soluzioni semplici e manutenibili.
+* Evitare astrazioni inutili.
+
+20. STANDARD DI NOMENCLATURA
+Utilizzare nomi espliciti e descrittivi.
+Nomi di variabili in camelCase.
+Esempi:
+playerHealth playerMaxHealth playerMovementSpeed playerAttackDamage playerJumpForce playerCurrentAnimation enemyDetectionRange enemyMovementSpeed enemyAttackDamage currentLevelNumber currentPlayerScore remainingPlayerLives isPlayerInvulnerable isGamePaused
+Classi in PascalCase:
+Player Enemy Boss GameEngine InputManager CombatSystem ComboManager LevelManager
+Funzioni in camelCase:
+movePlayer() calculatePlayerDamage() spawnEnemy() updatePlayerHealth() checkCollision() loadLevel()
+Commenti e documentazione devono essere scritti in italiano.
+Evitare nomi poco descrittivi come temp, val, data1 o x1 quando è possibile utilizzare nomi espliciti.
+21. CONFIGURAZIONE CENTRALIZZATA
+Le principali statistiche del gioco devono essere raccolte in configurazioni dedicate.
+Esempio:
+export const PLAYER_CONFIG = { maxHealth: 100, movementSpeed: 4, jumpForce: 12, lightAttackDamage: 15, heavyAttackDamage: 30, invulnerabilityDuration: 1000 };
+Creare configurazioni analoghe per:
+
+* Nemici.
+* Boss.
+* Attacchi.
+* Combo.
+* Livelli.
+* Controlli.
+* Difficoltà.
+
+L'obiettivo è consentire all'utente di modificare facilmente i valori principali senza intervenire direttamente nella logica interna.
+22. DOCUMENTAZIONE OBBLIGATORIA
+Creare sei documenti principali.
+GAME_MANUAL.md
+Descrivere:
+
+* Storia.
+* Ambientazione.
+* Personaggi.
+* Nemici.
+* Boss.
+* Livelli.
+* Regole di gioco.
+* Sistema di combattimento.
+* Combo.
+* Oggetti.
+* Punteggio.
+* Controlli.
+
+CODE_MANUAL.md
+Descrivere:
+
+* Struttura dei file.
+* Funzione di ogni modulo.
+* Classi.
+* Interfacce.
+* Variabili principali.
+* Funzioni.
+* Configurazioni.
+* Flussi di esecuzione.
+* Relazioni tra componenti.
+
+FEATURES.md
+Elencare tutte le funzionalità implementate e pianificate.
+Utilizzare stati chiari:
+
+* Implementata.
+* Da implementare.
+* Pianificata.
+* In sviluppo.
+
+Non indicare come implementata una funzionalità soltanto progettata.
+ARCHITECTURE.md
+Descrivere:
+
+* Architettura generale.
+* Game Loop.
+* Rendering.
+* Gestione input.
+* Gestione entità.
+* Sistema di combattimento.
+* Gestione livelli.
+* Punti di estensione futuri.
+
+INSTALLATION.md
+Spiegare:
+
+* Requisiti.
+* Installazione.
+* Configurazione.
+* Avvio.
+* Compilazione.
+* Distribuzione.
+
+CHANGELOG.md
+Registrare:
+
+* Versione.
+* Data.
+* Modifiche.
+* Funzionalità aggiunte.
+* Correzioni.
+* Problemi noti.
+
+23. ESEMPI PRATICI NEL MANUALE TECNICO
+Il manuale deve includere esempi concreti e funzionanti.
+Spiegare come:
+
+1. Aumentare la salute del giocatore.
+2. Modificare la velocità.
+3. Modificare la forza del salto.
+4. Modificare il danno della spada.
+5. Modificare le combo.
+6. Aggiungere un nuovo nemico.
+7. Modificare il comportamento di un nemico.
+8. Aggiungere un oggetto raccoglibile.
+9. Aggiungere un nuovo livello.
+10. Aggiungere un boss.
+11. Aggiungere una nuova animazione.
+
+Per ogni esempio indicare:
+
+* File da aprire.
+* Variabile o funzione da cercare.
+* Codice originale.
+* Codice aggiornato.
+* Spiegazione dettagliata.
+* Risultato previsto nel gioco.
+
+Gli esempi devono essere verificati rispetto al codice realmente sviluppato.
+24. QUALITÀ E TEST
+Prima della consegna effettuare verifiche su:
+
+* Compilazione TypeScript.
+* Strict mode.
+* Input da tastiera.
+* Movimento.
+* Salto.
+* Collisioni.
+* Combattimento.
+* Combo.
+* Salute.
+* Nemici.
+* Boss.
+* Livelli.
+* Oggetti.
+* Punteggio.
+* Pausa.
+* Game Over.
+* Audio.
+* Rendering.
+
+Verificare inoltre che:
+
+* Non siano presenti errori bloccanti.
+* Le risorse siano caricate correttamente.
+* Il gioco funzioni con dimensioni dello schermo differenti.
+* Il gioco mantenga una velocità coerente.
+* I manuali siano aggiornati.
+
+25. ROADMAP DI SVILUPPO
+Sviluppare il progetto in fasi ordinate.
+FASE 1 – Struttura e configurazione:
+
+* Creazione progetto.
+* Configurazione TypeScript.
+* Configurazione Vite.
+* Struttura cartelle.
+* Configurazioni iniziali.
+
+FASE 2 – Motore:
+
+* Canvas.
+* Rendering.
+* Game Loop.
+* Delta time.
+* Gestione stati.
+
+FASE 3 – Protagonista:
+
+* Movimento.
+* Salto.
+* Gravità.
+* Collisioni.
+* Animazioni.
+
+FASE 4 – Combattimento:
+
+* Spada.
+* Attacchi leggeri.
+* Attacchi pesanti.
+* Combo statiche.
+* Schivata.
+* Sistema danni.
+
+FASE 5 – Nemici:
+
+* Generazione.
+* Movimento.
+* AI.
+* Attacchi.
+* Morte.
+
+FASE 6 – Livelli:
+
+* Ambientazioni.
+* Piattaforme.
+* Camera.
+* Progressione.
+* Boss.
+
+FASE 7 – Interfaccia:
+
+* Menu.
+* HUD.
+* Punteggio.
+* Vite.
+* Pausa.
+* Game Over.
+
+FASE 8 – Audio e rifiniture:
+
+* Musiche.
+* Effetti sonori.
+* Effetti grafici.
+* Bilanciamento.
+
+FASE 9 – Documentazione:
+
+* Manuali.
+* Esempi.
+* Architettura.
+* Installazione.
+
+FASE 10 – Test e distribuzione:
+
+* Verifiche.
+* Build.
+* Versione distribuibile.
+* Archivio finale.
+
+Ogni fase deve essere funzionante prima di procedere alla successiva.
+26. VERSIONI FUTURE
+Prevedere una roadmap evolutiva.
+VERSIONE 1.0: Gioco arcade completo con spada, combo statiche, nemici, livelli e boss.
+VERSIONE 1.1: Nuovi nemici, boss, ambientazioni e contenuti.
+VERSIONE 1.2: Power-up temporanei e poteri speciali.
+VERSIONE 1.3: Nuove armi, nuove combo e abilità.
+VERSIONE 2.0: Personaggi alternativi, progressione avanzata e sistema di equipaggiamento.
+Queste funzionalità non devono essere implementate anticipatamente nella versione 1.0.
+L'architettura deve semplicemente consentirne l'introduzione futura.
+27. CONSEGNA FINALE
+Consegnare:
+
+1. Progetto completo.
+2. Codice sorgente TypeScript.
+3. File HTML e CSS.
+4. Configurazione Vite.
+5. Risorse grafiche.
+6. Risorse audio.
+7. Documentazione tecnica.
+8. Manuale di gioco.
+9. Manuale di installazione.
+10. Versione compilata.
+11. Archivio ZIP completo.
+
+Il progetto deve essere realmente funzionante.
+Se l'ambiente consente di generare file, creare direttamente tutte le cartelle e i file necessari.
+Consegnare un archivio ZIP contenente il progetto completo, senza dipendenze mancanti.
+Non utilizzare collegamenti esterni temporanei per risorse indispensabili.
+Non dichiarare completate funzionalità non implementate o non testate.
+28. REGOLE FINALI
+La priorità del progetto è creare un videogioco:
+
+* Semplice da avviare.
+* Divertente da giocare.
+* Coerente con lo stile 8 bit.
+* Facile da comprendere.
+* Facile da modificare.
+* Espandibile nel tempo.
+* Ben documentato.
+
+Non sacrificare la leggibilità del codice per ottenere una soluzione apparentemente più sofisticata.
+Non implementare funzionalità future senza una reale necessità nella versione iniziale.
+Ogni parte del progetto deve essere documentata in modo da consentire all'utente di imparare, intervenire e sviluppare autonomamente nuove funzionalità.
+Il risultato finale deve essere un vero progetto software, non una semplice demo o un prototipo incompleto.
+
+
+Ho questo prompt mi inizi la creazione di questo progetto seguendo la roadmap iniziando con la Fase1

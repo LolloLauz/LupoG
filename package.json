@@ -1,0 +1,21 @@
+{
+  "name": "iron-and-shadow",
+  "version": "1.0.0",
+  "description": "IRON & SHADOW - Medieval Retro Action Arcade (TypeScript + Canvas + Vite)",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "balance": "node tools/balance.mjs",
+    "verify-docs": "node tools/verifyManualExamples.mjs",
+    "test": "node tests/run.mjs",
+    "test:browser": "node tests/browser/run.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}
