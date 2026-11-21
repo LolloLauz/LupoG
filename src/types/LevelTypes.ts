@@ -2,10 +2,10 @@ import type { EnemyTypeId } from "./EntityTypes";
 import type { Rectangle, Vector2 } from "./GameTypes";
 
 /** Ambientazioni disponibili. */
-export type ThemeId = "forest" | "castle" | "dungeon";
+export type ThemeId = "forest" | "castle" | "dungeon" | "swamp" | "ice" | "tower";
 
 /** Tessiture del terreno disponibili (disegnate da TerrainRenderer). */
-export type TerrainTexture = "grassAndEarth" | "stoneTiles" | "dungeonBricks";
+export type TerrainTexture = "grassAndEarth" | "stoneTiles" | "dungeonBricks" | "swampMud" | "snowAndRock" | "runeStone";
 
 /** Aspetto del terreno di un'ambientazione. Ogni colore deve essere della palette. */
 export interface ThemeStyle {
@@ -18,6 +18,8 @@ export interface ThemeStyle {
   ledgeColors: readonly [string, string, string];
   /** Dettagli (sassi, muschio...): scuro e chiaro. */
   detailColors: readonly [string, string];
+  /** Colori dell'acqua (se omessi: acqua blu). Fondo dall'alto al basso, velo, superficie (ciclo dei colori). */
+  waterColors?: { depth: readonly string[]; veil: string; surface: readonly string[] };
 }
 
 /** Tipi di oggetto raccoglibile. */

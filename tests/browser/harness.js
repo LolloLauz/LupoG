@@ -132,7 +132,9 @@ function createBot(skill, seed) {
       }
     }
     if (boss !== null && !boss.isActive && levelManager.arenaLocked) nearest = boss;
-    const isGroundAt = (x) => platforms.some((p) => !p.oneWay && x >= p.x && x <= p.x + p.width && p.y >= player.positionY + 20);
+    // abissi e spuntoni: il bot li salta
+    const spikes = (engine.levelManager.level.hazards ?? []).filter((h) => h.kind === "spikes");
+    const isGroundAt = (x) => platforms.some((p) => !p.oneWay && x >= p.x && x <= p.x + p.width && p.y >= player.positionY + 20) && !spikes.some((h) => x >= h.x - 4 && x <= h.x + h.width);
     const isWallAt = (x) => platforms.some((p) => !p.oneWay && x >= p.x && x <= p.x + p.width && p.y < player.positionY + 20 && p.y + p.height > player.positionY + 2);
     let wantsJump = false, wantsAttack = false, wantsDodge = false;
     if (nearest !== null && !player.isDead) {
@@ -140,11 +142,11 @@ function createBot(skill, seed) {
       const direction = targetCenter < centerX ? -1 : 1;
       const gap = Math.abs(targetCenter - centerX) - (nearest.width + player.width) / 2;
       heldWanted.add(direction > 0 ? "KeyD" : "KeyA");
-      const isAttacking = nearest.isAttacking || ["slash", "chargeWindup", "charging"].includes(nearest.currentState);
+      const isAttacking = nearest === boss ? !["idle", "walk", "dormant", "dead"].includes(boss.currentState) : nearest.isAttacking;
       if (isAttacking) {
         if (!attackStartTimes.has(nearest)) { attackStartTimes.set(nearest, time); dodgeDecisions.set(nearest, random() < skill); }
       } else { attackStartTimes.delete(nearest); dodgeDecisions.delete(nearest); }
-      const windupMs = nearest === boss ? (boss.currentAttackWindupMs ?? boss.definition.attacks.find((attack) => attack.kind === "melee").windupMs) : nearest.definition.attackWindupMs;
+      const windupMs = nearest === boss ? (boss.currentAttackWindupMs ?? (boss.definition.attacks.find((attack) => attack.kind === "melee") ?? boss.definition.attacks[0]).windupMs) : nearest.definition.attackWindupMs;
       const elapsedMs = (time - (attackStartTimes.get(nearest) ?? time)) * 1000;
       const wantsToDodge = isAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);
       if (wantsToDodge && elapsedMs >= windupMs - 100 && elapsedMs <= windupMs - 30 && player.isOnGround && !player.activeAttack) { wantsDodge = true; dodgeDecisions.set(nearest, false); }

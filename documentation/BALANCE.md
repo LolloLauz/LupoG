@@ -42,7 +42,31 @@ Modifiche:
 5. Danni dei nemici normali **invariati** (scheletro 10, goblin 8, soldato 15): variarli non cambiava
    l'esito dei bot, quindi non c'era evidenza per toccarli.
 
-## Risultati attuali (`npm run balance`, 40-60 ripetizioni)
+## Versione 2.0: sei livelli (`npm run balance`, 40-60 ripetizioni, 2.0.0-alpha.4)
+
+Dalla 2.0.0-alpha.4 il simulatore usa gli stessi sistemi del gioco: boss di ogni livello (`bossId`), proiettili, pericoli (acqua, ghiaccio, spuntoni:
+il bot salta gli spuntoni come gli abissi), piattaforme mobili, evocazioni dei boss e divisione delle melme. I livelli 1-3 danno gli stessi numeri di prima.
+
+| Misura | rusher | medio |
+|---|---|---|
+| Duello lupo / melma / arciere / golem (HP persi) | 9 / 0 / 20 / 15 | - |
+| Boss da solo, vittorie: Cavaliere Nero / Strega / Re dei Lupi / Signore dell'Ombra | 33% / 100% / 100% / 45% | 88% / 100% / 95% / 68% |
+| Livelli 1 / 2 / 3, vittorie | 100% / 100% / 33% | 100% / 95% / 75% |
+| Livelli 4 / 5 / 6, vittorie | 100% / 100% / 35% | 98% / 90% / 48% |
+| Partita completa (6 livelli), vinte | circa 32% | circa 73% |
+| Morti medie per livello (L1-L6) | 0 / 0 / 1,5 / 0 / 0 / 0,9 | 0 / 0,2 / 0,2 / 0 / 0,2 / 0,9 |
+
+**Come si legge.** La palude (4) è un respiro dopo il Cavaliere Nero; i picchi (5) consumano molta salute (lupi veloci, golem corazzato);
+la torre (6) con il Signore dell'Ombra è il punto più difficile, come deve essere un finale. Il bot non usa mai l'attacco pesante: contro il
+golem corazzato (che lo richiede) e contro i pipistrelli (che il bot non insegue in aria) i numeri sono pessimisti o non significativi
+(pipistrello: 40 s = il bot non lo affronta).
+
+**Modifiche fatte durante la Fase 4** (misurate con il simulatore): golem 90 → 70 HP, danno 18 → 15, corazza 0,4 → 0,5 (era quasi
+invulnerabile per chi usa solo l'attacco leggero); nel livello 5 un golem sostituito da un goblin e una pozione in più (vittorie del bot
+medio 53% → 90%); Signore dell'Ombra 400 → 340 HP e attacchi un poco più deboli (da solo 33% → 68%); Strega 260 → 300 HP perché era più
+facile del Cavaliere Nero che la precede.
+
+## Risultati della versione 1.0 (tre livelli)
 
 > Rieseguito nella 2.0.0-alpha.3, dopo che gli attacchi del boss sono diventati dati: **stessi risultati** (boss 33% / 88%, livello 3 33% / 75%,
 > partite 67% / 98%). La grafica a 16 bit (2.0.0-alpha.2) non ha cambiato le hitbox, quindi nemmeno il bilanciamento.

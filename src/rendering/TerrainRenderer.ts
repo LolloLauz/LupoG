@@ -4,6 +4,13 @@ import { cycleRampColor } from "./PaletteEffects";
 import type { Camera } from "./Camera";
 import type { Renderer } from "./Renderer";
 
+/** Colori dell'acqua se l'ambientazione non ne indica di propri. */
+const DEFAULT_WATER = {
+  depth: [PALETTE.blue, PALETTE.navy, PALETTE.deepNavy],
+  veil: PALETTE.lightBlue,
+  surface: PALETTE_RAMPS.blue.slice(3),
+};
+
 /** Numero pseudo-casuale ripetibile (0..999) a partire da un intero. */
 function hashNumber(value: number): number {
   let hashed = Math.imul(value + 7919, 2654435761) >>> 0;
@@ -19,7 +26,7 @@ function hashNumber(value: number): number {
  * camera senza "tremare". Si disegna solo la parte visibile di ogni piattaforma.
  */
 export class TerrainRenderer {
-  public renderPlatform(renderer: Renderer, platform: PlatformDefinition, camera: Camera, style: ThemeStyle): void {
+  public renderPlatform(renderer: Renderer, platform: PlatformDefinition, camera: Camera, style: ThemeStyle, timeSeconds = 0): void {
     const visibleStart = Math.max(platform.x, camera.x - 4);
     const visibleEnd = Math.min(platform.x + platform.width, camera.x + renderer.width + 4);
     if (visibleEnd <= visibleStart) {
@@ -41,6 +48,16 @@ export class TerrainRenderer {
       case "dungeonBricks":
         this.renderMasonry(renderer, platform, camera, style, visibleStart, visibleEnd, 24, 10, true);
         break;
+      case "swampMud":
+        this.renderEarth(renderer, platform, camera, style, visibleStart, visibleEnd, "swamp");
+        break;
+      case "snowAndRock":
+        this.renderEarth(renderer, platform, camera, style, visibleStart, visibleEnd, "snow");
+        break;
+      case "runeStone":
+        this.renderMasonry(renderer, platform, camera, style, visibleStart, visibleEnd, 16, 10, true);
+        this.renderRunes(renderer, platform, camera, style, visibleStart, visibleEnd, timeSeconds);
+        break;
     }
     // bordi verticali in ombra (pareti degli abissi e dei blocchi)
     if (platform.x >= visibleStart) {
@@ -52,14 +69,20 @@ export class TerrainRenderer {
     }
   }
 
-  /** Erba a tre toni con fili d'erba sopra e radici sotto, terra con sassi e strati più scuri. */
+  /**
+   * Terreno "naturale" in tre varianti:
+   * - grass: erba a tre toni con fili d'erba sopra e radici sotto, terra con sassi;
+   * - swamp: muschio con canne palustri e tife, fango con bolle;
+   * - snow: neve soffice con cumuli, ghiaccioli sotto il bordo, roccia con cristalli.
+   */
   private renderEarth(
     renderer: Renderer,
     platform: PlatformDefinition,
     camera: Camera,
     style: ThemeStyle,
     visibleStart: number,
-    visibleEnd: number
+    visibleEnd: number,
+    variant: "grass" | "swamp" | "snow" = "grass"
   ): void {
     const screenY = platform.y - camera.y;
     const visibleWidth = visibleEnd - visibleStart;
@@ -85,15 +108,80 @@ export class TerrainRenderer {
     renderer.fillRect(screenStart, screenY + 4, visibleWidth, 1, style.surfaceColors[2]);
     for (let columnX = Math.floor(visibleStart / 2) * 2; columnX < visibleEnd; columnX += 2) {
       const randomValue = hashNumber(columnX * 3 + 11);
-      // radici ed erba che pende sotto la superficie
+      const screenColumn = columnX - camera.x;
+      // sotto la superficie: radici (erba, palude) o ghiaccioli appuntiti (neve)
       const hangLength = randomValue % 4;
-      if (hangLength > 0) {
-        renderer.fillRect(columnX - camera.x, screenY + 5, 1, hangLength, style.surfaceColors[2]);
+      if (variant === "snow") {
+        if (randomValue % 5 === 0) {
+          const icicleLength = 2 + (randomValue % 5);
+          renderer.fillRect(screenColumn, screenY + 5, 2, Math.ceil(icicleLength / 2), style.detailColors[1]);
+          renderer.fillRect(screenColumn, screenY + 5, 1, icicleLength, style.surfaceColors[1]);
+        }
+      } else if (hangLength > 0) {
+        renderer.fillRect(screenColumn, screenY + 5, 1, hangLength, style.surfaceColors[2]);
       }
-      // fili d'erba sopra la superficie (solo decorazione, fuori dall'hitbox)
-      if (randomValue % 3 === 0) {
+      // sopra la superficie (solo decorazione, fuori dall'hitbox)
+      if (variant === "grass" && randomValue % 3 === 0) {
         const bladeHeight = 1 + (randomValue % 3);
-        renderer.fillRect(columnX - camera.x, screenY - bladeHeight, 1, bladeHeight, randomValue % 2 === 0 ? style.surfaceColors[0] : style.surfaceColors[1]);
+        renderer.fillRect(screenColumn, screenY - bladeHeight, 1, bladeHeight, randomValue % 2 === 0 ? style.surfaceColors[0] : style.surfaceColors[1]);
+      } else if (variant === "swamp" && randomValue % 7 === 0) {
+        // canna palustre con tifa marrone in cima
+        const reedHeight = 5 + (randomValue % 6);
+        renderer.fillRect(screenColumn, screenY - reedHeight, 1, reedHeight, style.surfaceColors[1]);
+        renderer.fillRect(screenColumn, screenY - reedHeight - 1, 2, 3, PALETTE.earth);
+        renderer.fillRect(screenColumn, screenY - reedHeight - 1, 1, 1, PALETTE.wood);
+      } else if (variant === "snow" && randomValue % 4 === 0) {
+        // cumuli di neve morbidi
+        renderer.fillRect(screenColumn - 1, screenY - 1, 4, 1, style.surfaceColors[0]);
+      }
+    }
+    if (variant === "swamp") {
+      // bolle nel fango
+      for (let bubbleX = Math.ceil(visibleStart / 13) * 13; bubbleX < visibleEnd; bubbleX += 13) {
+        const randomValue = hashNumber(bubbleX * 5 + 3);
+        if (randomValue % 3 === 0) {
+          const bubbleY = screenY + 9 + (randomValue % 18);
+          renderer.strokeRect(bubbleX - camera.x, bubbleY, 3, 3, style.detailColors[1]);
+        }
+      }
+    }
+  }
+
+  /** Rune che brillano (ciclo dei colori) su alcuni blocchi della pietra runica. */
+  private renderRunes(
+    renderer: Renderer,
+    platform: PlatformDefinition,
+    camera: Camera,
+    style: ThemeStyle,
+    visibleStart: number,
+    visibleEnd: number,
+    timeSeconds: number
+  ): void {
+    const runeRamp = [style.fillColors[0], style.detailColors[0], style.detailColors[1], PALETTE.white];
+    for (let runeX = Math.ceil(visibleStart / 24) * 24 + 6; runeX < visibleEnd - 6; runeX += 24) {
+      const randomValue = hashNumber(runeX * 11 + platform.y);
+      if (randomValue % 2 !== 0 || platform.height < 16) {
+        continue;
+      }
+      const color = cycleRampColor(runeRamp, timeSeconds, 3, runeX / 24, "pingPong");
+      const runeY = platform.y - camera.y + 7;
+      const left = runeX - camera.x;
+      // tre forme di runa semplici
+      switch (randomValue % 3) {
+        case 0:
+          renderer.fillRect(left + 1, runeY, 1, 5, color);
+          renderer.fillRect(left, runeY + 1, 3, 1, color);
+          break;
+        case 1:
+          renderer.fillRect(left, runeY, 3, 1, color);
+          renderer.fillRect(left + 1, runeY + 1, 1, 3, color);
+          renderer.fillRect(left, runeY + 4, 3, 1, color);
+          break;
+        default:
+          renderer.fillRect(left, runeY, 1, 5, color);
+          renderer.fillRect(left + 2, runeY, 1, 5, color);
+          renderer.fillRect(left + 1, runeY + 2, 1, 1, color);
+          break;
       }
     }
   }
@@ -197,7 +285,7 @@ export class TerrainRenderer {
   // ---------------------------------------------------------------------------
 
   /** Pericoli disegnati DIETRO le entità: spuntoni, ghiaccio, fondo dell'acqua. */
-  public renderHazard(renderer: Renderer, hazard: HazardDefinition, camera: Camera, timeSeconds: number): void {
+  public renderHazard(renderer: Renderer, hazard: HazardDefinition, camera: Camera, timeSeconds: number, style: ThemeStyle): void {
     const screenX = hazard.x - camera.x;
     if (screenX + hazard.width < 0 || screenX > renderer.width) {
       return;
@@ -210,29 +298,30 @@ export class TerrainRenderer {
         this.renderIce(renderer, hazard, camera, timeSeconds);
         break;
       case "water":
-        renderer.fillVerticalGradient(screenX, hazard.y - camera.y, hazard.width, hazard.height, [PALETTE.blue, PALETTE.navy, PALETTE.deepNavy], 4);
+        renderer.fillVerticalGradient(screenX, hazard.y - camera.y, hazard.width, hazard.height, style.waterColors?.depth ?? DEFAULT_WATER.depth, 4);
         break;
     }
   }
 
   /** Acqua DAVANTI alle entità: velo a retino, superficie con il ciclo dei colori e ondulazione per riga. */
-  public renderWaterForeground(renderer: Renderer, water: HazardDefinition, camera: Camera, timeSeconds: number): void {
+  public renderWaterForeground(renderer: Renderer, water: HazardDefinition, camera: Camera, timeSeconds: number, style: ThemeStyle): void {
+    const colors = style.waterColors ?? DEFAULT_WATER;
     const screenX = water.x - camera.x;
     const screenY = water.y - camera.y;
     if (screenX + water.width < 0 || screenX > renderer.width) {
       return;
     }
-    renderer.fillDitheredOverlay(screenX, screenY + 2, water.width, water.height - 2, PALETTE.lightBlue, 4);
-    renderer.fillDitheredOverlay(screenX, screenY + 10, water.width, water.height - 10, PALETTE.navy, 6);
+    renderer.fillDitheredOverlay(screenX, screenY + 2, water.width, water.height - 2, colors.veil, 4);
+    renderer.fillDitheredOverlay(screenX, screenY + 10, water.width, water.height - 10, colors.depth[1] ?? colors.veil, 6);
     renderer.applyLineWave(screenY + 2, water.height - 2, 1, 7, timeSeconds * 5, screenX, water.width);
     // superficie: due righe che luccicano scorrendo lungo la rampa del blu
-    const surfaceRamp = PALETTE_RAMPS.blue.slice(3);
+    const surfaceRamp = colors.surface;
     for (let segmentX = Math.floor(water.x / 8) * 8; segmentX < water.x + water.width; segmentX += 8) {
       const left = Math.max(segmentX, water.x);
       const right = Math.min(segmentX + 8, water.x + water.width);
       const color = cycleRampColor(surfaceRamp, timeSeconds, 4, segmentX / 8, "pingPong");
       renderer.fillRect(left - camera.x, screenY, right - left, 1, color);
-      renderer.fillRect(left - camera.x, screenY + 1, right - left, 1, PALETTE.lightBlue);
+      renderer.fillRect(left - camera.x, screenY + 1, right - left, 1, colors.veil);
     }
   }
 

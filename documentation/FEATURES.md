@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.0.0-alpha.3**.
+Versione: **2.0.0-alpha.4**.
 
 **Stati usati:**
 
@@ -69,14 +69,17 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Sfondi con 4-6 livelli di parallasse disegnati una volta e ripetuti | Implementata | Fase 2; circa 0,8 ms per frame |
 | Terreno con tessiture per ambientazione (erba e terra, pietra, mattoni), piattaforme sospese, porta e cancello ridisegnati | Implementata | Fase 2; `TerrainRenderer`, `THEME_STYLES` |
 | HUD e schermate a 16 bit (pannello metallico, titoli a fasce, riquadri decorati, tasti in rilievo) | Implementata | Fase 2 |
-| Effetto di ondulazione usato nei livelli (acqua, calore) | Implementata | Fase 3 per l'acqua (limitata alla zona d'acqua); nei livelli dalla Fase 4 |
+| Effetto di ondulazione usato nei livelli (acqua) | Implementata | Fase 3; vasche della palude |
 | Proiettili (freccia, dardo magico, palla di fuoco): deviabili con la spada, attraversabili con la schivata | Implementata | Fase 3; `ProjectileSystem`, `PROJECTILE_CONFIG` |
-| Nemici a distanza (`ranged`: tira e indietreggia) | Implementata | Fase 3; Arciere Scheletro pronto, nei livelli dalla Fase 4 |
-| Nemici volanti (`flyer`: volteggia e picchia, da morto cade) | Implementata | Fase 3; Pipistrello pronto, nei livelli dalla Fase 4 |
-| Pericoli: spuntoni, acqua (si nuota, ondulazione), ghiaccio (scivoloso) | Implementata | Fase 3; `HazardSystem`, `HAZARD_CONFIG`, `LevelDefinition.hazards`; nei livelli dalla Fase 4 |
-| Piattaforme mobili che trasportano giocatore e nemici | Implementata | Fase 3; `LevelDefinition.movingPlatforms`; nei livelli dalla Fase 4 |
+| Nemici a distanza (`ranged`: tira e indietreggia) | Implementata | Fase 3; Arciere Scheletro nei livelli 4 e 6 |
+| Nemici volanti (`flyer`: volteggia e picchia, da morto cade) | Implementata | Fase 3; Pipistrello nei livelli 4-6 |
+| Pericoli: spuntoni, acqua (si nuota, ondulazione), ghiaccio (scivoloso) | Implementata | Fase 3; nei livelli 4-6 |
+| Piattaforme mobili che trasportano giocatore e nemici | Implementata | Fase 3; nei livelli 4-6 |
 | Attacchi dei boss come dati (corpo a corpo, carica, proiettili, evocazione) con pesi per fase | Implementata | Fase 3; il Cavaliere Nero si comporta come nella 1.0 |
-| Palude Maledetta, Picchi Ghiacciati, Torre dell'Ombra; 5 nemici; 3 boss | Pianificata | Fase 4 |
+| Tre nuove ambientazioni (Palude Maledetta, Picchi Ghiacciati, Torre dell'Ombra) con sfondi a più livelli e terreni propri | Implementata | Fase 4; acqua con i colori dell'ambientazione |
+| Livelli 4-6 con pericoli, piattaforme mobili e boss; vittoria dopo il livello 6 | Implementata | Fase 4 |
+| Nuovi nemici: Lupo (balzo), Melma (si divide), Golem di ghiaccio (corazzato); Arciere e Pipistrello nei livelli | Implementata | Fase 4 |
+| Nuovi boss: Strega della Palude, Re dei Lupi (forma di belva), Signore dell'Ombra (finale a tre fasi) | Implementata | Fase 4 |
 | Power-up, selettore di difficoltà, selezione dei livelli | Pianificata | Fase 5 |
 
 ## Protagonista
@@ -123,7 +126,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Boss: Cavaliere Nero (290 HP) con fendente, carica, due fasi | Implementata | |
 | Barra della salute del boss con tacche di fase | Implementata | |
 | Struttura a fasi multiple e catalogo di boss | Implementata | esempio 10 del manuale (tre fasi) |
-| Boss aggiuntivi nel gioco | Pianificata | Fase 4 della 2.0; il catalogo e gli attacchi come dati sono pronti, il gioco ne ha uno |
+| Boss aggiuntivi nel gioco | Implementata | Fase 4: quattro boss |
 | Attacchi nuovi per un boss | Implementata | 2.0 Fase 3: 4 tipi di attacco configurabili; un tipo nuovo richiede di estendere `Boss.ts` |
 
 ## Livelli e oggetti
@@ -141,7 +144,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Nuovi oggetti tramite configurazione | Implementata | esempio 8 del manuale |
 | Power-up temporanei (Berserk, Velocità, Scudo, Fuoco, Salute) | Pianificata | v1.2; vedi `ARCHITECTURE.md` sez. 10 |
 | Potenziamenti permanenti | Pianificata | v1.2-2.0 |
-| Nuove ambientazioni | Pianificata | v1.1 |
+| Nuove ambientazioni | Implementata | Fase 4: sei ambientazioni |
 
 ## Interfaccia
 

@@ -1,6 +1,7 @@
 import { PALETTE } from "../../config/gameConfig";
 import { ENEMY_CONFIG } from "../../config/enemyConfig";
 import type { SpriteManager } from "../SpriteManager";
+import { composeBlob, composeWolf, type BlobPose, type WolfPose } from "./creatureTools";
 import { createGrid, drawSlashArc, drawSword, linePoints, mirrorRows, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
 
 /**
@@ -22,7 +23,7 @@ interface LegPoses {
 }
 
 interface HumanoidSpec {
-  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher";
+  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "iceGolem";
   bodyRows: string[];
   colors: Record<string, string>;
   bladeKeys: BladeKeys;
@@ -228,6 +229,162 @@ const SOLDIER_LEGS: LegPoses = {
 const SOLDIER_ANCHOR_X = 4;
 
 // ---------------------------------------------------------------------------
+// Golem di ghiaccio: corpo massiccio di blocchi di ghiaccio, crepe scure, occhi bianchi, mazza di ghiaccio
+// ---------------------------------------------------------------------------
+
+const GOLEM_BODY_ROWS: string[] = [
+  ".......kkkkkk...........",
+  "......kwwllmmk..........",
+  ".....kwllllmmdk.........",
+  ".....kllekllmek.........",
+  ".....klllllmmdk.........",
+  "......kdmcmmdk..........",
+  "...kkkkkkkkkkkkkk.......",
+  "..kwwllkllllmmkmmk......",
+  ".kwllllkllclmmkmmdk.....",
+  ".klllmmklllllmdkmddk....",
+  ".klmmmdkllllmmdkkddk....",
+  ".kdmmdkklcllmmddkkdk....",
+  "..kddk.kllllmmdk.kddk...",
+  "..kddk.klllmmmdk.kmmk...",
+  "..kmmk.kmmcmmmdk.kmmk...",
+  "..kwwk.kddddddk..kwwk...",
+  "...kk..kmmmmmmk...kk....",
+  ".......kdmmmmdk.........",
+  "......kssssssssk........",
+  "......kkkkkkkkkk........",
+];
+
+const GOLEM_LEGS: LegPoses = {
+  stand: [
+    ".......kllmk.kllmk......",
+    ".......kllmk.kllmk......",
+    ".......klmdk.klmdk......",
+    ".......kmmdk.kmmdk......",
+    ".......kmcdk.kmmdk......",
+    "......kllmdk.kllmdk.....",
+    "......kmmmdk.kmmmdk.....",
+    "......kkkkkk.kkkkkk.....",
+    "........................",
+  ],
+  stride: [
+    ".......kllmk.kllmk......",
+    "......kllmk...kllmk.....",
+    "......klmdk...klmdk.....",
+    ".....kmmdk.....kmmdk....",
+    ".....kmcdk.....kmmdk....",
+    "....kllmdk.....kllmdk...",
+    "....kmmmdk.....kmmmdk...",
+    "....kkkkkk.....kkkkkk...",
+    "........................",
+  ],
+  passing: [
+    "........kllmmk..........",
+    "........kllmmk..........",
+    "........klmmdk..........",
+    "........kmmmdk..........",
+    "........kmcmdk..........",
+    ".......kllmmdk..........",
+    ".......kmmmmdk..........",
+    ".......kkkkkkk..........",
+    "........................",
+  ],
+  fall: [
+    ".......kllmk.kllmk......",
+    "......kllmk...kllmk.....",
+    ".....klmdk.....klmdk....",
+    "....kmmdk.......kmmdk...",
+    "....kkkk.........kkkk...",
+    "........................",
+    "........................",
+    "........................",
+    "........................",
+  ],
+};
+
+// ---------------------------------------------------------------------------
+// Lupo e melme (forme procedurali, vedi creatureTools.ts)
+// ---------------------------------------------------------------------------
+
+const WOLF_COLORS: Record<string, string> = {
+  k: PALETTE.black,
+  d: PALETTE.slate,
+  m: PALETTE.gray,
+  l: PALETTE.lightGray,
+  w: PALETTE.white,
+  e: PALETTE.yellow,
+  n: PALETTE.earthDark,
+  r: PALETTE.red,
+};
+
+const SLIME_COLORS: Record<string, string> = {
+  k: PALETTE.bogDark,
+  d: PALETTE.bog,
+  m: PALETTE.moss,
+  l: PALETTE.olive,
+  w: PALETTE.reed,
+  e: PALETTE.black,
+};
+
+/** Frame dei nemici animali: stesso schema di nomi degli umanoidi (Idle1-2, Walk1-3, AttackA-C, Hurt, Heap). */
+function registerCreature(
+  spriteManager: SpriteManager,
+  prefix: string,
+  framesByName: Record<string, string[]>,
+  colors: Record<string, string>,
+  anchorX: number
+): void {
+  for (const [frameName, pixelRows] of Object.entries(framesByName)) {
+    spriteManager.registerSprite(`${prefix}${frameName}`, pixelRows, colors, anchorX);
+  }
+}
+
+function registerWolf(spriteManager: SpriteManager): void {
+  const shape = { scale: 1, width: 31, height: 19 };
+  const pose = (name: WolfPose): string[] => composeWolf(shape, name);
+  registerCreature(
+    spriteManager,
+    "wolf",
+    {
+      Idle1: pose("stand"),
+      Idle2: pose("standBreath"),
+      Walk1: pose("run1"),
+      Walk2: pose("run2"),
+      Walk3: pose("run3"),
+      AttackA: pose("crouch"),
+      AttackB: pose("leap"),
+      AttackC: pose("bite"),
+      Hurt: pose("hurt"),
+      Heap: pose("lying"),
+    },
+    WOLF_COLORS,
+    4
+  );
+}
+
+function registerSlime(spriteManager: SpriteManager, prefix: string, width: number, height: number, anchorX: number): void {
+  const pose = (name: BlobPose): string[] => composeBlob(width, height, name);
+  registerCreature(
+    spriteManager,
+    prefix,
+    {
+      Idle1: pose("rest"),
+      Idle2: pose("squash"),
+      Walk1: pose("wobbleLeft"),
+      Walk2: pose("rest"),
+      Walk3: pose("wobbleRight"),
+      AttackA: pose("squash"),
+      AttackB: pose("stretch"),
+      AttackC: pose("rest"),
+      Hurt: pose("hurt"),
+      Heap: pose("puddle"),
+    },
+    SLIME_COLORS,
+    anchorX
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Arciere scheletro: lo scheletro con cappuccio verde, faretra sulla schiena e arco
 // ---------------------------------------------------------------------------
 
@@ -354,6 +511,27 @@ const SPECS: HumanoidSpec[] = [
     anchorX: 3,
     weapon: "bow",
     spriteWidth: 26,
+  },
+  {
+    idPrefix: "iceGolem",
+    bodyRows: GOLEM_BODY_ROWS,
+    colors: {
+      k: PALETTE.black,
+      d: PALETTE.blue,
+      m: PALETTE.lightBlue,
+      l: PALETTE.cyan,
+      w: PALETTE.iceWhite,
+      c: PALETTE.deepNavy,
+      e: PALETTE.white,
+      s: PALETTE.slate,
+    },
+    bladeKeys: { grip: "s", blade: "m", edge: "w", guard: "d" },
+    handX: 19,
+    handY: 14,
+    legs: GOLEM_LEGS,
+    anchorX: 4,
+    restingTip: { dx: 1, dy: -11 },
+    spriteWidth: 24,
   },
   {
     idPrefix: "soldier",
@@ -632,4 +810,7 @@ function registerBat(spriteManager: SpriteManager): void {
 export function registerEnemySprites(spriteManager: SpriteManager): void {
   SPECS.forEach((spec) => registerHumanoid(spriteManager, spec));
   registerBat(spriteManager);
+  registerWolf(spriteManager);
+  registerSlime(spriteManager, "slime", 16, 12, 1);
+  registerSlime(spriteManager, "slimeSmall", 12, 9, 1);
 }

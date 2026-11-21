@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.3.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.4.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -21,8 +21,10 @@ Il gioco è pensato per essere usato solo con la **tastiera**. Non ha audio.
 Un'ombra è calata sul regno. Dalla Foresta Oscura fino alle profondità del dungeon, scheletri, goblin e soldati
 corrotti servono un misterioso **Cavaliere Nero**.
 
-Tu sei il **Cavaliere di Ferro**: armato solo della tua spada, attraversi tre luoghi maledetti per sconfiggere
-il Cavaliere Nero e liberare il regno. La storia è tutta qui: nessun dialogo ti rallenta, l'azione viene prima di tutto.
+Tu sei il **Cavaliere di Ferro**: armato solo della tua spada, attraversi il regno per sconfiggere il Cavaliere Nero.
+Ma il Cavaliere Nero era solo un luogotenente: il vero nemico è il **Signore dell'Ombra**, che attende in cima alla sua torre.
+Per raggiungerlo dovrai attraversare la Palude Maledetta della **Strega**, i Picchi Ghiacciati del **Re dei Lupi** e infine la
+**Torre dell'Ombra**. La storia è tutta qui: nessun dialogo ti rallenta, l'azione viene prima di tutto.
 
 ## 3. Ambientazione
 
@@ -146,14 +148,19 @@ Un colpo subito **interrompe** il tuo attacco in corso. Il rinculo **non ti spin
 
 ## 7. Nemici
 
-I nemici hanno tre comportamenti diversi. Tutti, quando sei a portata, **preparano un attacco** (un breve gesto che puoi vedere) e poi colpiscono.
-I nemici non camminano nel vuoto né attraverso i muri.
+Tutti i nemici, quando sei a portata, **preparano un attacco** (un breve gesto che puoi vedere) e poi colpiscono.
+I nemici a terra non camminano nel vuoto, attraverso i muri, sugli spuntoni o nell'acqua.
 
 | Nemico | Salute | Danno | Velocità | Comportamento | Punti |
 |---|---|---|---|---|---|
 | **Scheletro Guerriero** | 40 | 10 | lenta (30) | **Pattuglia** una zona di 60 px per lato attorno al suo punto; se ti vede (80 px) ti affronta restando nella zona | 100 |
 | **Goblin** | 25 | 8 | veloce (55) | **Insegue**: aspetta, poi ti corre incontro se entri nei 110 px; smette se ti allontani oltre 165 px | 75 |
 | **Soldato Nemico** | 60 | 15 | lenta (25) | **Guardia**: sta fermo, si volta verso di te e **attacca solo se sei a portata** (24 px) | 150 |
+| **Arciere Scheletro** | 30 | 10 (freccia) | lenta (30) | **Tira frecce** a chi è alla sua altezza fino a 130 px; se ti avvicini troppo **indietreggia** | 125 |
+| **Pipistrello** | 15 | 8 | media (50) | **Vola**: ti segue restando sopra la tua testa e si lancia **in picchiata** verso il punto in cui eri | 80 |
+| **Lupo** | 30 | 9 | molto veloce (70) | **Insegue**; a 34 px si acquatta e **balza** in avanti (non oltre il bordo di un abisso) | 100 |
+| **Melma della Palude** | 36 | 8 | lentissima (18) | **Pattuglia**; quando muore **si divide in due melmine** (10 HP, veloci) | 60 (+25 per melmina) |
+| **Golem di Ghiaccio** | 70 | 15 | lentissima (16) | **Pattuglia**; è **corazzato**: l'attacco leggero gli fa metà danno, quello **pesante (J)** il danno pieno; non vacilla e non arretra | 250 |
 
 Dettagli utili per sconfiggerli:
 
@@ -162,29 +169,36 @@ Dettagli utili per sconfiggerli:
 | Scheletro | 0,4 s | **sì**, ma solo nei primi 0,15 s dell'attacco |
 | Goblin | 0,2 s (molto rapido) | no: una volta iniziato, colpisce comunque |
 | Soldato | 0,6 s | no: è "corazzato", subisce i danni ma completa l'attacco |
+| Arciere | 0,6 s (tende l'arco) | **sì**: colpito mentre tende l'arco non scocca |
+| Pipistrello | 0,35 s (sospeso a mezz'aria) | sì, durante la sospensione |
+| Lupo | 0,35 s (si acquatta) | sì, durante l'acquattamento |
+| Melma | 0,5 s | sì |
+| Golem | 0,8 s (alza la mazza) | no |
 
 Quando colpisci un nemico, **lampeggia di bianco**. Se è stordito dal colpo (scheletro) o sta per attaccare, ricordati che
 la **schivata** è lo strumento più sicuro: scatta durante la preparazione del suo colpo e passa attraverso l'attacco.
+La schivata passa anche attraverso le frecce e le magie. La spada **devia** (distrugge) frecce e dardi magici, ma **non le palle di fuoco**.
+
+### Pericoli dei livelli
+
+| Pericolo | Effetto | Come si affronta |
+|---|---|---|
+| **Spuntoni** | 12 danni e un rimbalzo all'indietro | saltali (sono larghi al massimo 36 px) |
+| **Acqua** (vasche della palude) | sei più lento, cadi piano; premendo salto **nuoti** verso l'alto anche senza toccare il fondo | - |
+| **Ghiaccio** | si scivola: si parte e ci si ferma con un certo ritardo | frena prima dei bordi e dei nemici |
+| **Piattaforme mobili** | vanno avanti e indietro (o su e giù) e ti trasportano | portano agli oggetti più in alto |
 
 ---
 
-### In arrivo nella versione 2.0
+## 8. I boss
 
-Il codice contiene già nuovi nemici e pericoli, che compariranno nei livelli nuovi (Palude Maledetta, Picchi Ghiacciati, Torre dell'Ombra):
+Ogni boss aspetta in un'**arena** alla fine del suo livello: **quando ci entri un cancello si chiude alle tue spalle**. Nessun boss vacilla quando lo
+colpisci (lampeggia soltanto). Prima di ogni attacco c'è una **preparazione** ben visibile: è il momento di schivare o di allontanarsi. La barra in basso
+mostra la salute e una tacca per ogni cambio di fase.
 
-| Novità | Come si comporta | Come si affronta |
-|---|---|---|
-| **Arciere Scheletro** (30 HP, freccia da 10) | tira frecce a chi è alla sua altezza fino a 130 px; se ti avvicini troppo indietreggia | colpiscilo mentre tende l'arco (annulla il tiro); la spada devia le frecce; la schivata ci passa attraverso |
-| **Pipistrello** (15 HP, picchiata da 8) | vola, ti segue restando sopra la testa e si lancia in picchiata | durante la breve pausa prima della picchiata spostati: punta dove eri |
-| **Spuntoni** | 12 danni e un rimbalzo all'indietro | saltali |
-| **Acqua** | sei più lento, cadi piano, puoi risalire premendo salto anche senza toccare il fondo | - |
-| **Ghiaccio** | si scivola: si parte e ci si ferma con un certo ritardo | frena prima dei bordi |
-| **Piattaforme mobili** | vanno avanti e indietro (o su e giù) e ti trasportano | - |
-| **Palle di fuoco** | non si possono deviare con la spada | schivale o saltale |
+### Il Cavaliere Nero (livello 3)
 
-## 8. Il boss: il Cavaliere Nero
-
-Aspetta nel fondo del dungeon (livello 3). **Quando entri nell'arena un cancello si chiude alle tue spalle**: non si può tornare indietro finché
+Aspetta nel fondo del dungeon. **Quando entri nell'arena un cancello si chiude alle tue spalle**: non si può tornare indietro finché
 non lo sconfiggi.
 
 | Dato | Valore |
@@ -210,6 +224,41 @@ attacco e l'altro (×0,75) e carica più spesso. Sulla barra in basso compare un
 - Appena dentro l'arena, a terra, c'è una pozione.
 - Sconfiggerlo vale 1000 punti.
 
+### La Strega della Palude (livello 4)
+
+300 HP, due fasi (sotto il 50% lancia più spesso). Vale 1200 punti.
+
+| Attacco | Quando | Danno | Come riconoscerlo |
+|---|---|---|---|
+| **Maleficio** | quando sei ad almeno 40 px | 10 per dardo | alza il bastone che si illumina per 0,7 s, poi lancia **tre dardi magici a ventaglio** verso di te |
+| **Covata** | se non ci sono già 2 melmine | - | alza il bastone per 0,8 s ed evoca **due melmine** ai suoi lati |
+| **Bastonata** | quando sei vicino | 14 | porta indietro il bastone per 0,55 s, poi colpisce davanti a sé |
+
+Consiglio: i dardi si deviano con la spada o si schivano; restare vicino la costringe alla bastonata, la più facile da evitare.
+
+### Il Re dei Lupi (livello 5)
+
+Un lupo enorme: 300 HP, due fasi. Vale 1400 punti.
+
+| Attacco | Quando | Danno | Come riconoscerlo |
+|---|---|---|---|
+| **Balzo** | quando sei ad almeno 60 px | 18 | si acquatta per 0,65 s, poi scatta in avanti velocissimo; dopo resta fermo 0,7 s |
+| **Branco** | se non ci sono già 2 lupi evocati | - | ulula per 0,9 s e chiama **due lupi** |
+| **Morso** | quando sei vicino | 16 | si acquatta per 0,45 s, poi azzanna |
+
+Consiglio: il balzo si schiva come la carica del Cavaliere Nero; quando ulula colpiscilo prima che arrivi il branco.
+
+### Il Signore dell'Ombra (livello 6, boss finale)
+
+340 HP, **tre fasi** (sotto il 66% evoca pipistrelli, sotto il 33% è più veloce e aggressivo). Vale 2500 punti.
+
+| Attacco | Quando | Danno | Come riconoscerlo |
+|---|---|---|---|
+| **Lama d'ombra** | quando sei vicino | 20 | alza la spada viola per 0,6 s, poi colpisce davanti a sé (portata 36 px) |
+| **Scatto d'ombra** | quando sei ad almeno 70 px | 16 | si piega per 0,7 s, poi scatta in avanti lasciando una scia |
+| **Fuoco infernale** | quando sei ad almeno 50 px | 10 per palla | alza la spada che si infiamma per 0,75 s, poi lancia **tre palle di fuoco**: **non si deviano**, vanno schivate o saltate |
+| **Ali della notte** (dalla seconda fase) | se non ci sono già 2 pipistrelli evocati | - | alza la spada per 0,9 s ed evoca due pipistrelli |
+
 ---
 
 ## 9. I livelli
@@ -218,10 +267,14 @@ attacco e l'altro (×0,75) e carica più spesso. Sulla barra in basso compare un
 |---|---|---|---|---|
 | **1 – Foresta Oscura** | foresta | 1536 px | 2 scheletri, 3 goblin, 2 soldati | raggiungere la porta |
 | **2 – Castello Medievale** | castello | 1792 px | 2 scheletri, 3 goblin, 3 soldati | raggiungere la porta |
-| **3 – Dungeon Sotterraneo** | dungeon | 1536 px | 4 scheletri, 2 goblin, 1 soldato + **boss** | sconfiggere il boss |
+| **3 – Dungeon Sotterraneo** | dungeon | 1536 px | 4 scheletri, 2 goblin, 1 soldato + **Cavaliere Nero** | sconfiggere il boss |
+| **4 – Palude Maledetta** | palude | 2048 px | 3 melme, 3 pipistrelli, 2 arcieri, 1 goblin, 1 scheletro + **Strega della Palude** | sconfiggere il boss |
+| **5 – Picchi Ghiacciati** | montagna innevata | 2048 px | 3 lupi, 2 pipistrelli, 1 golem, 1 arciere, 1 goblin + **Re dei Lupi** | sconfiggere il boss |
+| **6 – Torre dell'Ombra** | torre | 2304 px | 2 soldati, 2 arcieri, 2 pipistrelli, 1 golem, 1 melma, 1 scheletro, 1 lupo + **Signore dell'Ombra** | sconfiggere il boss |
 
-Ogni livello ha **abissi** (livelli 1 e 2: tre; livello 3: due), **piattaforme sospese** (si attraversano dal basso e ci si sale sopra), blocchi di pietra, e
-oggetti da raccogliere. La telecamera segue il cavaliere.
+Ogni livello ha **abissi**, **piattaforme sospese** (si attraversano dal basso e ci si sale sopra), blocchi di pietra e oggetti da raccogliere.
+I livelli 4-6 hanno anche **pericoli** (vasche d'acqua, ghiaccio, spuntoni) e **piattaforme mobili**. La telecamera segue il cavaliere.
+Dopo il Signore dell'Ombra compare la schermata di vittoria.
 
 A inizio livello compare il nome; a fine livello un riquadro mostra bonus, gemme e salute recuperata.
 
@@ -235,7 +288,7 @@ Si raccolgono semplicemente toccandoli. Alcuni sono su piattaforme sospese: biso
 |---|---|---|
 | **Pozione** | boccetta rossa | **+30 HP** (non oltre il massimo) |
 | **Moneta** | disco giallo | **+50 punti** |
-| **Gemma** | cristallo azzurro | **+200 punti** e conta come *gemma* (1 per livello) |
+| **Gemma** | cristallo azzurro | **+200 punti** e conta come *gemma* (almeno 1 per livello, 2 nella torre) |
 
 Quando raccogli un oggetto compare una scritta con il bonus (per esempio "+30 HP").
 
@@ -246,12 +299,15 @@ Quando raccogli un oggetto compare una scritta con il bonus (per esempio "+30 HP
 | Azione | Punti |
 |---|---|
 | Scheletro / Goblin / Soldato | 100 / 75 / 150 |
-| Cavaliere Nero | 1000 |
+| Arciere / Pipistrello / Lupo | 125 / 80 / 100 |
+| Melma / Melmina / Golem | 60 / 25 / 250 |
+| Cavaliere Nero / Strega / Re dei Lupi / Signore dell'Ombra | 1000 / 1200 / 1400 / 2500 |
 | Moneta | 50 |
 | Gemma | 200 |
 | Livello completato | 500 |
 
-Il punteggio massimo teorico (tutto raccolto, tutti i nemici sconfitti) è **5900** punti.
+Il punteggio massimo teorico (tutto raccolto, tutti i nemici del livello sconfitti, senza contare quelli evocati dai boss) è
+**16875** punti: 5900 nei primi tre livelli e 10975 negli altri tre. Anche i nemici evocati dai boss danno punti.
 Se perdi una vita, il punteggio torna al valore che avevi all'inizio di quel livello.
 
 **Record.** Il tuo miglior punteggio viene salvato **nel browser** (non su un server). Compare nella schermata del titolo, nel

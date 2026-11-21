@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.0.0-alpha.3**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.0.0-alpha.4**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -155,9 +155,13 @@ Per cambiare i tasti basta modificare `CONTROLS_CONFIG`.
   - Castello: cielo a fasce, stelle, colline, castelli lontani con tetti conici e finestre accese, mura merlate in mattoni ombreggiati con edera,
     colonne cilindriche con stendardi.
   - Dungeon: muro di mattoni ombreggiati con muschio e crepe, celle ad arco con sbarre, torce con alone e fiamma a ciclo dei colori, catene, foschia.
+  - Palude (2.0 Fase 4): cielo torbido, luna malata dietro le nuvole, alberi morti e salici piangenti, nebbia a retino, lucciole a ciclo dei colori.
+  - Picchi Ghiacciati: alba con aurora boreale (nastri ondulati a retino), due catene di montagne innevate, pini con la neve, nevicata a due velocità.
+  - Torre dell'Ombra: cielo in tempesta con fulmini lontani, rovine che fluttuano, muro viola con vetrate gotiche a ciclo dei colori, bracieri di fuoco magico.
 - **Terreno (2.0).** `TerrainRenderer` disegna le piattaforme con la tessitura dell'ambientazione (`THEME_STYLES` in `levelConfig.ts`): erba e terra
   con sassi, piastrelle di pietra smussate, mattoni del dungeon; piattaforme sospese come assi con giunti e ombra a retino; porta d'uscita con arco
-  di pietra e luce calda; cancello a saracinesca. I motivi sono ancorati alle coordinate del mondo e si disegna solo la parte visibile.
+  di pietra e luce calda; cancello a saracinesca. Tessiture aggiunte nella Fase 4: fango e muschio con canne palustri e bolle (`swampMud`), neve e roccia con
+  ghiaccioli (`snowAndRock`), pietra con rune luminose a ciclo dei colori (`runeStone`). L'acqua prende i colori dell'ambientazione (`waterColors`). I motivi sono ancorati alle coordinate del mondo e si disegna solo la parte visibile.
 - **Interfaccia (2.0).** HUD su pannello metallico a fasce con bordo dorato; salute a segmenti ombreggiati; titoli con riempimento a fasce
   (`rowColors` di `drawText`); riquadri decorati (`drawOrnateFrame`) per messaggi, menu e schermate.
 - **Pausa.** Oscuramento con un retino a scacchi di pixel (un'immagine creata una volta sola): niente trasparenze.
@@ -286,8 +290,10 @@ completamento (`reachExit` o `defeatBoss`), eventuale boss (`bossId`, `bossSpawn
 - **Punto sicuro.** Il motore ricorda l'ultima posizione in cui il giocatore poggiava **interamente** sul terreno; dopo una caduta si riparte da lì.
 - **Arena.** Superata `bossArenaStartX` (+24 px) viene aggiunta una piattaforma solida alle spalle del giocatore, disegnata come cancello a sbarre.
 
-**Regole di progettazione (verificate dai test):** abissi ≤ 36 px, piattaforme raggiungibili con una salita ≤ 44 px, nemici e oggetti appoggiati su una superficie,
-uscita su terreno. `npm run verify-docs` applica le stesse regole al livello aggiunto nell'esempio 9 del manuale.
+**Regole di progettazione (verificate dai test):** abissi ≤ 36 px (le **vasche** con il fondo al massimo 44 px più in basso non contano come abissi),
+piattaforme raggiungibili con una salita ≤ 44 px, nemici a terra e oggetti appoggiati su una superficie, nemici volanti a mezz'aria sopra una superficie,
+spuntoni appoggiati e larghi al massimo 36 px, ghiaccio a cavallo della superficie, acqua con il fondo, piattaforme mobili dentro la mappa, boss appoggiato,
+uscita su terreno. Il bot di percorribilità usa solo il terreno fisso: le piattaforme mobili servono a raggiungere gli oggetti, mai obbligatorie. `npm run verify-docs` applica le stesse regole al livello aggiunto nell'esempio 9 del manuale.
 
 ---
 
@@ -305,8 +311,9 @@ d'aggancio elencati, volutamente minimi.
 | Attacchi speciali, magie, abilità | 1.2-1.3 | `GameAction`, `Player.handleInput`, `ATTACK_DEFINITIONS` | nuove azioni nei controlli, un costo (risorsa) e un nuovo stato di animazione |
 | Nuove armi | 1.3 | `ATTACK_DEFINITIONS`, `COMBO_DEFINITIONS` | oggi esiste un solo insieme globale di attacchi: servirebbe una `WeaponDefinition` con i propri attacchi e combo, scelta dal giocatore |
 | Boss con più fasi o attacchi diversi | già possibile (2.0) | `BossDefinition.attacks` e `phases[].attackWeights` | solo dati per i 4 tipi esistenti; un **tipo** di attacco nuovo richiede un caso in `Boss.ts` (`canPerform`, `onActivePhaseStart`, `getAttackHitbox`) e le animazioni in `BOSS_ATTACK_ANIMATIONS` |
-| Nemici a distanza e volanti, proiettili, pericoli, piattaforme mobili | già possibile (2.0) | `ENEMY_CONFIG` (`ranged`, `flight`), `PROJECTILE_CONFIG`, `LevelDefinition.hazards` e `movingPlatforms` | solo dati e sprite; usati nei livelli dalla Fase 4 |
-| Nuove ambientazioni | 1.1 | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer` | un nuovo caso in `BackgroundRenderer.render` e i colori del terreno |
+| Nemici a distanza e volanti, balzo, divisione, corazza, proiettili, pericoli, piattaforme mobili | già possibile (2.0) | `ENEMY_CONFIG` (`ranged`, `flight`, `lunge`, `splitInto`, `armor`), `PROJECTILE_CONFIG`, `LevelDefinition.hazards` e `movingPlatforms` | solo dati e sprite |
+| Boss con una silhouette nuova | già possibile (2.0) | `BOSS_SPRITE_SHAPES` (`knight`, `witch`, `sorcerer`, `beast`) | una forma nuova richiede una funzione che componga i frame in `bossSprites.ts` e la sua hitbox in `SHAPE_HITBOX` |
+| Nuove ambientazioni | già possibile (2.0: sei) | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer`, `TerrainRenderer` | un caso in `BackgroundRenderer.buildTheme` (livelli di parallasse) e i colori del terreno; una tessitura nuova richiede un caso in `TerrainRenderer` |
 | Personaggi alternativi, equipaggiamento | 2.0 | `PLAYER_CONFIG`, `knightSprites.ts` | un `CharacterDefinition` che sostituisce la configurazione e gli sprite del giocatore |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |
 | Selettore di difficoltà | da implementare | `DIFFICULTY_CONFIG` (già presente) | un menu e passare la scelta a `LevelManager.createEnemies` |

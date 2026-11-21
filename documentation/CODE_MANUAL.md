@@ -1,6 +1,6 @@
 # Manuale del codice
 
-Versione del gioco descritta: **2.0.0-alpha.3**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
+Versione del gioco descritta: **2.0.0-alpha.4**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
 per le regole di gioco `GAME_MANUAL.md`.
 
 Questo manuale spiega **cosa c'è in ogni file**, **come si muove il codice** e, nella parte finale,
@@ -92,7 +92,7 @@ modificare qui, senza toccare la logica.
 | `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco (velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) |
 | `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili), `ITEM_SIZE` |
-| `levelConfig.ts` | `LEVEL_CONFIG` (i livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`) |
+| `levelConfig.ts` | `LEVEL_CONFIG` (i 6 livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
 | `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
 | `animationConfig.ts` | `PLAYER_ANIMATIONS`, `ENEMY_ANIMATIONS`, `BOSS_ANIMATIONS` |
 
@@ -165,6 +165,9 @@ di nessuna combo. `COMBO_DEFINITIONS` contiene `tripleSlash` (Spazio ×3, finest
 | `behavior` | `"patrol"`, `"chase"`, `"guard"`, `"ranged"` (tira proiettili, serve `ranged`) o `"flyer"` (vola, serve `flight`) |
 | `ranged` (facoltativo) | `projectileId`, `launchOffsetY` (altezza di lancio dalla cima dell'hitbox), `retreatDistance` (sotto questa distanza indietreggia) |
 | `flight` (facoltativo) | `hoverHeight` (quota sopra la testa del giocatore), `diveSpeed` (velocità della picchiata), `bobAmplitude` e `bobPeriodMs` (oscillazione) |
+| `lunge` (facoltativo) | `speed`: nella fase attiva dell'attacco il nemico balza in avanti (non oltre il bordo di un abisso); l'area d'urto è il corpo più 6 px davanti (lupo) |
+| `splitInto` (facoltativo) | `enemyType`, `count`: alla morte compaiono questi nemici al suo posto (melma → 2 melmine) |
+| `armor` (facoltativo) | `damageMultiplier`, `breakDamage`: i colpi con danno minore di `breakDamage` fanno solo quella frazione (golem: l'attacco leggero fa metà danno, il pesante il danno pieno) |
 | `scoreReward` | punti alla sconfitta |
 | `hitbox` | dimensioni del corpo (`x`,`y` non usati) |
 
@@ -254,7 +257,7 @@ regolano hit-stop, tremolio e polvere.
 L'ordine dentro `update`: timer → (morto / stordito / input) → gravità → `moveAndCollide` → stato → animazione.
 Priorità degli stati in `updateState()`: morto > stordito > schivata > attacco > aria > camminata > fermo.
 
-**`Enemy`** – decide `EnemyAISystem`, esegue `Enemy`. Funzioni: `setMovement(direction, speedMultiplier)`,
+**`Enemy`** – decide `EnemyAISystem`, esegue `Enemy`. Balzo, divisione (`drainSplitRequests`, il motore crea i nemici) e corazza (`lastHitDamage` = danno davvero subito) sono gestiti qui. Funzioni: `setMovement(direction, speedMultiplier)`,
 `faceTowards(x)`, `beginAttack(target?)`, `setFlightTarget(x, y)` (volanti), `getAttackHitbox()`, `markPlayerHit()`,
 `receiveHit(damage, hitDirection)`, `drainProjectileLaunches()` (a distanza), `update(...)`, `render(...)`. Getter: `isAlive`,
 `isRemovable`, `canAct`, `isAttacking`, `isAttackReady`, `isFlying`, `centerX`, `centerY`, `scoreReward`. Proprietà
@@ -320,12 +323,14 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `SpriteManager.ts` | `SpriteManager` | `registerSprite(id, righe, colori, anchorX)`, `drawSprite(...)`, `drawSpriteAligned(...)` (allinea lo sprite all'hitbox con l'ancora, anche specchiato), `drawSpriteSilhouette(..., colore)`, `getSpriteSize`, `getSpriteAnchorX`; crea le versioni specchiate e, alla prima richiesta, le sagome a tinta unita |
 | `AnimationManager.ts` | `AnimationPlayer`, `AnimationDefinition` | riproduce un'animazione: `play`, `restart`, `update`, `currentFrameId`; durata per frame (`frameDurationsMs`) opzionale |
 | `EffectsManager.ts` | `EffectsManager` | particelle, scritte, tremolio, hit-stop |
-| `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`: 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia) |
-| `TerrainRenderer.ts` | `TerrainRenderer` | terreno e piattaforme con la tessitura dell'ambientazione (`THEME_STYLES`), porta d'uscita, cancello dell'arena |
+| `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`, `swamp`, `ice`, `tower`: 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia, lucciole, aurora, neve, fulmini, vetrate, bracieri) |
+| `TerrainRenderer.ts` | `TerrainRenderer` | terreno e piattaforme con la tessitura dell'ambientazione (`THEME_STYLES`: erba, pietra, mattoni, fango, neve, pietra runica), piattaforme mobili, pericoli (spuntoni, ghiaccio, acqua in due tempi), porta d'uscita, cancello dell'arena |
 | `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe, `addOutline` (contorno automatico), `remapSpriteKeys` (varianti) |
 | `sprites/knightSprites.ts` | `registerKnightSprites`, `KNIGHT_ANCHOR_X` | cavaliere 24×30 (attacchi 44×30): parte superiore + gambe + spada; ancora alla colonna 7 |
-| `sprites/enemySprites.ts` | `registerEnemySprites` | nemici da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma, mano, ancora): scheletro 20×26, goblin 20×19, soldato 20×27 |
-| `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES` | boss 36×41 a piena risoluzione (corna, spallacci, mantello, spadone); i colori di ogni boss sono in `BOSS_SPRITE_STYLES` (chiavi k, n, d, s, w, r, e, y, c, p) |
+| `sprites/enemySprites.ts` | `registerEnemySprites` | umanoidi da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma spada o arco, mano, ancora): scheletro, arciere, goblin, soldato, golem; pipistrello disegnato a metà e specchiato; lupo e melme con le forme procedurali di `creatureTools.ts` |
+| `sprites/creatureTools.ts` (2.0) | `composeWolf`, `composeBlob`, `fillShadedEllipse` | creature non umanoidi composte da ellissi ombreggiate e rettangoli, con contorno automatico: lo stesso codice disegna il lupo (scala 1) e il Re dei Lupi (scala 2) |
+| `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES`, `BOSS_SPRITE_SHAPES` | quattro forme (`BOSS_SPRITE_SHAPES`, se manca: `knight`): **knight** cavaliere corazzato 36×41 (Cavaliere Nero), **witch** strega con veste e bastone, **sorcerer** stregone incappucciato con corona e spada d'ombra (36×44), **beast** lupo gigante 60×42 (hitbox 40×24). La forma impone la hitbox; i colori di ogni boss sono in `BOSS_SPRITE_STYLES` con le chiavi della sua forma |
+| `sprites/projectileSprites.ts` | `registerProjectileSprites` | freccia, dardo magico (2 frame), palla di fuoco (2 frame) |
 | `sprites/itemSprites.ts`, `uiSprites.ts` | funzioni | oggetti 8×8 ombreggiati; icone dell'HUD (`hudLife`, `hudHeart`, `hudSkull`) |
 
 **Come si descrive uno sprite.** Uno sprite è una lista di righe di testo; `.` è trasparente, ogni altra lettera è una
@@ -362,8 +367,8 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 | File | Tipi |
 |---|---|
 | `GameTypes.ts` | `GameStateName`, `GameAction`, `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
-| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition`, `ComboDefinition`, `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
-| `LevelTypes.ts` | `ThemeId`, `TerrainTexture`, `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` |
+| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition`, `ComboDefinition`, `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
+| `LevelTypes.ts` | `ThemeId` (6 ambientazioni), `TerrainTexture` (6 tessiture), `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` |
 
 ---
 
@@ -383,7 +388,7 @@ registra gli sprite, carica il livello 1, crea giocatore/nemici/oggetti → `sta
 ### 4.3 `updatePlaying` (l'ordine conta)
 piattaforme mobili (trasportano chi ci sta sopra) → ambiente del giocatore (acqua, ghiaccio) → `player.update` → spuntoni →
 effetti di movimento (polvere) → punto sicuro → arena del boss → combattimento (`processPlayerAttack` → effetti/punti →
-IA dei nemici → `enemy.update` e proiettili lanciati → attacchi nemici → boss, i suoi proiettili e i suoi evocati →
+IA dei nemici → `enemy.update`, proiettili lanciati e melme che si dividono → attacchi nemici → boss, i suoi proiettili e i suoi evocati →
 `projectileSystem.update` → rimozione dei morti) → oggetti → effetti di danno → ripartenza dopo la morte o caduta →
 completamento del livello → camera.
 
@@ -590,26 +595,27 @@ Servono 6 passi: tipo, statistiche, animazioni, sprite (2 punti) e posizione nel
 
 Codice originale:
 ```ts
-export type EnemyTypeId = "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "bat";
+  | "iceGolem";
 ```
 Codice aggiornato:
 ```ts
-export type EnemyTypeId = "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "bat" | "brute";
+  | "iceGolem"
+  | "brute";
 ```
 
 #### Passo 2 – `src/config/enemyConfig.ts`
 
-**Cerca:** `ENEMY_CONFIG`, in fondo alla voce `bat` (l'ultima).
+**Cerca:** `ENEMY_CONFIG`, in fondo alla voce `iceGolem` (l'ultima).
 
 Codice originale:
 ```ts
-    flight: { hoverHeight: 26, diveSpeed: 150, bobAmplitude: 4, bobPeriodMs: 900 },
+    armor: { damageMultiplier: 0.5, breakDamage: 30 },
   },
 };
 ```
 Codice aggiornato:
 ```ts
-    flight: { hoverHeight: 26, diveSpeed: 150, bobAmplitude: 4, bobPeriodMs: 900 },
+    armor: { damageMultiplier: 0.5, breakDamage: 30 },
   },
   brute: {
     id: "brute",
@@ -640,12 +646,12 @@ Codice aggiornato:
 
 Codice originale:
 ```ts
-  bat: createEnemyAnimations("bat"),
+  iceGolem: createEnemyAnimations("iceGolem"),
 };
 ```
 Codice aggiornato:
 ```ts
-  bat: createEnemyAnimations("bat"),
+  iceGolem: createEnemyAnimations("iceGolem"),
   brute: createEnemyAnimations("brute"),
 };
 ```
@@ -670,7 +676,7 @@ import type { EnemyTypeId } from "../../types/EntityTypes";
 
 Codice originale:
 ```ts
-  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher";
+  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "iceGolem";
 ```
 Codice aggiornato:
 ```ts
@@ -759,14 +765,16 @@ Codice aggiornato:
 
 #### Passo 2 – `src/config/enemyConfig.ts` (comportamento)
 
-**Cerca:** `behavior: "patrol"`.
+**Cerca:** nella voce `skeleton`, `behavior: "patrol"` (subito dopo `patrolDistance: 60`).
 
 Codice originale:
 ```ts
+    patrolDistance: 60,
     behavior: "patrol",
 ```
 Codice aggiornato:
 ```ts
+    patrolDistance: 60,
     behavior: "chase",
 ```
 
@@ -870,8 +878,9 @@ funziona da solo perché `healAmount > 0`.
 
 ### Esempio 9 – Aggiungere un nuovo livello
 
-**Obiettivo:** inserire un nuovo livello ("Rovine Antiche", ambientazione castello) **prima** del livello del boss,
-che diventa il livello 4.
+**Obiettivo:** inserire un nuovo livello ("Rovine Antiche", ambientazione castello) **prima** del dungeon del Cavaliere Nero,
+che diventa il livello 4. Poiché gli `id` devono restare consecutivi, i livelli successivi (palude, picchi, torre) vanno rinumerati
+(passi 2-4).
 
 #### Passo 1 – `src/config/levelConfig.ts`
 
@@ -926,14 +935,61 @@ Codice aggiornato:
     name: "Dungeon Sotterraneo",
 ```
 
+#### Passo 2 – `src/config/levelConfig.ts`
+
+**Cerca:** l'inizio della Palude Maledetta.
+
+Codice originale:
+```ts
+    id: 4,
+    name: "Palude Maledetta",
+```
+Codice aggiornato:
+```ts
+    id: 5,
+    name: "Palude Maledetta",
+```
+
+#### Passo 3 – `src/config/levelConfig.ts`
+
+**Cerca:** l'inizio dei Picchi Ghiacciati.
+
+Codice originale:
+```ts
+    id: 5,
+    name: "Picchi Ghiacciati",
+```
+Codice aggiornato:
+```ts
+    id: 6,
+    name: "Picchi Ghiacciati",
+```
+
+#### Passo 4 – `src/config/levelConfig.ts`
+
+**Cerca:** l'inizio della Torre dell'Ombra.
+
+Codice originale:
+```ts
+    id: 6,
+    name: "Torre dell'Ombra",
+```
+Codice aggiornato:
+```ts
+    id: 7,
+    name: "Torre dell'Ombra",
+```
+
 **Spiegazione.** Un livello è solo un oggetto dati: nessun codice del motore cambia. Regole da rispettare:
 gli `id` sono consecutivi da 1 (il motore passa a `id + 1` e dopo l'ultimo mostra la vittoria); gli abissi non più larghi di
 circa 36 px; le piattaforme non più di circa 44 px sopra una superficie da cui salire; i nemici e gli oggetti poggiano su una
 superficie (nemico: `y = superficie − altezza hitbox`; oggetto: `y = superficie − 8`); l'uscita (`exitX`) sta su un tratto di terreno.
-Le ambientazioni disponibili sono `forest`, `castle`, `dungeon`. Il boss (livello 4) mantiene arena e posizioni invariate.
+Le ambientazioni disponibili sono `forest`, `castle`, `dungeon`, `swamp`, `ice`, `tower`. Il dungeon (ora livello 4) mantiene
+boss, arena e posizioni invariate. Si può anche aggiungere un livello in fondo all'elenco (id 7) senza rinumerare: diventerebbe
+l'ultimo, giocato dopo il Signore dell'Ombra.
 
 **Risultato atteso:** dopo il Castello Medievale compare "LIVELLO 3 – ROVINE ANTICHE"; raggiunta la porta in fondo si
-passa al Dungeon (ora livello 4) con il boss; vinto il boss, la vittoria.
+passa al Dungeon (ora livello 4) con il Cavaliere Nero, poi a Palude (5), Picchi (6) e Torre (7); vinto il Signore dell'Ombra, la vittoria.
 
 ### Esempio 10 – Aggiungere un boss
 
@@ -947,6 +1003,9 @@ Codice originale:
 ```ts
 export const BOSS_CATALOG: Record<string, BossDefinition> = {
   [BOSS_CONFIG.id]: BOSS_CONFIG,
+  [SWAMP_WITCH_CONFIG.id]: SWAMP_WITCH_CONFIG,
+  [WOLF_KING_CONFIG.id]: WOLF_KING_CONFIG,
+  [SHADOW_LORD_CONFIG.id]: SHADOW_LORD_CONFIG,
 };
 ```
 Codice aggiornato:
@@ -975,6 +1034,9 @@ const SKELETON_KING_CONFIG: BossDefinition = {
 
 export const BOSS_CATALOG: Record<string, BossDefinition> = {
   [BOSS_CONFIG.id]: BOSS_CONFIG,
+  [SWAMP_WITCH_CONFIG.id]: SWAMP_WITCH_CONFIG,
+  [WOLF_KING_CONFIG.id]: WOLF_KING_CONFIG,
+  [SHADOW_LORD_CONFIG.id]: SHADOW_LORD_CONFIG,
   [SKELETON_KING_CONFIG.id]: SKELETON_KING_CONFIG,
 };
 ```
@@ -985,14 +1047,14 @@ export const BOSS_CATALOG: Record<string, BossDefinition> = {
 
 Codice originale:
 ```ts
+    c: PALETTE.wine,
     p: PALETTE.purple,
   },
-};
-
-const BLADE_KEYS: BladeKeys
+  swampWitch: {
 ```
 Codice aggiornato:
 ```ts
+    c: PALETTE.wine,
     p: PALETTE.purple,
   },
   skeletonKing: {
@@ -1007,9 +1069,7 @@ Codice aggiornato:
     c: PALETTE.violetDark,
     p: PALETTE.violet,
   },
-};
-
-const BLADE_KEYS: BladeKeys
+  swampWitch: {
 ```
 
 #### Passo 3 – `src/config/levelConfig.ts`
@@ -1032,8 +1092,9 @@ boss del catalogo, con il nome `<id>Idle1`, `<id>SlashA`, ecc.; per questo serve
 (lettere: `k` contorno, `n` ombra profonda, `d` armatura, `s` luci, `w` corna e lama, `r` dettagli, `e` bagliore degli occhi e della scia,
 `y` impugnatura e finiture, `c` e `p` mantello in ombra e in luce: tutte devono avere un colore). **Le fasi** sono l'elenco
 `phases`, ordinato per soglia decrescente: una fase è attiva quando la salute in % scende sotto la sua soglia; l'HUD mostra
-una tacca sulla barra per ogni soglia sotto il 100. **Limite:** tutti i boss condividono la forma dello sprite (hitbox 24×40
-obbligatoria): per una silhouette diversa servirebbe disegnare nuove righe di sprite in `bossSprites.ts`.
+una tacca sulla barra per ogni soglia sotto il 100. Il Re Scheletro non è in `BOSS_SPRITE_SHAPES`, quindi usa la forma
+`knight` (hitbox 24×40 obbligatoria). Per un'altra silhouette si sceglie una forma esistente (`witch`, `sorcerer`, `beast`) con la sua hitbox e i colori
+con le chiavi di quella forma; una forma del tutto nuova richiede di disegnarne i frame in `bossSprites.ts`.
 Gli attacchi sono dati: il Re Scheletro usa gli stessi tipi del Cavaliere Nero (carica e fendente) con numeri diversi; per
 dargli anche un ventaglio di proiettili o un'evocazione basta aggiungere un attacco `projectile` o `summon` in `attacks` e il
 suo peso in `attackWeights` delle fasi (vedi la tabella degli attacchi in 3.1).

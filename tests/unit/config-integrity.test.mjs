@@ -61,7 +61,9 @@ export default async function (t, load) {
   ];
   const badAnchors = [];
   for (const [prefix, hitbox] of hitboxByPrefix) {
-    const frames = [...sprites.sprites].filter(([id]) => id.startsWith(prefix) && !id.endsWith("Heap") && !id.endsWith("DeadLie"));
+    // solo i frame di questo personaggio (wolf non deve prendere i frame di wolfKing, slime quelli di slimeSmall)
+    const framePattern = new RegExp(`^${prefix}(Idle|Walk|Attack|Hurt|Slash|Charge|Cast|Jump|Fall|Dodge|DeadFall|Heavy)`);
+    const frames = [...sprites.sprites].filter(([id]) => framePattern.test(id));
     if (frames.length === 0) badAnchors.push(`${prefix}: nessuno sprite`);
     for (const [spriteId, sprite] of frames) {
       // l'hitbox deve stare dentro lo sprite: ancora + larghezza entro la larghezza, sprite non più basso dell'hitbox
@@ -126,7 +128,11 @@ export default async function (t, load) {
     }
   }).map((attack) => `${boss.id}.${attack.id}`));
   t("gli attacchi dei boss hanno tipo conosciuto, tempi e valori validi", badBossAttacks.length === 0, badBossAttacks.join(", "));
-  t("i boss hanno hitbox 24x40 (forma dello sprite)", Object.values(BOSS_CATALOG).every((boss) => boss.hitbox.width === 24 && boss.hitbox.height === 40));
+  const shapeHitbox = { knight: [24, 40], witch: [24, 40], sorcerer: [24, 40], beast: [40, 24] };
+  t("ogni boss ha la hitbox della sua forma di sprite (24x40 umanoidi, 40x24 belva)", Object.values(BOSS_CATALOG).every((boss) => {
+    const [width, height] = shapeHitbox[bossSprites.BOSS_SPRITE_SHAPES[boss.id] ?? "knight"];
+    return boss.hitbox.width === width && boss.hitbox.height === height;
+  }));
 
   // ---------- oggetti ----------
   t("ITEM_CONFIG: la chiave coincide con l'id e lo sprite esiste", Object.entries(ITEM_CONFIG).every(([key, item]) => key === item.id && sprites.has(item.spriteId)));
@@ -170,13 +176,17 @@ export default async function (t, load) {
   t("ogni ambientazione usata ha uno stile", LEVEL_CONFIG.every((level) => THEME_STYLES[level.theme] !== undefined));
   const themeColors = Object.values(THEME_STYLES).flatMap((style) => [...style.surfaceColors, ...style.fillColors, ...style.ledgeColors, ...style.detailColors]);
   t("tutti i colori del terreno (THEME_STYLES) sono della palette", themeColors.every((color) => paletteSet.has(color)) && themeColors.length === Object.keys(THEME_STYLES).length * 12);
-  t("ogni ambientazione ha una tessitura del terreno conosciuta", Object.values(THEME_STYLES).every((style) => ["grassAndEarth", "stoneTiles", "dungeonBricks"].includes(style.terrainTexture)));
+  t("ogni ambientazione ha una tessitura del terreno conosciuta", Object.values(THEME_STYLES).every((style) => ["grassAndEarth", "stoneTiles", "dungeonBricks", "swampMud", "snowAndRock", "runeStone"].includes(style.terrainTexture)));
+  t("i colori dell'acqua delle ambientazioni sono della palette", Object.values(THEME_STYLES).every((style) => style.waterColors === undefined || [...style.waterColors.depth, style.waterColors.veil, ...style.waterColors.surface].every((color) => paletteSet.has(color))));
   for (const level of LEVEL_CONFIG) {
     const problems = [];
     const ground = level.platforms.filter((p) => p.y === 200 && !p.oneWay).sort((a, b) => a.x - b.x);
     for (let i = 1; i < ground.length; i++) {
-      const gap = ground[i].x - (ground[i - 1].x + ground[i - 1].width);
-      if (gap > 36) problems.push(`abisso di ${gap}px`);
+      const gapStart = ground[i - 1].x + ground[i - 1].width;
+      const gap = ground[i].x - gapStart;
+      // una vasca (fondo solido poco più in basso, sotto tutto lo spazio) non è un abisso
+      const isBasin = level.platforms.some((p) => !p.oneWay && p.y > 200 && p.y - 200 <= 44 && p.x <= gapStart && p.x + p.width >= ground[i].x);
+      if (gap > 36 && !isBasin) problems.push(`abisso di ${gap}px`);
     }
     if (ground[ground.length - 1].x + ground[ground.length - 1].width < level.width) problems.push("terreno non arriva al bordo");
     if (level.platforms.some((p) => p.x < 0 || p.x + p.width > level.width)) problems.push("piattaforma fuori mappa");
@@ -189,6 +199,12 @@ export default async function (t, load) {
       if (def === undefined) { problems.push(`tipo nemico sconosciuto ${enemy.type}`); continue; }
       const feetY = enemy.position.y + def.hitbox.height;
       const centerX = enemy.position.x + def.hitbox.width / 2;
+      if (def.behavior === "flyer") {
+        // i volanti partono a mezz'aria, sopra una superficie e dentro la mappa
+        const hasSurfaceBelow = level.platforms.some((p) => centerX >= p.x && centerX <= p.x + p.width && p.y >= feetY + 20);
+        if (!hasSurfaceBelow || enemy.position.y < 24 || enemy.position.x < 0 || enemy.position.x + def.hitbox.width > level.width) problems.push(`volante ${enemy.type}@${enemy.position.x} fuori posto`);
+        continue;
+      }
       if (!level.platforms.some((p) => centerX >= p.x && centerX <= p.x + p.width && Math.abs(p.y - feetY) <= 0.5)) problems.push(`nemico ${enemy.type}@${enemy.position.x} non appoggiato`);
     }
     for (const item of level.items) {
@@ -203,6 +219,26 @@ export default async function (t, load) {
       problems.push("livello con boss senza arena o posizione del boss");
     }
     if (level.hasBoss && level.bossId !== undefined && BOSS_CATALOG[level.bossId] === undefined) problems.push(`bossId ${level.bossId} non nel catalogo`);
+    if (level.hasBoss && level.bossSpawn !== undefined) {
+      const bossDefinition = BOSS_CATALOG[level.bossId ?? BOSS_CONFIG.id];
+      const bossFeetY = level.bossSpawn.y + bossDefinition.hitbox.height;
+      if (!level.platforms.some((p) => Math.abs(p.y - bossFeetY) <= 0.5 && level.bossSpawn.x >= p.x && level.bossSpawn.x + bossDefinition.hitbox.width <= p.x + p.width)) problems.push("boss non appoggiato");
+    }
+    const surfaceAt = (x, y) => level.platforms.some((p) => !p.oneWay && x >= p.x && x <= p.x + p.width && Math.abs(p.y - y) <= 0.5);
+    for (const hazard of level.hazards ?? []) {
+      if (hazard.x < 0 || hazard.x + hazard.width > level.width || hazard.width <= 0 || hazard.height <= 0) problems.push(`pericolo ${hazard.kind}@${hazard.x} fuori mappa`);
+      const bottom = hazard.y + hazard.height;
+      const middleX = hazard.x + hazard.width / 2;
+      if (hazard.kind === "spikes" && (!surfaceAt(middleX, bottom) || hazard.width > 36)) problems.push(`spuntoni @${hazard.x} non appoggiati o più larghi di 36 px`);
+      if (hazard.kind === "ice" && !level.platforms.some((p) => !p.oneWay && p.y >= hazard.y && p.y <= bottom && middleX >= p.x && middleX <= p.x + p.width)) problems.push(`ghiaccio @${hazard.x} non sulla superficie`);
+      if (hazard.kind === "water" && !surfaceAt(middleX, bottom)) problems.push(`acqua @${hazard.x} senza fondo`);
+    }
+    for (const moving of level.movingPlatforms ?? []) {
+      const minX = Math.min(moving.x, moving.x + moving.travelX);
+      const maxX = Math.max(moving.x, moving.x + moving.travelX) + moving.width;
+      const minY = Math.min(moving.y, moving.y + moving.travelY);
+      if (minX < 0 || maxX > level.width || minY < 24 || moving.periodMs < 1000) problems.push(`piattaforma mobile @${moving.x} fuori mappa o troppo veloce`);
+    }
     t(`livello ${level.id} (${level.name}): regole geometriche e riferimenti`, problems.length === 0, problems.join("; "));
 
     // percorribilità: un bot cammina verso destra saltando ostacoli e abissi, senza nemici

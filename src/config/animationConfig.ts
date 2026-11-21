@@ -75,6 +75,10 @@ export const ENEMY_ANIMATIONS: Record<EnemyTypeId, Record<string, AnimationDefin
   soldier: createEnemyAnimations("soldier"),
   skeletonArcher: createEnemyAnimations("skeletonArcher"),
   bat: createEnemyAnimations("bat"),
+  wolf: createEnemyAnimations("wolf"),
+  slime: createEnemyAnimations("slime"),
+  slimeSmall: createEnemyAnimations("slimeSmall"),
+  iceGolem: createEnemyAnimations("iceGolem"),
 };
 
 /**

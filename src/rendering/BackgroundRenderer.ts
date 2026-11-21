@@ -80,6 +80,12 @@ export class BackgroundRenderer {
         return this.buildCastle(screenWidth);
       case "dungeon":
         return this.buildDungeon(screenWidth);
+      case "swamp":
+        return this.buildSwamp(screenWidth);
+      case "ice":
+        return this.buildIce(screenWidth);
+      case "tower":
+        return this.buildTower(screenWidth);
     }
   }
 
@@ -490,6 +496,299 @@ export class BackgroundRenderer {
     renderer.fillRect(torchX - 1, torchY - flameHeight, 5, flameHeight - 3, PALETTE.orange);
     const coreColor = cycleRampColor(PALETTE_RAMPS.fire.slice(3), timeSeconds, 9, torchIndex, "pingPong");
     renderer.fillRect(torchX, torchY - flameHeight + 2, 3, flameHeight - 6, coreColor);
+  }
+
+  // ===========================================================================
+  // Palude Maledetta: cielo torbido, luna malata, salici e alberi morti, nebbia, lucciole
+  // ===========================================================================
+
+  private buildSwamp(screenWidth: number): BackgroundStep[] {
+    return [
+      this.createLayer(0, (painter) => {
+        painter.fillVerticalGradient(0, 0, LAYER_PERIOD, GROUND_Y, [PALETTE.black, PALETTE.bogDark, PALETTE.bog, PALETTE.moss]);
+        this.paintPit(painter, [PALETTE.bogDark, PALETTE.black]);
+      }),
+      {
+        kind: "live",
+        draw: (renderer, cameraX): void => {
+          const moonX = 70 - Math.round(cameraX * 0.02);
+          renderer.fillGlow(moonX, 46, 24, PALETTE.olive, 3, 4);
+          renderer.fillCircle(moonX, 46, 11, PALETTE.reed);
+          renderer.fillCircle(moonX + 3, 48, 9, PALETTE.paleGreen);
+          renderer.fillCircle(moonX - 3, 43, 2, PALETTE.olive);
+          // nuvole basse davanti alla luna
+          renderer.fillRect(moonX - 22, 50, 30, 3, PALETTE.bog);
+          renderer.fillRect(moonX - 10, 53, 26, 2, PALETTE.bog);
+        },
+      },
+      this.createLayer(0.1, (painter) => this.paintRollingHills(painter, 132, 10, PALETTE.bogDark)),
+      this.createLayer(0.25, (painter) => this.paintDeadTrees(painter, 80, 11, PALETTE.bogDark, 60, 30)),
+      {
+        kind: "live",
+        draw: (renderer): void => {
+          renderer.fillDitheredOverlay(0, 130, renderer.width, 40, PALETTE.olive, 2);
+          renderer.fillDitheredOverlay(0, 150, renderer.width, 20, PALETTE.olive, 4);
+        },
+      },
+      this.createLayer(0.45, (painter) => this.paintWillows(painter)),
+      this.createLayer(0.7, (painter) => this.paintDeadTrees(painter, 160, 29, PALETTE.earthDark, 110, 40)),
+      this.createFireflies(screenWidth),
+      {
+        kind: "live",
+        draw: (renderer): void => {
+          renderer.fillDitheredOverlay(0, 184, renderer.width, 16, PALETTE.moss, 4);
+        },
+      },
+    ];
+  }
+
+  /** Alberi morti: tronco storto e rami spogli che salgono in diagonale (ripetibili ogni "spacing"). */
+  private paintDeadTrees(painter: PixelPainter, spacing: number, seed: number, color: string, minHeight: number, heightRange: number): void {
+    const treeCount = Math.round(LAYER_PERIOD / spacing);
+    for (let treeIndex = 0; treeIndex < treeCount; treeIndex++) {
+      const randomValue = hashNumber(treeIndex + seed);
+      const baseX = treeIndex * spacing + (randomValue % Math.max(1, Math.floor(spacing / 3)));
+      const treeHeight = minHeight + (randomValue % heightRange);
+      const trunkWidth = Math.max(2, Math.round(treeHeight / 20));
+      for (const wrapOffset of [-LAYER_PERIOD, 0, LAYER_PERIOD]) {
+        const x = baseX + wrapOffset;
+        // tronco leggermente piegato
+        for (let rowOffset = 0; rowOffset < treeHeight; rowOffset++) {
+          const bend = Math.round(Math.sin(rowOffset / 14 + randomValue) * 2);
+          painter.fillRect(x + bend, GROUND_Y - rowOffset, trunkWidth, 1, color);
+        }
+        // rami: dal tronco verso l'alto, a sinistra e a destra, con un rametto
+        for (let branchIndex = 0; branchIndex < 4; branchIndex++) {
+          const branchY = GROUND_Y - Math.round(treeHeight * (0.45 + branchIndex * 0.14));
+          const side = branchIndex % 2 === 0 ? -1 : 1;
+          const length = Math.round(treeHeight * (0.35 - branchIndex * 0.05));
+          for (let step = 0; step < length; step++) {
+            painter.fillRect(x + side * step, branchY - Math.round(step * 0.7), Math.max(1, trunkWidth - 1), 1, color);
+          }
+          const twigX = x + side * Math.round(length * 0.6);
+          const twigY = branchY - Math.round(length * 0.42);
+          for (let step = 0; step < 6; step++) {
+            painter.fillRect(twigX + side * Math.round(step * 0.4), twigY - step, 1, 1, color);
+          }
+        }
+      }
+    }
+  }
+
+  /** Salici piangenti: chioma larga e filamenti di muschio che pendono. */
+  private paintWillows(painter: PixelPainter): void {
+    for (let treeIndex = 0; treeIndex < 4; treeIndex++) {
+      const randomValue = hashNumber(treeIndex + 77);
+      const centerX = treeIndex * 160 + 60 + (randomValue % 40);
+      for (const wrapOffset of [-LAYER_PERIOD, 0, LAYER_PERIOD]) {
+        const x = centerX + wrapOffset;
+        painter.fillRect(x - 3, GROUND_Y - 70, 6, 70, PALETTE.earthDark);
+        painter.fillRect(x - 3, GROUND_Y - 70, 2, 70, PALETTE.earth);
+        for (let blob = 0; blob < 5; blob++) {
+          const blobX = x - 30 + blob * 15;
+          painter.fillCircle(blobX, GROUND_Y - 78 + Math.abs(blob - 2) * 4, 13, PALETTE.bog);
+          painter.fillCircle(blobX - 3, GROUND_Y - 82 + Math.abs(blob - 2) * 4, 7, PALETTE.moss);
+        }
+        // filamenti che pendono
+        for (let strand = -32; strand <= 32; strand += 4) {
+          const length = 30 + (hashNumber(strand + treeIndex * 50) % 40);
+          painter.fillRect(x + strand, GROUND_Y - 72 + Math.abs(strand) / 3, 1, length, strand % 8 === 0 ? PALETTE.olive : PALETTE.moss);
+        }
+      }
+    }
+  }
+
+  /** Lucciole: punti che vagano lentamente e pulsano tra il verde e il giallo. */
+  private createFireflies(screenWidth: number): LiveStep {
+    const glowRamp = [PALETTE.moss, PALETTE.olive, PALETTE.reed, PALETTE.yellow];
+    return {
+      kind: "live",
+      draw: (renderer, cameraX, timeSeconds): void => {
+        const shift = Math.round(cameraX * 0.5);
+        for (let fireflyIndex = 0; fireflyIndex < 18; fireflyIndex++) {
+          const baseX = hashNumber(fireflyIndex + 400) % (screenWidth * 2);
+          const x = (((baseX - shift + Math.round(Math.sin(timeSeconds * 0.7 + fireflyIndex) * 12)) % screenWidth) + screenWidth) % screenWidth;
+          const y = 110 + (hashNumber(fireflyIndex + 500) % 80) + Math.round(Math.sin(timeSeconds * 1.3 + fireflyIndex * 2) * 6);
+          renderer.fillRect(x, y, 1, 1, cycleRampColor(glowRamp, timeSeconds, 3, fireflyIndex, "pingPong"));
+        }
+      },
+    };
+  }
+
+  // ===========================================================================
+  // Picchi Ghiacciati: alba con aurora, montagne innevate, pini con la neve, nevicata
+  // ===========================================================================
+
+  private buildIce(screenWidth: number): BackgroundStep[] {
+    return [
+      this.createLayer(0, (painter) => {
+        painter.fillVerticalGradient(0, 0, LAYER_PERIOD, GROUND_Y, [PALETTE.deepNavy, PALETTE.navy, PALETTE.blue, PALETTE.lightBlue, PALETTE.iceWhite]);
+        this.paintPit(painter, [PALETTE.navy, PALETTE.deepNavy, PALETTE.black]);
+      }),
+      {
+        kind: "live",
+        draw: (renderer, cameraX, timeSeconds): void => {
+          // aurora: due nastri ondulati che cambiano colore lentamente
+          const auroraRamp = [PALETTE.darkGreen, PALETTE.green, PALETTE.cyan, PALETTE.green];
+          for (let band = 0; band < 2; band++) {
+            const color = cycleRampColor(auroraRamp, timeSeconds, 0.8, band * 2, "pingPong");
+            for (let columnX = 0; columnX < renderer.width; columnX += 2) {
+              const worldX = columnX + cameraX * 0.03;
+              const top = 30 + band * 14 + Math.round(Math.sin(worldX * 0.025 + timeSeconds * 0.4 + band) * 8);
+              renderer.fillDitheredOverlay(columnX, top, 2, 10, color, band === 0 ? 6 : 4);
+            }
+          }
+        },
+      },
+      this.createLayer(0.08, (painter) => this.paintMountains(painter, 150, 70, PALETTE.slate, PALETTE.lightGray, PALETTE.white)),
+      this.createLayer(0.2, (painter) => this.paintMountains(painter, 90, 40, PALETTE.gray, PALETTE.stonePale, PALETTE.white)),
+      this.createLayer(0.4, (painter) => {
+        this.paintPineRow(painter, { spacing: 20, baseY: GROUND_Y, minHeight: 46, heightRange: 24, width: 20, seed: 600, fill: PALETTE.deepForest, light: PALETTE.pine, trunk: PALETTE.earthDark, highlight: PALETTE.white });
+      }),
+      this.createLayer(0.65, (painter) => {
+        this.paintPineRow(painter, { spacing: 80, baseY: GROUND_Y, minHeight: 100, heightRange: 30, width: 42, seed: 950, fill: PALETTE.pine, light: PALETTE.darkGreen, trunk: PALETTE.earth, highlight: PALETTE.iceWhite });
+      }),
+      this.createSnowfall(screenWidth),
+    ];
+  }
+
+  /** Nevicata: fiocchi che scendono ondeggiando, più grandi e veloci quelli vicini. */
+  private createSnowfall(screenWidth: number): LiveStep {
+    return {
+      kind: "live",
+      draw: (renderer, cameraX, timeSeconds): void => {
+        for (let flakeIndex = 0; flakeIndex < 50; flakeIndex++) {
+          const isNear = flakeIndex % 4 === 0;
+          const speed = isNear ? 34 : 18;
+          const parallax = isNear ? 0.8 : 0.4;
+          const startX = hashNumber(flakeIndex + 700) % screenWidth;
+          const startY = hashNumber(flakeIndex + 800) % GROUND_Y;
+          const x = (((startX - Math.round(cameraX * parallax) + Math.round(Math.sin(timeSeconds + flakeIndex) * 6)) % screenWidth) + screenWidth) % screenWidth;
+          const y = Math.round(startY + timeSeconds * speed) % (GROUND_Y + 40);
+          renderer.fillRect(x, y, isNear ? 2 : 1, isNear ? 2 : 1, isNear ? PALETTE.white : PALETTE.iceWhite);
+        }
+      },
+    };
+  }
+
+  // ===========================================================================
+  // Torre dell'Ombra: cielo in tempesta con fulmini, rovine sospese, vetrate, bracieri magici
+  // ===========================================================================
+
+  private buildTower(screenWidth: number): BackgroundStep[] {
+    const wallSpeed = 0.5;
+    const braziers = 160;
+    return [
+      this.createLayer(0, (painter) => {
+        painter.fillVerticalGradient(0, 0, LAYER_PERIOD, GROUND_Y, [PALETTE.black, PALETTE.violetDark, PALETTE.violet, PALETTE.amethyst]);
+        this.paintPit(painter, [PALETTE.violetDark, PALETTE.black]);
+      }),
+      {
+        kind: "live",
+        draw: (renderer, cameraX, timeSeconds): void => {
+          // fulmine lontano: compare per un istante ogni pochi secondi
+          const cycle = timeSeconds % 4.3;
+          if (cycle < 0.12) {
+            const boltX = ((hashNumber(Math.floor(timeSeconds / 4.3)) % 260) + 30 - Math.round(cameraX * 0.02) + renderer.width) % renderer.width;
+            let x = boltX;
+            for (let y = 26; y < 110; y += 6) {
+              const nextX = x + (hashNumber(y + boltX) % 7) - 3;
+              renderer.fillRect(Math.min(x, nextX), y, Math.abs(nextX - x) + 1, 6, PALETTE.lavender);
+              renderer.fillRect(x, y, 1, 6, PALETTE.white);
+              x = nextX;
+            }
+          }
+        },
+      },
+      this.createLayer(0.1, (painter) => this.paintFloatingRuins(painter)),
+      this.createLayer(wallSpeed, (painter) => {
+        painter.fillRect(0, 60, LAYER_PERIOD, GROUND_Y - 60, PALETTE.violetDark);
+        this.paintBricks(painter, 0, 60, LAYER_PERIOD, GROUND_Y - 60, 32, 12, {
+          face: PALETTE.violetDark,
+          light: PALETTE.violet,
+          dark: PALETTE.black,
+          mortar: PALETTE.black,
+          seed: 91,
+        });
+        for (let windowX = 60; windowX < LAYER_PERIOD; windowX += braziers) {
+          this.paintGothicWindow(painter, windowX);
+        }
+      }),
+      {
+        kind: "live",
+        draw: (renderer, cameraX, timeSeconds): void => {
+          const shift = Math.round(cameraX * wallSpeed);
+          const first = Math.floor((shift - 120) / braziers);
+          for (let index = first; index * braziers + 140 - shift < screenWidth + 40; index++) {
+            const windowX = index * braziers + 60 - shift;
+            // vetri della finestra che cambiano colore (ciclo dei colori)
+            const glassRamp = [PALETTE.violet, PALETTE.amethyst, PALETTE.lilac, PALETTE.cyan];
+            for (let pane = 0; pane < 3; pane++) {
+              const color = cycleRampColor(glassRamp, timeSeconds, 1.5, index + pane, "pingPong");
+              renderer.fillRect(windowX + 5 + pane * 7, 90, 5, 34, color);
+            }
+            this.drawBrazier(renderer, index * braziers + 140 - shift, 168, timeSeconds, index);
+          }
+        },
+      },
+      {
+        kind: "live",
+        draw: (renderer): void => {
+          renderer.fillDitheredOverlay(0, 186, renderer.width, 14, PALETTE.violet, 2);
+        },
+      },
+    ];
+  }
+
+  /** Rovine che fluttuano nel cielo: blocchi di pietra con il bordo illuminato e radici che pendono. */
+  private paintFloatingRuins(painter: PixelPainter): void {
+    for (let ruinIndex = 0; ruinIndex < 5; ruinIndex++) {
+      const randomValue = hashNumber(ruinIndex + 300);
+      const x = ruinIndex * 128 + (randomValue % 50);
+      const y = 40 + (randomValue % 60);
+      const width = 24 + (randomValue % 30);
+      painter.fillRect(x, y, width, 8, PALETTE.violetDark);
+      painter.fillRect(x, y, width, 1, PALETTE.amethyst);
+      for (let step = 0; step < width / 2; step++) {
+        painter.fillRect(x + step, y + 8 + Math.round(step * 0.6), width - step * 2, 1, PALETTE.violetDark);
+      }
+      if (randomValue % 2 === 0) {
+        // torretta in rovina
+        painter.fillRect(x + 4, y - 14, 8, 14, PALETTE.violetDark);
+        painter.fillRect(x + 4, y - 14, 1, 14, PALETTE.violet);
+        painter.fillRect(x + 6, y - 9, 3, 4, PALETTE.black);
+      }
+    }
+  }
+
+  /** Finestra gotica ad arco con cornice di pietra (i vetri colorati sono animati a parte). */
+  private paintGothicWindow(painter: PixelPainter, windowX: number): void {
+    painter.fillRect(windowX, 80, 30, 50, PALETTE.stoneShadow);
+    painter.fillRect(windowX + 2, 82, 26, 46, PALETTE.black);
+    for (let row = 0; row < 10; row++) {
+      const inset = Math.round(13 - Math.sqrt(Math.max(0, 169 - (row - 10) * (row - 10) * 1.6)));
+      painter.fillRect(windowX + inset, 70 + row, 30 - inset * 2, 1, PALETTE.stoneShadow);
+    }
+    painter.fillRect(windowX, 80, 30, 1, PALETTE.stoneLight);
+    painter.fillRect(windowX + 11, 88, 1, 36, PALETTE.stoneShadow);
+    painter.fillRect(windowX + 18, 88, 1, 36, PALETTE.stoneShadow);
+    painter.fillRect(windowX - 2, 130, 34, 3, PALETTE.stone);
+    painter.fillRect(windowX - 2, 130, 34, 1, PALETTE.stonePale);
+  }
+
+  /** Braciere con fuoco magico viola (ciclo dei colori sulla rampa della magia). */
+  private drawBrazier(renderer: Renderer, brazierX: number, brazierY: number, timeSeconds: number, index: number): void {
+    const flicker = Math.floor(timeSeconds * 7 + index) % 2;
+    renderer.fillGlow(brazierX + 4, brazierY - 10, 26 + flicker, PALETTE.violet, 2, 4);
+    renderer.fillRect(brazierX, brazierY, 9, 4, PALETTE.slate);
+    renderer.fillRect(brazierX, brazierY, 9, 1, PALETTE.gray);
+    renderer.fillRect(brazierX + 3, brazierY + 4, 3, GROUND_Y - brazierY - 4, PALETTE.slate);
+    renderer.fillRect(brazierX + 1, GROUND_Y - 3, 7, 3, PALETTE.slate);
+    const flameHeight = 9 + flicker * 2;
+    renderer.fillRect(brazierX + 1, brazierY - flameHeight, 7, flameHeight, PALETTE.amethyst);
+    renderer.fillRect(brazierX + 2, brazierY - flameHeight - 2, 5, 3, PALETTE.amethyst);
+    const coreColor = cycleRampColor(PALETTE_RAMPS.magic.slice(2), timeSeconds, 9, index, "pingPong");
+    renderer.fillRect(brazierX + 3, brazierY - flameHeight + 3, 3, flameHeight - 4, coreColor);
   }
 
   // ===========================================================================

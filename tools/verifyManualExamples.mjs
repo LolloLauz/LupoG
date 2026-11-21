@@ -352,11 +352,11 @@ const behaviorChecks = {
     const lastLevel = levels.find((level) => level.id === 4);
     const levelManager = new m.LevelManager.LevelManager();
     return [
-      ["i livelli sono 4, con id consecutivi 1-4", levels.length === 4 && levels.every((level, index) => level.id === index + 1)],
+      ["i livelli sono 7, con id consecutivi 1-7", levels.length === 7 && levels.every((level, index) => level.id === index + 1)],
       ["il livello 3 è 'Rovine Antiche' e il boss è passato al livello 4", newLevel?.name === "Rovine Antiche" && lastLevel?.hasBoss === true && lastLevel?.name === "Dungeon Sotterraneo"],
       ["il livello 3 rispetta le regole geometriche (abissi, piattaforme, nemici, oggetti, uscita)", newLevel !== undefined && validateLevelGeometry(newLevel, m).length === 0],
       ["un bot raggiunge l'uscita del livello 3 senza cadere", newLevel !== undefined && newLevel.completion.kind === "reachExit" && botReachesGoal(newLevel, m, newLevel.completion.exitX)],
-      ["LevelManager conosce il livello 4 e non il 5", levelManager.hasLevel(4) && !levelManager.hasLevel(5)],
+      ["LevelManager conosce il livello 7 e non l'8; la torre è ora il livello 7", levelManager.hasLevel(7) && !levelManager.hasLevel(8) && levels.find((level) => level.id === 7)?.name === "Torre dell'Ombra"],
       ["il livello 3 crea i suoi 5 nemici e nessun boss", (() => { levelManager.loadLevel(3); return levelManager.createEnemies().length === 5 && levelManager.createBoss() === null; })()],
     ];
   },

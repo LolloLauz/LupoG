@@ -321,4 +321,58 @@ export default async function (t, load) {
       return false;
     })());
   }
+
+  // =========================================================================
+  // Fase 4: balzo (lupo), divisione (melma), corazza (golem), nuovi livelli e boss
+  // =========================================================================
+  {
+    const ai = new EnemyAISystem();
+    // balzo: il lupo scatta in avanti nella fase attiva, ma non oltre il bordo di un abisso
+    const wolf = new Enemy(ENEMY_CONFIG.wolf, 300, 188);
+    const prey = groundedPlayer(250);
+    let maxLungeSpeed = 0;
+    let bitten = false;
+    for (let i = 0; i < 90; i++) {
+      prey.update(frame, input(), collision, ground, 2000);
+      ai.update([wolf], prey, ground);
+      wolf.update(frame, collision, ground, 2000);
+      maxLungeSpeed = Math.max(maxLungeSpeed, Math.abs(wolf.velocityX));
+      const hitbox = wolf.getAttackHitbox();
+      if (hitbox !== null && CollisionSystem.intersects(hitbox, prey.getBounds())) { wolf.markPlayerHit(); bitten = prey.takeDamage(wolf.attackDamage, wolf.centerX) || bitten; }
+    }
+    t("il lupo balza verso il giocatore (velocità del balzo) e lo morde", maxLungeSpeed === ENEMY_CONFIG.wolf.lunge.speed && bitten);
+    const ledge = [{ x: 0, y: 200, width: 320, height: 40 }, { x: 356, y: 200, width: 400, height: 40 }];
+    const edgeWolf = new Enemy(ENEMY_CONFIG.wolf, 290, 188);
+    const across = groundedPlayer(360, ledge);
+    for (let i = 0; i < 120; i++) { across.update(frame, input(), collision, ledge, 2000); ai.update([edgeWolf], across, ledge); edgeWolf.update(frame, collision, ledge, 2000); }
+    t("il balzo si ferma sul bordo di un abisso (il lupo non ci cade)", edgeWolf.positionY < 200 && edgeWolf.positionX + edgeWolf.width <= 322, edgeWolf.positionX.toFixed(1));
+
+    // divisione
+    const slime = new Enemy(ENEMY_CONFIG.slime, 400, 190);
+    t("la melma viva non si divide", slime.drainSplitRequests().length === 0);
+    slime.receiveHit(1000, "right");
+    const children = slime.drainSplitRequests();
+    t("la melma morta si divide in 2 melmine appoggiate allo stesso terreno, una sola volta", children.length === 2 && children.every((c) => c.enemyType === "slimeSmall" && c.position.y + ENEMY_CONFIG.slimeSmall.hitbox.height === 200) && slime.drainSplitRequests().length === 0);
+    t("le melmine non si dividono a loro volta", ENEMY_CONFIG.slimeSmall.splitInto === undefined);
+
+    // corazza
+    const golem = new Enemy(ENEMY_CONFIG.iceGolem, 400, 172);
+    golem.receiveHit(15, "right");
+    const afterLight = golem.currentHealth;
+    golem.receiveHit(30, "right");
+    t("corazza: l'attacco leggero (15) fa metà danno, il pesante (30) il danno pieno", ENEMY_CONFIG.iceGolem.maxHealth - afterLight === 8 && afterLight - golem.currentHealth === 30 && golem.lastHitDamage === 30);
+    t("il golem non viene respinto né stordito", golem.velocityX === 0 && golem.canAct);
+  }
+  {
+    const { LEVEL_CONFIG } = await load("config/levelConfig");
+    const { BOSS_CATALOG } = await load("config/enemyConfig");
+    const bossSprites = await load("rendering/sprites/bossSprites");
+    const { FakeSpriteManager } = await import("../helpers.mjs");
+    t("6 livelli: dopo il dungeon (3) vengono palude, picchi ghiacciati e torre", LEVEL_CONFIG.length === 6 && ["swamp", "ice", "tower"].every((theme, i) => LEVEL_CONFIG[3 + i].theme === theme));
+    t("ogni livello nuovo ha un boss diverso e usa i nuovi elementi (pericoli, piattaforme mobili, nemici nuovi)", LEVEL_CONFIG.slice(3).every((level) => level.hasBoss && level.hazards?.length > 0 && level.movingPlatforms?.length > 0 && level.enemies.some((e) => ["skeletonArcher", "bat", "wolf", "slime", "iceGolem"].includes(e.type))) && new Set(LEVEL_CONFIG.slice(3).map((l) => l.bossId)).size === 3);
+    t("il boss finale (Signore dell'Ombra) ha tre fasi e usa tutti e quattro i tipi di attacco", BOSS_CATALOG.shadowLord.phases.length === 3 && new Set(BOSS_CATALOG.shadowLord.attacks.map((a) => a.kind)).size === 4);
+    const fake = new FakeSpriteManager();
+    bossSprites.registerBossSprites(fake);
+    t("le forme dei boss: belva larga e bassa, strega e stregone con la veste, tutte con le pose degli attacchi", fake.getSpriteSize("wolfKingIdle1").width > fake.getSpriteSize("wolfKingIdle1").height && fake.has("swampWitchCastA") && fake.has("shadowLordChargeDash") && fake.has("wolfKingCastB"));
+  }
 }

@@ -14,18 +14,19 @@ const mk=(pressed=[],held=[])=>({isHeld:a=>held.includes(a),wasPressed:a=>presse
 LEVEL_CONFIG.forEach((L,i)=>{
  t(`L${L.id} id consecutivo`,L.id===i+1);
  const ground=L.platforms.filter(p=>p.y===200&&!p.oneWay).sort((a,b)=>a.x-b.x);
- let maxGap=0;for(let k=1;k<ground.length;k++)maxGap=Math.max(maxGap,ground[k].x-(ground[k-1].x+ground[k-1].width));
- t(`L${L.id} abissi <= 36px`,maxGap<=36,'max '+maxGap);
+ // una vasca (fondo solido al massimo 44 px più in basso, sotto tutto lo spazio) non è un abisso
+ let maxGap=0;for(let k=1;k<ground.length;k++){const gs=ground[k-1].x+ground[k-1].width;const basin=L.platforms.some(p=>!p.oneWay&&p.y>200&&p.y-200<=44&&p.x<=gs&&p.x+p.width>=ground[k].x);if(!basin)maxGap=Math.max(maxGap,ground[k].x-gs);}
+ t(`L${L.id} abissi <= 36px (le vasche con il fondo non contano)`,maxGap<=36,'max '+maxGap);
  t(`L${L.id} terreno copre fino al bordo`,ground[ground.length-1].x+ground[ground.length-1].width>=L.width);
  // altezza piattaforme sospese raggiungibili: ogni oneWay ha sotto una superficie a <= 44px (terreno o altra piattaforma/blocco)
  const surfaces=L.platforms.map(p=>({x:p.x,w:p.width,top:p.y}));
  let bad=[];L.platforms.filter(p=>p.y<200).forEach(p=>{const below=surfaces.filter(s=>s.top>p.y&&s.x<p.x+p.width+30&&s.x+s.w>p.x-30&&s.top-p.y<=44);if(!below.length)bad.push(`${p.x},${p.y}`)});
  t(`L${L.id} piattaforme tutte raggiungibili (<=44px su, <=30px di lato)`,bad.length===0,bad.join(' '));
  // nemici sopra una superficie, non dentro solidi
- let badE=[];L.enemies.forEach(e=>{const d=ENEMY_CONFIG[e.type];const feet=e.position.y+d.hitbox.height;const cx=e.position.x+d.hitbox.width/2;
+ let badE=[];L.enemies.forEach(e=>{const d=ENEMY_CONFIG[e.type];if(d.behavior==='flyer')return;const feet=e.position.y+d.hitbox.height;const cx=e.position.x+d.hitbox.width/2;
   const sup=L.platforms.some(p=>cx>=p.x&&cx<=p.x+p.width&&Math.abs(p.y-feet)<=0.5);
   const inside=L.platforms.some(p=>!p.oneWay&&e.position.x<p.x+p.width&&e.position.x+d.hitbox.width>p.x&&e.position.y<p.y+p.height&&e.position.y+d.hitbox.height>p.y&&!(Math.abs(p.y-feet)<=0.5));
-  if(!sup||inside)badE.push(e.type+'@'+e.position.x)});t(`L${L.id} nemici appoggiati su una superficie`,badE.length===0,badE.join(' '));
+  if(!sup||inside)badE.push(e.type+'@'+e.position.x)});t(`L${L.id} nemici a terra appoggiati su una superficie (i volanti no)`,badE.length===0,badE.join(' '));
  let badI=[];L.items.forEach(it=>{const cx=it.position.x+4;const feet=it.position.y+8;const sup=L.platforms.some(p=>cx>=p.x&&cx<=p.x+p.width&&p.y>=feet-1&&p.y-feet<=2);if(!sup)badI.push(it.type+'@'+it.position.x+','+it.position.y)});t(`L${L.id} oggetti appoggiati/poco sopra una superficie`,badI.length===0,badI.join(' '));
  if(L.completion.kind==='reachExit'){const ex=L.completion.exitX;t(`L${L.id} uscita su terreno`,ground.some(g=>ex>=g.x&&ex+24<=g.x+g.width))}
  else t(`L${L.id} boss definito con arena`,L.hasBoss&&L.bossSpawn&&L.bossArenaStartX<L.bossSpawn.x);

@@ -373,10 +373,17 @@ export class GameEngine {
     }
 
     this.enemyAISystem.update(this.enemies, this.player, platforms, this.levelManager.hazards, this.levelElapsedSeconds * 1000);
+    const splitChildren: Enemy[] = [];
     for (const enemy of this.enemies) {
       enemy.update(deltaTimeSeconds, this.collisionSystem, platforms, mapWidth);
       enemy.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
+      // le melme si dividono quando muoiono
+      for (const split of enemy.drainSplitRequests()) {
+        splitChildren.push(new Enemy(ENEMY_CONFIG[split.enemyType], split.position.x, split.position.y));
+        this.effects.spawnBurst(enemy.centerX, enemy.centerY, [PALETTE.moss, PALETTE.olive, PALETTE.reed], 8);
+      }
     }
+    this.enemies.push(...splitChildren);
     this.combatSystem.processEnemyAttacks(this.enemies, this.player);
     if (this.boss !== null) {
       const aliveMinionCount = this.enemies.filter((enemy) => enemy.isSummoned && enemy.isAlive).length;

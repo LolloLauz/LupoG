@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.0.0-alpha.4 – Versione 2.0, Fase 4: nuovi livelli, nemici e boss (2026-11-21)
+Quarta fase della versione 2.0: il gioco passa da 3 a **6 livelli**. I primi tre non cambiano; dopo il Cavaliere Nero la storia continua fino al
+**Signore dell'Ombra**, il vero nemico.
+### Aggiunto
+- **Tre ambientazioni** con sfondi a più livelli di parallasse e terreni propri:
+  - **Palude Maledetta**: cielo torbido, luna malata, alberi morti, salici piangenti, nebbia, lucciole; fango e muschio con canne palustri; acqua verde.
+  - **Picchi Ghiacciati**: aurora boreale, montagne innevate, pini con la neve, nevicata; neve e roccia con ghiaccioli.
+  - **Torre dell'Ombra**: cielo in tempesta con fulmini, rovine sospese, vetrate e bracieri magici; pietra con rune luminose.
+- **Tre livelli** (4, 5, 6) con vasche d'acqua, ghiaccio, spuntoni, piattaforme mobili e un boss ciascuno; la vittoria arriva dopo il livello 6.
+- **Nuovi nemici**: **Lupo** (veloce, balza in avanti senza cadere negli abissi), **Melma della Palude** (alla morte si divide in due **melmine**), **Golem di Ghiaccio** (corazzato: l'attacco leggero fa metà danno, il pesante il danno pieno; non vacilla). Arciere Scheletro e Pipistrello (Fase 3) compaiono nei livelli.
+- **Nuovi boss**: **Strega della Palude** (dardi a ventaglio, evoca melmine, bastonata), **Re dei Lupi** (balzo, morso, chiama il branco; forma di belva con hitbox 40×24), **Signore dell'Ombra** (boss finale a tre fasi: lama d'ombra, scatto, palle di fuoco, pipistrelli).
+- **Forme degli sprite dei boss** (`BOSS_SPRITE_SHAPES`): `knight`, `witch`, `sorcerer`, `beast`. Nuovo `sprites/creatureTools.ts` per disegnare in modo procedurale lupi (anche giganti) e melme.
+- Campi dei nemici `lunge`, `splitInto`, `armor`; colori dell'acqua per ambientazione (`ThemeStyle.waterColors`); tessiture `swampMud`, `snowAndRock`, `runeStone`.
+- **Test**: regole dei livelli estese (vasche, volanti, spuntoni, ghiaccio, acqua, piattaforme mobili, boss appoggiato), test di balzo, divisione, corazza, livelli nuovi e forme dei boss. Totale 484 controlli in 13 file.
+### Modificato
+- **Simulatore di bilanciamento** (`tools/balance.mjs`): usa il boss di ogni livello e gli stessi sistemi del gioco (proiettili, pericoli, piattaforme mobili, evocazioni, divisioni); il bot salta gli spuntoni; nuovi duelli e una riga per ogni boss. Numeri dei livelli 1-3 invariati.
+- Bot dei test nel browser (`harness.js`): salta gli spuntoni e riconosce gli attacchi di qualsiasi boss.
+- Bilanciamento dei contenuti nuovi misurato e corretto (vedi `BALANCE.md`): partita completa vinta dal bot "medio" circa 73% (32% senza schivate).
+- `CODE_MANUAL`: esempi 6, 7, 9 (ora rinumera anche i livelli successivi) e 10 aggiornati; `GAME_MANUAL` con storia, nemici, pericoli, quattro boss, sei livelli e punteggio massimo (16875); `ARCHITECTURE`, `FEATURES`, `TESTING`, `BALANCE`, `README`.
+### Verificato
+- `npm run typecheck`, `npm test` (484 controlli), `npm run verify-docs` (11 esempi), `npm run balance`, `npm run build`.
+- Chrome headless: schermate dei livelli 4-6 con 0 pixel fuori palette; il bot vince 2 partite complete di 6 livelli su 3, senza violazioni.
+### Limiti
+- `npm run test:browser` (Playwright) non eseguito.
+- Il bilanciamento dei livelli nuovi è misurato solo con il bot, che non usa l'attacco pesante e non insegue i pipistrelli: serve una prova con persone.
+- I power-up, il selettore di difficoltà e la selezione dei livelli sono la Fase 5.
+
 ## 2.0.0-alpha.3 – Versione 2.0, Fase 3: sistemi per i nuovi contenuti (2026-11-21)
 Terza fase della versione 2.0: i sistemi che servono ai livelli, ai nemici e ai boss della Fase 4. **I tre livelli attuali non cambiano** e il
 bilanciamento è identico (vedi `BALANCE.md`): le novità si vedranno nei livelli nuovi.

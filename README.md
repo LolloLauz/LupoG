@@ -1,7 +1,7 @@
 # IRON & SHADOW
 *Medieval Action Arcade* in pixel art a 16 bit – TypeScript, HTML5 Canvas, Vite. Nessun audio, nessuna dipendenza di esecuzione.
 
-**Versione 2.0.0-alpha.3** – in sviluppo la versione 2.0 a 16 bit (fondamenta grafiche, grafica ridisegnata, sistemi per i nuovi contenuti) (vedi `documentation/CHANGELOG.md`). Il gioco è completo e giocabile dall'inizio alla vittoria: spada, combo, schivata, tre nemici, tre livelli, boss a due fasi, vite, record, HUD e menu. La versione 1.0.0 a 8 bit resta disponibile nel primo commit del repository.
+**Versione 2.0.0-alpha.4** – in sviluppo la versione 2.0 a 16 bit: grafica a 16 bit, 6 livelli, 11 tipi di nemici, 4 boss (vedi `documentation/CHANGELOG.md`). Il gioco è completo e giocabile dall'inizio alla vittoria: spada, combo, schivata, sei livelli (foresta, castello, dungeon, palude, picchi ghiacciati, torre), nemici a terra, a distanza e volanti, quattro boss, pericoli, vite, record, HUD e menu. La versione 1.0.0 a 8 bit resta disponibile nel primo commit del repository.
 Provato solo in Chromium (vedi `documentation/TESTING.md`).
 
 ## Giocare

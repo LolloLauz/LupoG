@@ -43,7 +43,16 @@ export type EnemyState =
 export type EnemyBehavior = "patrol" | "chase" | "guard" | "ranged" | "flyer";
 
 /** Identificatori dei tipi di nemico normale. */
-export type EnemyTypeId = "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "bat";
+export type EnemyTypeId =
+  | "skeleton"
+  | "goblin"
+  | "soldier"
+  | "skeletonArcher"
+  | "bat"
+  | "wolf"
+  | "slime"
+  | "slimeSmall"
+  | "iceGolem";
 
 /** Identificatori dei tipi di proiettile (vedi projectileConfig.ts). */
 export type ProjectileTypeId = "arrow" | "magicBolt" | "fireball";
@@ -134,6 +143,15 @@ export interface EnemyDefinition {
   ranged?: RangedAttackDefinition;
   /** Solo per il comportamento "flyer". */
   flight?: FlightDefinition;
+  /** Balzo: durante la fase attiva dell'attacco il nemico scatta in avanti a questa velocità (px/s). */
+  lunge?: { speed: number };
+  /** Alla morte si divide: compaiono "count" nemici di tipo "enemyType" dove è morto. */
+  splitInto?: { enemyType: EnemyTypeId; count: number };
+  /**
+   * Corazza: i colpi con danno minore di breakDamage (gli attacchi leggeri) fanno solo
+   * damageMultiplier del danno; i colpi più forti (l'attacco pesante) fanno il danno pieno.
+   */
+  armor?: { damageMultiplier: number; breakDamage: number };
 }
 
 /** Definizione di un attacco (spada, combo...). */

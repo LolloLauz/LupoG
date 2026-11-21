@@ -45,13 +45,17 @@ const { CombatSystem } = await loadModule("combat/CombatSystem");
 const { EnemyAISystem } = await loadModule("systems/EnemyAISystem");
 const { ItemManager } = await loadModule("systems/ItemManager");
 const { ScoreManager } = await loadModule("systems/ScoreManager");
+const { LevelManager } = await loadModule("systems/LevelManager");
+const { ProjectileSystem } = await loadModule("systems/ProjectileSystem");
+const { HazardSystem } = await loadModule("systems/HazardSystem");
 const { LEVEL_CONFIG } = await loadModule("config/levelConfig");
-const { ENEMY_CONFIG, BOSS_CONFIG } = await loadModule("config/enemyConfig");
+const { ENEMY_CONFIG, BOSS_CONFIG, BOSS_CATALOG } = await loadModule("config/enemyConfig");
 const { GAME_CONFIG } = await loadModule("config/gameConfig");
 
 const collisionSystem = new CollisionSystem();
 const combatSystem = new CombatSystem();
 const enemyAISystem = new EnemyAISystem();
+const hazardSystem = new HazardSystem();
 const FRAME = 1 / 60;
 /** Il giocatore colpisce al massimo a questa distanza (px) dal bordo del nemico. */
 const PLAYER_REACH = 16;
@@ -77,11 +81,17 @@ function playLevel(levelId, options = {}) {
   const { dodgeSkill = 0, seed = 1, startHealth = 100, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
   const level = LEVEL_CONFIG.find((candidate) => candidate.id === levelId);
   const random = createRandom(seed);
-  const platforms = [...level.platforms];
+  // come nel gioco: piattaforme (anche mobili e cancello dell'arena), pericoli, proiettili
+  const levelManager = new LevelManager();
+  levelManager.loadLevel(levelId);
+  const hazards = level.hazards ?? [];
+  const projectileSystem = new ProjectileSystem();
+  let platforms = levelManager.platforms;
   const player = new Player(level.playerStart.x, level.playerStart.y);
   player.currentHealth = startHealth;
   const enemies = (enemyOverride ?? level.enemies).map((spawn) => new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y));
-  const boss = level.hasBoss ? new Boss(BOSS_CONFIG, level.bossSpawn.x, level.bossSpawn.y, createRandom(seed + 999)) : null;
+  const bossDefinition = level.hasBoss ? BOSS_CATALOG[level.bossId ?? BOSS_CONFIG.id] : null;
+  const boss = bossDefinition !== null ? new Boss(bossDefinition, level.bossSpawn.x, level.bossSpawn.y, createRandom(seed + 999)) : null;
   const itemManager = new ItemManager();
   itemManager.loadItems(level.items);
   const scoreManager = new ScoreManager();
@@ -93,7 +103,10 @@ function playLevel(levelId, options = {}) {
 
   const isSolidWallAhead = (aheadX) =>
     platforms.some((p) => !p.oneWay && aheadX >= p.x && aheadX <= p.x + p.width && p.y < player.positionY + 20 && p.y + p.height > player.positionY + 2);
-  const isGroundAt = (x) => platforms.some((p) => !p.oneWay && x >= p.x && x <= p.x + p.width && p.y >= player.positionY + 20);
+  // spuntoni e abissi: il bot li salta
+  const isGroundAt = (x) =>
+    platforms.some((p) => !p.oneWay && x >= p.x && x <= p.x + p.width && p.y >= player.positionY + 20) &&
+    !hazards.some((h) => h.kind === "spikes" && x >= h.x - 4 && x <= h.x + h.width);
 
   for (let frame = 0; frame < 60 * maxSeconds; frame++) {
     const time = frame * FRAME;
@@ -123,7 +136,7 @@ function playLevel(levelId, options = {}) {
       const direction = targetCenterX < playerCenterX ? -1 : 1;
       const gap = Math.abs(targetCenterX - playerCenterX) - (nearest.width + player.width) / 2;
       held.push(direction > 0 ? "moveRight" : "moveLeft");
-      const isTargetAttacking = nearest.isAttacking || ["slash", "chargeWindup", "charging"].includes(nearest.currentState);
+      const isTargetAttacking = nearest === boss ? !["idle", "walk", "dormant", "dead"].includes(boss.currentState) : nearest.isAttacking;
       if (isTargetAttacking) {
         if (!attackStartTimes.has(nearest)) {
           attackStartTimes.set(nearest, time);
@@ -134,7 +147,7 @@ function playLevel(levelId, options = {}) {
         dodgeDecisions.delete(nearest);
       }
       const windupMs = nearest === boss
-        ? (nearest.currentAttackWindupMs ?? BOSS_CONFIG.attacks.find((attack) => attack.kind === "melee").windupMs)
+        ? (nearest.currentAttackWindupMs ?? (bossDefinition.attacks.find((attack) => attack.kind === "melee") ?? bossDefinition.attacks[0]).windupMs)
         : nearest.definition.attackWindupMs;
       const attackElapsedMs = (time - (attackStartTimes.get(nearest) ?? time)) * 1000;
       const wantsToDodge = isTargetAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);
@@ -161,19 +174,37 @@ function playLevel(levelId, options = {}) {
 
     const input = { isHeld: (a) => held.includes(a), wasPressed: (a) => pressed.includes(a), wasReleased: () => false };
     const healthBefore = player.currentHealth;
+    levelManager.updateMovingPlatforms(time * 1000, [player, ...enemies.filter((enemy) => !enemy.isFlying)]);
+    player.environment = hazardSystem.computePlayerEnvironment(player, hazards);
     player.update(FRAME, input, collisionSystem, platforms, level.width);
+    hazardSystem.applyContactDamage(player, hazards);
     if (level.bossArenaStartX !== undefined && !isArenaLocked && player.positionX > level.bossArenaStartX + 24) {
       isArenaLocked = true;
-      platforms.push({ x: level.bossArenaStartX, y: 0, width: 16, height: 200 });
+      levelManager.lockArena();
+      platforms = levelManager.platforms;
     }
     combatSystem.processPlayerAttack(player, boss === null ? enemies : [...enemies, boss]);
-    enemyAISystem.update(enemies, player, platforms);
-    enemies.forEach((enemy) => enemy.update(FRAME, collisionSystem, platforms, level.width));
+    enemyAISystem.update(enemies, player, platforms, hazards, time * 1000);
+    const children = [];
+    for (const enemy of enemies) {
+      enemy.update(FRAME, collisionSystem, platforms, level.width);
+      enemy.drainProjectileLaunches().forEach((launch) => projectileSystem.spawn(launch));
+      for (const split of enemy.drainSplitRequests()) children.push(new Enemy(ENEMY_CONFIG[split.enemyType], split.position.x, split.position.y));
+    }
+    enemies.push(...children);
     combatSystem.processEnemyAttacks(enemies, player);
     if (boss !== null) {
-      boss.update(FRAME, player, collisionSystem, platforms, level.width);
+      const minions = enemies.filter((enemy) => enemy.isSummoned && enemy.isAlive).length;
+      boss.update(FRAME, player, collisionSystem, platforms, level.width, minions);
       combatSystem.processBossAttack(boss, player);
+      boss.drainProjectileLaunches().forEach((launch) => projectileSystem.spawn(launch));
+      for (const summon of boss.drainSummonRequests()) {
+        const minion = new Enemy(ENEMY_CONFIG[summon.enemyType], summon.position.x, summon.position.y);
+        minion.isSummoned = true;
+        enemies.push(minion);
+      }
     }
+    projectileSystem.update(FRAME, player, platforms, level.width, level.height);
     itemManager.update(FRAME);
     itemManager.collectItems(player, scoreManager);
     for (let index = enemies.length - 1; index >= 0; index--) {
@@ -227,6 +258,11 @@ const duels = {
   "soldato": [{ type: "soldier", position: { x: 150, y: 176 } }],
   "2 goblin": [{ type: "goblin", position: { x: 130, y: 184 } }, { type: "goblin", position: { x: 170, y: 184 } }],
   "scheletro+goblin": [{ type: "skeleton", position: { x: 130, y: 176 } }, { type: "goblin", position: { x: 190, y: 184 } }],
+  "lupo": [{ type: "wolf", position: { x: 150, y: 188 } }],
+  "melma": [{ type: "slime", position: { x: 150, y: 190 } }],
+  "arciere": [{ type: "skeletonArcher", position: { x: 200, y: 176 } }],
+  "pipistrello": [{ type: "bat", position: { x: 150, y: 120 } }],
+  "golem": [{ type: "iceGolem", position: { x: 150, y: 172 } }],
 };
 for (const [name, enemyOverride] of Object.entries(duels)) {
   const [label, skill] = skills[0];
@@ -234,11 +270,14 @@ for (const [name, enemyOverride] of Object.entries(duels)) {
   console.log(`${pad(name, 17)} ${pad(label, 24)} HP persi ${average(results.map((r) => r.healthLost)).toFixed(1).padStart(5)}   tempo ${average(results.map((r) => r.time)).toFixed(1)}s`);
 }
 
-console.log("\n=== BOSS DA SOLO (giocatore a 100 HP, nessun altro nemico) ===");
-for (const [label, skill] of skills) {
-  const results = Array.from({ length: repetitions }, (_, i) => playLevel(LEVEL_CONFIG.find((l) => l.hasBoss).id, { dodgeSkill: skill, seed: i + 1, enemyOverride: [], stopWhenClear: true, maxSeconds: 180 }));
-  const wins = results.filter((r) => r.outcome === "win").length;
-  console.log(`${pad(label, 24)} vittorie ${((wins / repetitions) * 100).toFixed(0).padStart(3)}%   HP persi ${average(results.map((r) => r.healthLost)).toFixed(0)}   tempo ${average(results.map((r) => r.time)).toFixed(0)}s`);
+console.log("\n=== BOSS DA SOLO (giocatore a 100 HP, nessun altro nemico, nel livello del boss) ===");
+for (const bossLevel of LEVEL_CONFIG.filter((l) => l.hasBoss)) {
+  const bossName = BOSS_CATALOG[bossLevel.bossId ?? BOSS_CONFIG.id].name;
+  for (const [label, skill] of skills) {
+    const results = Array.from({ length: repetitions }, (_, i) => playLevel(bossLevel.id, { dodgeSkill: skill, seed: i + 1, enemyOverride: [], stopWhenClear: true, maxSeconds: 180 }));
+    const wins = results.filter((r) => r.outcome === "win").length;
+    console.log(`${pad(bossName, 20)} ${pad(label, 24)} vittorie ${((wins / repetitions) * 100).toFixed(0).padStart(3)}%   HP persi ${average(results.map((r) => r.healthLost)).toFixed(0)}   tempo ${average(results.map((r) => r.time)).toFixed(0)}s`);
+  }
 }
 
 console.log("\n=== LIVELLI (singoli, giocatore a 100 HP) ===");

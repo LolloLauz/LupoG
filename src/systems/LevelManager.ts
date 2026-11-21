@@ -150,18 +150,19 @@ export class LevelManager {
         this.terrainRenderer.renderArenaGate(renderer, platform, camera);
         continue;
       }
-      this.terrainRenderer.renderPlatform(renderer, platform, camera, style);
+      this.terrainRenderer.renderPlatform(renderer, platform, camera, style, timeSeconds);
     }
     for (const hazard of this.hazards) {
-      this.terrainRenderer.renderHazard(renderer, hazard, camera, timeSeconds);
+      this.terrainRenderer.renderHazard(renderer, hazard, camera, timeSeconds, style);
     }
   }
 
   /** Ciò che sta DAVANTI alle entità: la superficie e il velo dell'acqua (con ondulazione). */
   public renderForeground(renderer: Renderer, camera: Camera, timeSeconds: number): void {
+    const style = THEME_STYLES[this.level.theme];
     for (const hazard of this.hazards) {
       if (hazard.kind === "water") {
-        this.terrainRenderer.renderWaterForeground(renderer, hazard, camera, timeSeconds);
+        this.terrainRenderer.renderWaterForeground(renderer, hazard, camera, timeSeconds, style);
       }
     }
   }

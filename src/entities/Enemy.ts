@@ -1,11 +1,11 @@
 import { DEFAULT_DIFFICULTY, DIFFICULTY_CONFIG, GAME_CONFIG, PALETTE, type DifficultyId } from "../config/gameConfig";
-import { ENEMY_AI_CONFIG } from "../config/enemyConfig";
+import { ENEMY_AI_CONFIG, ENEMY_CONFIG } from "../config/enemyConfig";
 import { ENEMY_ANIMATIONS } from "../config/animationConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { Damageable, EnemyDefinition, EnemyState, ProjectileLaunch } from "../types/EntityTypes";
+import type { Damageable, EnemyDefinition, EnemyState, ProjectileLaunch, SummonRequest } from "../types/EntityTypes";
 import type { FacingDirection, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -21,7 +21,10 @@ const HIT_FLASH_MS = 100;
  *  - a distanza (definition.ranged): alla fine della preparazione chiede il lancio di un proiettile
  *    (vedi drainProjectileLaunches) invece di colpire davanti a sé;
  *  - volante (definition.flight): niente gravità finché è vivo; vola verso il punto scelto dall'IA
- *    e attacca in picchiata (il corpo ferisce durante la fase attiva); da morto cade.
+ *    e attacca in picchiata (il corpo ferisce durante la fase attiva); da morto cade;
+ *  - balzo (definition.lunge): nella fase attiva scatta in avanti (ma non oltre il bordo di un abisso);
+ *  - divisione (definition.splitInto): alla morte chiede di far comparire nemici più piccoli (drainSplitRequests);
+ *  - corazza (definition.armor): i colpi deboli fanno solo una parte del danno.
  */
 export class Enemy extends GameObject implements Damageable {
   public currentState: EnemyState = "idle";
@@ -52,6 +55,9 @@ export class Enemy extends GameObject implements Damageable {
   private diveDirection: Vector2 = { x: 0, y: 1 };
   private hasLaunchedThisAttack = false;
   private pendingLaunches: ProjectileLaunch[] = [];
+  private hasSplit = false;
+  /** Danno effettivamente subito con l'ultimo colpo (dopo la corazza). */
+  private lastDamageTaken = 0;
 
   constructor(
     public readonly definition: EnemyDefinition,
@@ -118,6 +124,31 @@ export class Enemy extends GameObject implements Damageable {
     this.flightTarget = { x, y };
   }
 
+  /** Danno effettivamente subito con l'ultimo colpo (minore del danno dell'attacco se il nemico è corazzato). */
+  public get lastHitDamage(): number {
+    return this.lastDamageTaken;
+  }
+
+  /**
+   * Se il nemico è appena morto e si divide (definition.splitInto), restituisce una volta sola i nemici
+   * da far comparire (affiancati, appoggiati sullo stesso terreno). Altrimenti un elenco vuoto.
+   */
+  public drainSplitRequests(): SummonRequest[] {
+    const split = this.definition.splitInto;
+    if (split === undefined || this.isAlive || this.hasSplit) {
+      return [];
+    }
+    this.hasSplit = true;
+    const child = ENEMY_CONFIG[split.enemyType];
+    return Array.from({ length: split.count }, (_, childIndex) => ({
+      enemyType: split.enemyType,
+      position: {
+        x: this.centerX - child.hitbox.width / 2 + (childIndex - (split.count - 1) / 2) * (child.hitbox.width + 2),
+        y: this.positionY + this.height - child.hitbox.height,
+      },
+    }));
+  }
+
   /** Proiettili da lanciare chiesti dall'ultimo aggiornamento (li crea il motore). Svuota l'elenco. */
   public drainProjectileLaunches(): ProjectileLaunch[] {
     const launches = this.pendingLaunches;
@@ -179,6 +210,16 @@ export class Enemy extends GameObject implements Damageable {
       // picchiata: ferisce tutto il corpo
       return { x: this.positionX - 1, y: this.positionY - 1, width: this.width + 2, height: this.height + 2 };
     }
+    if (this.definition.lunge !== undefined) {
+      // balzo: ferisce il corpo e un poco davanti (le fauci)
+      const reach = 6;
+      return {
+        x: this.facingDirection === "right" ? this.positionX : this.positionX - reach,
+        y: this.positionY,
+        width: this.width + reach,
+        height: this.height,
+      };
+    }
     const range = this.definition.attackRange;
     return {
       x: this.facingDirection === "right" ? this.positionX + this.width : this.positionX - range,
@@ -197,7 +238,11 @@ export class Enemy extends GameObject implements Damageable {
     if (!this.isAlive) {
       return;
     }
-    this.currentHealth = Math.max(0, this.currentHealth - damage);
+    const armor = this.definition.armor;
+    const effectiveDamage =
+      armor !== undefined && damage < armor.breakDamage ? Math.max(1, Math.round(damage * armor.damageMultiplier)) : damage;
+    this.lastDamageTaken = effectiveDamage;
+    this.currentHealth = Math.max(0, this.currentHealth - effectiveDamage);
     this.hitFlashRemainingMs = HIT_FLASH_MS;
     // Un attacco già avviato (oltre la finestra di interruzione) prosegue: niente stordimento.
     const isUninterruptible =
@@ -242,7 +287,7 @@ export class Enemy extends GameObject implements Damageable {
     } else if (this.hurtRemainingMs > 0) {
       this.velocityX *= 0.92;
     } else if (this.isAttackInProgress) {
-      this.velocityX = 0;
+      this.velocityX = this.getLungeVelocity(platforms);
     } else {
       this.velocityX = this.desiredDirection * this.definition.movementSpeed * this.desiredSpeedMultiplier;
     }
@@ -352,6 +397,23 @@ export class Enemy extends GameObject implements Damageable {
     const solidPlatforms = platforms.filter((platform) => platform.oneWay !== true);
     collisionSystem.moveAndCollide(this, deltaTimeSeconds, solidPlatforms, mapWidth);
     this.positionY = Math.max(0, this.positionY);
+  }
+
+  /** Balzo: velocità orizzontale durante la fase attiva; si ferma se davanti non c'è terreno. */
+  private getLungeVelocity(platforms: PlatformDefinition[]): number {
+    const lunge = this.definition.lunge;
+    const activeStartMs = this.definition.attackWindupMs;
+    const isActive = this.attackElapsedMs >= activeStartMs && this.attackElapsedMs < activeStartMs + this.definition.attackActiveMs;
+    if (lunge === undefined || !isActive || !this.isOnGround) {
+      return 0;
+    }
+    const direction = this.facingDirection === "right" ? 1 : -1;
+    const probeX = direction > 0 ? this.positionX + this.width + 2 : this.positionX - 2;
+    const feetY = this.positionY + this.height;
+    const hasGroundAhead = platforms.some(
+      (platform) => probeX >= platform.x && probeX <= platform.x + platform.width && Math.abs(platform.y - feetY) <= 2
+    );
+    return hasGroundAhead ? direction * lunge.speed : 0;
   }
 
   /** A distanza: alla fine della preparazione chiede il lancio del proiettile (una volta per attacco). */
