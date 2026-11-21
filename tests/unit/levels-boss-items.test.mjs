@@ -61,7 +61,8 @@ p=mkp(1000-150);step(b,p,3);t('si risveglia entro 220px',b.isActive&&b.currentSt
 b=new Boss(BOSS_CONFIG,1000,160,()=>0.9);p=mkp(1000-30);step(b,p,50);const hp0=p.currentHealth;
 t('prima del cooldown iniziale (800ms) nessun attacco',b.currentState==='idle'||b.currentState==='walk'||b.currentState==='slash',b.currentState);
 let sawSlash=false;let hp1=p.currentHealth;for(let i=0;i<120;i++){step(b,p,1);if(b.currentState==='slash')sawSlash=true;}
-t('fendente eseguito e danno da config subito',sawSlash&&p.currentHealth<=100-BOSS_CONFIG.slashDamage,p.currentHealth);
+const slashAttack=BOSS_CONFIG.attacks.find(a=>a.kind==='melee');
+t('fendente eseguito e danno da config subito',sawSlash&&p.currentHealth<=100-slashAttack.damage,p.currentHealth);
 // carica (random=0 => charge) da lontano
 b=new Boss(BOSS_CONFIG,1000,160,()=>0);p=mkp(1000-150);let seen=new Set();let x0=b.positionX;let minX=1e9;let hpC=p.currentHealth;
 for(let i=0;i<60*6;i++){step(b,p,1);seen.add(b.currentState);minX=Math.min(minX,b.positionX);}
@@ -84,7 +85,7 @@ const h=b.currentHealth;b.receiveHit(5,'left');t('niente danno da morto',b.curre
 // danno dal giocatore 5 combo
 b=new Boss(BOSS_CONFIG,1000,160,()=>0.9);b.receiveHit(15+15+30,'right');t('una combo = 60 danno',b.currentHealth===BOSS_CONFIG.maxHealth-60);
 // animazione slash somma fasi
-const sa=BOSS_ANIMATIONS.blackKnight.slash.frameDurationsMs.reduce((x,y)=>x+y,0);t('animazione slash = windup+active+recovery',sa===BOSS_CONFIG.slashWindupMs+BOSS_CONFIG.slashActiveMs+BOSS_CONFIG.slashRecoveryMs);
+const sa=BOSS_ANIMATIONS.blackKnight.slash.frameDurationsMs.reduce((x,y)=>x+y,0);t('animazione slash = windup+active+recovery',sa===slashAttack.windupMs+slashAttack.activeMs+slashAttack.recoveryMs);
 // boss sveglio se colpito da lontano
 b=new Boss(BOSS_CONFIG,1000,160,()=>0.9);b.receiveHit(5,'right');t('colpito da dormiente si sveglia',b.isActive);
 // ---------- OGGETTI ----------

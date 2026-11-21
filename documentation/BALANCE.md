@@ -44,6 +44,9 @@ Modifiche:
 
 ## Risultati attuali (`npm run balance`, 40-60 ripetizioni)
 
+> Rieseguito nella 2.0.0-alpha.3, dopo che gli attacchi del boss sono diventati dati: **stessi risultati** (boss 33% / 88%, livello 3 33% / 75%,
+> partite 67% / 98%). La grafica a 16 bit (2.0.0-alpha.2) non ha cambiato le hitbox, quindi nemmeno il bilanciamento.
+
 | Misura | rusher | medio |
 |---|---|---|
 | Duello scheletro / goblin / soldato (HP persi) | 10 / 8 / 15 | - |

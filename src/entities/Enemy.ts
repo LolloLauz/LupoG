@@ -5,8 +5,8 @@ import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { Damageable, EnemyDefinition, EnemyState } from "../types/EntityTypes";
-import type { FacingDirection, Rectangle } from "../types/GameTypes";
+import type { Damageable, EnemyDefinition, EnemyState, ProjectileLaunch } from "../types/EntityTypes";
+import type { FacingDirection, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
 
@@ -17,6 +17,11 @@ const HIT_FLASH_MS = 100;
  * Nemico generico guidato da un EnemyDefinition.
  * Questa classe gestisce stato, timer, fisica e animazione; le decisioni
  * (dove muoversi, quando attaccare) le prende EnemyAISystem.
+ * Varianti:
+ *  - a distanza (definition.ranged): alla fine della preparazione chiede il lancio di un proiettile
+ *    (vedi drainProjectileLaunches) invece di colpire davanti a sé;
+ *  - volante (definition.flight): niente gravità finché è vivo; vola verso il punto scelto dall'IA
+ *    e attacca in picchiata (il corpo ferisce durante la fase attiva); da morto cade.
  */
 export class Enemy extends GameObject implements Damageable {
   public currentState: EnemyState = "idle";
@@ -24,6 +29,9 @@ export class Enemy extends GameObject implements Damageable {
   public readonly maxHealth: number;
   public readonly attackDamage: number;
   public readonly spawnPositionX: number;
+  public readonly spawnPositionY: number;
+  /** Vero se è stato evocato da un boss (conta per il limite di evocati). */
+  public isSummoned = false;
   /** Direzione di pattuglia corrente (1 = destra, -1 = sinistra). */
   public patrolDirection: 1 | -1 = 1;
   /** Vero se sta inseguendo il giocatore (comportamento "chase"). */
@@ -39,6 +47,11 @@ export class Enemy extends GameObject implements Damageable {
   private attackCooldownRemainingMs = 0;
   private hasHitPlayerThisAttack = false;
   private hitFlashRemainingMs = 0;
+  /** Volo: punto verso cui volare in questo frame (scelto dall'IA) e direzione della picchiata. */
+  private flightTarget: Vector2 | null = null;
+  private diveDirection: Vector2 = { x: 0, y: 1 };
+  private hasLaunchedThisAttack = false;
+  private pendingLaunches: ProjectileLaunch[] = [];
 
   constructor(
     public readonly definition: EnemyDefinition,
@@ -52,6 +65,7 @@ export class Enemy extends GameObject implements Damageable {
     this.currentHealth = this.maxHealth;
     this.attackDamage = Math.round(definition.attackDamage * difficultyConfig.enemyDamageMultiplier);
     this.spawnPositionX = startX;
+    this.spawnPositionY = startY;
     this.animationPlayer = new AnimationPlayer(ENEMY_ANIMATIONS[definition.id], "idle");
   }
 
@@ -85,6 +99,32 @@ export class Enemy extends GameObject implements Damageable {
     return this.positionX + this.width / 2;
   }
 
+  public get centerY(): number {
+    return this.positionY + this.height / 2;
+  }
+
+  /** Vero per i nemici volanti (definition.flight). */
+  public get isFlying(): boolean {
+    return this.definition.flight !== undefined;
+  }
+
+  /** Millisecondi trascorsi dall'inizio dell'attacco in corso (0 se non attacca). */
+  public get currentAttackElapsedMs(): number {
+    return this.isAttackInProgress ? this.attackElapsedMs : 0;
+  }
+
+  /** Volo: punto verso cui volare in questo frame (lo sceglie l'IA a ogni frame). */
+  public setFlightTarget(x: number, y: number): void {
+    this.flightTarget = { x, y };
+  }
+
+  /** Proiettili da lanciare chiesti dall'ultimo aggiornamento (li crea il motore). Svuota l'elenco. */
+  public drainProjectileLaunches(): ProjectileLaunch[] {
+    const launches = this.pendingLaunches;
+    this.pendingLaunches = [];
+    return launches;
+  }
+
   public get currentAnimationName(): string {
     return this.animationPlayer.animationName;
   }
@@ -104,22 +144,40 @@ export class Enemy extends GameObject implements Damageable {
     }
   }
 
-  public beginAttack(): void {
+  /**
+   * Inizia un attacco. Per i volanti "target" è il punto (centro del giocatore) verso cui
+   * puntare la picchiata, bloccato adesso: durante la preparazione c'è il tempo di spostarsi.
+   */
+  public beginAttack(target?: Vector2): void {
     this.isAttackInProgress = true;
     this.attackElapsedMs = 0;
     this.hasHitPlayerThisAttack = false;
+    this.hasLaunchedThisAttack = false;
+    if (target !== undefined) {
+      const deltaX = target.x - this.centerX;
+      const deltaY = target.y - this.centerY;
+      const length = Math.hypot(deltaX, deltaY);
+      this.diveDirection = length > 0 ? { x: deltaX / length, y: deltaY / length } : { x: 0, y: 1 };
+      if (deltaX !== 0) {
+        this.facingDirection = deltaX < 0 ? "left" : "right";
+      }
+    }
     this.animationPlayer.restart("attack");
   }
 
   /** Area d'urto dell'attacco se in questo momento è attiva, altrimenti null. */
   public getAttackHitbox(): Rectangle | null {
-    if (!this.isAttackInProgress || this.hasHitPlayerThisAttack) {
-      return null;
+    if (!this.isAttackInProgress || this.hasHitPlayerThisAttack || this.definition.ranged !== undefined) {
+      return null; // chi attacca a distanza ferisce solo con i proiettili
     }
     const activeStartMs = this.definition.attackWindupMs;
     const activeEndMs = activeStartMs + this.definition.attackActiveMs;
     if (this.attackElapsedMs < activeStartMs || this.attackElapsedMs > activeEndMs) {
       return null;
+    }
+    if (this.isFlying) {
+      // picchiata: ferisce tutto il corpo
+      return { x: this.positionX - 1, y: this.positionY - 1, width: this.width + 2, height: this.height + 2 };
     }
     const range = this.definition.attackRange;
     return {
@@ -151,6 +209,9 @@ export class Enemy extends GameObject implements Damageable {
     }
     this.isAttackInProgress = false;
     this.velocityX = (hitDirection === "right" ? 1 : -1) * this.definition.knockbackSpeed;
+    if (this.isFlying) {
+      this.velocityY = -this.definition.knockbackSpeed * 0.5;
+    }
     if (this.isAlive) {
       this.hurtRemainingMs = this.definition.hurtDurationMs;
       this.animationPlayer.restart("hurt");
@@ -168,6 +229,13 @@ export class Enemy extends GameObject implements Damageable {
     mapWidth: number
   ): void {
     this.updateTimers(deltaTimeSeconds * 1000);
+    if (this.isFlying && this.isAlive) {
+      this.updateFlight(deltaTimeSeconds, collisionSystem, platforms, mapWidth);
+      this.updateState();
+      this.animationPlayer.play(this.getAnimationName());
+      this.animationPlayer.update(deltaTimeSeconds);
+      return;
+    }
 
     if (!this.isAlive) {
       this.velocityX *= 0.9; // il rinculo si smorza
@@ -230,6 +298,7 @@ export class Enemy extends GameObject implements Damageable {
     }
     if (this.isAttackInProgress) {
       this.attackElapsedMs += deltaTimeMs;
+      this.launchProjectileIfReady();
       const totalMs =
         this.definition.attackWindupMs + this.definition.attackActiveMs + this.definition.attackRecoveryMs;
       if (this.attackElapsedMs >= totalMs) {
@@ -237,6 +306,71 @@ export class Enemy extends GameObject implements Damageable {
         this.attackCooldownRemainingMs = this.definition.attackCooldownMs;
       }
     }
+  }
+
+  /**
+   * Volo (solo da vivo): niente gravità; passa attraverso le piattaforme sospese ma non i muri.
+   * Preparazione = sospeso a mezz'aria; fase attiva = picchiata; recupero = risale.
+   */
+  private updateFlight(
+    deltaTimeSeconds: number,
+    collisionSystem: CollisionSystem,
+    platforms: PlatformDefinition[],
+    mapWidth: number
+  ): void {
+    const flight = this.definition.flight!;
+    const windupMs = this.definition.attackWindupMs;
+    const activeEndMs = windupMs + this.definition.attackActiveMs;
+    if (this.hurtRemainingMs > 0) {
+      this.velocityX *= 0.9;
+      this.velocityY *= 0.9;
+    } else if (this.isAttackInProgress && this.attackElapsedMs < windupMs) {
+      this.velocityX = 0;
+      this.velocityY = 0;
+    } else if (this.isAttackInProgress && this.attackElapsedMs < activeEndMs) {
+      this.velocityX = this.diveDirection.x * flight.diveSpeed;
+      this.velocityY = this.diveDirection.y * flight.diveSpeed;
+    } else if (this.isAttackInProgress) {
+      this.velocityX *= 0.85;
+      this.velocityY = -this.definition.movementSpeed * 0.6;
+    } else if (this.flightTarget !== null) {
+      const deltaX = this.flightTarget.x - this.centerX;
+      const deltaY = this.flightTarget.y - this.centerY;
+      const distance = Math.hypot(deltaX, deltaY);
+      const speed = Math.min(this.definition.movementSpeed * this.desiredSpeedMultiplier, distance / Math.max(deltaTimeSeconds, 0.001));
+      this.velocityX = distance > 0.5 ? (deltaX / distance) * speed : 0;
+      this.velocityY = distance > 0.5 ? (deltaY / distance) * speed : 0;
+      if (Math.abs(deltaX) > 2) {
+        this.facingDirection = deltaX < 0 ? "left" : "right";
+      }
+    } else {
+      this.velocityX = 0;
+      this.velocityY = 0;
+    }
+    this.flightTarget = null;
+    this.desiredSpeedMultiplier = 1;
+    const solidPlatforms = platforms.filter((platform) => platform.oneWay !== true);
+    collisionSystem.moveAndCollide(this, deltaTimeSeconds, solidPlatforms, mapWidth);
+    this.positionY = Math.max(0, this.positionY);
+  }
+
+  /** A distanza: alla fine della preparazione chiede il lancio del proiettile (una volta per attacco). */
+  private launchProjectileIfReady(): void {
+    const ranged = this.definition.ranged;
+    if (ranged === undefined || this.hasLaunchedThisAttack || this.attackElapsedMs < this.definition.attackWindupMs) {
+      return;
+    }
+    this.hasLaunchedThisAttack = true;
+    const directionX = this.facingDirection === "right" ? 1 : -1;
+    this.pendingLaunches.push({
+      projectileId: ranged.projectileId,
+      origin: {
+        x: directionX > 0 ? this.positionX + this.width + 2 : this.positionX - 2,
+        y: this.positionY + ranged.launchOffsetY,
+      },
+      direction: { x: directionX, y: 0 },
+      damage: this.attackDamage,
+    });
   }
 
   /** Priorità: morto > stordito > attacco > in movimento (patrol/chase) > fermo. */
@@ -247,7 +381,7 @@ export class Enemy extends GameObject implements Damageable {
       this.currentState = "hurt";
     } else if (this.isAttackInProgress) {
       this.currentState = "attack";
-    } else if (this.velocityX !== 0) {
+    } else if (this.velocityX !== 0 || (this.isFlying && this.velocityY !== 0)) {
       this.currentState = this.isChasing ? "chase" : "patrol";
     } else {
       this.currentState = "idle";

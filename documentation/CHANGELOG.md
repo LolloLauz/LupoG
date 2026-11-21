@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.0.0-alpha.3 – Versione 2.0, Fase 3: sistemi per i nuovi contenuti (2026-11-21)
+Terza fase della versione 2.0: i sistemi che servono ai livelli, ai nemici e ai boss della Fase 4. **I tre livelli attuali non cambiano** e il
+bilanciamento è identico (vedi `BALANCE.md`): le novità si vedranno nei livelli nuovi.
+### Aggiunto
+- **Proiettili** (`entities/Projectile.ts`, `systems/ProjectileSystem.ts`, `config/projectileConfig.ts`, `sprites/projectileSprites.ts`): freccia, dardo magico, palla di fuoco. Colpiscono il giocatore una volta; durante la schivata (o l'invulnerabilità) passano attraverso; la spada distrugge frecce e dardi ma non le palle di fuoco; si schiantano contro i muri (non contro le piattaforme sospese).
+- **Nemici a distanza** (`behavior: "ranged"`, campo `ranged`): tirano a chi è alla loro altezza entro `attackRange`, indietreggiano se il giocatore è troppo vicino; la preparazione è interrompibile. Nuovo nemico **Arciere Scheletro** (cappuccio, faretra, arco che si tende).
+- **Nemici volanti** (`behavior: "flyer"`, campo `flight`): niente gravità, volteggiano attorno al punto di partenza, seguono il giocatore restando sopra la sua testa, attaccano in picchiata verso il punto in cui era; da morti cadono. Nuovo nemico **Pipistrello** (4 pose d'ala).
+- **Pericoli** (`LevelDefinition.hazards`, `systems/HazardSystem.ts`, `config/hazardConfig.ts`): spuntoni (12 danni e rimbalzo), acqua (più lenti, caduta lenta, si nuota verso l'alto; fondo dietro e velo ondulato davanti alle entità), ghiaccio (aderenza ridotta: si scivola). I nemici a terra non entrano in spuntoni e acqua. Il giocatore ha un `environment` (`PlayerEnvironment`) che il motore aggiorna a ogni frame.
+- **Piattaforme mobili** (`LevelDefinition.movingPlatforms`): avanti e indietro con rallentamento agli estremi, trasportano giocatore e nemici a terra; disegnate con piastre di ferro e bulloni d'oro.
+- **Attacchi dei boss come dati** (`BossDefinition.attacks`, `BossPhaseDefinition.attackWeights`): quattro tipi (`melee`, `charge`, `projectile` con ventaglio mirato, `summon` con limite di evocati) con preparazione, fase attiva e recupero. Nuove pose del boss `CastA`/`CastB` (incantesimo) e animazioni per proiettili ed evocazioni (`BOSS_ATTACK_ANIMATIONS`).
+- `LevelManager.loadLevelDefinition` (livelli fuori da `LEVEL_CONFIG`, per test e prove), `Renderer.applyLineWave` limitato a una zona orizzontale, `Boss.currentAttackWindupMs`.
+- **Test**: nuova suite `systems-phase3.test.mjs` (47 controlli) e nuovi controlli di coerenza (comportamenti, proiettili, attacchi e pesi dei boss). Totale 428 controlli in 13 file.
+### Modificato
+- `BossDefinition`: i campi `slash...` e `charge...` e `phases[].chargeChance` sono sostituiti da `attacks` e `attackWeights`. Il Cavaliere Nero ha gli stessi numeri; la carica è elencata per prima perché il sorteggio dia gli stessi risultati della 1.0. `Boss.currentState` è ora un getter; gli stati visibili (`slash`, `chargeWindup`, `charging`, `recovery`...) sono gli stessi.
+- `Boss` ricava le animazioni dalla propria definizione (`createBossAnimations`): funziona con qualsiasi boss, anche fuori dal catalogo.
+- `EnemyAISystem.update` riceve anche i pericoli e il tempo di gioco; `Boss.update` riceve il numero di evocati vivi.
+- Bot del simulatore (`tools/balance.mjs`) e dei test nel browser (`harness.js`): leggono la durata della preparazione dal boss.
+- `CODE_MANUAL`: esempi 6 e 10 aggiornati (nuovi tipi di nemico; il Re Scheletro con la nuova struttura degli attacchi). Manuali aggiornati (`ARCHITECTURE` sez. 7-10, `CODE_MANUAL`, `FEATURES`, `GAME_MANUAL` con le novità in arrivo, `TESTING`, `BALANCE`).
+### Verificato
+- `npm run typecheck`, `npm test` (428 controlli), `npm run verify-docs` (11 esempi), `npm run balance` (risultati identici), `npm run build`.
+- Livello di prova in Chrome headless (non incluso nel gioco) con tutte le novità: 0 pixel fuori palette; arcieri che tirano, pipistrelli, boss che evoca al massimo 2 pipistrelli e lancia palle di fuoco.
+### Limiti
+- Arciere, pipistrello, pericoli e piattaforme mobili non sono ancora nei livelli: arrivano con la Fase 4.
+- `npm run test:browser` (Playwright) non eseguito.
+- Tutti i boss condividono ancora la forma umanoide dello sprite: i boss non umanoidi della Fase 4 (es. Re dei Lupi) richiederanno sprite propri.
+
 ## 2.0.0-alpha.2 – Versione 2.0, Fase 2: grafica ridisegnata a 16 bit (2026-11-21)
 Seconda fase della versione 2.0: tutta la grafica è ridisegnata con gli strumenti della Fase 1. **Il gioco non cambia**: hitbox, statistiche,
 livelli e bilanciamento sono quelli di prima; cambia solo come appare.

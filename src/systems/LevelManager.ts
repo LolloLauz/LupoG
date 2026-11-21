@@ -6,7 +6,17 @@ import { BackgroundRenderer } from "../rendering/BackgroundRenderer";
 import { TerrainRenderer } from "../rendering/TerrainRenderer";
 import type { Camera } from "../rendering/Camera";
 import type { Renderer } from "../rendering/Renderer";
-import type { LevelDefinition, PlatformDefinition } from "../types/LevelTypes";
+import type { GameObject } from "../entities/GameObject";
+import type { HazardDefinition, LevelDefinition, MovingPlatformDefinition, PlatformDefinition } from "../types/LevelTypes";
+
+/** Una piattaforma mobile: la definizione (posizione di partenza) e la piattaforma che si muove davvero. */
+interface MovingPlatformState {
+  definition: MovingPlatformDefinition;
+  platform: PlatformDefinition;
+}
+
+/** Tolleranza (px) per considerare i piedi appoggiati su una piattaforma. */
+const STANDING_TOLERANCE = 1;
 
 /**
  * Carica i livelli da LEVEL_CONFIG, crea nemici e boss del livello e disegna il livello
@@ -18,6 +28,7 @@ export class LevelManager {
   private readonly terrainRenderer = new TerrainRenderer();
   /** Piattaforme del livello più eventuali elementi aggiunti durante il gioco (cancello dell'arena). */
   private activePlatforms: PlatformDefinition[] = [];
+  private movingPlatforms: MovingPlatformState[] = [];
   private isArenaLocked = false;
 
   /** Vero se esiste un livello con questo id. */
@@ -30,8 +41,20 @@ export class LevelManager {
     if (level === undefined) {
       throw new Error(`Livello non trovato: ${levelId}`);
     }
+    this.loadLevelDefinition(level);
+  }
+
+  /**
+   * Carica una definizione di livello qualsiasi, anche fuori da LEVEL_CONFIG (test, livelli di prova).
+   * Il gioco usa loadLevel(id).
+   */
+  public loadLevelDefinition(level: LevelDefinition): void {
     this.currentLevel = level;
-    this.activePlatforms = [...level.platforms];
+    this.movingPlatforms = (level.movingPlatforms ?? []).map((definition) => ({
+      definition,
+      platform: { x: definition.x, y: definition.y, width: definition.width, height: definition.height, oneWay: true, isMoving: true },
+    }));
+    this.activePlatforms = [...level.platforms, ...this.movingPlatforms.map((state) => state.platform)];
     this.isArenaLocked = false;
   }
 
@@ -56,9 +79,42 @@ export class LevelManager {
     return this.currentLevel;
   }
 
-  /** Tutte le piattaforme attive in questo momento. */
+  /** Tutte le piattaforme attive in questo momento (comprese le mobili e il cancello dell'arena). */
   public get platforms(): PlatformDefinition[] {
     return this.activePlatforms;
+  }
+
+  /** Pericoli e zone speciali del livello. */
+  public get hazards(): HazardDefinition[] {
+    return this.level.hazards ?? [];
+  }
+
+  /**
+   * Muove le piattaforme mobili alla posizione dell'istante "elapsedMs" (andata e ritorno con
+   * rallentamento agli estremi) e trasporta chi ci stava sopra (giocatore, nemici a terra).
+   * Va chiamato prima di aggiornare le entità.
+   */
+  public updateMovingPlatforms(elapsedMs: number, riders: readonly GameObject[]): void {
+    for (const { definition, platform } of this.movingPlatforms) {
+      const standingRiders = riders.filter(
+        (rider) =>
+          rider.isOnGround &&
+          Math.abs(rider.positionY + rider.height - platform.y) <= STANDING_TOLERANCE &&
+          rider.positionX + rider.width > platform.x &&
+          rider.positionX < platform.x + platform.width
+      );
+      const progress = (1 - Math.cos((((elapsedMs + (definition.phaseOffsetMs ?? 0)) / definition.periodMs) * Math.PI * 2))) / 2;
+      const newX = definition.x + definition.travelX * progress;
+      const newY = definition.y + definition.travelY * progress;
+      const deltaX = newX - platform.x;
+      const deltaY = newY - platform.y;
+      platform.x = newX;
+      platform.y = newY;
+      for (const rider of standingRiders) {
+        rider.positionX += deltaX;
+        rider.positionY += deltaY;
+      }
+    }
   }
 
   /** Crea il boss del livello (se previsto). */
@@ -95,6 +151,18 @@ export class LevelManager {
         continue;
       }
       this.terrainRenderer.renderPlatform(renderer, platform, camera, style);
+    }
+    for (const hazard of this.hazards) {
+      this.terrainRenderer.renderHazard(renderer, hazard, camera, timeSeconds);
+    }
+  }
+
+  /** Ciò che sta DAVANTI alle entità: la superficie e il velo dell'acqua (con ondulazione). */
+  public renderForeground(renderer: Renderer, camera: Camera, timeSeconds: number): void {
+    for (const hazard of this.hazards) {
+      if (hazard.kind === "water") {
+        this.terrainRenderer.renderWaterForeground(renderer, hazard, camera, timeSeconds);
+      }
     }
   }
 }

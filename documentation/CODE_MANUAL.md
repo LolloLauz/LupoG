@@ -1,6 +1,6 @@
 # Manuale del codice
 
-Versione del gioco descritta: **2.0.0-alpha.2**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
+Versione del gioco descritta: **2.0.0-alpha.3**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
 per le regole di gioco `GAME_MANUAL.md`.
 
 Questo manuale spiega **cosa c'è in ogni file**, **come si muove il codice** e, nella parte finale,
@@ -89,6 +89,8 @@ modificare qui, senza toccare la logica.
 | `paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS`), `PALETTE_RAMPS` (rampe dallo scuro al chiaro), tipi `PaletteColor`, `PaletteRampName` |
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG`, `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss) |
+| `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco (velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) |
+| `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili), `ITEM_SIZE` |
 | `levelConfig.ts` | `LEVEL_CONFIG` (i livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`) |
 | `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
@@ -160,16 +162,30 @@ di nessuna combo. `COMBO_DEFINITIONS` contiene `tripleSlash` (Spazio ×3, finest
 | `hurtDurationMs`, `knockbackSpeed` | stordimento e rinculo quando viene colpito |
 | `attackInterruptWindowMs` | per quanti ms (dall'inizio dell'attacco) un colpo subito lo interrompe; 0 = mai |
 | `patrolDistance` | raggio (px) della zona di pattuglia (solo `patrol`) |
-| `behavior` | `"patrol"`, `"chase"` o `"guard"` |
+| `behavior` | `"patrol"`, `"chase"`, `"guard"`, `"ranged"` (tira proiettili, serve `ranged`) o `"flyer"` (vola, serve `flight`) |
+| `ranged` (facoltativo) | `projectileId`, `launchOffsetY` (altezza di lancio dalla cima dell'hitbox), `retreatDistance` (sotto questa distanza indietreggia) |
+| `flight` (facoltativo) | `hoverHeight` (quota sopra la testa del giocatore), `diveSpeed` (velocità della picchiata), `bobAmplitude` e `bobPeriodMs` (oscillazione) |
 | `scoreReward` | punti alla sconfitta |
 | `hitbox` | dimensioni del corpo (`x`,`y` non usati) |
 
 #### `BOSS_CONFIG` (tipo `BossDefinition`)
 
-Contiene salute, velocità, `activationRange`, i parametri del **fendente** (`slash...`) e della **carica**
-(`charge...`), `attackCooldownMs`, `hitFlashMs`, `deathDurationMs`, `scoreReward`, `hitbox` e l'elenco
-`phases` (tipo `BossPhaseDefinition`: soglia di salute in %, moltiplicatori di velocità e di pausa,
-probabilità di carica). `BOSS_CATALOG` raccoglie tutti i boss per id.
+Contiene salute, velocità, `activationRange`, l'elenco degli **attacchi** (`attacks`, tipo `BossAttackDefinition`),
+`attackCooldownMs`, `hitFlashMs`, `deathDurationMs`, `scoreReward`, `hitbox` e l'elenco `phases` (tipo
+`BossPhaseDefinition`: soglia di salute in %, moltiplicatori di velocità e di pausa, `attackWeights` = peso di ogni attacco
+nel sorteggio). `BOSS_CATALOG` raccoglie tutti i boss per id.
+
+Ogni attacco ha `id`, `kind`, `windupMs` (preparazione ben visibile), `activeMs`, `recoveryMs` e i campi del suo tipo:
+
+| `kind` | Campi | Cosa fa |
+|---|---|---|
+| `melee` | `damage`, `range` | colpo davanti a sé, a portata `range` |
+| `charge` | `damage`, `speed`, `minDistance` | scatto in avanti per `activeMs`; tutto il corpo ferisce; si ferma contro i muri; solo da almeno `minDistance` |
+| `projectile` | `damage`, `projectileId`, `count`, `spreadDegrees`, `launchOffset`, `minDistance` | ventaglio di `count` proiettili mirati al giocatore all'inizio della fase attiva |
+| `summon` | `enemyType`, `count`, `maxAlive`, `spawnDistance` | evoca nemici ai suoi lati, senza superare `maxAlive` evocati vivi |
+
+Al massimo un attacco per tipo. Nel sorteggio i pesi si sommano nell'ordine di `attacks` (per questo nel Cavaliere Nero la
+carica è prima del fendente: con lo stesso numero casuale si ottiene lo stesso attacco della versione 1.0).
 
 ### 3.2 `src/core/` – il motore
 
@@ -215,8 +231,9 @@ regolano hit-stop, tremolio e polvere.
 |---|---|---|
 | `GameObject.ts` | `GameObject` (astratta) | `positionX`, `positionY`, `velocityX`, `velocityY`, `facingDirection`, `isOnGround`, `width`, `height`, `getBounds()` |
 | `Player.ts` | `Player` | il cavaliere |
-| `Enemy.ts` | `Enemy` | nemico normale guidato da una `EnemyDefinition` |
-| `Boss.ts` | `Boss` | boss con IA propria e fasi |
+| `Enemy.ts` | `Enemy` | nemico normale guidato da una `EnemyDefinition` (anche a distanza e volante) |
+| `Boss.ts` | `Boss` | boss con IA propria, attacchi come dati e fasi |
+| `Projectile.ts` (2.0) | `Projectile` | proiettile nemico: si muove, scade, si anima (le regole di contatto sono in `ProjectileSystem`) |
 | `Item.ts` | `Item` | oggetto raccoglibile |
 
 **`Player`** – `currentState` (`PlayerState`: `idle`, `walk`, `jump`, `fall`, `attack`, `hurt`, `dodge`, `dead`;
@@ -238,14 +255,26 @@ L'ordine dentro `update`: timer → (morto / stordito / input) → gravità → 
 Priorità degli stati in `updateState()`: morto > stordito > schivata > attacco > aria > camminata > fermo.
 
 **`Enemy`** – decide `EnemyAISystem`, esegue `Enemy`. Funzioni: `setMovement(direction, speedMultiplier)`,
-`faceTowards(x)`, `beginAttack()`, `getAttackHitbox()`, `markPlayerHit()`, `receiveHit(damage, hitDirection)`,
-`update(...)`, `render(...)`. Getter: `isAlive`, `isRemovable`, `canAct`, `isAttacking`, `isAttackReady`, `scoreReward`.
-Applica `DIFFICULTY_CONFIG` a salute e danno quando viene creato.
+`faceTowards(x)`, `beginAttack(target?)`, `setFlightTarget(x, y)` (volanti), `getAttackHitbox()`, `markPlayerHit()`,
+`receiveHit(damage, hitDirection)`, `drainProjectileLaunches()` (a distanza), `update(...)`, `render(...)`. Getter: `isAlive`,
+`isRemovable`, `canAct`, `isAttacking`, `isAttackReady`, `isFlying`, `centerX`, `centerY`, `scoreReward`. Proprietà
+`isSummoned` (evocato da un boss). Applica `DIFFICULTY_CONFIG` a salute e danno quando viene creato.
+- **A distanza** (`ranged`): alla fine della preparazione mette in coda un `ProjectileLaunch`; il motore lo preleva con
+  `drainProjectileLaunches()` e lo passa a `ProjectileSystem`. Non ha area d'urto da mischia.
+- **Volante** (`flight`): da vivo niente gravità; vola verso il punto scelto dall'IA (`setFlightTarget`), attraversa le
+  piattaforme sospese ma non i muri; la preparazione lo tiene fermo a mezz'aria, la fase attiva è una picchiata verso il punto
+  bloccato da `beginAttack(target)` (ferisce tutto il corpo), il recupero lo fa risalire. Da morto cade.
 
-**`Boss`** – stati `dormant`, `idle`, `walk`, `slash`, `chargeWindup`, `charging`, `recovery`, `dead`. Si risveglia entro
-`activationRange` (o se colpito). Sorteggia il prossimo attacco una volta per pausa (`rollNextAttack`), usando
-`chargeChance` della fase corrente. Non viene stordito dai colpi (lampeggia). Getter: `phaseIndex`, `currentPhase`,
-`isActive`, `isDefeated`, `currentAttackDamage`. Il generatore casuale è un parametro del costruttore (utile per i test).
+**`Boss`** – fuori dagli attacchi gli stati sono `dormant`, `idle`, `walk`, `dead`; durante un attacco `currentState` è il
+nome della fase (`BOSS_ATTACK_ANIMATIONS` in `animationConfig.ts`: `slash`; `chargeWindup`/`charging`/`recovery`;
+`castWindup`/`casting`/`castRecovery`; `summonWindup`/`summoning`/`summonRecovery`), che è anche il nome dell'animazione.
+Si risveglia entro `activationRange` (o se colpito). Sorteggia il prossimo attacco una volta per pausa (`rollNextAttack`) con i
+pesi della fase corrente. Se l'attacco sorteggiato non è possibile (troppo vicino per caricare o lanciare, troppi evocati) usa
+il corpo a corpo se il giocatore è a portata, altrimenti si avvicina (un boss senza corpo a corpo resta fermo). Proiettili ed
+evocazioni sono richieste che il motore preleva (`drainProjectileLaunches`, `drainSummonRequests`). Non viene stordito dai colpi
+(lampeggia). Getter: `phaseIndex`, `currentPhase`, `isActive`, `isDefeated`, `currentAttackDamage`, `currentAttackWindupMs`.
+Le animazioni si ricavano dalla definizione (`createBossAnimations`). Il generatore casuale è un parametro del costruttore
+(utile per i test).
 
 **`Item`** – ha `definition` (da `ITEM_CONFIG`) e `bobPhase` (solo grafica).
 
@@ -270,8 +299,10 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | File | Classe | Responsabilità |
 |---|---|---|
 | `CollisionSystem.ts` | `CollisionSystem` | `intersects(a, b)`, `applyGravityAndMove(object, dt, gravity, maxFallSpeed, platforms, mapWidth)` (gravità con **velocità media** del frame: la traiettoria del salto è esatta a qualsiasi FPS) e `moveAndCollide(object, dt, platforms, mapWidth)`: muove prima su X poi su Y, risolve le collisioni, impone i limiti della mappa, imposta `isOnGround`; piattaforme sospese (`oneWay`) attraversabili dal basso |
-| `EnemyAISystem.ts` | `EnemyAISystem` | decide cosa fa ogni nemico (pattuglia, insegue, guardia, attacca); evita abissi e muri |
-| `LevelManager.ts` | `LevelManager` | `loadLevel`, `hasLevel`, `createEnemies`, `createBoss`, `lockArena`, `render` (sfondo, terreno, porta, cancello) |
+| `EnemyAISystem.ts` | `EnemyAISystem` | decide cosa fa ogni nemico (pattuglia, insegue, guardia, tira a distanza, vola e picchia, attacca); i nemici a terra evitano abissi, muri, spuntoni e acqua |
+| `LevelManager.ts` | `LevelManager` | `loadLevel`, `loadLevelDefinition` (livelli fuori da `LEVEL_CONFIG`, per test e prove), `hasLevel`, `createEnemies`, `createBoss`, `lockArena`, `hazards`, `updateMovingPlatforms(ms, chi)` (muove le piattaforme mobili e trasporta chi ci sta sopra), `render` (sfondo, terreno, porta, cancello, pericoli), `renderForeground` (acqua davanti alle entità) |
+| `ProjectileSystem.ts` (2.0) | `ProjectileSystem` | `spawn`, `update` (restituisce gli eventi: colpito il giocatore, deviato dalla spada, schianto), `render`, `clear`. Il proiettile passa attraverso il giocatore invulnerabile (schivata) |
+| `HazardSystem.ts` (2.0) | `HazardSystem` | `computePlayerEnvironment` (acqua o ghiaccio: modificatori del movimento), `applyContactDamage` (spuntoni) |
 | `ItemManager.ts` | `ItemManager` | `loadItems`, `collectItems(player, scoreManager)` (applica gli effetti), `render` |
 | `ScoreManager.ts` | `ScoreManager` | `currentScore`, `collectiblesFound`, `addScore`, `registerCollectible`, `restore`, `reset` |
 | `LivesManager.ts` | `LivesManager` | `remainingLives`, `hasLivesLeft`, `loseLife`, `addLife`, `reset` |
@@ -331,8 +362,8 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 | File | Tipi |
 |---|---|
 | `GameTypes.ts` | `GameStateName`, `GameAction`, `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
-| `EntityTypes.ts` | `PlayerState`, `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `EnemyDefinition`, `AttackDefinition`, `ComboDefinition`, `Damageable`, `BossPhaseDefinition`, `BossDefinition` |
-| `LevelTypes.ts` | `ThemeId`, `TerrainTexture`, `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `EnemySpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` |
+| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition`, `ComboDefinition`, `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
+| `LevelTypes.ts` | `ThemeId`, `TerrainTexture`, `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` |
 
 ---
 
@@ -350,9 +381,14 @@ registra gli sprite, carica il livello 1, crea giocatore/nemici/oggetti → `sta
 5. `render()`: mondo (con tremolio) → HUD → messaggi di livello → schermata dello stato.
 
 ### 4.3 `updatePlaying` (l'ordine conta)
-`player.update` → effetti di movimento (polvere) → punto sicuro → arena del boss → combattimento
-(`processPlayerAttack` → effetti/punti → IA dei nemici → `enemy.update` → attacchi nemici → boss) → oggetti →
-effetti di danno → ripartenza dopo la morte o caduta → completamento del livello → camera.
+piattaforme mobili (trasportano chi ci sta sopra) → ambiente del giocatore (acqua, ghiaccio) → `player.update` → spuntoni →
+effetti di movimento (polvere) → punto sicuro → arena del boss → combattimento (`processPlayerAttack` → effetti/punti →
+IA dei nemici → `enemy.update` e proiettili lanciati → attacchi nemici → boss, i suoi proiettili e i suoi evocati →
+`projectileSystem.update` → rimozione dei morti) → oggetti → effetti di danno → ripartenza dopo la morte o caduta →
+completamento del livello → camera.
+
+Ordine di disegno del mondo: livello (sfondo, terreno, pericoli) → oggetti → nemici → boss → giocatore → proiettili →
+acqua in primo piano (con ondulazione) → effetti.
 
 ### 4.4 Un colpo del giocatore
 `Player.handleInput` memorizza l'input (`bufferAttack`, solo se l'attacco può partire entro `attackBufferMs`) → quando possibile `startAttack` chiede a `ComboManager` l'attacco →
@@ -554,28 +590,26 @@ Servono 6 passi: tipo, statistiche, animazioni, sprite (2 punti) e posizione nel
 
 Codice originale:
 ```ts
-export type EnemyTypeId = "skeleton" | "goblin" | "soldier";
+export type EnemyTypeId = "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "bat";
 ```
 Codice aggiornato:
 ```ts
-export type EnemyTypeId = "skeleton" | "goblin" | "soldier" | "brute";
+export type EnemyTypeId = "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "bat" | "brute";
 ```
 
 #### Passo 2 – `src/config/enemyConfig.ts`
 
-**Cerca:** `ENEMY_CONFIG`, in fondo alla voce `soldier`.
+**Cerca:** `ENEMY_CONFIG`, in fondo alla voce `bat` (l'ultima).
 
 Codice originale:
 ```ts
-    scoreReward: 150,
-    hitbox: { x: 0, y: 0, width: 12, height: 24 },
+    flight: { hoverHeight: 26, diveSpeed: 150, bobAmplitude: 4, bobPeriodMs: 900 },
   },
 };
 ```
 Codice aggiornato:
 ```ts
-    scoreReward: 150,
-    hitbox: { x: 0, y: 0, width: 12, height: 24 },
+    flight: { hoverHeight: 26, diveSpeed: 150, bobAmplitude: 4, bobPeriodMs: 900 },
   },
   brute: {
     id: "brute",
@@ -606,12 +640,12 @@ Codice aggiornato:
 
 Codice originale:
 ```ts
-  soldier: createEnemyAnimations("soldier"),
+  bat: createEnemyAnimations("bat"),
 };
 ```
 Codice aggiornato:
 ```ts
-  soldier: createEnemyAnimations("soldier"),
+  bat: createEnemyAnimations("bat"),
   brute: createEnemyAnimations("brute"),
 };
 ```
@@ -636,7 +670,7 @@ import type { EnemyTypeId } from "../../types/EntityTypes";
 
 Codice originale:
 ```ts
-  idPrefix: "skeleton" | "goblin" | "soldier";
+  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher";
 ```
 Codice aggiornato:
 ```ts
@@ -923,26 +957,19 @@ const SKELETON_KING_CONFIG: BossDefinition = {
   maxHealth: 360,
   movementSpeed: 34,
   activationRange: 220,
-  slashDamage: 22,
-  slashRange: 36,
-  slashWindupMs: 650,
-  slashActiveMs: 200,
-  slashRecoveryMs: 450,
-  chargeDamage: 18,
-  chargeSpeed: 150,
-  chargeMinDistance: 70,
-  chargeWindupMs: 800,
-  chargeDurationMs: 600,
-  chargeRecoveryMs: 800,
+  attacks: [
+    { id: "charge", kind: "charge", damage: 18, speed: 150, minDistance: 70, windupMs: 800, activeMs: 600, recoveryMs: 800 },
+    { id: "slash", kind: "melee", damage: 22, range: 36, windupMs: 650, activeMs: 200, recoveryMs: 450 },
+  ],
   attackCooldownMs: 1500,
   hitFlashMs: 100,
   deathDurationMs: 1500,
   scoreReward: 1500,
   hitbox: { x: 0, y: 0, width: 24, height: 40 },
   phases: [
-    { healthPercentThreshold: 100, speedMultiplier: 1, cooldownMultiplier: 1, chargeChance: 0.2 },
-    { healthPercentThreshold: 66, speedMultiplier: 1.15, cooldownMultiplier: 0.85, chargeChance: 0.4 },
-    { healthPercentThreshold: 33, speedMultiplier: 1.4, cooldownMultiplier: 0.7, chargeChance: 0.6 },
+    { healthPercentThreshold: 100, speedMultiplier: 1, cooldownMultiplier: 1, attackWeights: { charge: 0.2, slash: 0.8 } },
+    { healthPercentThreshold: 66, speedMultiplier: 1.15, cooldownMultiplier: 0.85, attackWeights: { charge: 0.4, slash: 0.6 } },
+    { healthPercentThreshold: 33, speedMultiplier: 1.4, cooldownMultiplier: 0.7, attackWeights: { charge: 0.6, slash: 0.4 } },
   ],
 };
 
@@ -1007,7 +1034,9 @@ boss del catalogo, con il nome `<id>Idle1`, `<id>SlashA`, ecc.; per questo serve
 `phases`, ordinato per soglia decrescente: una fase è attiva quando la salute in % scende sotto la sua soglia; l'HUD mostra
 una tacca sulla barra per ogni soglia sotto il 100. **Limite:** tutti i boss condividono la forma dello sprite (hitbox 24×40
 obbligatoria): per una silhouette diversa servirebbe disegnare nuove righe di sprite in `bossSprites.ts`.
-Il tipo di attacchi (fendente e carica) è lo stesso: per attacchi nuovi va esteso `Boss.ts`.
+Gli attacchi sono dati: il Re Scheletro usa gli stessi tipi del Cavaliere Nero (carica e fendente) con numeri diversi; per
+dargli anche un ventaglio di proiettili o un'evocazione basta aggiungere un attacco `projectile` o `summon` in `attacks` e il
+suo peso in `attackWeights` delle fasi (vedi la tabella degli attacchi in 3.1).
 
 **Risultato atteso:** nel dungeon l'avversario è un Re Scheletro (360 HP, armatura grigia, occhi azzurri) che cambia
 comportamento a 66% e 33% di salute; la barra mostra due tacche.

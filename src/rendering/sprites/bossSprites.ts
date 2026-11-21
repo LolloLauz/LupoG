@@ -134,6 +134,8 @@ const SPRITE_HEIGHT = 41;
 const LEGS_TOP = 26;
 /** Colonna in cui inizia l'hitbox del boss dentro lo sprite. */
 const BOSS_ANCHOR_X = 6;
+/** Portata usata per disegnare la scia se il boss non ha un attacco corpo a corpo. */
+const DEFAULT_SLASH_RANGE = 34;
 /** Mano che impugna lo spadone. */
 const HAND_X = 27;
 const HAND_Y = 19;
@@ -172,6 +174,30 @@ function composeWithSword(spriteWidth: number, pose: BossPose, bodyDrop = 0): st
   return grid.map((row) => row.join(""));
 }
 
+/**
+ * Posa dell'incantesimo: come composeWithSword, più un bagliore ("e" e "w") attorno alla punta.
+ * isReleased = bagliore che si stacca in avanti (fase attiva).
+ */
+function composeCastFrame(spriteWidth: number, pose: BossPose, bodyDrop: number, isReleased: boolean): string[] {
+  const rows = composeWithSword(spriteWidth, pose, bodyDrop);
+  const grid = rows.map((row) => [...row]);
+  const glowCenterX = Math.min(spriteWidth - 3, pose.tipX + (isReleased ? 1 : 0));
+  const glowCenterY = Math.max(2, pose.tipY + (isReleased ? 0 : 2));
+  for (let offsetY = -2; offsetY <= 2; offsetY++) {
+    for (let offsetX = -2; offsetX <= 2; offsetX++) {
+      const distance = Math.abs(offsetX) + Math.abs(offsetY);
+      if (distance > 3) {
+        continue;
+      }
+      const row = grid[glowCenterY + offsetY];
+      if (row !== undefined && glowCenterX + offsetX >= 0 && glowCenterX + offsetX < row.length) {
+        row[glowCenterX + offsetX] = distance <= 1 ? "w" : "e";
+      }
+    }
+  }
+  return grid.map((row) => row.join(""));
+}
+
 function collapse(rows: string[]): string[] {
   const sampled = rows.filter((_, rowIndex) => rowIndex % 3 === 2);
   const emptyRow = ".".repeat(rows[0]!.length);
@@ -188,8 +214,10 @@ function registerBossSpritesFor(spriteManager: SpriteManager, definition: BossDe
     throw new Error(`Il boss "${definition.id}" deve avere hitbox ${BODY_WIDTH}x${BODY_HEIGHT} (forma dello sprite)`);
   }
   const prefix = definition.id;
-  // la scia arriva dove arriva il colpo: bordo anteriore dell'hitbox + slashRange
-  const slashTipX = BOSS_ANCHOR_X + BODY_WIDTH + definition.slashRange;
+  // la scia arriva dove arriva il colpo: bordo anteriore dell'hitbox + portata del corpo a corpo
+  const meleeAttack = definition.attacks.find((attack) => attack.kind === "melee");
+  const meleeRange = meleeAttack !== undefined && meleeAttack.kind === "melee" ? meleeAttack.range : DEFAULT_SLASH_RANGE;
+  const slashTipX = BOSS_ANCHOR_X + BODY_WIDTH + meleeRange;
   const slashWidth = slashTipX + 4;
   const chargeWidth = SPRITE_WIDTH + 24;
   const restingTip = { tipX: HAND_X + 6, tipY: 4 };
@@ -219,6 +247,9 @@ function registerBossSpritesFor(spriteManager: SpriteManager, definition: BossDe
       legs: LEGS_STRIDE,
     }),
     [`${prefix}Hurt`]: composeWithSword(SPRITE_WIDTH, { tipX: SPRITE_WIDTH - 2, tipY: SPRITE_HEIGHT - 1 }, 2),
+    // incantesimo (proiettili, evocazione): spada alzata che si carica, poi puntata in avanti
+    [`${prefix}CastA`]: composeCastFrame(SPRITE_WIDTH + 4, { tipX: HAND_X + 2, tipY: 0 }, 1, false),
+    [`${prefix}CastB`]: composeCastFrame(SPRITE_WIDTH + 8, { tipX: SPRITE_WIDTH + 6, tipY: HAND_Y - 4 }, 0, true),
   };
   frames[`${prefix}Heap`] = collapse(composeBody(LEGS_STAND, 0));
   for (const [spriteId, pixelRows] of Object.entries(frames)) {

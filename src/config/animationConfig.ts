@@ -1,5 +1,5 @@
 import type { AnimationDefinition } from "../rendering/AnimationManager";
-import type { BossDefinition, EnemyTypeId } from "../types/EntityTypes";
+import type { BossAttackKind, BossDefinition, EnemyTypeId } from "../types/EntityTypes";
 import { BOSS_CATALOG, ENEMY_CONFIG } from "./enemyConfig";
 import { ATTACK_DEFINITIONS } from "./playerConfig";
 
@@ -73,28 +73,58 @@ export const ENEMY_ANIMATIONS: Record<EnemyTypeId, Record<string, AnimationDefin
   skeleton: createEnemyAnimations("skeleton"),
   goblin: createEnemyAnimations("goblin"),
   soldier: createEnemyAnimations("soldier"),
+  skeletonArcher: createEnemyAnimations("skeletonArcher"),
+  bat: createEnemyAnimations("bat"),
 };
 
 /**
- * Animazioni di un boss. I frame hanno il nome "<idBoss>Idle1", "<idBoss>Slash..." ecc.
- * Le durate di fendente e carica seguono la definizione del boss.
+ * Nomi delle animazioni (e degli stati del boss) per ogni tipo di attacco, nelle tre fasi.
+ * Il fendente usa una sola animazione a tre frame, uno per fase.
  */
-function createBossAnimations(definition: BossDefinition): Record<string, AnimationDefinition> {
+export const BOSS_ATTACK_ANIMATIONS: Record<BossAttackKind, { windup: string; active: string; recovery: string }> = {
+  melee: { windup: "slash", active: "slash", recovery: "slash" },
+  charge: { windup: "chargeWindup", active: "charging", recovery: "recovery" },
+  projectile: { windup: "castWindup", active: "casting", recovery: "castRecovery" },
+  summon: { windup: "summonWindup", active: "summoning", recovery: "summonRecovery" },
+};
+
+/** Frame (suffissi degli sprite del boss) usati da ogni animazione d'attacco. */
+const BOSS_ATTACK_FRAMES: Record<BossAttackKind, { windup: string; active: string; recovery: string }> = {
+  melee: { windup: "SlashA", active: "SlashB", recovery: "SlashC" },
+  charge: { windup: "ChargeWindup", active: "ChargeDash", recovery: "Hurt" },
+  projectile: { windup: "CastA", active: "CastB", recovery: "CastA" },
+  summon: { windup: "CastA", active: "CastB", recovery: "CastA" },
+};
+
+/**
+ * Animazioni di un boss. I frame hanno il nome "<idBoss>Idle1", "<idBoss>SlashA" ecc.
+ * Per ogni attacco della definizione si creano le animazioni del suo tipo; le durate seguono
+ * quelle dell'attacco.
+ */
+export function createBossAnimations(definition: BossDefinition): Record<string, AnimationDefinition> {
   const id = definition.id;
-  return {
+  const animations: Record<string, AnimationDefinition> = {
     idle: { frameIds: [`${id}Idle1`, `${id}Idle2`], frameDurationMs: 600, loop: true },
     walk: { frameIds: [`${id}Walk1`, `${id}Walk2`, `${id}Walk3`, `${id}Walk2`], frameDurationMs: 200, loop: true },
-    slash: {
-      frameIds: [`${id}SlashA`, `${id}SlashB`, `${id}SlashC`],
-      frameDurationMs: 100,
-      frameDurationsMs: [definition.slashWindupMs, definition.slashActiveMs, definition.slashRecoveryMs],
-      loop: false,
-    },
-    chargeWindup: { frameIds: [`${id}ChargeWindup`], frameDurationMs: 100, loop: true },
-    charging: { frameIds: [`${id}ChargeDash`], frameDurationMs: 100, loop: true },
-    recovery: { frameIds: [`${id}Hurt`], frameDurationMs: 100, loop: true },
     dead: { frameIds: [`${id}Hurt`, `${id}Heap`], frameDurationMs: 400, loop: false },
   };
+  for (const attack of definition.attacks) {
+    const names = BOSS_ATTACK_ANIMATIONS[attack.kind];
+    const frames = BOSS_ATTACK_FRAMES[attack.kind];
+    if (attack.kind === "melee") {
+      animations[names.windup] = {
+        frameIds: [`${id}${frames.windup}`, `${id}${frames.active}`, `${id}${frames.recovery}`],
+        frameDurationMs: 100,
+        frameDurationsMs: [attack.windupMs, attack.activeMs, attack.recoveryMs],
+        loop: false,
+      };
+      continue;
+    }
+    animations[names.windup] = { frameIds: [`${id}${frames.windup}`], frameDurationMs: 100, loop: true };
+    animations[names.active] = { frameIds: [`${id}${frames.active}`], frameDurationMs: 100, loop: true };
+    animations[names.recovery] = { frameIds: [`${id}${frames.recovery}`], frameDurationMs: 100, loop: true };
+  }
+  return animations;
 }
 
 /** Animazioni di tutti i boss del catalogo, indicizzate per id del boss. */

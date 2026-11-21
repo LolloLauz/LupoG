@@ -1,7 +1,7 @@
 import { CombatSystem } from "../combat/CombatSystem";
 import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import type { Boss } from "../entities/Boss";
-import type { Enemy } from "../entities/Enemy";
+import { Enemy } from "../entities/Enemy";
 import { Player } from "../entities/Player";
 import { Camera } from "../rendering/Camera";
 import { EffectsManager } from "../rendering/EffectsManager";
@@ -14,6 +14,10 @@ import { registerKnightSprites } from "../rendering/sprites/knightSprites";
 import { registerUiSprites } from "../rendering/sprites/uiSprites";
 import { CollisionSystem } from "../systems/CollisionSystem";
 import { EnemyAISystem } from "../systems/EnemyAISystem";
+import { HazardSystem } from "../systems/HazardSystem";
+import { ProjectileSystem, type ProjectileEvent } from "../systems/ProjectileSystem";
+import { ENEMY_CONFIG } from "../config/enemyConfig";
+import { registerProjectileSprites } from "../rendering/sprites/projectileSprites";
 import { HighScoreManager } from "../systems/HighScoreManager";
 import { ItemManager } from "../systems/ItemManager";
 import { LevelManager } from "../systems/LevelManager";
@@ -71,6 +75,8 @@ export class GameEngine {
   private readonly combatSystem = new CombatSystem();
   private readonly player: Player;
   private readonly enemyAISystem = new EnemyAISystem();
+  private readonly projectileSystem = new ProjectileSystem();
+  private readonly hazardSystem = new HazardSystem();
   private readonly scoreManager = new ScoreManager();
   private readonly livesManager = new LivesManager();
   private readonly highScoreManager = new HighScoreManager();
@@ -99,6 +105,7 @@ export class GameEngine {
     registerBossSprites(this.spriteManager);
     registerItemSprites(this.spriteManager);
     registerUiSprites(this.spriteManager);
+    registerProjectileSprites(this.spriteManager);
     this.screens = new ScreenManager(this.spriteManager);
     this.levelManager.loadLevel(FIRST_LEVEL_ID);
     const playerStart = this.levelManager.level.playerStart;
@@ -203,6 +210,7 @@ export class GameEngine {
     this.player.respawnAt(playerStart);
     this.lastSafePosition = { ...playerStart };
     this.effects.clear();
+    this.projectileSystem.clear();
     this.levelPhase = "playing";
     this.bannerRemainingMs = GAME_CONFIG.levelBannerDurationMs;
     this.levelElapsedSeconds = 0;
@@ -257,6 +265,12 @@ export class GameEngine {
     const fallingSpeed = this.player.velocityY;
     const wasDodging = this.player.currentState === "dodge";
     const healthBeforeUpdate = this.player.currentHealth;
+    // piattaforme mobili (trasportano chi ci sta sopra) e ambiente del giocatore (acqua, ghiaccio)
+    this.levelManager.updateMovingPlatforms(this.levelElapsedSeconds * 1000, [
+      this.player,
+      ...this.enemies.filter((enemy) => !enemy.isFlying),
+    ]);
+    this.player.environment = this.hazardSystem.computePlayerEnvironment(this.player, this.levelManager.hazards);
     this.player.update(
       deltaTimeSeconds,
       this.input,
@@ -264,6 +278,7 @@ export class GameEngine {
       this.levelManager.platforms,
       level.width
     );
+    this.hazardSystem.applyContactDamage(this.player, this.levelManager.hazards);
     this.updateMovementEffects(wasOnGround, fallingSpeed, wasDodging);
     this.updateSafePosition();
     this.updateArena();
@@ -357,16 +372,40 @@ export class GameEngine {
       }
     }
 
-    this.enemyAISystem.update(this.enemies, this.player, platforms);
+    this.enemyAISystem.update(this.enemies, this.player, platforms, this.levelManager.hazards, this.levelElapsedSeconds * 1000);
     for (const enemy of this.enemies) {
       enemy.update(deltaTimeSeconds, this.collisionSystem, platforms, mapWidth);
+      enemy.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
     }
     this.combatSystem.processEnemyAttacks(this.enemies, this.player);
     if (this.boss !== null) {
-      this.boss.update(deltaTimeSeconds, this.player, this.collisionSystem, platforms, mapWidth);
+      const aliveMinionCount = this.enemies.filter((enemy) => enemy.isSummoned && enemy.isAlive).length;
+      this.boss.update(deltaTimeSeconds, this.player, this.collisionSystem, platforms, mapWidth, aliveMinionCount);
       this.combatSystem.processBossAttack(this.boss, this.player);
+      this.boss.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
+      for (const summon of this.boss.drainSummonRequests()) {
+        const minion = new Enemy(ENEMY_CONFIG[summon.enemyType], summon.position.x, summon.position.y);
+        minion.isSummoned = true;
+        this.enemies.push(minion);
+        this.effects.spawnBurst(minion.centerX, minion.centerY, [PALETTE.violet, PALETTE.lilac, PALETTE.white], 12);
+      }
     }
+    const level = this.levelManager.level;
+    const projectileEvents = this.projectileSystem.update(deltaTimeSeconds, this.player, platforms, level.width, level.height);
+    this.showProjectileEffects(projectileEvents);
     this.enemies = this.enemies.filter((enemy) => !enemy.isRemovable);
+  }
+
+  /** Scintille quando un proiettile viene deviato dalla spada o si schianta. */
+  private showProjectileEffects(events: ProjectileEvent[]): void {
+    for (const event of events) {
+      if (event.kind === "deflected") {
+        this.effects.spawnHitSparks(event.x, event.y, this.player.facingDirection === "right" ? 1 : -1);
+        this.effects.triggerHitStop(EFFECT_CONFIG.lightHitStopMs);
+      } else if (event.kind === "impact") {
+        this.effects.spawnDust(event.x, event.y);
+      }
+    }
   }
 
   /** Polvere all'atterraggio e all'inizio della schivata. */
@@ -520,6 +559,8 @@ export class GameEngine {
     this.enemies.forEach((enemy) => enemy.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y));
     this.boss?.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
     this.player.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
+    this.projectileSystem.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
+    this.levelManager.renderForeground(this.renderer, this.camera, this.levelElapsedSeconds);
     this.effects.render(this.renderer, this.camera.x, this.camera.y);
     if (GAME_CONFIG.debugMode) {
       const bounds = this.player.getBounds();

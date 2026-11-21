@@ -1,7 +1,7 @@
 import { ENEMY_AI_CONFIG } from "../config/enemyConfig";
 import type { Enemy } from "../entities/Enemy";
 import type { Player } from "../entities/Player";
-import type { PlatformDefinition } from "../types/LevelTypes";
+import type { HazardDefinition, PlatformDefinition } from "../types/LevelTypes";
 import { CollisionSystem } from "./CollisionSystem";
 
 /**
@@ -9,17 +9,40 @@ import { CollisionSystem } from "./CollisionSystem";
  *  - patrol: pattuglia una zona attorno al punto di partenza e, se vede il
  *    giocatore, lo affronta restando dentro la zona;
  *  - chase: aspetta, poi insegue il giocatore quando entra nel raggio;
- *  - guard: resta fermo, si volta verso il giocatore e attacca se è abbastanza vicino.
- * Tutti attaccano quando il giocatore è a portata. Nessuno cammina nel vuoto
- * o contro un muro.
+ *  - guard: resta fermo, si volta verso il giocatore e attacca se è abbastanza vicino;
+ *  - ranged: tiene le distanze (indietreggia se il giocatore è troppo vicino) e tira proiettili
+ *    quando il giocatore è alla sua altezza ed entro attackRange;
+ *  - flyer: vola attorno al punto di partenza; quando vede il giocatore (in qualsiasi direzione)
+ *    gli resta sopra la testa e, a distanza attackRange, si lancia in picchiata.
+ * Tutti attaccano quando il giocatore è a portata. Nessun nemico a terra cammina nel vuoto,
+ * contro un muro, sugli spuntoni o nell'acqua.
  */
 export class EnemyAISystem {
-  public update(enemies: Enemy[], player: Player, platforms: PlatformDefinition[]): void {
+  private hazards: HazardDefinition[] = [];
+
+  /**
+   * @param elapsedMs tempo di gioco (ms), per l'oscillazione dei volanti
+   * @param hazards pericoli del livello (i nemici a terra non ci entrano)
+   */
+  public update(
+    enemies: Enemy[],
+    player: Player,
+    platforms: PlatformDefinition[],
+    hazards: HazardDefinition[] = [],
+    elapsedMs = 0
+  ): void {
+    this.hazards = hazards;
     for (const enemy of enemies) {
       if (!enemy.canAct) {
         continue;
       }
-      this.updateEnemy(enemy, player, platforms);
+      if (enemy.definition.behavior === "flyer") {
+        this.updateFlyer(enemy, player, elapsedMs);
+      } else if (enemy.definition.behavior === "ranged") {
+        this.updateRanged(enemy, player, platforms);
+      } else {
+        this.updateEnemy(enemy, player, platforms);
+      }
     }
   }
 
@@ -51,11 +74,74 @@ export class EnemyAISystem {
         this.updateChase(enemy, canSeePlayer, isPlayerOnSameLevel, horizontalDistance, playerCenterX, platforms);
         break;
       case "guard":
+      case "ranged":
+      case "flyer":
         if (canSeePlayer) {
           enemy.faceTowards(playerCenterX);
         }
         break;
     }
+  }
+
+  /** A distanza: indietreggia se il giocatore è troppo vicino, altrimenti tira quando è alla sua altezza. */
+  private updateRanged(enemy: Enemy, player: Player, platforms: PlatformDefinition[]): void {
+    const ranged = enemy.definition.ranged;
+    const playerCenterX = player.positionX + player.width / 2;
+    const horizontalDistance = Math.abs(playerCenterX - enemy.centerX);
+    const horizontalGap = Math.max(0, horizontalDistance - (enemy.width + player.width) / 2);
+    const verticalDistance = Math.abs(player.positionY + player.height / 2 - enemy.centerY);
+    const isPlayerOnSameLevel = !player.isDead && verticalDistance <= ENEMY_AI_CONFIG.verticalDetectionTolerance;
+    if (!isPlayerOnSameLevel || horizontalDistance > enemy.definition.detectionRange) {
+      if (enemy.definition.patrolDistance > 0) {
+        this.updatePatrol(enemy, false, playerCenterX, platforms);
+      }
+      return;
+    }
+    enemy.faceTowards(playerCenterX);
+    const directionToPlayer = playerCenterX < enemy.centerX ? -1 : 1;
+    const directionAway = directionToPlayer > 0 ? -1 : 1;
+    if (ranged !== undefined && horizontalGap < ranged.retreatDistance && this.canMoveForward(enemy, directionAway, platforms)) {
+      // indietreggia senza voltarsi: continua a guardare il giocatore
+      enemy.setMovement(directionAway);
+      enemy.faceTowards(playerCenterX);
+      return;
+    }
+    if (horizontalGap <= enemy.definition.attackRange && enemy.isAttackReady) {
+      enemy.beginAttack();
+    }
+  }
+
+  /**
+   * Volante: senza bersaglio volteggia attorno al punto di partenza; visto il giocatore (distanza
+   * tra i centri entro detectionRange) gli si porta sopra la testa, dal lato in cui si trova, e
+   * a distanza attackRange si lancia in picchiata verso di lui.
+   */
+  private updateFlyer(enemy: Enemy, player: Player, elapsedMs: number): void {
+    const flight = enemy.definition.flight;
+    if (flight === undefined) {
+      return;
+    }
+    const playerCenterX = player.positionX + player.width / 2;
+    const playerCenterY = player.positionY + player.height / 2;
+    const distance = Math.hypot(playerCenterX - enemy.centerX, playerCenterY - enemy.centerY);
+    if (!player.isDead && distance <= enemy.definition.detectionRange) {
+      enemy.isChasing = true;
+    } else if (player.isDead || distance > enemy.definition.detectionRange * ENEMY_AI_CONFIG.loseInterestMultiplier) {
+      enemy.isChasing = false;
+    }
+    const bobPhase = ((elapsedMs + enemy.spawnPositionX * 7) / flight.bobPeriodMs) * Math.PI * 2;
+    const bobOffset = Math.sin(bobPhase) * flight.bobAmplitude;
+    if (!enemy.isChasing) {
+      const patrolOffset = Math.sin(bobPhase / 3) * enemy.definition.patrolDistance;
+      enemy.setFlightTarget(enemy.spawnPositionX + enemy.width / 2 + patrolOffset, enemy.spawnPositionY + enemy.height / 2 + bobOffset);
+      return;
+    }
+    if (distance <= enemy.definition.attackRange && enemy.isAttackReady) {
+      enemy.beginAttack({ x: playerCenterX, y: playerCenterY });
+      return;
+    }
+    const side = enemy.centerX < playerCenterX ? -1 : 1;
+    enemy.setFlightTarget(playerCenterX + side * 24, player.positionY - flight.hoverHeight + bobOffset);
   }
 
   private updatePatrol(
@@ -123,6 +209,11 @@ export class EnemyAISystem {
     const isBlockedByWall = platforms.some(
       (platform) => platform.oneWay !== true && CollisionSystem.intersects(wallProbe, platform)
     );
-    return hasGround && !isBlockedByWall;
+    // spuntoni e acqua contano come un vuoto: il nemico non ci entra
+    const bodyProbe = { x: probeX, y: enemy.positionY, width: 1, height: enemy.height + 2 };
+    const isDangerous = this.hazards.some(
+      (hazard) => (hazard.kind === "spikes" || hazard.kind === "water") && CollisionSystem.intersects(bodyProbe, hazard)
+    );
+    return hasGround && !isBlockedByWall && !isDangerous;
   }
 }

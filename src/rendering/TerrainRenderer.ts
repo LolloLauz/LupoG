@@ -1,5 +1,6 @@
-import { PALETTE } from "../config/gameConfig";
-import type { PlatformDefinition, ThemeStyle } from "../types/LevelTypes";
+import { PALETTE, PALETTE_RAMPS } from "../config/gameConfig";
+import type { HazardDefinition, PlatformDefinition, ThemeStyle } from "../types/LevelTypes";
+import { cycleRampColor } from "./PaletteEffects";
 import type { Camera } from "./Camera";
 import type { Renderer } from "./Renderer";
 
@@ -181,6 +182,96 @@ export class TerrainRenderer {
     }
     // ombra a retino sotto la piattaforma
     renderer.fillDitheredOverlay(screenStart + 2, screenY + platform.height, visibleWidth - 4, 3, PALETTE.black, 8);
+    if (platform.isMoving === true) {
+      // piattaforma mobile: piastre di ferro con bulloni dorati alle estremità
+      for (const plateX of [platform.x, platform.x + platform.width - 6]) {
+        renderer.fillRect(plateX - camera.x, screenY + 1, 6, platform.height - 2, PALETTE.slate);
+        renderer.fillRect(plateX - camera.x, screenY + 1, 6, 1, PALETTE.gray);
+        renderer.fillRect(plateX + 2 - camera.x, screenY + 3, 2, 2, PALETTE.goldLight);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Pericoli
+  // ---------------------------------------------------------------------------
+
+  /** Pericoli disegnati DIETRO le entità: spuntoni, ghiaccio, fondo dell'acqua. */
+  public renderHazard(renderer: Renderer, hazard: HazardDefinition, camera: Camera, timeSeconds: number): void {
+    const screenX = hazard.x - camera.x;
+    if (screenX + hazard.width < 0 || screenX > renderer.width) {
+      return;
+    }
+    switch (hazard.kind) {
+      case "spikes":
+        this.renderSpikes(renderer, hazard, camera);
+        break;
+      case "ice":
+        this.renderIce(renderer, hazard, camera, timeSeconds);
+        break;
+      case "water":
+        renderer.fillVerticalGradient(screenX, hazard.y - camera.y, hazard.width, hazard.height, [PALETTE.blue, PALETTE.navy, PALETTE.deepNavy], 4);
+        break;
+    }
+  }
+
+  /** Acqua DAVANTI alle entità: velo a retino, superficie con il ciclo dei colori e ondulazione per riga. */
+  public renderWaterForeground(renderer: Renderer, water: HazardDefinition, camera: Camera, timeSeconds: number): void {
+    const screenX = water.x - camera.x;
+    const screenY = water.y - camera.y;
+    if (screenX + water.width < 0 || screenX > renderer.width) {
+      return;
+    }
+    renderer.fillDitheredOverlay(screenX, screenY + 2, water.width, water.height - 2, PALETTE.lightBlue, 4);
+    renderer.fillDitheredOverlay(screenX, screenY + 10, water.width, water.height - 10, PALETTE.navy, 6);
+    renderer.applyLineWave(screenY + 2, water.height - 2, 1, 7, timeSeconds * 5, screenX, water.width);
+    // superficie: due righe che luccicano scorrendo lungo la rampa del blu
+    const surfaceRamp = PALETTE_RAMPS.blue.slice(3);
+    for (let segmentX = Math.floor(water.x / 8) * 8; segmentX < water.x + water.width; segmentX += 8) {
+      const left = Math.max(segmentX, water.x);
+      const right = Math.min(segmentX + 8, water.x + water.width);
+      const color = cycleRampColor(surfaceRamp, timeSeconds, 4, segmentX / 8, "pingPong");
+      renderer.fillRect(left - camera.x, screenY, right - left, 1, color);
+      renderer.fillRect(left - camera.x, screenY + 1, right - left, 1, PALETTE.lightBlue);
+    }
+  }
+
+  /** Fila di spuntoni metallici (larghi 6 px), illuminati a sinistra, su una base arrugginita. */
+  private renderSpikes(renderer: Renderer, spikes: HazardDefinition, camera: Camera): void {
+    const screenY = spikes.y - camera.y;
+    const baseHeight = 2;
+    const spikeHeight = spikes.height - baseHeight;
+    for (let spikeX = spikes.x; spikeX + 6 <= spikes.x + spikes.width; spikeX += 6) {
+      for (let rowOffset = 0; rowOffset < spikeHeight; rowOffset++) {
+        const halfWidth = Math.floor(((rowOffset + 1) / spikeHeight) * 3);
+        const rowX = spikeX + 3 - halfWidth - camera.x;
+        const rowY = screenY + rowOffset;
+        if (halfWidth === 0) {
+          renderer.fillRect(spikeX + 2 - camera.x, rowY, 2, 1, PALETTE.white);
+          continue;
+        }
+        renderer.fillRect(rowX, rowY, halfWidth, 1, PALETTE.lightGray);
+        renderer.fillRect(rowX + halfWidth, rowY, halfWidth, 1, PALETTE.gray);
+        renderer.fillRect(rowX, rowY, 1, 1, PALETTE.black);
+        renderer.fillRect(rowX + halfWidth * 2 - 1, rowY, 1, 1, PALETTE.black);
+      }
+    }
+    renderer.fillRect(spikes.x - camera.x, screenY + spikeHeight, spikes.width, baseHeight, PALETTE.wood);
+    renderer.fillRect(spikes.x - camera.x, screenY + spikeHeight, spikes.width, 1, PALETTE.woodLight);
+  }
+
+  /** Ghiaccio: lastra azzurra sulla superficie, riflessi a retino e scintille che brillano. */
+  private renderIce(renderer: Renderer, ice: HazardDefinition, camera: Camera, timeSeconds: number): void {
+    const screenX = ice.x - camera.x;
+    const surfaceY = ice.y - camera.y;
+    renderer.fillRect(screenX, surfaceY, ice.width, 2, PALETTE.iceWhite);
+    renderer.fillRect(screenX, surfaceY + 2, ice.width, 2, PALETTE.cyan);
+    renderer.fillDitheredOverlay(screenX, surfaceY + 4, ice.width, 6, PALETTE.lightBlue, 6);
+    const sparkleRamp = [PALETTE.cyan, PALETTE.iceWhite, PALETTE.white];
+    for (let sparkleX = Math.ceil(ice.x / 11) * 11; sparkleX < ice.x + ice.width; sparkleX += 11) {
+      const color = cycleRampColor(sparkleRamp, timeSeconds, 3, sparkleX, "pingPong");
+      renderer.fillRect(sparkleX - camera.x, surfaceY + 1, 1, 1, color);
+    }
   }
 
   /** Porta di uscita: arco di pietra, battenti di legno con bande di ferro, luce calda all'interno. */

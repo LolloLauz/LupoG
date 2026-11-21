@@ -29,6 +29,34 @@ export type ItemTypeId = "healthPotion" | "scoreCoin" | "collectible";
  */
 export interface PlatformDefinition extends Rectangle {
   oneWay?: boolean;
+  /** Vero per le piattaforme mobili (aggiunte dal LevelManager, non scritte nei livelli). */
+  isMoving?: boolean;
+}
+
+/**
+ * Piattaforma mobile (sempre attraversabile dal basso): va avanti e indietro tra la posizione
+ * iniziale e quella spostata di (travelX, travelY), rallentando agli estremi. Trasporta chi ci sta sopra.
+ */
+export interface MovingPlatformDefinition extends Rectangle {
+  travelX: number;
+  travelY: number;
+  /** Durata (ms) di un'andata e ritorno. */
+  periodMs: number;
+  /** Sfasamento (ms) per non far muovere insieme piattaforme vicine. */
+  phaseOffsetMs?: number;
+}
+
+/**
+ * Pericoli e zone speciali (vedi HAZARD_CONFIG):
+ * - spikes: spuntoni, feriscono e respingono al contatto;
+ * - water: acqua, rallenta, alleggerisce la caduta e permette di risalire a nuoto;
+ * - ice: ghiaccio, la superficie su cui si cammina è scivolosa.
+ */
+export type HazardKind = "spikes" | "water" | "ice";
+
+/** Zona di pericolo: rettangolo nel mondo (per gli spuntoni e il ghiaccio, appoggiato sulla superficie). */
+export interface HazardDefinition extends Rectangle {
+  kind: HazardKind;
 }
 
 export interface EnemySpawnDefinition {
@@ -66,4 +94,8 @@ export interface LevelDefinition {
   bossSpawn?: Vector2;
   /** Quando il giocatore supera questa x si chiude un cancello alle sue spalle e il boss si attiva. */
   bossArenaStartX?: number;
+  /** Pericoli e zone speciali (facoltativi). */
+  hazards?: HazardDefinition[];
+  /** Piattaforme mobili (facoltative). */
+  movingPlatforms?: MovingPlatformDefinition[];
 }

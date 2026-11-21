@@ -134,7 +134,7 @@ function playLevel(levelId, options = {}) {
         dodgeDecisions.delete(nearest);
       }
       const windupMs = nearest === boss
-        ? (nearest.currentState === "chargeWindup" ? BOSS_CONFIG.chargeWindupMs : BOSS_CONFIG.slashWindupMs)
+        ? (nearest.currentAttackWindupMs ?? BOSS_CONFIG.attacks.find((attack) => attack.kind === "melee").windupMs)
         : nearest.definition.attackWindupMs;
       const attackElapsedMs = (time - (attackStartTimes.get(nearest) ?? time)) * 1000;
       const wantsToDodge = isTargetAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);

@@ -52,13 +52,24 @@ export class Renderer extends PixelPainter {
   /**
    * Ondulazione per riga (effetto "raster" di acqua, calore, magia): ogni riga della fascia
    * indicata viene spostata in orizzontale di un numero intero di pixel secondo un'onda.
-   * Va chiamato DOPO aver disegnato ciò che deve ondulare. I pixel scoperti ai bordi
-   * mantengono il contenuto precedente della riga.
+   * Va chiamato DOPO aver disegnato ciò che deve ondulare. Con "left" e "regionWidth" ondula solo
+   * quella parte della riga (es. una pozza d'acqua). I pixel scoperti ai bordi mantengono il
+   * contenuto precedente della riga.
    */
-  public applyLineWave(top: number, height: number, amplitude: number, wavelength: number, phase: number): void {
+  public applyLineWave(
+    top: number,
+    height: number,
+    amplitude: number,
+    wavelength: number,
+    phase: number,
+    left = 0,
+    regionWidth = this.canvas.width
+  ): void {
     const firstRow = Math.max(0, Math.round(top));
     const lastRow = Math.min(this.canvas.height, Math.round(top + height));
-    if (lastRow <= firstRow || amplitude === 0) {
+    const regionLeft = Math.max(0, Math.round(left));
+    const regionRight = Math.min(this.canvas.width, Math.round(left + regionWidth));
+    if (lastRow <= firstRow || regionRight <= regionLeft || amplitude === 0) {
       return;
     }
     if (this.waveBuffer === null) {
@@ -68,11 +79,18 @@ export class Renderer extends PixelPainter {
     }
     const bufferContext = this.waveBuffer.getContext("2d")!;
     const bandHeight = lastRow - firstRow;
-    bufferContext.drawImage(this.canvas, 0, firstRow, this.canvas.width, bandHeight, 0, firstRow, this.canvas.width, bandHeight);
+    const bandWidth = regionRight - regionLeft;
+    bufferContext.drawImage(this.canvas, regionLeft, firstRow, bandWidth, bandHeight, regionLeft, firstRow, bandWidth, bandHeight);
     for (let rowY = firstRow; rowY < lastRow; rowY++) {
       const offset = computeLineWaveOffset(rowY, amplitude, wavelength, phase);
-      if (offset !== 0) {
-        this.context.drawImage(this.waveBuffer, 0, rowY, this.canvas.width, 1, offset, rowY, this.canvas.width, 1);
+      if (offset === 0) {
+        continue;
+      }
+      // la riga spostata resta dentro la regione: si copia solo la parte che ci entra
+      const sourceLeft = offset > 0 ? regionLeft : regionLeft - offset;
+      const copyWidth = bandWidth - Math.abs(offset);
+      if (copyWidth > 0) {
+        this.context.drawImage(this.waveBuffer, sourceLeft, rowY, copyWidth, 1, sourceLeft + offset, rowY, copyWidth, 1);
       }
     }
   }

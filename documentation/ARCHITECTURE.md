@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.0.0-alpha.2**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.0.0-alpha.3**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -193,8 +193,9 @@ del progetto; restano tutte le altre regole di stile: pixel nitidi, scala intera
 | Entità | Chi la comanda | Note |
 |---|---|---|
 | `Player` | `InputManager` (tramite `InputSource`) | timer interni per attacco, schivata, danno, invulnerabilità, salto |
-| `Enemy` | `EnemyAISystem` | decide `EnemyAISystem`, esegue `Enemy`: separa "cosa voglio fare" da "come lo faccio" |
-| `Boss` | se stesso (IA interna) | stati propri, due attacchi, fasi |
+| `Enemy` | `EnemyAISystem` | decide `EnemyAISystem`, esegue `Enemy`: separa "cosa voglio fare" da "come lo faccio". Varianti (2.0): a distanza e volante |
+| `Boss` | se stesso (IA interna) | stati propri, attacchi come dati, fasi |
+| `Projectile` (2.0) | `ProjectileSystem` | si muove dritto (o ad arco), scade; contatti gestiti dal sistema |
 | `Item` | nessuno | non ha fisica; `ItemManager` gestisce raccolta ed effetti |
 
 **Stato derivato, non memorizzato.** Il `Player` mantiene timer (`hurtRemainingMs`, `dodgeRemainingMs`, `currentAttack`...) e ricalcola ogni frame
@@ -239,9 +240,30 @@ indulgente senza cambiare le regole.
 
 ### Il boss
 
-`Boss` ha una macchina a stati esplicita (`dormant → idle/walk → slash | chargeWindup → charging → recovery → idle`, `dead`). Il prossimo attacco viene
-**sorteggiato una volta per pausa** (non a ogni frame) e se è una carica il boss **aspetta a distanza** invece di avvicinarsi. Le **fasi** sono dati
-(`phases`): la fase corrente è l'ultima la cui soglia di salute è ≥ della salute attuale. L'HUD legge le soglie dalla definizione del boss.
+`Boss` ha una macchina a stati esplicita: `dormant → idle/walk → attacco (preparazione → fase attiva → recupero) → idle`, `dead`. **Gli attacchi sono
+dati (2.0):** `BossDefinition.attacks` elenca fino a un attacco per tipo (`melee`, `charge`, `projectile`, `summon`), ognuno con le sue tre durate e i suoi
+numeri; ogni fase dà un peso a ogni attacco (`attackWeights`). Il prossimo attacco viene **sorteggiato una volta per pausa** (non a ogni frame); se è un
+attacco da lontano il boss **aspetta a distanza** invece di avvicinarsi; se al momento non è possibile, ripiega sul corpo a corpo o si avvicina. Le **fasi**
+sono dati (`phases`): la fase corrente è l'ultima la cui soglia di salute è ≥ della salute attuale. L'HUD legge le soglie dalla definizione del boss.
+
+Il boss **non crea oggetti**: proiettili ed evocati sono *richieste* (`ProjectileLaunch`, `SummonRequest`) che il motore preleva dopo l'aggiornamento
+(`drainProjectileLaunches`, `drainSummonRequests`) e trasforma in `Projectile` ed `Enemy`. Lo stesso vale per i nemici a distanza. Così le entità restano
+indipendenti da chi le contiene e si provano da sole nei test.
+
+**Compatibilità.** Il Cavaliere Nero è descritto con i nuovi dati (carica e fendente, stessi numeri della 1.0). La carica è elencata prima del fendente perché
+nel sorteggio i pesi si sommano in quell'ordine: con lo stesso numero casuale si ottiene lo stesso attacco di prima. Il simulatore di bilanciamento dà
+esattamente le stesse percentuali (vedi `BALANCE.md`).
+
+### Proiettili, nemici a distanza e volanti (2.0)
+
+- **`ProjectileSystem`**: un proiettile colpisce il giocatore una volta e sparisce; se il giocatore è invulnerabile (schivata, appena colpito) gli **passa
+  attraverso** e prosegue, quindi la schivata funziona anche contro i proiettili. La spada distrugge i proiettili "deviabili" (frecce, dardi), non le palle
+  di fuoco. I proiettili attraversano le piattaforme sospese e si schiantano contro quelle solide.
+- **Nemico a distanza** (`behavior: "ranged"`): tira solo a chi è alla sua altezza ed entro `attackRange`; se il giocatore è più vicino di
+  `retreatDistance` indietreggia guardandolo. La preparazione è lunga e interrompibile: colpirlo mentre tende l'arco annulla il tiro.
+- **Nemico volante** (`behavior: "flyer"`): niente gravità finché è vivo; si muove verso un punto scelto dall'IA a ogni frame (sopra la testa del giocatore
+  o attorno al punto di partenza, con un'oscillazione); la picchiata punta al punto in cui era il giocatore all'inizio della preparazione, quindi si
+  schiva spostandosi.
 
 ---
 
@@ -250,8 +272,15 @@ indulgente senza cambiare le regole.
 Un livello è un oggetto `LevelDefinition`: nome, ambientazione, dimensioni, partenza, piattaforme, nemici (tipo + posizione), oggetti, condizione di
 completamento (`reachExit` o `defeatBoss`), eventuale boss (`bossId`, `bossSpawn`) e arena (`bossArenaStartX`). **Nessun livello è codice.**
 
-- `LevelManager` carica un livello, crea i nemici (`createEnemies`) e il boss (`createBoss`), tiene le piattaforme **attive** (quelle del livello più il cancello
-  dell'arena quando si chiude) e disegna sfondo, terreno, porta d'uscita e cancello.
+- `LevelManager` carica un livello, crea i nemici (`createEnemies`) e il boss (`createBoss`), tiene le piattaforme **attive** (quelle del livello, le
+  piattaforme mobili e il cancello dell'arena quando si chiude) e disegna sfondo, terreno, pericoli, porta d'uscita e cancello.
+- **Piattaforme mobili (2.0)** (`movingPlatforms`): sempre attraversabili dal basso; vanno avanti e indietro con una curva a coseno (rallentano agli
+  estremi). La posizione dipende solo dal tempo del livello, quindi è indipendente dagli FPS. Prima di aggiornare le entità, `updateMovingPlatforms`
+  sposta le piattaforme e **trasporta** chi ci stava sopra (giocatore e nemici a terra) dello stesso spostamento.
+- **Pericoli (2.0)** (`hazards`): `HazardSystem` calcola a ogni frame l'**ambiente** del giocatore (`PlayerEnvironment`): in acqua velocità, gravità e
+  salto ridotti e si può nuotare verso l'alto; sul ghiaccio l'aderenza è bassa e la velocità cambia gradualmente. Gli spuntoni feriscono e respingono
+  verso l'alto (poi l'invulnerabilità evita colpi ripetuti). I nemici a terra trattano spuntoni e acqua come un vuoto. L'acqua si disegna in due tempi:
+  il fondo dietro le entità e il velo con l'ondulazione per riga davanti, così chi è immerso sembra davvero sott'acqua.
 - `GameEngine` gestisce il flusso: `startLevel(id)` → gioco → `checkLevelCompletion()` → messaggio → `advanceToNextLevel()` (id + 1, oppure vittoria).
   **Gli id devono essere consecutivi da 1.**
 - **Punto sicuro.** Il motore ricorda l'ultima posizione in cui il giocatore poggiava **interamente** sul terreno; dopo una caduta si riparte da lì.
@@ -275,7 +304,8 @@ d'aggancio elencati, volutamente minimi.
 | Danni elementali | 1.2-1.3 | `calculateDamage()` e `HitResult` | un tipo di elemento nell'attacco e un effetto sul bersaglio |
 | Attacchi speciali, magie, abilità | 1.2-1.3 | `GameAction`, `Player.handleInput`, `ATTACK_DEFINITIONS` | nuove azioni nei controlli, un costo (risorsa) e un nuovo stato di animazione |
 | Nuove armi | 1.3 | `ATTACK_DEFINITIONS`, `COMBO_DEFINITIONS` | oggi esiste un solo insieme globale di attacchi: servirebbe una `WeaponDefinition` con i propri attacchi e combo, scelta dal giocatore |
-| Boss con più fasi o attacchi diversi | 1.1 | `BossDefinition.phases` | più fasi sono già dati; **nuovi attacchi** richiedono di estendere `Boss.ts` |
+| Boss con più fasi o attacchi diversi | già possibile (2.0) | `BossDefinition.attacks` e `phases[].attackWeights` | solo dati per i 4 tipi esistenti; un **tipo** di attacco nuovo richiede un caso in `Boss.ts` (`canPerform`, `onActivePhaseStart`, `getAttackHitbox`) e le animazioni in `BOSS_ATTACK_ANIMATIONS` |
+| Nemici a distanza e volanti, proiettili, pericoli, piattaforme mobili | già possibile (2.0) | `ENEMY_CONFIG` (`ranged`, `flight`), `PROJECTILE_CONFIG`, `LevelDefinition.hazards` e `movingPlatforms` | solo dati e sprite; usati nei livelli dalla Fase 4 |
 | Nuove ambientazioni | 1.1 | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer` | un nuovo caso in `BackgroundRenderer.render` e i colori del terreno |
 | Personaggi alternativi, equipaggiamento | 2.0 | `PLAYER_CONFIG`, `knightSprites.ts` | un `CharacterDefinition` che sostituisce la configurazione e gli sprite del giocatore |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |

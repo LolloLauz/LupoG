@@ -18,6 +18,8 @@ export default async function (t, load) {
   const bossSprites = await load("rendering/sprites/bossSprites");
   const itemSprites = await load("rendering/sprites/itemSprites");
   const uiSprites = await load("rendering/sprites/uiSprites");
+  const projectileSprites = await load("rendering/sprites/projectileSprites");
+  const { PROJECTILE_CONFIG } = await load("config/projectileConfig");
   const { LevelManager } = await load("systems/LevelManager");
 
   const { LEVEL_CONFIG, THEME_STYLES } = levelModule;
@@ -37,6 +39,7 @@ export default async function (t, load) {
     bossSprites.registerBossSprites(sprites);
     itemSprites.registerItemSprites(sprites);
     uiSprites.registerUiSprites(sprites);
+    projectileSprites.registerProjectileSprites(sprites);
   } catch (error) {
     registrationError = String(error);
   }
@@ -101,13 +104,28 @@ export default async function (t, load) {
   t("ENEMY_CONFIG: la chiave coincide con l'id", Object.entries(ENEMY_CONFIG).every(([key, def]) => key === def.id));
   t("ogni nemico ha tutte le animazioni (idle, walk, attack, hurt, dead)", Object.keys(ENEMY_CONFIG).every((id) => ["idle", "walk", "attack", "hurt", "dead"].every((n) => ENEMY_ANIMATIONS[id]?.[n] !== undefined)));
   t("valori dei nemici positivi e coerenti (portata <= vista)", Object.values(ENEMY_CONFIG).every((e) => e.maxHealth > 0 && e.attackDamage > 0 && e.movementSpeed > 0 && e.attackRange > 0 && e.detectionRange >= e.attackRange && e.attackWindupMs > 0 && e.attackActiveMs > 0 && e.attackRecoveryMs >= 0 && e.scoreReward > 0 && e.attackInterruptWindowMs >= 0));
-  t("i comportamenti sono validi", Object.values(ENEMY_CONFIG).every((e) => ["patrol", "chase", "guard"].includes(e.behavior)));
+  t("i comportamenti sono validi", Object.values(ENEMY_CONFIG).every((e) => ["patrol", "chase", "guard", "ranged", "flyer"].includes(e.behavior)));
+  t("chi tira (ranged) ha un proiettile esistente e una distanza di ritirata; gli altri no", Object.values(ENEMY_CONFIG).every((e) => (e.behavior === "ranged") === (e.ranged !== undefined) && (e.ranged === undefined || (PROJECTILE_CONFIG[e.ranged.projectileId] !== undefined && e.ranged.retreatDistance >= 0 && e.ranged.retreatDistance < e.attackRange))));
+  t("chi vola (flyer) ha i parametri di volo validi; gli altri no", Object.values(ENEMY_CONFIG).every((e) => (e.behavior === "flyer") === (e.flight !== undefined) && (e.flight === undefined || (e.flight.diveSpeed > 0 && e.flight.hoverHeight > 0 && e.flight.bobPeriodMs > 0))));
+  t("PROJECTILE_CONFIG: la chiave coincide con l'id, velocità e durata positive, ogni frame è uno sprite", Object.entries(PROJECTILE_CONFIG).every(([key, projectile]) => key === projectile.id && projectile.speed > 0 && projectile.lifetimeMs > 0 && projectile.frameIds.length > 0 && projectile.frameIds.every((frameId) => sprites.has(frameId))));
   t("i nemici che pattugliano hanno una zona > 0", Object.values(ENEMY_CONFIG).filter((e) => e.behavior === "patrol").every((e) => e.patrolDistance > 0));
   t("BOSS_CATALOG: la chiave coincide con l'id", Object.entries(BOSS_CATALOG).every(([key, def]) => key === def.id));
   t("BOSS_CONFIG è nel catalogo", BOSS_CATALOG[BOSS_CONFIG.id] === BOSS_CONFIG);
   t("ogni boss ha animazioni e stile degli sprite", Object.keys(BOSS_CATALOG).every((id) => BOSS_ANIMATIONS[id] !== undefined && sprites.has(`${id}Idle1`) && sprites.has(`${id}Heap`)));
   t("le fasi dei boss partono da 100 e sono in ordine decrescente", Object.values(BOSS_CATALOG).every((boss) => boss.phases[0].healthPercentThreshold === 100 && boss.phases.every((phase, i) => i === 0 || phase.healthPercentThreshold < boss.phases[i - 1].healthPercentThreshold)));
-  t("le probabilità di carica sono tra 0 e 1", Object.values(BOSS_CATALOG).every((boss) => boss.phases.every((p) => p.chargeChance >= 0 && p.chargeChance <= 1 && p.speedMultiplier > 0 && p.cooldownMultiplier > 0)));
+  t("le fasi dei boss hanno moltiplicatori positivi e pesi non negativi di attacchi esistenti, con almeno un peso positivo", Object.values(BOSS_CATALOG).every((boss) => boss.phases.every((p) => p.speedMultiplier > 0 && p.cooldownMultiplier > 0 && Object.entries(p.attackWeights).every(([id, weight]) => weight >= 0 && boss.attacks.some((attack) => attack.id === id)) && Object.values(p.attackWeights).some((weight) => weight > 0))));
+  t("ogni boss ha almeno un attacco, id distinti e al massimo un attacco per tipo", Object.values(BOSS_CATALOG).every((boss) => boss.attacks.length > 0 && new Set(boss.attacks.map((a) => a.id)).size === boss.attacks.length && new Set(boss.attacks.map((a) => a.kind)).size === boss.attacks.length));
+  const badBossAttacks = Object.values(BOSS_CATALOG).flatMap((boss) => boss.attacks.filter((attack) => {
+    const timesOk = attack.windupMs > 0 && attack.activeMs > 0 && attack.recoveryMs >= 0;
+    switch (attack.kind) {
+      case "melee": return !(timesOk && attack.damage > 0 && attack.range > 0);
+      case "charge": return !(timesOk && attack.damage > 0 && attack.speed > 0 && attack.minDistance >= 0);
+      case "projectile": return !(timesOk && attack.damage > 0 && attack.count >= 1 && PROJECTILE_CONFIG[attack.projectileId] !== undefined);
+      case "summon": return !(timesOk && attack.count >= 1 && attack.maxAlive >= 1 && ENEMY_CONFIG[attack.enemyType] !== undefined);
+      default: return true;
+    }
+  }).map((attack) => `${boss.id}.${attack.id}`));
+  t("gli attacchi dei boss hanno tipo conosciuto, tempi e valori validi", badBossAttacks.length === 0, badBossAttacks.join(", "));
   t("i boss hanno hitbox 24x40 (forma dello sprite)", Object.values(BOSS_CATALOG).every((boss) => boss.hitbox.width === 24 && boss.hitbox.height === 40));
 
   // ---------- oggetti ----------

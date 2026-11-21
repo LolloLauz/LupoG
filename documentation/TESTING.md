@@ -1,6 +1,6 @@
 # Test e verifiche
 
-Versione descritta: **2.0.0-alpha.2**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
+Versione descritta: **2.0.0-alpha.3**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
 Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima esecuzione prima della consegna.
 
 ---
@@ -10,7 +10,7 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 372 controlli in 12 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 428 controlli in 13 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 165 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
 | `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure) | `npm install` | circa 1 minuto |
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 372 controlli)
+### 2.1 Test unitari (`tests/unit/`, 428 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -41,17 +41,22 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `combat.test.mjs` | 37 | attacchi leggeri e pesanti, combo (avanzamento, finestra di tempo, ripartenza), buffer, schivata e suo tempo di ricarica, invulnerabilità, rinculo, danno, morte e ripartenza, hitbox specchiata, sincronizzazione animazioni |
 | `enemy-ai.test.mjs` | 32 | pattuglia dentro la zona, inseguimento e perdita d'interesse, guardia, attacco in tre fasi, danno e schivata, interruzioni degli attacchi, morte e rimozione, moltiplicatori di difficoltà, niente salti nel vuoto |
 | `levels-boss-items.test.mjs` | 51 | geometria dei livelli, bot di percorribilità, boss (risveglio, fendente, carica, fasi, morte, nessuno stordimento), oggetti (cura, punti, gemme), danno da caduta |
-| `config-integrity.test.mjs` | 57 | ogni sprite si registra (colori della palette, ancore che contengono l'hitbox), ogni frame delle animazioni è uno sprite, combo e attacchi coerenti, nemici/boss/oggetti ben formati, controlli senza conflitti, palette (al massimo 64 colori distinti, 16 colori della 1.0 invariati, rampe ordinate dallo scuro al chiaro, ogni colore in una rampa), **tutti i livelli** (regole geometriche e percorribilità) |
+| `config-integrity.test.mjs` | 64 | ogni sprite si registra (colori della palette, ancore che contengono l'hitbox), ogni frame delle animazioni è uno sprite, combo e attacchi coerenti, nemici/boss/oggetti ben formati, controlli senza conflitti, palette (al massimo 64 colori distinti, 16 colori della 1.0 invariati, rampe ordinate dallo scuro al chiaro, ogni colore in una rampa), **tutti i livelli** (regole geometriche e percorribilità) |
 | `interface-state.test.mjs` | 28 | vite, record (archivio normale, guasto, assente, corrotto), menu, transizioni di stato, font |
 | `effects-and-jump.test.mjs` | 21 | particelle, popup, tremolio, hit-stop, coyote time, salto anticipato |
 | `rendering-and-physics.test.mjs` | 19 | rettangoli a pixel interi, scala intera in pixel fisici (14 combinazioni), gravità esatta, atterraggio, soffitto, limiti della mappa |
 | `speed-consistency.test.mjs` | 11 | camminata, salto, nemico, boss, animazioni, effetti e delta time a 20, 30, 60, 120 e 144 FPS |
 | `regressions.test.mjs` | 21 | rinculo vicino agli abissi e attacco a raffica (difetti della 0.9.1) |
 | `graphics-16bit.test.mjs` | 54 | retino di Bayer, retino sovrapposto, aloni, cerchi, testo a fasce, sprite allineati all'hitbox (anche specchiati), gradienti a fasce, ombreggiatura, ciclo dei colori, ondulazione, `Renderer` su un finto canvas (retino, gradiente, ondulazione, testo con ombra), font (glifi, discendenti, spaziatura proporzionale, cifre a larghezza fissa), contorno e varianti degli sprite |
+| `systems-phase3.test.mjs` | 47 | proiettili (volo, durata, colpo, passaggio durante la schivata, muri e piattaforme sospese, deviazione con la spada, palla di fuoco non deviabile, uscita dalla mappa), arciere (tiro alla fine della preparazione, una freccia per attacco, raggio, altezza, ritirata, interruzione), pipistrello (volo senza gravità, picchiata che ferisce, piattaforme sospese, caduta da morto), acqua, ghiaccio, spuntoni, nemici che evitano i pericoli, piattaforme mobili (andata e ritorno, trasporto), boss (ventaglio di proiettili, evocazione con limite, ripiego sul corpo a corpo, pesi zero) |
 | `static-rules.test.mjs` | 28 | strict, nessun `any`, tipi di ritorno espliciti, nomi, nessun audio né risorsa esterna, struttura del progetto, versioni e manuali aggiornati |
 
 ### 2.2 Test nel browser (`tests/browser/`, 165 controlli, Chromium)
 
+> **Stato nella 2.0.0-alpha.3.** Come nelle alpha precedenti `npm run test:browser` non è stato eseguito. Le novità della Fase 3 sono state provate in
+> Chrome headless con un livello di prova (non incluso nel gioco) con acqua, ghiaccio, spuntoni, piattaforme mobili, arcieri, pipistrelli e un boss con
+> tutti i tipi di attacco: 0 pixel fuori palette, evocazioni limitate a 2, proiettili visibili. I tre livelli del gioco non usano ancora queste novità.
+>
 > **Stato nella 2.0.0-alpha.2.** Come nella alpha.1, `npm run test:browser` non è stato eseguito. In più, il bot di `harness.js` è stato fatto
 > giocare in Chrome headless senza Playwright: 3 partite complete vinte, 0 colori fuori palette, 0 violazioni; 6000 frame di tasti a caso senza problemi.
 >

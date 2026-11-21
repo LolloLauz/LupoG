@@ -1,7 +1,7 @@
 import { PALETTE } from "../../config/gameConfig";
 import { ENEMY_CONFIG } from "../../config/enemyConfig";
 import type { SpriteManager } from "../SpriteManager";
-import { createGrid, drawSlashArc, drawSword, mirrorRows, setPixel, stampRows, type BladeKeys } from "./spriteTools";
+import { createGrid, drawSlashArc, drawSword, linePoints, mirrorRows, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
 
 /**
  * Sprite dei nemici in stile 16 bit (rivolti a destra).
@@ -22,7 +22,7 @@ interface LegPoses {
 }
 
 interface HumanoidSpec {
-  idPrefix: "skeleton" | "goblin" | "soldier";
+  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher";
   bodyRows: string[];
   colors: Record<string, string>;
   bladeKeys: BladeKeys;
@@ -35,6 +35,10 @@ interface HumanoidSpec {
   anchorX?: number;
   /** Punta della spada a riposo (relativa alla mano). */
   restingTip?: { dx: number; dy: number };
+  /** Arma: spada (predefinita) o arco (per chi tira frecce: niente spada, arco teso nella preparazione). */
+  weapon?: "sword" | "bow";
+  /** Larghezza dello sprite, se deve essere più larga del disegno (es. per l'arco). */
+  spriteWidth?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +227,61 @@ const SOLDIER_LEGS: LegPoses = {
 
 const SOLDIER_ANCHOR_X = 4;
 
+// ---------------------------------------------------------------------------
+// Arciere scheletro: lo scheletro con cappuccio verde, faretra sulla schiena e arco
+// ---------------------------------------------------------------------------
+
+const ARCHER_BODY_ROWS: string[] = [
+  ".....hhhhhh.........",
+  "....hHHhhhhh........",
+  "...hHhkbbbbhh.......",
+  "...hhkbbbkkbh.......",
+  "...hhkbbbkrok.......",
+  "...hhkgbbbbbbk......",
+  "....hhkgbbkbkbk.....",
+  "....hhhkgbbbbk......",
+  ".lr.hh..kkkkk.......",
+  ".lrkkkkkkbkkkkk.....",
+  ".lrebbgkbbbkgbbk....",
+  ".eekbk.kwbbk.kbgk...",
+  ".eekbk.kbkbk.kbbk...",
+  ".eekbk.kwbbk..kbk...",
+  "..ekgk..kbk...kbk...",
+  "...kbk.knnnk..kbbk..",
+  "...kbkkmemmek.kkk...",
+  "....kkkmekmek.......",
+  ".......kk.kk........",
+];
+
+/** Arco: legno chiaro e scuro, corda bianca; freccia incoccata (legno chiaro, punta di ferro). */
+const BOW_RADIUS = 7;
+
+/**
+ * Disegna l'arco davanti alla mano. drawAmount 0 = corda dritta (a riposo), 1 = corda tirata
+ * fino alla mano con la freccia incoccata.
+ */
+function drawBow(grid: PixelGrid, handX: number, handY: number, drawAmount: number): void {
+  const centerX = handX - 2;
+  drawSlashArc(grid, centerX, handY, BOW_RADIUS, -78, 78, "e");
+  drawSlashArc(grid, centerX, handY, BOW_RADIUS - 1, -60, 60, "l");
+  const topTip = { x: Math.round(centerX + Math.cos((78 * Math.PI) / 180) * BOW_RADIUS), y: handY - BOW_RADIUS };
+  const bottomTip = { x: topTip.x, y: handY + BOW_RADIUS };
+  const pullX = topTip.x - Math.round(drawAmount * 5);
+  for (const tip of [topTip, bottomTip]) {
+    for (const point of linePoints(tip.x, tip.y, pullX, handY)) {
+      setPixel(grid, point.x, point.y, "w", false);
+    }
+  }
+  if (drawAmount > 0) {
+    for (let arrowX = pullX; arrowX <= handX + BOW_RADIUS + 1; arrowX++) {
+      setPixel(grid, arrowX, handY, "l", true);
+    }
+    setPixel(grid, handX + BOW_RADIUS + 2, handY, "s", true);
+    setPixel(grid, pullX - 1, handY - 1, "r", true);
+    setPixel(grid, pullX - 1, handY + 1, "r", true);
+  }
+}
+
 const SPECS: HumanoidSpec[] = [
   {
     idPrefix: "skeleton",
@@ -270,6 +329,33 @@ const SPECS: HumanoidSpec[] = [
     restingTip: { dx: 4, dy: -5 },
   },
   {
+    idPrefix: "skeletonArcher",
+    bodyRows: ARCHER_BODY_ROWS,
+    colors: {
+      k: PALETTE.black,
+      w: PALETTE.white,
+      b: PALETTE.stonePale,
+      g: PALETTE.stoneLight,
+      r: PALETTE.red,
+      o: PALETTE.orange,
+      m: PALETTE.earth,
+      e: PALETTE.wood,
+      l: PALETTE.woodLight,
+      s: PALETTE.lightGray,
+      n: PALETTE.bronze,
+      y: PALETTE.gold,
+      h: PALETTE.pine,
+      H: PALETTE.darkGreen,
+    },
+    bladeKeys: { grip: "e", blade: "g", edge: "b", guard: "n" },
+    handX: 16,
+    handY: 13,
+    legs: SKELETON_LEGS,
+    anchorX: 3,
+    weapon: "bow",
+    spriteWidth: 26,
+  },
+  {
     idPrefix: "soldier",
     bodyRows: SOLDIER_BODY_ROWS,
     colors: {
@@ -301,7 +387,7 @@ function getLegs(spec: HumanoidSpec): LegPoses {
 }
 
 function getSpriteWidth(spec: HumanoidSpec): number {
-  return Math.max(...spec.bodyRows.map((row) => row.length), ...getLegs(spec).stand.map((row) => row.length));
+  return spec.spriteWidth ?? Math.max(...spec.bodyRows.map((row) => row.length), ...getLegs(spec).stand.map((row) => row.length));
 }
 
 /** Frame con l'arma a riposo (tenuta in alto davanti al corpo). */
@@ -310,6 +396,10 @@ function composeRestingFrame(spec: HumanoidSpec, legRows: string[], bodyDrop: nu
   const rows = composeRows(spec, width, legRows, bodyDrop);
   const grid = createGrid(width, rows.length);
   stampRows(grid, rows);
+  if (spec.weapon === "bow") {
+    drawBow(grid, spec.handX, spec.handY + bodyDrop, 0);
+    return grid.map((row) => row.join(""));
+  }
   const tip = spec.restingTip ?? { dx: 2, dy: -12 };
   drawSword(grid, spec.handX, spec.handY + bodyDrop, spec.handX + tip.dx, Math.max(0, spec.handY + bodyDrop + tip.dy), spec.bladeKeys);
   return grid.map((row) => row.join(""));
@@ -356,6 +446,30 @@ function collapseRows(standingRows: string[]): string[] {
   return [...Array<string>(standingRows.length - sampled.length).fill(emptyRow), ...sampled];
 }
 
+/** Frame dell'arciere: arco teso (preparazione), freccia appena scoccata (colpo), arco a riposo (recupero). */
+function composeBowFrames(spec: HumanoidSpec): { attackA: string[]; attackB: string[]; attackC: string[]; hurt: string[] } {
+  const width = getSpriteWidth(spec);
+  const legs = getLegs(spec);
+  const compose = (drawAmount: number, withSpark: boolean, legRows: string[], bodyDrop: number, shiftLeft: number): string[] => {
+    const rows = composeRows(spec, width, legRows, bodyDrop);
+    const grid = createGrid(width, rows.length);
+    stampRows(grid, rows.map((row) => row.slice(shiftLeft) + ".".repeat(shiftLeft)));
+    drawBow(grid, spec.handX - shiftLeft, spec.handY + bodyDrop, drawAmount);
+    if (withSpark) {
+      for (const [x, y] of [[width - 2, spec.handY - 1], [width - 1, spec.handY], [width - 2, spec.handY + 1]] as const) {
+        setPixel(grid, x, y, "w", true);
+      }
+    }
+    return grid.map((row) => row.join(""));
+  };
+  return {
+    attackA: compose(1, false, legs.stand, 1, 0),
+    attackB: compose(0, true, legs.stand, 0, 0),
+    attackC: compose(0, false, legs.stand, 0, 0),
+    hurt: compose(0, false, legs.fall, 1, 1),
+  };
+}
+
 function registerHumanoid(spriteManager: SpriteManager, spec: HumanoidSpec): void {
   const definition = ENEMY_CONFIG[spec.idPrefix];
   const anchorX = spec.anchorX ?? SOLDIER_ANCHOR_X;
@@ -379,12 +493,143 @@ function registerHumanoid(spriteManager: SpriteManager, spec: HumanoidSpec): voi
     [`${prefix}Hurt`]: composeHurtFrame(spec),
     [`${prefix}Heap`]: collapseRows(standing),
   };
+  if (spec.weapon === "bow") {
+    const bowFrames = composeBowFrames(spec);
+    frames[`${prefix}AttackA`] = bowFrames.attackA;
+    frames[`${prefix}AttackB`] = bowFrames.attackB;
+    frames[`${prefix}AttackC`] = bowFrames.attackC;
+    frames[`${prefix}Hurt`] = bowFrames.hurt;
+  }
   for (const [spriteId, pixelRows] of Object.entries(frames)) {
     spriteManager.registerSprite(spriteId, pixelRows, spec.colors, anchorX);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Pipistrello (volante): visto di fronte, ali in quattro pose
+// ---------------------------------------------------------------------------
+
+const BAT_COLORS: Record<string, string> = {
+  k: PALETTE.black,
+  d: PALETTE.violetDark,
+  v: PALETTE.violet,
+  a: PALETTE.amethyst,
+  i: PALETTE.lilac,
+  r: PALETTE.red,
+  o: PALETTE.orange,
+  w: PALETTE.white,
+  y: PALETTE.yellow,
+};
+
+/**
+ * Metà sinistra del pipistrello (colonne 0-9, la colonna 9 è l'asse): lo sprite intero (19 colonne)
+ * si ottiene specchiando. Corpo con orecchie, occhio rosso e zanna; ali in pose diverse.
+ */
+const BAT_HALVES: Record<string, string[]> = {
+  wingsUp: [
+    "k.........",
+    "kd........",
+    "kad....k..",
+    ".kad...kk.",
+    ".kvad.kvvv",
+    "..kvadkvrv",
+    "..kkvdkvvv",
+    "....kkkvwv",
+    "......kvvv",
+    ".......kvv",
+    "........kk",
+    "..........",
+  ],
+  wingsMid: [
+    "..........",
+    "..........",
+    ".......k..",
+    ".......kk.",
+    "kkk...kvvv",
+    "kaavvdkvrv",
+    ".kkaavdvvv",
+    "...kkkkvwv",
+    "......kvvv",
+    ".......kvv",
+    "........kk",
+    "..........",
+  ],
+  wingsDown: [
+    "..........",
+    "..........",
+    ".......k..",
+    ".......kk.",
+    "......kvvv",
+    "....kkkvrv",
+    "..kkavdvvv",
+    ".kavadkvwv",
+    "kavdk.kvvv",
+    "kadk...kvv",
+    "kk......kk",
+    "..........",
+  ],
+  // ali raccolte (picchiata)
+  folded: [
+    "..........",
+    ".......k..",
+    ".......kk.",
+    "......kvvv",
+    ".....kavrv",
+    ".....kavvv",
+    ".....kavwv",
+    ".....kavvv",
+    "......kavv",
+    ".......kav",
+    "........kk",
+    "..........",
+  ],
+};
+
+/** Colonna d'ancoraggio del pipistrello (hitbox 12 px centrata su 19). */
+const BAT_ANCHOR_X = 4;
+
+function mirrorHalf(halfRows: string[]): string[] {
+  return halfRows.map((row) => row + [...row.slice(0, -1)].reverse().join(""));
+}
+
+function registerBat(spriteManager: SpriteManager): void {
+  const up = mirrorHalf(BAT_HALVES.wingsUp!);
+  const mid = mirrorHalf(BAT_HALVES.wingsMid!);
+  const down = mirrorHalf(BAT_HALVES.wingsDown!);
+  const folded = mirrorHalf(BAT_HALVES.folded!);
+  // preparazione: ali spalancate e occhi che brillano (arancio)
+  const screech = up.map((row) => row.split("r").join("o"));
+  const hurtGrid = createGrid(up[0]!.length, up.length);
+  stampRows(hurtGrid, mid);
+  for (const [x, y] of [[2, 0], [16, 1], [0, 3]] as const) {
+    setPixel(hurtGrid, x, y, "y", true);
+  }
+  const heap = [
+    ...Array<string>(8).fill(".".repeat(19)),
+    "....kkk.kvk.kkk....",
+    "..kkavdkvrvkdvakk..",
+    ".kavdddkvvvkdddvak.",
+    "kkkkkkkkkkkkkkkkkkk",
+  ];
+  const frames: Record<string, string[]> = {
+    batIdle1: up,
+    batIdle2: down,
+    batWalk1: up,
+    batWalk2: mid,
+    batWalk3: down,
+    batAttackA: screech,
+    batAttackB: folded,
+    batAttackC: mid,
+    batHurt: hurtGrid.map((row) => row.join("")),
+    batHeap: heap,
+  };
+  for (const [spriteId, pixelRows] of Object.entries(frames)) {
+    spriteManager.registerSprite(spriteId, pixelRows, BAT_COLORS, BAT_ANCHOR_X);
   }
 }
 
 /** Registra gli sprite di tutti i nemici. */
 export function registerEnemySprites(spriteManager: SpriteManager): void {
   SPECS.forEach((spec) => registerHumanoid(spriteManager, spec));
+  registerBat(spriteManager);
 }

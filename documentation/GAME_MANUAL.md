@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.2.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.3.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -167,6 +167,20 @@ Quando colpisci un nemico, **lampeggia di bianco**. Se è stordito dal colpo (sc
 la **schivata** è lo strumento più sicuro: scatta durante la preparazione del suo colpo e passa attraverso l'attacco.
 
 ---
+
+### In arrivo nella versione 2.0
+
+Il codice contiene già nuovi nemici e pericoli, che compariranno nei livelli nuovi (Palude Maledetta, Picchi Ghiacciati, Torre dell'Ombra):
+
+| Novità | Come si comporta | Come si affronta |
+|---|---|---|
+| **Arciere Scheletro** (30 HP, freccia da 10) | tira frecce a chi è alla sua altezza fino a 130 px; se ti avvicini troppo indietreggia | colpiscilo mentre tende l'arco (annulla il tiro); la spada devia le frecce; la schivata ci passa attraverso |
+| **Pipistrello** (15 HP, picchiata da 8) | vola, ti segue restando sopra la testa e si lancia in picchiata | durante la breve pausa prima della picchiata spostati: punta dove eri |
+| **Spuntoni** | 12 danni e un rimbalzo all'indietro | saltali |
+| **Acqua** | sei più lento, cadi piano, puoi risalire premendo salto anche senza toccare il fondo | - |
+| **Ghiaccio** | si scivola: si parte e ci si ferma con un certo ritardo | frena prima dei bordi |
+| **Piattaforme mobili** | vanno avanti e indietro (o su e giù) e ti trasportano | - |
+| **Palle di fuoco** | non si possono deviare con la spada | schivale o saltale |
 
 ## 8. Il boss: il Cavaliere Nero
 

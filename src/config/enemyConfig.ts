@@ -79,13 +79,59 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
     scoreReward: 150,
     hitbox: { x: 0, y: 0, width: 12, height: 24 },
   },
+  skeletonArcher: {
+    id: "skeletonArcher",
+    name: "Arciere Scheletro",
+    maxHealth: 30,
+    attackDamage: 10,
+    movementSpeed: 30,
+    detectionRange: 150,
+    attackRange: 130,
+    attackCooldownMs: 1800,
+    // la preparazione (arco teso) è lunga e ben visibile; colpirlo in quel momento annulla il tiro
+    attackWindupMs: 600,
+    attackActiveMs: 100,
+    attackRecoveryMs: 400,
+    hurtDurationMs: 300,
+    knockbackSpeed: 60,
+    attackInterruptWindowMs: 600,
+    patrolDistance: 0,
+    behavior: "ranged",
+    scoreReward: 125,
+    hitbox: { x: 0, y: 0, width: 12, height: 24 },
+    ranged: { projectileId: "arrow", launchOffsetY: 11, retreatDistance: 36 },
+  },
+  bat: {
+    id: "bat",
+    name: "Pipistrello",
+    maxHealth: 15,
+    attackDamage: 8,
+    movementSpeed: 50,
+    detectionRange: 120,
+    // a questa distanza (tra i centri) si prepara alla picchiata
+    attackRange: 70,
+    attackCooldownMs: 1400,
+    attackWindupMs: 350,
+    attackActiveMs: 500,
+    attackRecoveryMs: 500,
+    hurtDurationMs: 250,
+    knockbackSpeed: 90,
+    attackInterruptWindowMs: 350,
+    patrolDistance: 30,
+    behavior: "flyer",
+    scoreReward: 80,
+    hitbox: { x: 0, y: 0, width: 12, height: 10 },
+    flight: { hoverHeight: 26, diveSpeed: 150, bobAmplitude: 4, bobPeriodMs: 900 },
+  },
 };
 
 /**
  * Boss principale: il Cavaliere Nero.
  * Attacchi: fendente (vicino) e carica (da lontano, con preparazione ben visibile).
  * Fasi: sotto il 50% di salute diventa più veloce e carica più spesso.
- * Per aggiungere fasi basta aggiungere elementi a "phases" (soglie decrescenti).
+ * Gli attacchi sono dati (vedi BossAttackDefinition): per aggiungere un attacco a un boss basta
+ * una voce in "attacks" e il suo peso nelle fasi. La carica è elencata per prima: nel sorteggio i
+ * pesi si sommano nell'ordine dell'elenco.
  */
 export const BOSS_CONFIG: BossDefinition = {
   id: "blackKnight",
@@ -93,25 +139,18 @@ export const BOSS_CONFIG: BossDefinition = {
   maxHealth: 290,
   movementSpeed: 40,
   activationRange: 220,
-  slashDamage: 20,
-  slashRange: 34,
-  slashWindupMs: 600,
-  slashActiveMs: 200,
-  slashRecoveryMs: 400,
-  chargeDamage: 16,
-  chargeSpeed: 170,
-  chargeMinDistance: 70,
-  chargeWindupMs: 700,
-  chargeDurationMs: 600,
-  chargeRecoveryMs: 700,
+  attacks: [
+    { id: "charge", kind: "charge", damage: 16, speed: 170, minDistance: 70, windupMs: 700, activeMs: 600, recoveryMs: 700 },
+    { id: "slash", kind: "melee", damage: 20, range: 34, windupMs: 600, activeMs: 200, recoveryMs: 400 },
+  ],
   attackCooldownMs: 1500,
   hitFlashMs: 100,
   deathDurationMs: 1500,
   scoreReward: 1000,
   hitbox: { x: 0, y: 0, width: 24, height: 40 },
   phases: [
-    { healthPercentThreshold: 100, speedMultiplier: 1, cooldownMultiplier: 1, chargeChance: 0.3 },
-    { healthPercentThreshold: 50, speedMultiplier: 1.3, cooldownMultiplier: 0.75, chargeChance: 0.6 },
+    { healthPercentThreshold: 100, speedMultiplier: 1, cooldownMultiplier: 1, attackWeights: { charge: 0.3, slash: 0.7 } },
+    { healthPercentThreshold: 50, speedMultiplier: 1.3, cooldownMultiplier: 0.75, attackWeights: { charge: 0.6, slash: 0.4 } },
   ],
 };
 

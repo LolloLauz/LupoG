@@ -144,7 +144,7 @@ function createBot(skill, seed) {
       if (isAttacking) {
         if (!attackStartTimes.has(nearest)) { attackStartTimes.set(nearest, time); dodgeDecisions.set(nearest, random() < skill); }
       } else { attackStartTimes.delete(nearest); dodgeDecisions.delete(nearest); }
-      const windupMs = nearest === boss ? (nearest.currentState === "chargeWindup" ? boss.definition.chargeWindupMs : boss.definition.slashWindupMs) : nearest.definition.attackWindupMs;
+      const windupMs = nearest === boss ? (boss.currentAttackWindupMs ?? boss.definition.attacks.find((attack) => attack.kind === "melee").windupMs) : nearest.definition.attackWindupMs;
       const elapsedMs = (time - (attackStartTimes.get(nearest) ?? time)) * 1000;
       const wantsToDodge = isAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);
       if (wantsToDodge && elapsedMs >= windupMs - 100 && elapsedMs <= windupMs - 30 && player.isOnGround && !player.activeAttack) { wantsDodge = true; dodgeDecisions.set(nearest, false); }

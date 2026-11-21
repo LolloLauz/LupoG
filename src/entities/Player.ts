@@ -12,7 +12,7 @@ import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { AttackDefinition, Damageable, PlayerState } from "../types/EntityTypes";
+import type { AttackDefinition, Damageable, PlayerEnvironment, PlayerState } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -22,9 +22,21 @@ const BLINK_INTERVAL_MS = 80;
 
 type AttackInput = "attack" | "heavyAttack";
 
+/** Ambiente normale: nessun modificatore. */
+export const NORMAL_PLAYER_ENVIRONMENT: PlayerEnvironment = {
+  speedMultiplier: 1,
+  gravityMultiplier: 1,
+  maxFallSpeedMultiplier: 1,
+  jumpMultiplier: 1,
+  traction: null,
+  canSwim: false,
+};
+
 /** Il cavaliere controllato dal giocatore. */
 export class Player extends GameObject {
   public currentState: PlayerState = "idle";
+  /** Ambiente in cui si trova (acqua, ghiaccio...): lo imposta il motore prima di ogni aggiornamento. */
+  public environment: PlayerEnvironment = NORMAL_PLAYER_ENVIRONMENT;
   public currentHealth: number = PLAYER_CONFIG.maxHealth;
   public readonly maxHealth: number = PLAYER_CONFIG.maxHealth;
 
@@ -52,6 +64,8 @@ export class Player extends GameObject {
   private dodgeCooldownRemainingMs = 0;
   private hurtRemainingMs = 0;
   private invulnerabilityRemainingMs = 0;
+  /** Durata dell'ultimo aggiornamento (serve all'aderenza sul ghiaccio). */
+  private lastDeltaTimeSeconds = 0;
   private deathElapsedMs = 0;
 
   constructor(startX: number, startY: number) {
@@ -185,6 +199,7 @@ export class Player extends GameObject {
     mapWidth: number
   ): void {
     this.updateTimers(deltaTimeSeconds * 1000);
+    this.lastDeltaTimeSeconds = deltaTimeSeconds;
 
     if (this.isDead) {
       this.velocityX = 0;
@@ -202,8 +217,8 @@ export class Player extends GameObject {
     collisionSystem.applyGravityAndMove(
       this,
       deltaTimeSeconds,
-      GAME_CONFIG.gravity,
-      GAME_CONFIG.maxFallSpeed,
+      GAME_CONFIG.gravity * this.environment.gravityMultiplier,
+      GAME_CONFIG.maxFallSpeed * this.environment.maxFallSpeedMultiplier,
       platforms,
       mapWidth
     );
@@ -311,7 +326,7 @@ export class Player extends GameObject {
     }
     const isGroundedAttack = this.currentAttack !== null && this.isOnGround;
     if (isGroundedAttack) {
-      this.velocityX = 0; // a terra l'attacco ferma il movimento
+      this.approachHorizontalVelocity(0); // a terra l'attacco ferma il movimento (sul ghiaccio scivola)
     } else {
       this.applyHorizontalInput(input);
     }
@@ -395,7 +410,7 @@ export class Player extends GameObject {
     if (input.isHeld("moveRight")) {
       direction += 1;
     }
-    this.velocityX = direction * PLAYER_CONFIG.movementSpeed;
+    this.approachHorizontalVelocity(direction * PLAYER_CONFIG.movementSpeed * this.environment.speedMultiplier);
     // la direzione resta bloccata mentre si attacca
     if (direction !== 0 && this.currentAttack === null) {
       this.facingDirection = direction < 0 ? "left" : "right";
@@ -406,15 +421,32 @@ export class Player extends GameObject {
     if (input.wasPressed("jump")) {
       this.jumpBufferRemainingMs = PLAYER_CONFIG.jumpBufferMs;
     }
-    const canJump = (this.isOnGround || this.coyoteRemainingMs > 0) && !isJumpBlocked;
+    const canJump = (this.isOnGround || this.coyoteRemainingMs > 0 || this.environment.canSwim) && !isJumpBlocked;
     if (this.jumpBufferRemainingMs > 0 && canJump) {
-      this.velocityY = -PLAYER_CONFIG.jumpForce;
+      this.velocityY = -PLAYER_CONFIG.jumpForce * this.environment.jumpMultiplier;
       this.jumpBufferRemainingMs = 0;
       this.coyoteRemainingMs = 0;
     }
     // Salto variabile: rilasciando il tasto in salita il salto si accorcia.
     if (input.wasReleased("jump") && this.velocityY < 0) {
       this.velocityY *= PLAYER_CONFIG.jumpCutMultiplier;
+    }
+  }
+
+  /**
+   * Porta la velocità orizzontale verso quella voluta: subito se l'aderenza è piena, altrimenti
+   * gradualmente (ghiaccio: si scivola all'avvio e alla frenata). In aria l'aderenza non conta.
+   */
+  private approachHorizontalVelocity(targetVelocityX: number): void {
+    const traction = this.environment.traction;
+    if (traction === null || !this.isOnGround) {
+      this.velocityX = targetVelocityX;
+      return;
+    }
+    const blend = Math.min(1, traction * this.lastDeltaTimeSeconds);
+    this.velocityX += (targetVelocityX - this.velocityX) * blend;
+    if (Math.abs(this.velocityX) < 1 && targetVelocityX === 0) {
+      this.velocityX = 0;
     }
   }
 
