@@ -4,6 +4,22 @@ import type { Rectangle, Vector2 } from "./GameTypes";
 /** Ambientazioni disponibili. */
 export type ThemeId = "forest" | "castle" | "dungeon";
 
+/** Tessiture del terreno disponibili (disegnate da TerrainRenderer). */
+export type TerrainTexture = "grassAndEarth" | "stoneTiles" | "dungeonBricks";
+
+/** Aspetto del terreno di un'ambientazione. Ogni colore deve essere della palette. */
+export interface ThemeStyle {
+  terrainTexture: TerrainTexture;
+  /** Righe della superficie del terreno, dall'alto (luce, colore, ombra). */
+  surfaceColors: readonly [string, string, string];
+  /** Corpo del terreno: luce, faccia, ombra, fuga tra le pietre. */
+  fillColors: readonly [string, string, string, string];
+  /** Piattaforme sospese: bordo superiore, corpo, bordo inferiore. */
+  ledgeColors: readonly [string, string, string];
+  /** Dettagli (sassi, muschio...): scuro e chiaro. */
+  detailColors: readonly [string, string];
+}
+
 /** Tipi di oggetto raccoglibile. */
 export type ItemTypeId = "healthPotion" | "scoreCoin" | "collectible";
 

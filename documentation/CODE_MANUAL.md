@@ -1,6 +1,6 @@
 # Manuale del codice
 
-Versione del gioco descritta: **2.0.0-alpha.1**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
+Versione del gioco descritta: **2.0.0-alpha.2**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
 per le regole di gioco `GAME_MANUAL.md`.
 
 Questo manuale spiega **cosa c'è in ogni file**, **come si muove il codice** e, nella parte finale,
@@ -68,6 +68,7 @@ IRON_AND_SHADOW/
 | `config/animationConfig.ts`, `config/itemConfig.ts` | animazioni e oggetti seguono lo stesso principio "tutto in configurazione" |
 | `rendering/EffectsManager.ts`, `rendering/BackgroundRenderer.ts`, `rendering/BitmapFont.ts`, `rendering/sprites/*` | effetti, sfondi con parallasse, font a pixel e sprite non erano nella struttura iniziale |
 | `config/paletteConfig.ts`, `rendering/PaletteEffects.ts` (2.0) | palette a rampe e effetti di colore a 16 bit (retino, gradienti, ciclo dei colori, ondulazione) |
+| `rendering/PixelPainter.ts`, `rendering/TerrainRenderer.ts` (2.0) | primitive di disegno riusabili su qualsiasi canvas (per i livelli di parallasse) e disegno del terreno separato da `LevelManager` |
 | `ui/MenuManager.ts` separato da `ScreenManager.ts` | i menu sono riusabili, le schermate si limitano a disegnare |
 | `systems/LivesManager.ts`, `systems/HighScoreManager.ts` | vite e record sono responsabilità distinte dal punteggio |
 | `entities/Item.ts` | serve agli oggetti raccoglibili |
@@ -89,7 +90,7 @@ modificare qui, senza toccare la logica.
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG`, `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss) |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili), `ITEM_SIZE` |
-| `levelConfig.ts` | `LEVEL_CONFIG` (i livelli), `THEME_STYLES` (colori del terreno per ambientazione) |
+| `levelConfig.ts` | `LEVEL_CONFIG` (i livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`) |
 | `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
 | `animationConfig.ts` | `PLAYER_ANIMATIONS`, `ENEMY_ANIMATIONS`, `BOSS_ANIMATIONS` |
 
@@ -104,7 +105,7 @@ modificare qui, senza toccare la logica.
 | `invulnerabilityDurationMs` | 1000 | invulnerabilità dopo un colpo subito |
 | `dodgeDurationMs` / `dodgeCooldownMs` / `dodgeSpeed` | 300 / 700 / 160 | schivata (durata, ricarica, velocità): ≈ 48 px di scatto |
 | `hitboxWidth` / `hitboxHeight` | 12 / 24 | dimensioni del corpo |
-| `spriteWidth` / `spriteHeight` | 16 / 24 | dimensioni dello sprite a riposo |
+| `spriteWidth` / `spriteHeight` | 24 / 30 | dimensioni dello sprite a riposo (solo informative: l'allineamento usa l'ancora dello sprite) |
 | `jumpCutMultiplier` | 0,5 | rilasciando il salto in salita la velocità si dimezza (salto variabile) |
 | `coyoteTimeMs` | 80 | si può saltare ancora per 80 ms dopo aver lasciato un bordo |
 | `jumpBufferMs` | 100 | un salto premuto 100 ms prima di atterrare viene eseguito all'atterraggio |
@@ -280,19 +281,21 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 
 | File | Classe / funzioni | Responsabilità |
 |---|---|---|
-| `Renderer.ts` | `Renderer` | canvas a risoluzione fissa con scala intera **in pixel fisici** (tiene conto di `devicePixelRatio`): `clear`, `fillRect` (arrotonda tutti i bordi: niente sfumature), `strokeRect`, `drawImage`, `drawText` (con `shadowColor` opzionale), `drawDitherOverlay`, `fillDithered` (retino di due colori), `fillVerticalGradient` (gradiente a fasce), `applyLineWave` (ondulazione per riga) |
+| `PixelPainter.ts` | `PixelPainter`, `DrawTextOptions` | primitive di disegno su qualsiasi canvas: `clear`, `fillRect` (arrotonda tutti i bordi: niente sfumature), `strokeRect`, `drawImage`, `fillDithered` (retino di due colori), `fillDitheredOverlay` (retino di un colore sopra ciò che c'è), `fillVerticalGradient` (gradiente a fasce), `fillCircle`, `fillGlow` (alone a anelli di retino), `drawText` (`shadowColor`, `rowColors` per le scritte a fasce) |
+| `Renderer.ts` | `Renderer` (estende `PixelPainter`) | lo schermo: risoluzione fissa con scala intera **in pixel fisici** (tiene conto di `devicePixelRatio`), `drawDitherOverlay` (pausa), `applyLineWave` (ondulazione per riga) |
 | `BitmapFont.ts` | `getGlyph`, `getGlyphRows`, `measureTextWidth` | font a pixel: maiuscole 5×7, minuscole con discendenti (9 righe in tutto), accentate italiane minuscole, spaziatura proporzionale con cifre a larghezza fissa |
 | `PaletteEffects.ts` | `isDitherPixelOn`, `buildDitherTile`, `computeGradientBands`, `shadeColor`, `cycleRampColor`, `computeLineWaveOffset` | effetti di colore a 16 bit come funzioni pure (testabili senza browser) |
 | `Camera.ts` | `Camera` | `follow(target, mapWidth, mapHeight)`: centra e limita ai bordi |
-| `SpriteManager.ts` | `SpriteManager` | `registerSprite(id, righe, colori)`, `drawSprite(...)`, `drawSpriteSilhouette(..., colore)`, `getSpriteSize`; crea le versioni specchiate e, alla prima richiesta, le sagome a tinta unita |
+| `SpriteManager.ts` | `SpriteManager` | `registerSprite(id, righe, colori, anchorX)`, `drawSprite(...)`, `drawSpriteAligned(...)` (allinea lo sprite all'hitbox con l'ancora, anche specchiato), `drawSpriteSilhouette(..., colore)`, `getSpriteSize`, `getSpriteAnchorX`; crea le versioni specchiate e, alla prima richiesta, le sagome a tinta unita |
 | `AnimationManager.ts` | `AnimationPlayer`, `AnimationDefinition` | riproduce un'animazione: `play`, `restart`, `update`, `currentFrameId`; durata per frame (`frameDurationsMs`) opzionale |
 | `EffectsManager.ts` | `EffectsManager` | particelle, scritte, tremolio, hit-stop |
-| `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a parallasse per `forest`, `castle`, `dungeon` |
+| `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`: 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia) |
+| `TerrainRenderer.ts` | `TerrainRenderer` | terreno e piattaforme con la tessitura dell'ambientazione (`THEME_STYLES`), porta d'uscita, cancello dell'arena |
 | `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe, `addOutline` (contorno automatico), `remapSpriteKeys` (varianti) |
-| `sprites/knightSprites.ts` | `registerKnightSprites` | sprite del cavaliere |
-| `sprites/enemySprites.ts` | `registerEnemySprites` | sprite dei nemici (`SPECS`) |
-| `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES` | sprite dei boss |
-| `sprites/itemSprites.ts`, `uiSprites.ts` | funzioni | oggetti e icone dell'HUD |
+| `sprites/knightSprites.ts` | `registerKnightSprites`, `KNIGHT_ANCHOR_X` | cavaliere 24×30 (attacchi 44×30): parte superiore + gambe + spada; ancora alla colonna 7 |
+| `sprites/enemySprites.ts` | `registerEnemySprites` | nemici da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma, mano, ancora): scheletro 20×26, goblin 20×19, soldato 20×27 |
+| `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES` | boss 36×41 a piena risoluzione (corna, spallacci, mantello, spadone); i colori di ogni boss sono in `BOSS_SPRITE_STYLES` (chiavi k, n, d, s, w, r, e, y, c, p) |
+| `sprites/itemSprites.ts`, `uiSprites.ts` | funzioni | oggetti 8×8 ombreggiati; icone dell'HUD (`hudLife`, `hudHeart`, `hudSkull`) |
 
 **Come si descrive uno sprite.** Uno sprite è una lista di righe di testo; `.` è trasparente, ogni altra lettera è una
 chiave della mappa dei colori:
@@ -307,14 +310,20 @@ spriteManager.registerSprite("itemCoin", COIN_ROWS, { k: PALETTE.black, y: PALET
 ```
 
 `registerSprite` controlla che tutte le righe abbiano la stessa lunghezza e che ogni lettera abbia un colore:
-altrimenti lancia un errore con il nome dello sprite.
+altrimenti lancia un errore con il nome dello sprite. I test controllano anche che ogni colore usato sia della palette.
+
+**Stile 16 bit degli sprite.** Ogni materiale ha 2-4 tonalità della stessa rampa (luce in alto a sinistra), il contorno è
+nero (`k`), le scie dei colpi sono doppie (bianca e colorata). Per i personaggi si passa anche l'**ancora** (quarto parametro):
+la colonna in cui inizia l'hitbox quando lo sprite guarda a destra. Esempio del cavaliere: lo sprite è largo 24 pixel, l'hitbox 12,
+l'ancora 7; nei frame d'attacco (larghi 44) l'ancora resta 7 e la spada occupa le colonne in più a destra. Lo sprite poggia sempre
+sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) sporge sopra.
 
 ### 3.7 `src/ui/`
 
 | File | Classe | Responsabilità |
 |---|---|---|
-| `HUDManager.ts` | `HUDManager` | barra superiore (salute a 10 segmenti, vite, punteggio, gemme, livello), barra del boss, riquadri dei messaggi |
-| `MenuManager.ts` | `MenuManager<TCommand>` | menu verticale: `update(input)` restituisce il comando confermato, `render(...)` |
+| `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, livello, punteggio dorato, gemme), barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
+| `MenuManager.ts` | `MenuManager<TCommand>` | menu verticale: `update(input)` restituisce il comando confermato, `render(...)` (voce scelta in bianco-oro con frecce) |
 | `ScreenManager.ts` | `ScreenManager` | schermate titolo, controlli, pausa, Game Over, vittoria; usa un `MenuManager` per ciascuna |
 
 ### 3.8 `src/types/`
@@ -323,7 +332,7 @@ altrimenti lancia un errore con il nome dello sprite.
 |---|---|
 | `GameTypes.ts` | `GameStateName`, `GameAction`, `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
 | `EntityTypes.ts` | `PlayerState`, `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `EnemyDefinition`, `AttackDefinition`, `ComboDefinition`, `Damageable`, `BossPhaseDefinition`, `BossDefinition` |
-| `LevelTypes.ts` | `ThemeId`, `ItemTypeId`, `PlatformDefinition`, `EnemySpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` |
+| `LevelTypes.ts` | `ThemeId`, `TerrainTexture`, `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `EnemySpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` |
 
 ---
 
@@ -641,16 +650,16 @@ Codice aggiornato:
 Codice originale:
 ```ts
     bladeKeys: { grip: "y", blade: "w", edge: "w", guard: "y" },
-    handX: 12,
-    handY: 12,
+    handX: 17,
+    handY: 15,
   },
 ];
 ```
 Codice aggiornato:
 ```ts
     bladeKeys: { grip: "y", blade: "w", edge: "w", guard: "y" },
-    handX: 12,
-    handY: 12,
+    handX: 17,
+    handY: 15,
   },
   {
     idPrefix: "brute",
@@ -665,8 +674,8 @@ Codice aggiornato:
       d: PALETTE.black,
     },
     bladeKeys: { grip: "y", blade: "w", edge: "w", guard: "y" },
-    handX: 12,
-    handY: 12,
+    handX: 17,
+    handY: 15,
   },
 ];
 ```
@@ -949,7 +958,7 @@ export const BOSS_CATALOG: Record<string, BossDefinition> = {
 
 Codice originale:
 ```ts
-    y: PALETTE.yellow,
+    p: PALETTE.purple,
   },
 };
 
@@ -957,15 +966,19 @@ const BLADE_KEYS: BladeKeys
 ```
 Codice aggiornato:
 ```ts
-    y: PALETTE.yellow,
+    p: PALETTE.purple,
   },
   skeletonKing: {
     k: PALETTE.black,
+    n: PALETTE.slate,
     d: PALETTE.gray,
     s: PALETTE.lightGray,
-    r: PALETTE.cyan,
     w: PALETTE.white,
+    r: PALETTE.cyan,
+    e: PALETTE.cyan,
     y: PALETTE.yellow,
+    c: PALETTE.violetDark,
+    p: PALETTE.violet,
   },
 };
 
@@ -989,7 +1002,8 @@ Codice aggiornato:
 **Spiegazione.** Il catalogo `BOSS_CATALOG` associa un id a una `BossDefinition`; il livello sceglie il boss con `bossId`
 (se omesso: Cavaliere Nero). Le animazioni (`BOSS_ANIMATIONS`) e gli sprite (`registerBossSprites`) si generano da soli per ogni
 boss del catalogo, con il nome `<id>Idle1`, `<id>SlashA`, ecc.; per questo serve solo la mappa colori in `BOSS_SPRITE_STYLES`
-(lettere: `k` contorno, `d` armatura, `s` luci, `r` occhi, `w` corna e lama, `y` impugnatura). **Le fasi** sono l'elenco
+(lettere: `k` contorno, `n` ombra profonda, `d` armatura, `s` luci, `w` corna e lama, `r` dettagli, `e` bagliore degli occhi e della scia,
+`y` impugnatura e finiture, `c` e `p` mantello in ombra e in luce: tutte devono avere un colore). **Le fasi** sono l'elenco
 `phases`, ordinato per soglia decrescente: una fase è attiva quando la salute in % scende sotto la sua soglia; l'HUD mostra
 una tacca sulla barra per ogni soglia sotto il 100. **Limite:** tutti i boss condividono la forma dello sprite (hitbox 24×40
 obbligatoria): per una silhouette diversa servirebbe disegnare nuove righe di sprite in `bossSprites.ts`.

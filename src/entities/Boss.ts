@@ -1,5 +1,5 @@
 import { BOSS_ANIMATIONS } from "../config/animationConfig";
-import { GAME_CONFIG } from "../config/gameConfig";
+import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
@@ -194,17 +194,14 @@ export class Boss extends GameObject implements Damageable {
   }
 
   public render(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
-    const frameId = this.animationPlayer.currentFrameId;
-    const spriteSize = spriteManager.getSpriteSize(frameId);
-    const isFlipped = this.facingDirection === "left";
-    const extraWidth = spriteSize.width - this.width;
-    spriteManager.drawSprite(
+    spriteManager.drawSpriteAligned(
       renderer,
-      frameId,
-      this.positionX - (isFlipped ? extraWidth : 0) - cameraX,
-      this.positionY + this.height - spriteSize.height - cameraY,
-      isFlipped,
-      this.hitFlashRemainingMs > 0
+      this.animationPlayer.currentFrameId,
+      this.positionX - cameraX,
+      this.positionY + this.height - cameraY,
+      this.width,
+      this.facingDirection === "left",
+      this.hitFlashRemainingMs > 0 ? PALETTE.white : null
     );
   }
 

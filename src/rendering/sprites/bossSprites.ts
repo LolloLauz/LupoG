@@ -2,94 +2,148 @@ import { PALETTE } from "../../config/gameConfig";
 import { BOSS_CATALOG } from "../../config/enemyConfig";
 import type { BossDefinition } from "../../types/EntityTypes";
 import type { SpriteManager } from "../SpriteManager";
-import { createGrid, drawSlashArc, drawSword, stampRows, type BladeKeys } from "./spriteTools";
+import { createGrid, drawSlashArc, drawSword, mirrorRows, stampRows, type BladeKeys } from "./spriteTools";
 
 /**
- * Sprite del Cavaliere Nero. Il corpo è disegnato a metà risoluzione
- * (12 colonne x 20 righe) e poi ingrandito 2x (24x40), così resta
- * facile da modificare. La spada si aggiunge dopo l'ingrandimento.
+ * Sprite dei boss in stile 16 bit, a piena risoluzione (36x41 pixel, rivolti a destra).
+ * Tutti i boss condividono la stessa forma (elmo cornuto, spallacci, mantello, spadone):
+ * cambiano i colori (BOSS_SPRITE_STYLES) e le statistiche.
+ * L'hitbox (24x40) inizia alla colonna BOSS_ANCHOR_X; le corna sporgono 1 pixel sopra.
  */
 /**
  * Colori di ogni boss (chiave = id in BOSS_CATALOG). Lettere usate dalla forma:
- * k contorno, d armatura, s luci dell'armatura, r occhi/dettagli, w corna e lama, y impugnatura.
+ * k contorno, n ombra profonda dell'armatura, d armatura, s luci dell'armatura, w corna e lama,
+ * r dettagli, e bagliore degli occhi, y impugnatura e finiture, c mantello (ombra), p mantello (luce).
  */
 export const BOSS_SPRITE_STYLES: Record<string, Record<string, string>> = {
   blackKnight: {
     k: PALETTE.black,
+    n: PALETTE.deepNavy,
     d: PALETTE.navy,
     s: PALETTE.blue,
-    r: PALETTE.red,
     w: PALETTE.lightGray,
-    y: PALETTE.yellow,
+    r: PALETTE.red,
+    e: PALETTE.orange,
+    y: PALETTE.goldLight,
+    c: PALETTE.wine,
+    p: PALETTE.purple,
   },
 };
 
 const BLADE_KEYS: BladeKeys = { grip: "y", blade: "w", edge: "w", guard: "r" };
 
+/**
+ * Parte superiore: corna, elmo, spallacci, busto, braccio (davanti) e mantello (dietro), 31 righe.
+ * Le gambe iniziano alla riga LEGS_TOP: le ultime righe del mantello scendono accanto alle gambe.
+ */
 const UPPER_ROWS: string[] = [
-  ".w........w.",
-  ".kw......wk.",
-  "..kkkkkkkk..",
-  "..kddddddk..",
-  "..kdrddrdk..",
-  "..kddddddk..",
-  "...kkkkkk...",
-  ".kkddddddkk.",
-  "kdddsddsdddk",
-  "kddsddddsddk",
-  "kdddrrrrdddk",
-  ".kddddddddk.",
-  ".kddddddddk.",
-  "..kdddddddk.",
+  "...........kk..........kk...........",
+  "..........kwk..........kwk..........",
+  "..........kwsk........kswk..........",
+  "...........kwsk......kswk...........",
+  "...........kkwskkkkkkswkk...........",
+  "............kdsssssssddk............",
+  "...........kdssddddddddnk...........",
+  "...........kdsdkkkkkkkkkk...........",
+  "...........kdsdkreeerreek...........",
+  "...........kdsddkkkkkkkdk...........",
+  "...........kndsddddddddnk...........",
+  "............kndddsdddddk............",
+  "......kkkkkkkknnnnnnnnkkkkkkk.......",
+  ".....kcpkwsdddkkkkkkkkdddswsk.......",
+  "....kccpkssdddsdrrrrddddsddsdk......",
+  "....kcpckkdddsddrrddsdddkkddsk......",
+  "...kcpcpk.kndssddddssdnk.kdssk......",
+  "...kcpcpk.kndsdddssdddnk.kdsk.......",
+  "..kccpcpk.kndddddddddddk.kdsk.......",
+  "..kcpccpk.knddyyyyyyddnk.kwsdk......",
+  "..kcpccpk.knnddddddddnnk.kkkkk......",
+  ".kccpccpk..knndddddnnk..............",
+  ".kcpccpk..kndsdkkdsdnk..............",
+  ".kcpcccpk.kndsdk.kdsdnk.............",
+  "kccpccpk..knddk..kddnk..............",
+  "kcpccpk...kkkk...kkkk...............",
+  "kcpcccpk............................",
+  "kccpccpk............................",
+  "kcpccpk.............................",
+  "kkcpcpk.............................",
+  ".kkkkk..............................",
 ];
 
+/** Gambe (36 colonne x 15 righe). */
 const LEGS_STAND: string[] = [
-  "..kddk.kddk.",
-  "..kddk.kddk.",
-  "..kddk.kddk.",
-  "..kddk.kddk.",
-  ".kkddk.kddkk",
-  ".kkkkk.kkkkk",
+  "..........kndsk...kndsk.............",
+  "..........kndsk...kndsk.............",
+  "..........kndsk...kndsk.............",
+  "..........kkkkk...kkkkk.............",
+  "..........kdssk...kdssk.............",
+  "..........kndsk...kndsk.............",
+  "..........kndsk...kndsk.............",
+  "..........kndsk...kndsk.............",
+  "..........kndsk...kndsk.............",
+  "..........kndsk...kndsk.............",
+  ".........kkndsk..kkndsk.............",
+  ".........kndssk..kndssk.............",
+  "........knnddssk.knnddssk...........",
+  "........knnnddsk.knnnddsk...........",
+  "........kkkkkkkk.kkkkkkkk...........",
 ];
 
 const LEGS_STRIDE: string[] = [
-  "..kddk.kddk.",
-  ".kdd....kddk",
-  ".kdd....kddk",
-  "kdd......ddk",
-  "kkdk.....dkk",
-  "kkkk.....kkk",
+  "..........kndsk...kndsk.............",
+  ".........kndsk.....kndsk............",
+  ".........kndsk.....kndsk............",
+  "........kkkkk.......kkkkk...........",
+  "........kdssk.......kdssk...........",
+  ".......kndsk.........kndsk..........",
+  ".......kndsk.........kndsk..........",
+  "......kndsk...........kndsk.........",
+  "......kndsk...........kndsk.........",
+  ".....kndsk.............kndsk........",
+  ".....kndsk.............kndssk.......",
+  "....kkndssk............kkndssk......",
+  "...knnddssk...........knnddssk......",
+  "...knnnddsk...........knnnddsk......",
+  "...kkkkkkkk...........kkkkkkkk......",
 ];
 
 const LEGS_PASSING: string[] = [
-  "...kdddddk..",
-  "...kdddddk..",
-  "...kdddddk..",
-  "...kdddddk..",
-  "..kkdddddkk.",
-  "..kkkkkkkkk.",
+  "............kndssk..................",
+  "............kndssk..................",
+  "............kndssk..................",
+  "............kkkkkk..................",
+  "............kdsssk..................",
+  "............kndssk..................",
+  "............kndssk..................",
+  "............kndssk..................",
+  "............kndssk..................",
+  "............kndssk..................",
+  "...........kkndssk..................",
+  "...........kndsssk..................",
+  "..........knnddsssk.................",
+  "..........knnnddssk.................",
+  "..........kkkkkkkkk.................",
 ];
 
-/** Tutti i boss condividono la stessa forma: hitbox 24x40. */
+/** Tutti i boss hanno hitbox 24x40; lo sprite base è 36x41 (le corna sporgono di 1 pixel, il mantello dietro). */
 const BODY_WIDTH = 24;
 const BODY_HEIGHT = 40;
+const SPRITE_WIDTH = 36;
+const SPRITE_HEIGHT = 41;
+/** Riga in cui iniziano le gambe. */
+const LEGS_TOP = 26;
+/** Colonna in cui inizia l'hitbox del boss dentro lo sprite. */
+const BOSS_ANCHOR_X = 6;
+/** Mano che impugna lo spadone. */
+const HAND_X = 27;
+const HAND_Y = 19;
 
-/** Ingrandisce uno sprite 2x (ogni pixel diventa un quadrato 2x2). */
-function scaleUp(rows: string[]): string[] {
-  return rows.flatMap((row) => {
-    const doubled = [...row].map((key) => key + key).join("");
-    return [doubled, doubled];
-  });
-}
-
-/** Corpo a risoluzione doppia; bodyDrop è in pixel della griglia piccola. */
-function composeBody(legRows: string[], bodyDrop: number): string[] {
-  const emptyRow = ".".repeat(12);
-  const upper =
-    bodyDrop > 0
-      ? [...Array<string>(bodyDrop).fill(emptyRow), ...UPPER_ROWS.slice(0, UPPER_ROWS.length - bodyDrop)]
-      : UPPER_ROWS;
-  return scaleUp([...upper, ...legRows]);
+/** Corpo completo; bodyDrop abbassa la parte superiore (respiro, passo). */
+function composeBody(legRows: string[], bodyDrop: number, width = SPRITE_WIDTH): string[] {
+  const grid = createGrid(width, SPRITE_HEIGHT);
+  stampRows(grid, legRows, 0, LEGS_TOP);
+  stampRows(grid, UPPER_ROWS, 0, bodyDrop);
+  return grid.map((row) => row.join(""));
 }
 
 interface BossPose {
@@ -99,18 +153,20 @@ interface BossPose {
   handY?: number;
   bodyShiftX?: number;
   arcs?: Array<{ radius: number; startDegrees: number; endDegrees: number }>;
+  legs?: string[];
 }
 
-/** Sprite con spada: corpo a sinistra, arma e scia a destra. */
+/** Sprite con spadone: corpo a sinistra, arma e scia a destra. */
 function composeWithSword(spriteWidth: number, pose: BossPose, bodyDrop = 0): string[] {
-  const grid = createGrid(spriteWidth, BODY_HEIGHT);
-  stampRows(grid, composeBody(LEGS_STAND, bodyDrop), pose.bodyShiftX ?? 0, 0);
-  const handX = pose.handX ?? 22;
-  const handY = (pose.handY ?? 24) + bodyDrop * 2;
+  const grid = createGrid(spriteWidth, SPRITE_HEIGHT);
+  stampRows(grid, composeBody(pose.legs ?? LEGS_STAND, bodyDrop), pose.bodyShiftX ?? 0, 0);
+  const handX = pose.handX ?? HAND_X;
+  const handY = (pose.handY ?? HAND_Y) + bodyDrop;
   for (const arc of pose.arcs ?? []) {
-    drawSlashArc(grid, handX, handY, arc.radius, arc.startDegrees, arc.endDegrees);
+    drawSlashArc(grid, handX, handY, arc.radius, arc.startDegrees, arc.endDegrees, "w");
+    drawSlashArc(grid, handX, handY, arc.radius - 1, arc.startDegrees, arc.endDegrees, "e");
   }
-  // l'arma del boss è spessa il doppio: due linee affiancate
+  // lo spadone del boss è spesso il doppio: due linee affiancate
   drawSword(grid, handX, handY, pose.tipX, pose.tipY, BLADE_KEYS);
   drawSword(grid, handX, handY + 1, pose.tipX, pose.tipY + 1, BLADE_KEYS);
   return grid.map((row) => row.join(""));
@@ -132,40 +188,41 @@ function registerBossSpritesFor(spriteManager: SpriteManager, definition: BossDe
     throw new Error(`Il boss "${definition.id}" deve avere hitbox ${BODY_WIDTH}x${BODY_HEIGHT} (forma dello sprite)`);
   }
   const prefix = definition.id;
-  const slashWidth = BODY_WIDTH + definition.slashRange + 6;
-  const slashTipX = Math.min(slashWidth - 1, BODY_WIDTH + definition.slashRange);
-  const mirroredStride = LEGS_STRIDE.map((row) => [...row].reverse().join(""));
+  // la scia arriva dove arriva il colpo: bordo anteriore dell'hitbox + slashRange
+  const slashTipX = BOSS_ANCHOR_X + BODY_WIDTH + definition.slashRange;
+  const slashWidth = slashTipX + 4;
+  const chargeWidth = SPRITE_WIDTH + 24;
+  const restingTip = { tipX: HAND_X + 6, tipY: 4 };
   const frames: Record<string, string[]> = {
-    [`${prefix}Idle1`]: composeWithSword(BODY_WIDTH + 8, { tipX: 29, tipY: 6 }),
-    [`${prefix}Idle2`]: composeWithSword(BODY_WIDTH + 8, { tipX: 29, tipY: 6 }, 1),
-    [`${prefix}Walk1`]: composeBody(LEGS_STRIDE, 1),
-    [`${prefix}Walk2`]: composeBody(LEGS_PASSING, 0),
-    [`${prefix}Walk3`]: composeBody(mirroredStride, 1),
-    [`${prefix}SlashA`]: composeWithSword(slashWidth, { tipX: 28, tipY: 2 }, 1),
+    [`${prefix}Idle1`]: composeWithSword(SPRITE_WIDTH, restingTip),
+    [`${prefix}Idle2`]: composeWithSword(SPRITE_WIDTH, { ...restingTip, tipY: 5 }, 1),
+    [`${prefix}Walk1`]: composeWithSword(SPRITE_WIDTH, { ...restingTip, tipY: 5, legs: LEGS_STRIDE }, 1),
+    [`${prefix}Walk2`]: composeWithSword(SPRITE_WIDTH, { ...restingTip, legs: LEGS_PASSING }),
+    [`${prefix}Walk3`]: composeWithSword(SPRITE_WIDTH, { ...restingTip, tipY: 5, legs: mirrorRows(LEGS_STRIDE) }, 1),
+    [`${prefix}SlashA`]: composeWithSword(slashWidth, { tipX: HAND_X - 4, tipY: 0 }, 1),
     [`${prefix}SlashB`]: composeWithSword(slashWidth, {
       tipX: slashTipX,
-      tipY: 22,
+      tipY: 26,
       arcs: [
-        { radius: 34, startDegrees: -80, endDegrees: -5 },
-        { radius: 28, startDegrees: -75, endDegrees: -15 },
+        { radius: slashTipX - HAND_X, startDegrees: -30, endDegrees: 32 },
+        { radius: slashTipX - HAND_X - 6, startDegrees: -28, endDegrees: 28 },
       ],
     }),
-    [`${prefix}SlashC`]: composeWithSword(slashWidth, { tipX: 40, tipY: 38 }),
-    [`${prefix}ChargeWindup`]: composeWithSword(BODY_WIDTH + 28, { tipX: 50, tipY: 22 }, 1),
-    [`${prefix}ChargeDash`]: composeWithSword(BODY_WIDTH + 28, { tipX: 52, tipY: 26, bodyShiftX: 4, handX: 26, handY: 26 }),
-    [`${prefix}Hurt`]: composeWithSword(BODY_WIDTH + 8, { tipX: 30, tipY: 40 }, 1),
+    [`${prefix}SlashC`]: composeWithSword(slashWidth, { tipX: HAND_X + 18, tipY: SPRITE_HEIGHT - 2 }),
+    [`${prefix}ChargeWindup`]: composeWithSword(chargeWidth, { tipX: chargeWidth - 4, tipY: HAND_Y - 2 }, 2),
+    [`${prefix}ChargeDash`]: composeWithSword(chargeWidth, {
+      tipX: chargeWidth - 1,
+      tipY: HAND_Y + 3,
+      bodyShiftX: 3,
+      handX: HAND_X + 3,
+      handY: HAND_Y + 2,
+      legs: LEGS_STRIDE,
+    }),
+    [`${prefix}Hurt`]: composeWithSword(SPRITE_WIDTH, { tipX: SPRITE_WIDTH - 2, tipY: SPRITE_HEIGHT - 1 }, 2),
   };
   frames[`${prefix}Heap`] = collapse(composeBody(LEGS_STAND, 0));
-  // I frame di camminata non hanno spada in vista: allargati per avere la stessa larghezza di base.
-  for (const walkId of [`${prefix}Walk1`, `${prefix}Walk2`, `${prefix}Walk3`]) {
-    const walkGrid = createGrid(BODY_WIDTH + 8, BODY_HEIGHT);
-    stampRows(walkGrid, frames[walkId]!);
-    drawSword(walkGrid, 22, 24, 29, 6, BLADE_KEYS);
-    drawSword(walkGrid, 22, 25, 29, 7, BLADE_KEYS);
-    frames[walkId] = walkGrid.map((row) => row.join(""));
-  }
   for (const [spriteId, pixelRows] of Object.entries(frames)) {
-    spriteManager.registerSprite(spriteId, pixelRows, colors);
+    spriteManager.registerSprite(spriteId, pixelRows, colors, BOSS_ANCHOR_X);
   }
 }
 

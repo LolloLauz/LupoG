@@ -62,6 +62,9 @@ export default async function (t, load) {
     fillRect(...args) { log.push({ kind: "fillRect", args, style: this.fillStyle }); },
     drawImage(...args) { log.push({ kind: "drawImage", args }); },
     createPattern(source) { const pattern = { pattern: patterns.length, source }; patterns.push(pattern); return pattern; },
+    translate() {},
+    scale() {},
+    globalCompositeOperation: "source-over",
   });
   const tileLog = [];
   globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: () => makeContext(tileLog) }) };
@@ -114,9 +117,54 @@ export default async function (t, load) {
   t("la larghezza del testo scala con il moltiplicatore", font.measureTextWidth("Punti 120", 3) === font.measureTextWidth("Punti 120", 1) * 3);
   t("maiuscole accentate diventano la lettera semplice", font.getGlyphRows("È") === font.getGlyphRows("E"));
 
+  // ---------- retino sovrapposto, aloni, cerchi, testo a fasce ----------
+  calls.length = 0;
+  tileLog.length = 0;
+  const patternsBefore = patterns.length;
+  renderer.fillDitheredOverlay(0.4, 10.6, 50.2, 8, PALETTE.slate, 4);
+  renderer.fillDitheredOverlay(60, 10, 20, 8, PALETTE.slate, 4);
+  t("retino sovrapposto: un motivo creato una volta, che colora solo 4 pixel su 16 (gli altri restano trasparenti)", patterns.length === patternsBefore + 1 && tileLog.length === 4 && tileLog.every((c) => c.style === PALETTE.slate));
+  t("retino sovrapposto: rettangoli a coordinate intere", calls.length === 2 && calls.every((c) => c.args.every(Number.isInteger)));
+  calls.length = 0;
+  renderer.fillDitheredOverlay(0, 0, 10, 10, PALETTE.slate, 0);
+  t("retino sovrapposto di livello 0 non disegna nulla", calls.length === 0);
+  calls.length = 0;
+  renderer.fillGlow(100, 80, 12, PALETTE.ember, 3, 8);
+  const glowPixels = calls.filter((c) => c.kind === "fillRect");
+  const distinctGlowPixels = new Set(glowPixels.map((c) => `${c.args[0]},${c.args[1]}`));
+  t("alone: solo pixel singoli del colore richiesto, dentro il raggio", glowPixels.length > 20 && glowPixels.every((c) => c.style === PALETTE.ember && c.args[2] === 1 && c.args[3] === 1 && Math.hypot(c.args[0] - 100, c.args[1] - 80) <= 12.5));
+  t("alone: nessun pixel disegnato due volte (anelli che non si sovrappongono)", distinctGlowPixels.size === glowPixels.length);
+  const innerShare = glowPixels.filter((c) => Math.hypot(c.args[0] - 100, c.args[1] - 80) <= 4).length / Math.max(1, glowPixels.length);
+  t("alone: più fitto verso il centro", innerShare > (Math.PI * 16) / (Math.PI * 144));
+  calls.length = 0;
+  renderer.fillCircle(50.4, 50.6, 5, PALETTE.white);
+  t("cerchio: 11 righe a coordinate intere", calls.length === 11 && calls.every((c) => c.args.every(Number.isInteger)));
+  calls.length = 0;
+  const bandColors = [PALETTE.cream, PALETTE.yellow, PALETTE.goldLight, PALETTE.gold, PALETTE.bronze, PALETTE.bronze, PALETTE.bronze];
+  renderer.drawText("E", 0, 0, PALETTE.white, { rowColors: bandColors });
+  t("testo a fasce: ogni riga del glifo ha il suo colore", calls.length > 0 && calls.every((c) => c.style === bandColors[c.args[1]]));
+
+  // ---------- sprite allineati all'hitbox (anche specchiati) ----------
+  const { SpriteManager } = await load("rendering/SpriteManager");
+  const spriteManager = new SpriteManager();
+  // sprite 10 colonne: hitbox (larga 4) alle colonne 2-5, spada a destra fino alla colonna 9
+  spriteManager.registerSprite("prova", ["..kkkk....", "..kkkkwwww", "..kkkk...."], { k: PALETTE.black, w: PALETTE.white }, 2);
+  const drawn = [];
+  const fakeScreen = { drawImage: (image, x, y) => drawn.push({ image, x, y }) };
+  spriteManager.drawSpriteAligned(fakeScreen, "prova", 50, 100, 4, false);
+  spriteManager.drawSpriteAligned(fakeScreen, "prova", 50, 100, 4, true);
+  t("allineato a destra: la colonna d'ancoraggio cade sul bordo sinistro dell'hitbox e i piedi sul bordo inferiore", drawn[0].x === 48 && drawn[0].y === 97);
+  // specchiato, l'hitbox occupa le colonne 4-7 dell'immagine: 46 + 4 = 50 (stesso punto), la spada (colonne 0-3) è a sinistra
+  t("specchiato: l'hitbox resta nello stesso punto e la spada passa a sinistra", drawn[1].x === 46 && drawn[0].image !== drawn[1].image);
+  t("l'ancora registrata si può leggere", spriteManager.getSpriteAnchorX("prova") === 2);
+  spriteManager.drawSpriteAligned(fakeScreen, "prova", 50, 100, 4, false, PALETTE.white);
+  spriteManager.drawSpriteAligned(fakeScreen, "prova", 50, 100, 4, false, PALETTE.white);
+  t("il lampo usa una sagoma creata una volta e poi riusata", drawn[2].image === drawn[3].image && drawn[2].image !== drawn[0].image);
+
   // ---------- contorni e varianti degli sprite ----------
   const outlined = addOutline([".....", "..a..", ".aba.", "..a..", "....."], "k");
   t("addOutline: contorno sui 4 lati dei pixel colorati, interno invariato, dimensioni invariate", outlined.join("|") === "..k..|.kak.|kabak|.kak.|..k..", outlined.join("|"));
   t("addOutline non tocca i pixel già colorati", addOutline(["ab", "cd"], "k").join("|") === "ab|cd");
   t("remapSpriteKeys sostituisce solo i caratteri indicati", remapSpriteKeys(["aab.", ".ba."], { a: "r" }).join("|") === "rrb.|.br.");
 }
+

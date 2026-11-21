@@ -1,45 +1,61 @@
 import { PALETTE } from "../../config/gameConfig";
 import type { SpriteManager } from "../SpriteManager";
 
-/** Sprite 8x8 degli oggetti raccoglibili. */
+/**
+ * Sprite 8x8 degli oggetti raccoglibili, in stile 16 bit: ogni oggetto ha la sua rampa
+ * (vetro e liquido rosso, oro, gemma blu) con riflesso in alto a sinistra.
+ * La dimensione resta 8x8 perché la raccolta usa ITEM_SIZE (itemConfig.ts).
+ */
 const ITEM_COLORS: Record<string, string> = {
   k: PALETTE.black,
   w: PALETTE.white,
+  // pozione
+  m: PALETTE.purple,
   r: PALETTE.red,
-  y: PALETTE.yellow,
+  o: PALETTE.orange,
+  g: PALETTE.lightGray,
+  e: PALETTE.wood,
+  // moneta
+  b: PALETTE.bronze,
+  n: PALETTE.gold,
+  y: PALETTE.goldLight,
+  v: PALETTE.cream,
+  // gemma
+  N: PALETTE.navy,
+  B: PALETTE.blue,
+  L: PALETTE.lightBlue,
   c: PALETTE.cyan,
-  b: PALETTE.blue,
 };
 
 const POTION_ROWS = [
-  "..kkkk..",
-  "...kk...",
-  "..kwwk..",
-  ".krrrrk.",
-  ".krwrrk.",
-  ".krrrrk.",
-  ".krrrrk.",
-  "..kkkk..",
+  "...ke...",
+  "..kggk..",
+  "...kgk..",
+  "..kwrrk.",
+  ".kwormrk",
+  ".krrrrmk",
+  ".kmrrmmk",
+  "..kkkkk.",
 ];
 
 const COIN_ROWS = [
   "..kkkk..",
-  ".kyyyyk.",
-  "kyywwyyk",
-  "kywyyyyk",
-  "kywyyyyk",
-  "kyyyyyyk",
-  ".kyyyyk.",
+  ".kvyyyk.",
+  "kvyynnyk",
+  "kyynynbk",
+  "kyynynbk",
+  "kyyynnbk",
+  ".knbbbk.",
   "..kkkk..",
 ];
 
 const GEM_ROWS = [
   "..kkkk..",
-  ".kwccbck",
-  "kwccbbck",
-  "kccbbbbk",
-  ".kcbbbk.",
-  "..kbbk..",
+  ".kwcLBNk",
+  "kwcLLBNk",
+  "kcLLBBNk",
+  ".kLBBNk.",
+  "..kBNk..",
   "...kk...",
   "........",
 ];

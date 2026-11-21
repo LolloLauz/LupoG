@@ -32,7 +32,7 @@ export async function load(relativePath) {
 /** Finto SpriteManager: applica le stesse regole di quello vero (righe uguali, colori definiti). */
 export class FakeSpriteManager {
   sprites = new Map();
-  registerSprite(spriteId, pixelRows, colorByKey) {
+  registerSprite(spriteId, pixelRows, colorByKey, anchorX = 0) {
     const width = pixelRows[0]?.length ?? 0;
     if (width === 0 || pixelRows.some((row) => row.length !== width)) {
       throw new Error(`Sprite "${spriteId}": righe di lunghezza diversa o vuote`);
@@ -44,9 +44,12 @@ export class FakeSpriteManager {
         }
       }
     }
-    this.sprites.set(spriteId, { width, height: pixelRows.length, rows: pixelRows });
+    this.sprites.set(spriteId, { width, height: pixelRows.length, rows: pixelRows, colors: colorByKey, anchorX });
   }
   has(spriteId) { return this.sprites.has(spriteId); }
   getSpriteSize(spriteId) { return this.sprites.get(spriteId); }
+  getSpriteAnchorX(spriteId) { return this.sprites.get(spriteId).anchorX; }
   drawSprite() {}
+  drawSpriteAligned() {}
+  drawSpriteSilhouette() {}
 }

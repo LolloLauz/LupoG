@@ -43,6 +43,33 @@ export default async function (t, load) {
   t("tutti gli sprite si registrano senza errori (righe uniformi, colori definiti)", registrationError === "", registrationError);
   t("sono stati registrati più di 60 sprite", sprites.sprites.size > 60, String(sprites.sprites.size));
 
+  // ---------- grafica a 16 bit: colori e ancore degli sprite ----------
+  const paletteSet = new Set(Object.values(PALETTE));
+  const offPaletteSprites = [];
+  for (const [spriteId, sprite] of sprites.sprites) {
+    const usedKeys = new Set(sprite.rows.join("").replaceAll(".", ""));
+    for (const key of usedKeys) if (!paletteSet.has(sprite.colors[key])) offPaletteSprites.push(`${spriteId}:${key}=${sprite.colors[key]}`);
+  }
+  t("ogni colore usato dagli sprite è un colore della palette", offPaletteSprites.length === 0, offPaletteSprites.slice(0, 3).join(", "));
+  const hitboxByPrefix = [
+    ["knight", { width: playerModule.PLAYER_CONFIG.hitboxWidth, height: playerModule.PLAYER_CONFIG.hitboxHeight }],
+    ...Object.values(ENEMY_CONFIG).map((enemy) => [enemy.id, enemy.hitbox]),
+    ...Object.values(BOSS_CATALOG).map((boss) => [boss.id, boss.hitbox]),
+  ];
+  const badAnchors = [];
+  for (const [prefix, hitbox] of hitboxByPrefix) {
+    const frames = [...sprites.sprites].filter(([id]) => id.startsWith(prefix) && !id.endsWith("Heap") && !id.endsWith("DeadLie"));
+    if (frames.length === 0) badAnchors.push(`${prefix}: nessuno sprite`);
+    for (const [spriteId, sprite] of frames) {
+      // l'hitbox deve stare dentro lo sprite: ancora + larghezza entro la larghezza, sprite non più basso dell'hitbox
+      if (sprite.anchorX < 0 || sprite.anchorX + hitbox.width > sprite.width || sprite.height < hitbox.height) badAnchors.push(`${spriteId} (ancora ${sprite.anchorX}, ${sprite.width}x${sprite.height})`);
+    }
+    const anchors = new Set(frames.map(([, sprite]) => sprite.anchorX));
+    if (anchors.size > 1) badAnchors.push(`${prefix}: ancore diverse tra i frame (${[...anchors].join(",")})`);
+  }
+  t("ogni frame di cavaliere, nemici e boss contiene l'hitbox e tutti i frame di un personaggio hanno la stessa ancora", badAnchors.length === 0, badAnchors.slice(0, 3).join("; "));
+  t("gli sprite del cavaliere sono più alti dell'hitbox (pennacchio ed elmo sporgono, 16 bit)", sprites.getSpriteSize("knightIdle1").height > playerModule.PLAYER_CONFIG.hitboxHeight);
+
   const allAnimationSets = [
     ["giocatore", PLAYER_ANIMATIONS],
     ...Object.entries(ENEMY_ANIMATIONS).map(([id, set]) => [`nemico ${id}`, set]),
@@ -123,6 +150,9 @@ export default async function (t, load) {
   t("gli id dei livelli sono consecutivi da 1", LEVEL_CONFIG.every((level, index) => level.id === index + 1));
   t("c'è almeno un livello con boss e l'ultimo livello è quello del boss", LEVEL_CONFIG.some((l) => l.hasBoss) && LEVEL_CONFIG[LEVEL_CONFIG.length - 1].hasBoss);
   t("ogni ambientazione usata ha uno stile", LEVEL_CONFIG.every((level) => THEME_STYLES[level.theme] !== undefined));
+  const themeColors = Object.values(THEME_STYLES).flatMap((style) => [...style.surfaceColors, ...style.fillColors, ...style.ledgeColors, ...style.detailColors]);
+  t("tutti i colori del terreno (THEME_STYLES) sono della palette", themeColors.every((color) => paletteSet.has(color)) && themeColors.length === Object.keys(THEME_STYLES).length * 12);
+  t("ogni ambientazione ha una tessitura del terreno conosciuta", Object.values(THEME_STYLES).every((style) => ["grassAndEarth", "stoneTiles", "dungeonBricks"].includes(style.terrainTexture)));
   for (const level of LEVEL_CONFIG) {
     const problems = [];
     const ground = level.platforms.filter((p) => p.y === 200 && !p.oneWay).sort((a, b) => a.x - b.x);

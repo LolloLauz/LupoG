@@ -10,6 +10,8 @@ interface CompiledSprite {
    * per ombre, lampi rossi o sagome scure.
    */
   silhouettes: Map<string, HTMLCanvasElement>;
+  /** Colonna dello sprite (rivolto a destra) in cui inizia l'hitbox dell'entità. */
+  anchorX: number;
 }
 
 /**
@@ -25,11 +27,14 @@ export class SpriteManager {
    * @param spriteId identificativo univoco
    * @param pixelRows righe di caratteri: '.' = trasparente, altri = chiave in colorByKey
    * @param colorByKey mappa carattere -> colore CSS
+   * @param anchorX colonna dello sprite (rivolto a destra) in cui cade il bordo sinistro
+   *   dell'hitbox: serve a drawSpriteAligned per allineare sprite più grandi dell'hitbox
    */
   public registerSprite(
     spriteId: string,
     pixelRows: string[],
-    colorByKey: Record<string, string>
+    colorByKey: Record<string, string>,
+    anchorX = 0
   ): void {
     const width = pixelRows[0]?.length ?? 0;
     const height = pixelRows.length;
@@ -66,7 +71,7 @@ export class SpriteManager {
     flippedContext.scale(-1, 1);
     flippedContext.drawImage(normal, 0, 0);
 
-    this.sprites.set(spriteId, { normal, flipped, silhouettes: new Map() });
+    this.sprites.set(spriteId, { normal, flipped, silhouettes: new Map(), anchorX });
   }
 
   /** Copia dell'immagine con ogni pixel non trasparente reso del colore indicato. */
@@ -89,6 +94,42 @@ export class SpriteManager {
       throw new Error(`Sprite non registrato: ${spriteId}`);
     }
     return { width: sprite.normal.width, height: sprite.normal.height };
+  }
+
+  /** Colonna d'ancoraggio dell'hitbox nello sprite (vedi registerSprite). */
+  public getSpriteAnchorX(spriteId: string): number {
+    return this.getCompiledSprite(spriteId).anchorX;
+  }
+
+  /**
+   * Disegna lo sprite allineato all'hitbox di un'entità: i piedi (ultima riga) poggiano sul bordo
+   * inferiore dell'hitbox e la colonna d'ancoraggio coincide con il suo bordo sinistro.
+   * Specchiato (entità rivolta a sinistra) l'hitbox resta nello stesso punto: ciò che sporge
+   * davanti (armi, scie) passa dall'altra parte.
+   * @param hitboxScreenX bordo sinistro dell'hitbox, in coordinate dello schermo
+   * @param hitboxScreenBottom bordo inferiore dell'hitbox, in coordinate dello schermo
+   * @param flashColor se indicato, disegna la sagoma a tinta unita (lampo quando viene colpito)
+   */
+  public drawSpriteAligned(
+    renderer: Renderer,
+    spriteId: string,
+    hitboxScreenX: number,
+    hitboxScreenBottom: number,
+    hitboxWidth: number,
+    isFlipped: boolean,
+    flashColor: string | null = null
+  ): void {
+    const sprite = this.getCompiledSprite(spriteId);
+    const spriteWidth = sprite.normal.width;
+    const drawX = isFlipped
+      ? hitboxScreenX - (spriteWidth - sprite.anchorX - hitboxWidth)
+      : hitboxScreenX - sprite.anchorX;
+    const drawY = hitboxScreenBottom - sprite.normal.height;
+    if (flashColor !== null) {
+      this.drawSpriteSilhouette(renderer, spriteId, drawX, drawY, isFlipped, flashColor);
+    } else {
+      renderer.drawImage(isFlipped ? sprite.flipped : sprite.normal, drawX, drawY);
+    }
   }
 
   public drawSprite(

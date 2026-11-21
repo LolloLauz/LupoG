@@ -197,15 +197,27 @@ const behaviorChecks = {
     const healthAfterDamage = (player.takeDamage(30, 0), player.currentHealth);
     player.heal(500);
     const fillCalls = [];
-    const renderer = { width: 256, height: 240, fillRect: (x, y, w, h, color) => fillCalls.push({ x, y, w, h, color }), strokeRect() {}, drawText() {} };
+    const renderer = {
+      width: 320,
+      height: 240,
+      fillRect: (x, y, w, h, color) => fillCalls.push({ x, y, w, h, color }),
+      strokeRect() {},
+      drawText() {},
+      fillVerticalGradient() {},
+      fillDithered() {},
+      fillDitheredOverlay() {},
+    };
     const hud = new m.HUDManager.HUDManager();
+    // un segmento della barra = il rettangolo principale con la geometria dichiarata dall'HUD
+    const geometry = m.HUDManager.HEALTH_SEGMENT_GEOMETRY;
+    const isSegment = (c) => c.w === geometry.width && c.h === geometry.height && c.y === geometry.y;
     const hudData = (health) => ({ health, maxHealth: 150, lives: 3, score: 0, collectibles: 0, levelNumber: 1, boss: null });
     hud.render(renderer, new FakeSpriteManager(), hudData(150), 0);
-    const segments = fillCalls.filter((c) => c.w === 5 && c.h === 9 && c.y === 3);
+    const segments = fillCalls.filter(isSegment);
     const full = segments.filter((c) => c.color === m.GameConfig.PALETTE.red).length;
     fillCalls.length = 0;
     hud.render(renderer, new FakeSpriteManager(), hudData(75), 1);
-    const half = fillCalls.filter((c) => c.w === 5 && c.h === 9 && c.y === 3 && c.color === m.GameConfig.PALETTE.red).length;
+    const half = fillCalls.filter((c) => isSegment(c) && c.color === m.GameConfig.PALETTE.red).length;
     return [
       ["la salute massima del giocatore è 150", player.maxHealth === 150],
       ["dopo 30 di danno restano 120 HP", healthAfterDamage === 120],

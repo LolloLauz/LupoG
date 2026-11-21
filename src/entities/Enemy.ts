@@ -10,8 +10,6 @@ import type { FacingDirection, Rectangle } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
 
-/** Larghezza del corpo nello sprite (come per il cavaliere). */
-const SPRITE_BODY_WIDTH = 16;
 /** Durata (ms) del lampo bianco quando il nemico viene colpito. */
 const HIT_FLASH_MS = 100;
 
@@ -197,19 +195,15 @@ export class Enemy extends GameObject implements Damageable {
   }
 
   public render(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
-    const frameId = this.animationPlayer.currentFrameId;
-    const spriteSize = spriteManager.getSpriteSize(frameId);
-    const isFlipped = this.facingDirection === "left";
-    const bodyOffsetX = (this.width - SPRITE_BODY_WIDTH) / 2;
-    const extraWidth = spriteSize.width - SPRITE_BODY_WIDTH;
     const screenX = this.positionX - cameraX;
-    spriteManager.drawSprite(
+    spriteManager.drawSpriteAligned(
       renderer,
-      frameId,
-      screenX + bodyOffsetX - (isFlipped ? extraWidth : 0),
-      this.positionY + this.height - spriteSize.height - cameraY,
-      isFlipped,
-      this.hitFlashRemainingMs > 0
+      this.animationPlayer.currentFrameId,
+      screenX,
+      this.positionY + this.height - cameraY,
+      this.width,
+      this.facingDirection === "left",
+      this.hitFlashRemainingMs > 0 ? PALETTE.white : null
     );
     // barra della salute, visibile solo se il nemico è stato ferito
     if (this.isAlive && this.currentHealth < this.maxHealth) {

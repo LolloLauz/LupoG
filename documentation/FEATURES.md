@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.0.0-alpha.1**.
+Versione: **2.0.0-alpha.2**.
 
 **Stati usati:**
 
@@ -56,13 +56,20 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Palette a rampe (54 colori su un massimo di 64, 11 rampe dallo scuro al chiaro) | Implementata | Fase 1; i 16 colori della 1.0 sono invariati |
 | Retino ordinato (dithering Bayer 4×4) senza colori fuori palette | Implementata | Fase 1; `Renderer.fillDithered` |
 | Gradienti verticali a fasce con retino (cieli) | Implementata | Fase 1; usati nei cieli di foresta e castello |
-| Ciclo dei colori (palette cycling) | Implementata | Fase 1; usato nel cuore delle torce del dungeon |
+| Ciclo dei colori (palette cycling) | Implementata | Fase 1; usato in torce, stelle, scritta "nuovo record" |
 | Ondulazione per riga (acqua, calore, magia) | Implementata | Fase 1; strumento pronto, non ancora usato nei livelli |
 | Ombreggiatura lungo le rampe (`shadeColor`) | Implementata | Fase 1 |
 | Sagome di sprite di qualsiasi colore | Implementata | Fase 1; il lampo bianco ora è un caso particolare |
-| Contorno automatico degli sprite (`addOutline`) e varianti (`remapSpriteKeys`) | Implementata | Fase 1; strumenti per la Fase 2 |
-| Sprite ridisegnati a 16 bit (cavaliere più grande, nemici, boss, oggetti, HUD) | Da implementare | Fase 2 |
-| Sfondi ridisegnati con più livelli di parallasse | Da implementare | Fase 2 |
+| Contorno automatico degli sprite (`addOutline`) e varianti (`remapSpriteKeys`) | Implementata | Fase 1; strumenti pronti, la grafica della Fase 2 ha i contorni disegnati a mano |
+| Cavaliere a 16 bit (24×30, attacchi 44×30): elmo con pennacchio, scudo, sopravveste, scie doppie | Implementata | Fase 2; hitbox invariata (12×24) |
+| Nemici a 16 bit: scheletro, goblin, soldato | Implementata | Fase 2; hitbox invariate |
+| Cavaliere Nero a piena risoluzione (36×41, prima era ingrandito 2×) con mantello e occhi luminosi | Implementata | Fase 2; hitbox invariata (24×40) |
+| Sprite allineati all'hitbox con colonna d'ancoraggio (anche specchiati) | Implementata | Fase 2; `SpriteManager.drawSpriteAligned` |
+| Oggetti e icone dell'HUD ombreggiati (pozione, moneta, gemma, elmo, cuore, teschio) | Implementata | Fase 2; oggetti sempre 8×8 |
+| Sfondi con 4-6 livelli di parallasse disegnati una volta e ripetuti | Implementata | Fase 2; circa 0,8 ms per frame |
+| Terreno con tessiture per ambientazione (erba e terra, pietra, mattoni), piattaforme sospese, porta e cancello ridisegnati | Implementata | Fase 2; `TerrainRenderer`, `THEME_STYLES` |
+| HUD e schermate a 16 bit (pannello metallico, titoli a fasce, riquadri decorati, tasti in rilievo) | Implementata | Fase 2 |
+| Effetto di ondulazione usato nei livelli (acqua, calore) | Pianificata | Fase 4 (Palude, Picchi Ghiacciati) |
 | Proiettili, nemici volanti, pericoli, piattaforme mobili, attacchi dei boss come dati | Pianificata | Fase 3 |
 | Palude Maledetta, Picchi Ghiacciati, Torre dell'Ombra; 5 nemici; 3 boss | Pianificata | Fase 4 |
 | Power-up, selettore di difficoltà, selezione dei livelli | Pianificata | Fase 5 |

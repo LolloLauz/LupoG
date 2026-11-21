@@ -1,6 +1,18 @@
 import { PALETTE } from "../config/gameConfig";
 import type { InputManager } from "../core/InputManager";
+import { measureTextWidth } from "../rendering/BitmapFont";
 import type { Renderer } from "../rendering/Renderer";
+
+/** Colori a fasce della voce selezionata (bianco-oro). */
+const SELECTED_ROW_COLORS: readonly string[] = [
+  PALETTE.white,
+  PALETTE.cream,
+  PALETTE.cream,
+  PALETTE.yellow,
+  PALETTE.yellow,
+  PALETTE.goldLight,
+  PALETTE.goldLight,
+];
 
 export interface MenuItem<TCommand extends string> {
   label: string;
@@ -44,11 +56,13 @@ export class MenuManager<TCommand extends string> {
       const itemY = startY + itemIndex * lineHeight;
       renderer.drawText(item.label, centerX, itemY, isSelected ? PALETTE.white : PALETTE.gray, {
         align: "center",
+        shadowColor: PALETTE.black,
+        rowColors: isSelected ? SELECTED_ROW_COLORS : undefined,
       });
       if (isSelected) {
-        const halfWidth = Math.floor((item.label.length * 6 - 1) / 2);
-        renderer.drawText(">", centerX - halfWidth - 12, itemY, PALETTE.orange);
-        renderer.drawText("<", centerX + halfWidth + 7, itemY, PALETTE.orange);
+        const halfWidth = Math.floor(measureTextWidth(item.label, 1) / 2);
+        renderer.drawText(">", centerX - halfWidth - 11, itemY, PALETTE.orange, { shadowColor: PALETTE.black });
+        renderer.drawText("<", centerX + halfWidth + 7, itemY, PALETTE.orange, { shadowColor: PALETTE.black });
       }
     });
   }

@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.0.0-alpha.2 – Versione 2.0, Fase 2: grafica ridisegnata a 16 bit (2026-11-21)
+Seconda fase della versione 2.0: tutta la grafica è ridisegnata con gli strumenti della Fase 1. **Il gioco non cambia**: hitbox, statistiche,
+livelli e bilanciamento sono quelli di prima; cambia solo come appare.
+### Aggiunto
+- **Cavaliere a 16 bit** (24×30, attacchi 44×30): elmo a visiera con pennacchio, armatura in 4 toni, sopravveste rossa con cintura d'oro, scudo blu con croce, spada con scie bianche e azzurre. Pose nuove per schivata (accovacciato dietro lo scudo), danno, morte.
+- **Nemici a 16 bit**: scheletro (ossa avorio, occhio rosso, spada arrugginita), goblin (pelle verde in 3 toni, orecchie, pugnale), soldato (elmo a falda dorata, sopravveste viola). Ogni nemico ha le sue pose delle gambe.
+- **Cavaliere Nero a piena risoluzione** (36×41; nella 1.0 era disegnato a metà risoluzione e ingrandito 2×): corna, visiera con occhi arancioni, spallacci, mantello a pieghe, spadone con scia arancione.
+- **Sprite allineati all'hitbox**: ogni sprite si registra con una colonna d'ancoraggio; `SpriteManager.drawSpriteAligned` lo appoggia sull'hitbox anche quando è specchiato. Sostituisce i calcoli di posizione che erano in `Player`, `Enemy` e `Boss`.
+- **Sfondi a 4-6 livelli di parallasse** (`BackgroundRenderer` riscritto): ogni livello si disegna una volta in un canvas da 640 px che si ripete senza cuciture; a ogni frame si disegnano solo stelle, luna, nebbia e torce. Foresta con montagne innevate e tre file di pini; castello con castelli lontani, mura merlate e colonne con stendardi; dungeon con mattoni ombreggiati, celle ad arco e torce con alone.
+- **Terreno** (`TerrainRenderer`, nuovo): erba e terra con sassi, piastrelle di pietra smussate, mattoni del dungeon; piattaforme sospese come assi; porta d'uscita ad arco con luce calda; cancello a saracinesca. Gli abissi mostrano un fondo scuro (prima restava il frame precedente sotto quota 200).
+- **HUD e schermate**: pannello metallico con bordo dorato, cuore e salute a segmenti ombreggiati, punteggio dorato, gemma, teschio sulla barra del boss; titolo con scritta metallica a fasce e scintilla; riquadri decorati; tasti in rilievo; menu con voce scelta in bianco-oro.
+- **Oggetti e icone ombreggiati** (sempre 8×8): pozione, moneta, gemma; icone elmo, cuore, teschio.
+- **PixelPainter** (nuovo): le primitive di disegno del `Renderer` ora funzionano su qualsiasi canvas (servono per i livelli di parallasse). Nuove primitive: `fillDitheredOverlay` (retino di un solo colore), `fillCircle`, `fillGlow` (alone), `rowColors` di `drawText` (scritte a fasce).
+- **Test**: 17 controlli nuovi (372 in totale): ogni colore degli sprite e del terreno è della palette, ogni frame contiene l'hitbox e tutti i frame di un personaggio hanno la stessa ancora, allineamento normale e specchiato, retino sovrapposto, aloni, cerchi, testo a fasce.
+### Modificato
+- `THEME_STYLES` (`levelConfig.ts`) descrive tessitura e rampe del terreno (`terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`) al posto dei 4 colori della 1.0. Nuovi tipi `ThemeStyle` e `TerrainTexture`.
+- `BOSS_SPRITE_STYLES`: ogni boss definisce 10 colori (k, n, d, s, w, r, e, y, c, p) invece di 6.
+- `SpriteManager.registerSprite` accetta l'ancora (quarto parametro, facoltativo); `drawSlashArc` accetta il colore della scia e non lascia buchi negli archi grandi.
+- `PLAYER_CONFIG.spriteWidth/spriteHeight`: 24 / 30 (solo informativi).
+- Rimosse le pose delle gambe a 12 colonne della 1.0 da `spriteTools.ts` (ogni personaggio ha le sue).
+- `CODE_MANUAL`: esempi 6 (nuovo nemico) e 10 (nuovo boss) aggiornati al nuovo codice; `verify-docs` conta i segmenti della salute con `HEALTH_SEGMENT_GEOMETRY`.
+- Manuali aggiornati (`ARCHITECTURE` sez. 6, `CODE_MANUAL`, `FEATURES`, `GAME_MANUAL`, `TESTING`).
+### Verificato
+- `npm run typecheck`, `npm test` (372 controlli), `npm run verify-docs` (11 esempi), `npm run build`.
+- Chrome headless sulla build di prova: tutte le schermate e i tre livelli con 0 pixel fuori palette, controllati anche a occhio (attacchi specchiati compresi).
+- Il bot dei test nel browser (`tests/browser/harness.js`), eseguito in Chrome headless **senza Playwright**: 3 partite complete vinte (livelli 1-2-3), 0 colori fuori palette nei frame controllati, 0 violazioni delle regole; 6000 frame di tasti a caso senza problemi.
+- Prestazioni: circa 0,8 ms di media per aggiornamento più disegno (Chrome senza GPU).
+### Limiti
+- `npm run test:browser` (Playwright) non è stato eseguito: vale quanto detto per la 2.0.0-alpha.1.
+- L'ondulazione per riga è ancora inutilizzata (servirà per acqua e calore nella Fase 4).
+- La grafica è stata valutata solo da chi l'ha disegnata: serve il parere di chi gioca.
+
 ## 2.0.0-alpha.1 – Versione 2.0, Fase 1: fondamenta grafiche a 16 bit (2026-11-21)
 Prima fase della versione 2.0 (grafica a 16 bit, nuovi nemici, boss, ambientazioni e contenuti). Il gioco resta lo stesso:
 cambia il motore grafico, che ora offre gli strumenti per ridisegnare tutto a 16 bit nella Fase 2.

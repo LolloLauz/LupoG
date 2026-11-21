@@ -224,18 +224,15 @@ export class Player extends GameObject {
     if (isBlinkHidden) {
       return;
     }
-    const frameId = this.animationPlayer.currentFrameId;
-    const spriteSize = spriteManager.getSpriteSize(frameId);
-    const isFlipped = this.facingDirection === "left";
-    // Il corpo occupa sempre i primi 16 pixel dello sprite; spada/scia sporgono dopo.
-    const bodyOffsetX = (PLAYER_CONFIG.hitboxWidth - PLAYER_CONFIG.spriteWidth) / 2;
-    const extraWidth = spriteSize.width - PLAYER_CONFIG.spriteWidth;
-    spriteManager.drawSprite(
+    // Lo sprite è più grande dell'hitbox (pennacchio, spada, scie): l'allineamento usa
+    // la colonna d'ancoraggio registrata con lo sprite (vedi knightSprites.ts).
+    spriteManager.drawSpriteAligned(
       renderer,
-      frameId,
-      this.positionX + bodyOffsetX - (isFlipped ? extraWidth : 0) - cameraX,
-      this.positionY + PLAYER_CONFIG.hitboxHeight - spriteSize.height - cameraY,
-      isFlipped
+      this.animationPlayer.currentFrameId,
+      this.positionX - cameraX,
+      this.positionY + PLAYER_CONFIG.hitboxHeight - cameraY,
+      PLAYER_CONFIG.hitboxWidth,
+      this.facingDirection === "left"
     );
   }
 

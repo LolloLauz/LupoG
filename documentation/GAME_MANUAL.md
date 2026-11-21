@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.1.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.2.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -30,9 +30,12 @@ Un mondo medievale fantastico, visto di lato (scorrimento orizzontale), con tre 
 
 | Ambientazione | Atmosfera |
 |---|---|
-| **Foresta Oscura** | notte con la luna, colline lontane, pini; terreno verde |
-| **Castello Medievale** | cielo stellato, castello in lontananza, colonne con stendardi rossi; mattoni grigi |
-| **Dungeon Sotterraneo** | mura di mattoni, celle con sbarre, torce che tremolano, catene; pavimento viola |
+| **Foresta Oscura** | notte con la luna piena e le stelle che brillano, montagne innevate, foschia, colline e tre file di pini; prato e terra con sassi, ponticelli di legno |
+| **Castello Medievale** | cielo stellato, castelli lontani con le finestre accese, mura merlate con l'edera, colonne con stendardi rossi e corona d'oro; pavimento di pietra |
+| **Dungeon Sotterraneo** | mura di mattoni con muschio e crepe, celle con sbarre, torce che illuminano il muro, catene, foschia viola; pavimento di mattoni viola |
+
+I personaggi sono più grandi e dettagliati della versione 1.0 (grafica a 16 bit), ma le **hitbox sono le stesse**: pennacchio, corna, mantelli
+e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul pennacchio.
 
 ---
 
@@ -89,12 +92,12 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 
 | Elemento | Significato |
 |---|---|
-| **HP** + 10 segmenti | salute; lampeggia sotto il 30% |
-| icona dell'elmo **X3** | vite rimaste |
+| cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
+| icona dell'elmo **x3** | vite rimaste |
 | **LIVELLO n** | livello corrente |
-| numero a 6 cifre | punteggio |
-| **GEMME n** | gemme raccolte |
-| barra in basso (solo contro il boss) | salute del boss, con una tacca dove cambia fase |
+| numero dorato a 6 cifre | punteggio |
+| gemma blu **xn** | gemme raccolte |
+| teschio e barra in basso (solo contro il boss) | salute del boss, con una tacca dove cambia fase; diventa arancione nella seconda fase |
 
 ---
 

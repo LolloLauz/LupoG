@@ -1,60 +1,8 @@
 /**
  * Strumenti condivisi per costruire sprite pixel art come testo:
- * griglie di pixel, linee, armi, scie e pose standard delle gambe.
- * Usati da knightSprites.ts e enemySprites.ts.
+ * griglie di pixel, linee, armi, scie, contorni, varianti e specchiature.
+ * Usati da knightSprites.ts, enemySprites.ts e bossSprites.ts.
  */
-
-/** Pose delle gambe (12 colonne x 7 righe). */
-export const LEGS_STAND: string[] = [
-  "...kgg.ggk..",
-  "...kgg.ggk..",
-  "...kgg.ggk..",
-  "...kgg.ggk..",
-  "...kgg.ggk..",
-  "..kkgg.ggkk.",
-  "..kkkk.kkkk.",
-];
-
-export const LEGS_STRIDE: string[] = [
-  "...kgg.ggk..",
-  "...kgg.ggk..",
-  "..kgg...ggk.",
-  ".kgg.....ggk",
-  ".kgg.....ggk",
-  ".kkgg...ggkk",
-  ".kkkk...kkkk",
-];
-
-export const LEGS_PASSING: string[] = [
-  "....kgggk...",
-  "....kgggk...",
-  "....kgggk...",
-  "....kgggk...",
-  "....kgggk...",
-  "...kkgggkk..",
-  "...kkkkkkk..",
-];
-
-export const LEGS_JUMP: string[] = [
-  "...kgg.ggk..",
-  "..kgg...ggk.",
-  "..kgg...kgg.",
-  "..kkkk..kkk.",
-  "............",
-  "............",
-  "............",
-];
-
-export const LEGS_FALL: string[] = [
-  "...kgg.ggk..",
-  "..kgg...ggk.",
-  ".kgg.....ggk",
-  ".kgg.....ggk",
-  ".kkgg...ggkk",
-  ".kkkk...kkkk",
-  "............",
-];
-
 
 // ---------------------------------------------------------------------------
 // Griglie di pixel
@@ -154,23 +102,29 @@ export function drawSword(
   }
 }
 
-/** Scia bianca del colpo: arco di cerchio centrato sull'impugnatura (0° = destra, positivo = verso il basso). */
+/**
+ * Scia del colpo: arco di cerchio centrato sull'impugnatura (0° = destra, positivo = verso il basso).
+ * "key" è il carattere del colore (bianco "w" se omesso). Non copre i pixel già disegnati.
+ */
 export function drawSlashArc(
   grid: PixelGrid,
   centerX: number,
   centerY: number,
   radius: number,
   startDegrees: number,
-  endDegrees: number
+  endDegrees: number,
+  key = "w"
 ): void {
-  const stepDegrees = startDegrees <= endDegrees ? 3 : -3;
+  // passo angolare abbastanza piccolo da non lasciare buchi anche negli archi grandi
+  const stepMagnitude = Math.min(3, 45 / Math.max(1, radius));
+  const stepDegrees = startDegrees <= endDegrees ? stepMagnitude : -stepMagnitude;
   for (let angle = startDegrees; stepDegrees > 0 ? angle <= endDegrees : angle >= endDegrees; angle += stepDegrees) {
     const radians = (angle * Math.PI) / 180;
     setPixel(
       grid,
       Math.round(centerX + Math.cos(radians) * radius),
       Math.round(centerY + Math.sin(radians) * radius),
-      "w",
+      key,
       false
     );
   }
@@ -210,4 +164,9 @@ export function addOutline(rows: readonly string[], outlineKey: string): string[
  */
 export function remapSpriteKeys(rows: readonly string[], keyMapping: Readonly<Record<string, string>>): string[] {
   return rows.map((row) => Array.from(row, (key) => keyMapping[key] ?? key).join(""));
+}
+
+/** Specchia in orizzontale ogni riga (per ottenere il passo con l'altra gamba). */
+export function mirrorRows(rows: readonly string[]): string[] {
+  return rows.map((row) => [...row].reverse().join(""));
 }

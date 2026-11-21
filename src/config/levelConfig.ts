@@ -1,28 +1,31 @@
-import type { LevelDefinition, ThemeId } from "../types/LevelTypes";
+import type { LevelDefinition, ThemeId, ThemeStyle } from "../types/LevelTypes";
 import { PALETTE } from "./gameConfig";
 
-/** Colori usati per disegnare il terreno di ogni ambientazione. */
-export const THEME_STYLES: Record<
-  ThemeId,
-  { skyColor: string; groundTopColor: string; groundFillColor: string; groundDetailColor: string }
-> = {
+/**
+ * Aspetto del terreno di ogni ambientazione (stile 16 bit): tessitura e rampe di colore.
+ * La forma delle piattaforme è nei livelli; qui c'è solo come si disegnano (TerrainRenderer.ts).
+ */
+export const THEME_STYLES: Record<ThemeId, ThemeStyle> = {
   forest: {
-    skyColor: PALETTE.darkBlue,
-    groundTopColor: PALETTE.green,
-    groundFillColor: PALETTE.darkGreen,
-    groundDetailColor: PALETTE.black,
+    terrainTexture: "grassAndEarth",
+    surfaceColors: [PALETTE.lightGreen, PALETTE.green, PALETTE.darkGreen],
+    fillColors: [PALETTE.wood, PALETTE.earth, PALETTE.earthDark, PALETTE.black],
+    ledgeColors: [PALETTE.woodLight, PALETTE.wood, PALETTE.earth],
+    detailColors: [PALETTE.stone, PALETTE.stoneLight],
   },
   castle: {
-    skyColor: PALETTE.darkBlue,
-    groundTopColor: PALETTE.lightGray,
-    groundFillColor: PALETTE.gray,
-    groundDetailColor: PALETTE.darkBlue,
+    terrainTexture: "stoneTiles",
+    surfaceColors: [PALETTE.stonePale, PALETTE.stoneLight, PALETTE.stone],
+    fillColors: [PALETTE.stoneLight, PALETTE.stone, PALETTE.stoneShadow, PALETTE.stoneDark],
+    ledgeColors: [PALETTE.stonePale, PALETTE.stoneLight, PALETTE.stoneShadow],
+    detailColors: [PALETTE.pine, PALETTE.darkGreen],
   },
   dungeon: {
-    skyColor: PALETTE.black,
-    groundTopColor: PALETTE.gray,
-    groundFillColor: PALETTE.purple,
-    groundDetailColor: PALETTE.black,
+    terrainTexture: "dungeonBricks",
+    surfaceColors: [PALETTE.stoneLight, PALETTE.stone, PALETTE.stoneShadow],
+    fillColors: [PALETTE.amethyst, PALETTE.violet, PALETTE.violetDark, PALETTE.black],
+    ledgeColors: [PALETTE.woodLight, PALETTE.wood, PALETTE.earth],
+    detailColors: [PALETTE.bog, PALETTE.moss],
   },
 };
 

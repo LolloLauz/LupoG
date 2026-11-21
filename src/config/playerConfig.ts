@@ -17,9 +17,12 @@ export const PLAYER_CONFIG = {
   /** Dimensioni dell'hitbox del corpo (pixel). */
   hitboxWidth: 12,
   hitboxHeight: 24,
-  /** Dimensioni dello sprite (più largo dell'hitbox per includere la spada). */
-  spriteWidth: 16,
-  spriteHeight: 24,
+  /**
+   * Dimensioni dello sprite a riposo (16 bit): più largo e più alto dell'hitbox per pennacchio,
+   * scudo e spada. Solo informative: l'allineamento usa l'ancora registrata con ogni sprite.
+   */
+  spriteWidth: 24,
+  spriteHeight: 30,
   /** Rilasciando il salto in salita la velocità verso l'alto viene moltiplicata per questo valore (salto variabile). */
   jumpCutMultiplier: 0.5,
   /** Si può ancora saltare per questo tempo (ms) dopo essere usciti da una piattaforma. */

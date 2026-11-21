@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.0.0-alpha.1**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.0.0-alpha.2**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -27,7 +27,7 @@ Verificato in Chromium; senza server HTTP. Se in futuro si caricassero risorse c
 
 ### Perché sprite e sfondi sono nel codice
 
-Gli sprite sono righe di testo (`"..kkkk.."`) registrate all'avvio; gli sfondi sono rettangoli. Così non esistono file immagine da
+Gli sprite sono righe di testo (`"..kkkk.."`) registrate all'avvio; gli sfondi sono disegnati dal codice (rettangoli, retini, gradienti). Così non esistono file immagine da
 caricare (nessun problema di `file://`, nessun ritardo di caricamento) e lo stile resta coerente. Il prezzo: disegnare nuova grafica
 significa scrivere testo, non usare un editor di immagini. Le cartelle `public/assets/*` sono pronte per risorse esterne ma oggi vuote.
 
@@ -130,15 +130,36 @@ Per cambiare i tasti basta modificare `CONTROLS_CONFIG`.
   può sfumare di 1 pixel.
 - **Rettangoli a pixel interi.** `Renderer.fillRect` arrotonda **tutti e quattro** i bordi: con coordinate frazionarie il browser sfumerebbe i bordi creando colori fuori palette.
 - **Niente testo del browser.** Il testo del canvas sarebbe sfocato: `BitmapFont` disegna pixel per pixel un font con maiuscole (5×7), minuscole con discendenti (altezza totale 9 righe) e spaziatura proporzionale; le cifre restano a larghezza fissa perché i numeri dell'HUD non "ballino". `drawText` accetta un colore d'ombra.
-- **Sprite come testo.** `SpriteManager.registerSprite` trasforma righe di caratteri in piccoli canvas (uno normale, uno specchiato, due "bianchi" per il
-  lampo di danno). Disegnare uno sprite è un `drawImage`.
+- **Sprite come testo.** `SpriteManager.registerSprite` trasforma righe di caratteri in piccoli canvas (uno normale e uno specchiato; le sagome a
+  tinta unita per il lampo di danno si creano alla prima richiesta). Disegnare uno sprite è un `drawImage`.
+- **Sprite più grandi dell'hitbox (2.0).** Gli sprite a 16 bit sporgono dall'hitbox (pennacchio, corna, spada, mantello) ma le hitbox sono quelle
+  della 1.0, quindi bilanciamento e livelli non cambiano. Ogni sprite si registra con una **colonna d'ancoraggio** (`anchorX`: dove inizia l'hitbox
+  nell'immagine rivolta a destra); `SpriteManager.drawSpriteAligned` appoggia i piedi sul fondo dell'hitbox e, se l'entità guarda a sinistra, specchia
+  l'immagine tenendo l'hitbox nello stesso punto, così ciò che sporge davanti passa dall'altra parte. Tutti i frame di un personaggio hanno la stessa
+  ancora (controllato dai test).
+- **PixelPainter.** Le primitive di disegno (rettangoli interi, retini, gradienti, cerchi, aloni, testo) sono in `PixelPainter`, che lavora su
+  qualsiasi canvas; `Renderer` lo estende con la scala intera, l'oscuramento della pausa e l'ondulazione per riga. Così gli sfondi possono disegnare
+  i loro livelli in canvas separati con gli stessi strumenti.
 - **Animazioni.** `AnimationPlayer` riproduce un'animazione definita da `frameIds` e durate (uguali per tutti i frame o per ciascuno). Le animazioni di
   attacco derivano la durata dei frame dalla durata dell'attacco, così non si disallineano se si ritocca il bilanciamento.
 - **Camera.** `Camera.follow` centra il bersaglio e limita ai bordi della mappa; coordinate intere.
 - **Ordine di disegno** (`GameEngine.render`): sfondo con parallasse → porta/terreno → oggetti → nemici → boss → giocatore → effetti → HUD → messaggi → schermata
   dello stato (pausa, ecc.).
 - **Tremolio dello schermo:** si sposta temporaneamente la camera di pochi pixel interi solo per il disegno del mondo (non dell'HUD).
-- **Sfondi.** `BackgroundRenderer` disegna 2-3 livelli di profondità per ambientazione; i livelli lontani scorrono più piano (parallasse).
+- **Sfondi (2.0).** `BackgroundRenderer` compone per ogni ambientazione 4-6 livelli di parallasse più alcuni elementi animati. Come sulle console
+  a 16 bit, ogni livello statico si disegna **una sola volta** (alla prima richiesta) in un canvas largo 640 pixel il cui contenuto si ripete senza
+  cuciture (armoniche intere, spaziature che dividono 640, elementi ridisegnati a ±640); a ogni frame si copia spostato con uno o due `drawImage`.
+  Si disegnano a ogni frame solo stelle (ciclo dei colori), luna con alone, nebbia a retino e torce. Misura: circa 0,8 ms per aggiornamento più
+  disegno in Chrome senza GPU.
+  - Foresta: cielo a fasce, stelle, luna con alone, montagne con creste illuminate e neve, foschia, colline, tre file di pini ombreggiati, nebbia a terra.
+  - Castello: cielo a fasce, stelle, colline, castelli lontani con tetti conici e finestre accese, mura merlate in mattoni ombreggiati con edera,
+    colonne cilindriche con stendardi.
+  - Dungeon: muro di mattoni ombreggiati con muschio e crepe, celle ad arco con sbarre, torce con alone e fiamma a ciclo dei colori, catene, foschia.
+- **Terreno (2.0).** `TerrainRenderer` disegna le piattaforme con la tessitura dell'ambientazione (`THEME_STYLES` in `levelConfig.ts`): erba e terra
+  con sassi, piastrelle di pietra smussate, mattoni del dungeon; piattaforme sospese come assi con giunti e ombra a retino; porta d'uscita con arco
+  di pietra e luce calda; cancello a saracinesca. I motivi sono ancorati alle coordinate del mondo e si disegna solo la parte visibile.
+- **Interfaccia (2.0).** HUD su pannello metallico a fasce con bordo dorato; salute a segmenti ombreggiati; titoli con riempimento a fasce
+  (`rowColors` di `drawText`); riquadri decorati (`drawOrnateFrame`) per messaggi, menu e schermate.
 - **Pausa.** Oscuramento con un retino a scacchi di pixel (un'immagine creata una volta sola): niente trasparenze.
 
 ### 6.1 Strumenti grafici a 16 bit (versione 2.0)
