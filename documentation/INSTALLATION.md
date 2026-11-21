@@ -1,6 +1,6 @@
 # Manuale di installazione
 
-Versione descritta: **1.0.0**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
+Versione descritta: **2.0.0-alpha.1**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
 **modificare il codice** (serve Node.js).
 
 ---
@@ -145,5 +145,5 @@ comportamento del plugin in `vite.config.ts` (quello che rende `dist/index.html`
 | Pagina bianca e errore nella console con il doppio clic su `dist/index.html` | ricostruire con `npm run build` (la build deve essere stata creata con la configurazione del progetto) |
 | Il record non si salva | il browser blocca `localStorage` per le pagine da file; il gioco funziona comunque |
 | Il gioco è molto piccolo | la finestra è piccola: il canvas si ingrandisce solo di multipli interi (2×, 3×...). Usare il pieno schermo del browser (F11) |
-| Il gioco è tagliato | la finestra è più piccola di 256×240 pixel fisici: ingrandirla |
+| Il gioco è tagliato | la finestra è più piccola di 320×240 pixel fisici: ingrandirla |
 | Il gioco va in pausa da solo | succede se la finestra perde il focus; si può disattivare con `pauseOnFocusLoss: false` in `gameConfig.ts` |

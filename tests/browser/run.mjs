@@ -45,7 +45,8 @@ const check = (name, condition, detail = "") => {
 const section = (title) => console.log(`\n=== ${title} ===`);
 
 // ---------------------------------------------------------------- preparazione
-const { PALETTE } = await load("config/gameConfig");
+const { PALETTE, GAME_CONFIG } = await load("config/gameConfig");
+const W = GAME_CONFIG.internalWidth, H = GAME_CONFIG.internalHeight;
 const hexToRgba = (hex) => `${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},255`;
 const paletteColors = Object.values(PALETTE).map(hexToRgba);
 
@@ -57,7 +58,7 @@ check("dist/index.html esiste", existsSync(join(projectRoot, "dist", "index.html
 
 const harnessDirectory = mkdtempSync(join(tmpdir(), "iron-harness-"));
 buildSync({ entryPoints: [join(projectRoot, "tests/browser/harness.js")], bundle: true, outfile: join(harnessDirectory, "h.js"), loader: { ".css": "css" }, logLevel: "error" });
-writeFileSync(join(harnessDirectory, "index.html"), '<!doctype html><html><head><meta charset="UTF-8"><link rel="stylesheet" href="h.css"></head><body><div id="game-container"><canvas id="game-canvas" width="256" height="240"></canvas></div><script src="h.js"></script></body></html>');
+writeFileSync(join(harnessDirectory, "index.html"), '<!doctype html><html><head><meta charset="UTF-8"><link rel="stylesheet" href="h.css"></head><body><div id="game-container"><canvas id="game-canvas" width="' + W + '" height="' + H + '"></canvas></div><script src="h.js"></script></body></html>');
 const harnessUrl = pathToFileURL(join(harnessDirectory, "index.html")).href;
 
 const browser = await chromium.launch();
@@ -126,8 +127,8 @@ function irregularBlockShare(image, scale, left, top, width, height) {
   return irregular / total;
 }
 
-const canvasHash = (page) => evaluate(page, `(() => { const d = document.getElementById("game-canvas").getContext("2d").getImageData(0,0,256,240).data; let h = 0; for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i] + d[i+1]*3 + d[i+2]*7) | 0; return h; })()`);
-const canvasColors = (page) => evaluate(page, `(() => { const d = document.getElementById("game-canvas").getContext("2d").getImageData(0,0,256,240).data; const s = new Set(); for (let i = 0; i < d.length; i += 4) s.add(d[i]+","+d[i+1]+","+d[i+2]+","+d[i+3]); return [...s]; })()`);
+const canvasHash = (page) => evaluate(page, `(() => { const d = document.getElementById("game-canvas").getContext("2d").getImageData(0,0,${W},${H}).data; let h = 0; for (let i = 0; i < d.length; i += 4) h = (h * 31 + d[i] + d[i+1]*3 + d[i+2]*7) | 0; return h; })()`);
+const canvasColors = (page) => evaluate(page, `(() => { const d = document.getElementById("game-canvas").getContext("2d").getImageData(0,0,${W},${H}).data; const s = new Set(); for (let i = 0; i < d.length; i += 4) s.add(d[i]+","+d[i+1]+","+d[i+2]+","+d[i+3]); return [...s]; })()`);
 
 try {
   // ================================================================= 1. BUILD REALE
@@ -154,7 +155,7 @@ try {
     check("nessuna richiesta fallita (risorse caricate correttamente)", failedRequests.length === 0, failedRequests.join(", "));
     check(`richieste totali: ${requests.length} (pagina, script, stile)`, requests.length <= 5);
     const size = await evaluate(page, `({w: document.getElementById("game-canvas").width, h: document.getElementById("game-canvas").height})`);
-    check("canvas interno 256x240", size.w === 256 && size.h === 240);
+    check(`canvas interno ${W}x${H}`, size.w === W && size.h === H);
     const titleColors = await canvasColors(page);
     check("schermata del titolo: usa solo colori della palette (nessuna sfumatura)", titleColors.every((c) => paletteColors.includes(c)), titleColors.filter((c) => !paletteColors.includes(c)).slice(0, 3).join(" "));
     check("schermata del titolo: usa più di 6 colori (non è vuota)", titleColors.length > 6, String(titleColors.length));
@@ -218,21 +219,21 @@ try {
       await page.goto(distUrl);
       await page.waitForTimeout(250);
       const rect = await evaluate(page, `(() => { const r = document.getElementById("game-canvas").getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height, rendering: getComputedStyle(document.getElementById("game-canvas")).imageRendering, overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight }; })()`);
-      const deviceScale = Math.max(1, Math.floor(Math.min((width * ratio) / 256, (height * ratio) / 240)));
+      const deviceScale = Math.max(1, Math.floor(Math.min((width * ratio) / W, (height * ratio) / H)));
       const label = `${width}x${height} a ${Math.round(ratio * 100)}%`;
-      check(`${label}: scala di ${deviceScale} pixel fisici per pixel di gioco (canvas ${(rect.width * ratio).toFixed(0)}x${(rect.height * ratio).toFixed(0)} px fisici)`, Math.abs(rect.width * ratio - deviceScale * 256) < 0.05 && Math.abs(rect.height * ratio - deviceScale * 240) < 0.05);
+      check(`${label}: scala di ${deviceScale} pixel fisici per pixel di gioco (canvas ${(rect.width * ratio).toFixed(0)}x${(rect.height * ratio).toFixed(0)} px fisici)`, Math.abs(rect.width * ratio - deviceScale * W) < 0.05 && Math.abs(rect.height * ratio - deviceScale * H) < 0.05);
       const fits = rect.width <= width + 0.01 && rect.height <= height + 0.01;
       if (fits) check(`${label}: canvas centrato e senza barre di scorrimento`, Math.abs(rect.left - (width - rect.width) / 2) <= 1 && Math.abs(rect.top - (height - rect.height) / 2) <= 1 && !rect.overflow);
       check(`${label}: rendering "pixelated"`, rect.rendering === "pixelated" || rect.rendering === "crisp-edges");
       if (fits) {
         const shot = decodePng(await page.screenshot());
         const originX = Math.round(rect.left * ratio), originY = Math.round(rect.top * ratio);
-        const regionFits = originX >= 0 && originY >= 0 && originX + deviceScale * 256 <= shot.width && originY + deviceScale * 240 <= shot.height;
+        const regionFits = originX >= 0 && originY >= 0 && originX + deviceScale * W <= shot.width && originY + deviceScale * H <= shot.height;
         // il browser aggancia il canvas alla griglia dei pixel fisici: si prova lo scarto di ±1 pixel
         let irregular = 1, bestOffset = [0, 0];
         if (regionFits) for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
-          if (originX + dx < 0 || originY + dy < 0 || originX + dx + deviceScale * 256 > shot.width || originY + dy + deviceScale * 240 > shot.height) continue;
-          const share = irregularBlockShare(shot, deviceScale, originX + dx, originY + dy, deviceScale * 256, deviceScale * 240);
+          if (originX + dx < 0 || originY + dy < 0 || originX + dx + deviceScale * W > shot.width || originY + dy + deviceScale * H > shot.height) continue;
+          const share = irregularBlockShare(shot, deviceScale, originX + dx, originY + dy, deviceScale * W, deviceScale * H);
           if (share < irregular) { irregular = share; bestOffset = [dx, dy]; }
           if (irregular === 0) break;
         }
@@ -241,20 +242,20 @@ try {
         if (regionFits) {
           const palettePixels = new Set(paletteColors.map((c) => c.split(",").slice(0, 3).join(",")));
           const left = originX + bestOffset[0], top = originY + bestOffset[1];
-          for (let y = top; y < top + deviceScale * 240; y++) for (let x = left; x < left + deviceScale * 256; x++) {
+          for (let y = top; y < top + deviceScale * H; y++) for (let x = left; x < left + deviceScale * W; x++) {
             const index = (y * shot.width + x) * shot.channels;
             if (palettePixels.has(`${shot.pixels[index]},${shot.pixels[index + 1]},${shot.pixels[index + 2]}`)) continue;
-            const isEdge = x === left || x === left + deviceScale * 256 - 1 || y === top || y === top + deviceScale * 240 - 1;
+            const isEdge = x === left || x === left + deviceScale * W - 1 || y === top || y === top + deviceScale * H - 1;
             if (isEdge) foreignOnEdge++; else foreignInside++;
           }
         }
         // La dimensione in pixel CSS è esatta solo se è multiplo di 1/64 (precisione del layout del browser).
         // Altrimenti (es. 150% e 300%) il browser può sfumare di poco la prima e l'ultima colonna/riga fisica
         // e spostare di 1 pixel un solo blocco: l'interno dell'immagine resta nitido.
-        const cssWidth = (deviceScale * 256) / ratio, cssHeight = (deviceScale * 240) / ratio;
+        const cssWidth = (deviceScale * W) / ratio, cssHeight = (deviceScale * H) / ratio;
         const isExactCssSize = Math.abs(cssWidth * 64 - Math.round(cssWidth * 64)) < 1e-6 && Math.abs(cssHeight * 64 - Math.round(cssHeight * 64)) < 1e-6;
         check(`${label}: nessuna sfumatura all'interno del canvas (solo colori della palette)`, regionFits && foreignInside === 0, `${foreignInside} pixel fuori palette`);
-        check(`${label}: bordo del canvas nitido${isExactCssSize ? "" : " — si tollera 1 pixel fisico di sfumatura sul bordo (dimensione CSS non esatta)"}`, regionFits && (isExactCssSize ? foreignOnEdge === 0 : foreignOnEdge <= 2 * (deviceScale * 256 + deviceScale * 240)), `${foreignOnEdge} pixel di bordo fuori palette`);
+        check(`${label}: bordo del canvas nitido${isExactCssSize ? "" : " — si tollera 1 pixel fisico di sfumatura sul bordo (dimensione CSS non esatta)"}`, regionFits && (isExactCssSize ? foreignOnEdge === 0 : foreignOnEdge <= 2 * (deviceScale * W + deviceScale * H)), `${foreignOnEdge} pixel di bordo fuori palette`);
         check(`${label}: pixel di gioco quadrati e regolari (blocchi ${deviceScale}x${deviceScale})${isExactCssSize ? "" : " — si tollera lo scarto di 1 pixel fisico di un blocco"}`, regionFits && (isExactCssSize ? irregular === 0 : irregular <= 0.05), `${(irregular * 100).toFixed(2)}% di blocchi irregolari`);
       } else {
         check(`${label}: finestra più piccola del gioco, scala minima 1 senza errori (il canvas viene tagliato)`, errors.length === 0 && deviceScale === 1);
@@ -275,7 +276,8 @@ try {
       await page.waitForTimeout(200);
       widths.push(await evaluate(page, `document.getElementById("game-canvas").getBoundingClientRect().width`));
     }
-    check("ridimensionando la finestra in gioco la scala si aggiorna (768, 512, 1024, 256, 768)", widths.join(",") === "768,512,1024,256,768", widths.join(","));
+    const expectedWidths = [[1280, 720], [640, 480], [1920, 1080], [500, 300], [1280, 720]].map(([w, h]) => W * Math.max(1, Math.floor(Math.min(w / W, h / H))));
+    check(`ridimensionando la finestra in gioco la scala si aggiorna (${expectedWidths.join(", ")})`, widths.join(",") === expectedWidths.join(","), widths.join(","));
     check("nessun errore durante i ridimensionamenti", errors.length === 0, errors.join(" | "));
     await context.close();
   }
@@ -308,7 +310,7 @@ try {
   })()`);
   check("tastiera: S + Invio sul titolo apre i controlli, Invio torna al titolo", screenStates.controlsState === "controls" && screenStates.backToTitle === "title");
   check("Invio avvia la partita; Esc mette in pausa e Esc riprende", screenStates.playing === "playing" && screenStates.pausedState === "paused" && screenStates.resumed === "playing");
-  check("palette: titolo, controlli, gioco, pausa, Game Over, vittoria usano solo i 16 colori", ["title", "controls", "game", "pause", "gameOver", "victory"].every((k) => screenStates[k] === true), Object.entries(screenStates).filter(([, v]) => v === false).map(([k]) => k).join(","));
+  check("palette: titolo, controlli, gioco, pausa, Game Over, vittoria usano solo i colori della palette", ["title", "controls", "game", "pause", "gameOver", "victory"].every((k) => screenStates[k] === true), Object.entries(screenStates).filter(([, v]) => v === false).map(([k]) => k).join(","));
 
   // --- velocità coerente
   const speeds = await evaluate(page, `(() => {

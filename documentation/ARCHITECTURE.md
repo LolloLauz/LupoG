@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **1.0.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.0.0-alpha.1**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -11,7 +11,7 @@ funzioni vedere `CODE_MANUAL.md`.
 |---|---|
 | Si avvia con un doppio clic, senza Node.js | la build produce un unico script classico con percorsi relativi; nessun asset esterno |
 | Facile da modificare | i numeri sono in `src/config/`; i contenuti (livelli, nemici, oggetti) sono dati |
-| Stile 8 bit autentico | risoluzione 256×240, palette di 16 colori, scala intera, font a pixel, nessuna trasparenza |
+| Stile 16 bit coerente | risoluzione 320×240, palette a rampe (al massimo 64 colori), retini e gradienti a fasce, scala intera, font a pixel, nessuna trasparenza né colore fuori palette |
 | Velocità coerente | loop con delta time; tutta la fisica in unità al secondo |
 | Espandibile | punti di estensione espliciti (sezione 10) senza anticipare funzioni future |
 | Semplice | nessun framework né motore; una sola classe di coordinamento (`GameEngine`) |
@@ -124,12 +124,12 @@ Per cambiare i tasti basta modificare `CONTROLS_CONFIG`.
 
 ## 6. Rendering
 
-- **Canvas a risoluzione fissa.** `Renderer` lavora sempre in 256×240; il canvas viene ingrandito con CSS di un **fattore intero di pixel FISICI** (il massimo che entra
+- **Canvas a risoluzione fissa.** `Renderer` lavora sempre in 320×240 (`GAME_CONFIG.internalWidth/Height`); il canvas viene ingrandito con CSS di un **fattore intero di pixel FISICI** (il massimo che entra
   nella finestra, calcolato con `devicePixelRatio`), con `image-rendering: pixelated`. Ragionare in pixel fisici evita pixel irregolari con la scala di sistema frazionaria (125%, 150%) tipica dei
   portatili Windows. Verificato con 17 combinazioni di finestra e scala (vedi `TESTING.md`); con 150% e 300% il browser non riesce a dimensionare il canvas esattamente al pixel fisico e il bordo
   può sfumare di 1 pixel.
 - **Rettangoli a pixel interi.** `Renderer.fillRect` arrotonda **tutti e quattro** i bordi: con coordinate frazionarie il browser sfumerebbe i bordi creando colori fuori palette.
-- **Niente testo del browser.** Il testo del canvas sarebbe sfocato: `BitmapFont` disegna un font 5×7 pixel per pixel.
+- **Niente testo del browser.** Il testo del canvas sarebbe sfocato: `BitmapFont` disegna pixel per pixel un font con maiuscole (5×7), minuscole con discendenti (altezza totale 9 righe) e spaziatura proporzionale; le cifre restano a larghezza fissa perché i numeri dell'HUD non "ballino". `drawText` accetta un colore d'ombra.
 - **Sprite come testo.** `SpriteManager.registerSprite` trasforma righe di caratteri in piccoli canvas (uno normale, uno specchiato, due "bianchi" per il
   lampo di danno). Disegnare uno sprite è un `drawImage`.
 - **Animazioni.** `AnimationPlayer` riproduce un'animazione definita da `frameIds` e durate (uguali per tutti i frame o per ciascuno). Le animazioni di
@@ -139,7 +139,29 @@ Per cambiare i tasti basta modificare `CONTROLS_CONFIG`.
   dello stato (pausa, ecc.).
 - **Tremolio dello schermo:** si sposta temporaneamente la camera di pochi pixel interi solo per il disegno del mondo (non dell'HUD).
 - **Sfondi.** `BackgroundRenderer` disegna 2-3 livelli di profondità per ambientazione; i livelli lontani scorrono più piano (parallasse).
-- **Pausa.** Oscuramento con un retino a scacchi di pixel (un'immagine creata una volta sola): niente trasparenze, in stile 8 bit.
+- **Pausa.** Oscuramento con un retino a scacchi di pixel (un'immagine creata una volta sola): niente trasparenze.
+
+### 6.1 Strumenti grafici a 16 bit (versione 2.0)
+
+Le console a 16 bit non avevano più "potenza" per disegnare sfumature vere: ottenevano profondità con **rampe** di colore, **retini**
+e **trucchi di palette**. Il gioco fa lo stesso, con una regola che i test controllano su ogni schermata: **nessun pixel fuori palette**.
+
+| Strumento | Dove | Come funziona |
+|---|---|---|
+| Palette a rampe | `config/paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS` = 64) e `PALETTE_RAMPS` (gruppi di 4-6 tonalità dal più scuro al più chiaro). I 16 colori della 1.0 sono invariati e fanno parte delle rampe |
+| Retino ordinato | `PaletteEffects.isDitherPixelOn`, `Renderer.fillDithered` | matrice di Bayer 4×4: con livello *n* (0-16) sono accesi *n* pixel su 16. Il motivo (4×4 pixel, creato una volta per coppia di colori e livello) è ancorato all'origine dello schermo, quindi aree vicine si raccordano |
+| Gradiente a fasce | `computeGradientBands`, `Renderer.fillVerticalGradient` | divide l'altezza in fasce piene raccordate da fasce a retino (livelli 0, 4, 8, 12): i cieli "a strisce" tipici dei 16 bit |
+| Ciclo dei colori | `cycleRampColor` | il colore scorre lungo una rampa (`loop` o `pingPong`): fiamme, acqua, lava, cristalli senza nuovi sprite |
+| Ombreggiatura | `shadeColor(colore, passi)` | sposta un colore lungo la sua rampa (negativo = più scuro) |
+| Ondulazione per riga | `computeLineWaveOffset`, `Renderer.applyLineWave` | effetto "raster": ogni riga di una fascia dello schermo viene spostata di un numero intero di pixel secondo un'onda. Va chiamato dopo aver disegnato ciò che deve ondulare |
+| Sagome colorate | `SpriteManager.drawSpriteSilhouette` | sagoma a tinta unita di uno sprite (creata alla prima richiesta e conservata); il lampo bianco dei colpi è un caso particolare |
+| Contorni e varianti | `addOutline`, `remapSpriteKeys` (`sprites/spriteTools.ts`) | si disegna solo l'interno dello sprite e il contorno si genera da solo; le varianti si ottengono sostituendo i caratteri |
+
+**Perché 320×240.** È una risoluzione reale delle console a 16 bit e ha la **stessa altezza** della 1.0: la geometria dei livelli (terreno a `y = 200`,
+salti, abissi) non cambia, la vista è solo più larga. Le schermate e l'HUD sono disposti rispetto al centro e ai bordi, non a coordinate fisse.
+
+**Variazione rispetto al prompt iniziale.** Il prompt della 1.0 chiedeva grafica a 8 bit (256×240, palette limitata). La 2.0 passa ai 16 bit per scelta
+del progetto; restano tutte le altre regole di stile: pixel nitidi, scala intera, palette limitata, nessuna sfumatura del browser.
 
 ---
 

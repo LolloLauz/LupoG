@@ -1,6 +1,6 @@
 # Manuale del codice
 
-Versione del gioco descritta: **1.0.0**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
+Versione del gioco descritta: **2.0.0-alpha.1**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
 per le regole di gioco `GAME_MANUAL.md`.
 
 Questo manuale spiega **cosa c'è in ogni file**, **come si muove il codice** e, nella parte finale,
@@ -18,7 +18,7 @@ controlla che compili e che il risultato sia quello descritto.
 | Nomi | variabili e funzioni in `camelCase`, classi e tipi in `PascalCase` |
 | Lingua | commenti e documentazione in italiano |
 | Coordinate | pixel del mondo di gioco; l'origine (0,0) è in alto a sinistra, `y` cresce verso il basso |
-| Risoluzione | schermo interno 256×240 pixel, ingrandito solo con moltiplicatori interi |
+| Risoluzione | schermo interno 320×240 pixel, ingrandito solo con moltiplicatori interi |
 | Posizione delle entità | `positionX`/`positionY` = angolo in alto a sinistra dell'**hitbox** |
 | Velocità | pixel al secondo; accelerazioni in pixel/secondo² |
 | Tempi | secondi (`deltaTimeSeconds`) nel loop; millisecondi (`...Ms`) nei timer e nelle configurazioni |
@@ -67,6 +67,7 @@ IRON_AND_SHADOW/
 | Nessun file in `public/assets/sprites`, `backgrounds`, `fonts` | sprite, sfondi e font sono generati dal codice: il gioco non dipende da file esterni e si avvia con doppio clic |
 | `config/animationConfig.ts`, `config/itemConfig.ts` | animazioni e oggetti seguono lo stesso principio "tutto in configurazione" |
 | `rendering/EffectsManager.ts`, `rendering/BackgroundRenderer.ts`, `rendering/BitmapFont.ts`, `rendering/sprites/*` | effetti, sfondi con parallasse, font a pixel e sprite non erano nella struttura iniziale |
+| `config/paletteConfig.ts`, `rendering/PaletteEffects.ts` (2.0) | palette a rampe e effetti di colore a 16 bit (retino, gradienti, ciclo dei colori, ondulazione) |
 | `ui/MenuManager.ts` separato da `ScreenManager.ts` | i menu sono riusabili, le schermate si limitano a disegnare |
 | `systems/LivesManager.ts`, `systems/HighScoreManager.ts` | vite e record sono responsabilità distinte dal punteggio |
 | `entities/Item.ts` | serve agli oggetti raccoglibili |
@@ -83,7 +84,8 @@ modificare qui, senza toccare la logica.
 
 | File | Contenuto |
 |---|---|
-| `gameConfig.ts` | `GAME_CONFIG` (risoluzione, gravità, vite, bonus, cura, danno da caduta...), `PALETTE` (i 16 colori), `DIFFICULTY_CONFIG` |
+| `gameConfig.ts` | `GAME_CONFIG` (risoluzione, gravità, vite, bonus, cura, danno da caduta...), `DIFFICULTY_CONFIG`; riesporta `PALETTE` e `PALETTE_RAMPS` |
+| `paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS`), `PALETTE_RAMPS` (rampe dallo scuro al chiaro), tipi `PaletteColor`, `PaletteRampName` |
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG`, `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss) |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili), `ITEM_SIZE` |
@@ -116,7 +118,7 @@ modificare qui, senza toccare la logica.
 
 | Chiave | Valore | Significato |
 |---|---|---|
-| `internalWidth` / `internalHeight` | 256 / 240 | risoluzione interna |
+| `internalWidth` / `internalHeight` | 320 / 240 | risoluzione interna (16 bit; nella 1.0 era 256 / 240) |
 | `maxDeltaTimeSeconds` | 0,05 | tetto del delta time (evita salti dopo cambi di scheda) |
 | `gravity` | 900 | gravità (px/s²) |
 | `maxFallSpeed` | 400 | velocità massima di caduta |
@@ -278,14 +280,15 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 
 | File | Classe / funzioni | Responsabilità |
 |---|---|---|
-| `Renderer.ts` | `Renderer` | canvas a risoluzione fissa con scala intera **in pixel fisici** (tiene conto di `devicePixelRatio`): `clear`, `fillRect` (arrotonda tutti i bordi: niente sfumature), `strokeRect`, `drawImage`, `drawText`, `drawDitherOverlay` |
-| `BitmapFont.ts` | `getGlyphRows`, `measureTextWidth` | font a pixel 5×7 (solo maiuscole, accenti rimossi) |
+| `Renderer.ts` | `Renderer` | canvas a risoluzione fissa con scala intera **in pixel fisici** (tiene conto di `devicePixelRatio`): `clear`, `fillRect` (arrotonda tutti i bordi: niente sfumature), `strokeRect`, `drawImage`, `drawText` (con `shadowColor` opzionale), `drawDitherOverlay`, `fillDithered` (retino di due colori), `fillVerticalGradient` (gradiente a fasce), `applyLineWave` (ondulazione per riga) |
+| `BitmapFont.ts` | `getGlyph`, `getGlyphRows`, `measureTextWidth` | font a pixel: maiuscole 5×7, minuscole con discendenti (9 righe in tutto), accentate italiane minuscole, spaziatura proporzionale con cifre a larghezza fissa |
+| `PaletteEffects.ts` | `isDitherPixelOn`, `buildDitherTile`, `computeGradientBands`, `shadeColor`, `cycleRampColor`, `computeLineWaveOffset` | effetti di colore a 16 bit come funzioni pure (testabili senza browser) |
 | `Camera.ts` | `Camera` | `follow(target, mapWidth, mapHeight)`: centra e limita ai bordi |
-| `SpriteManager.ts` | `SpriteManager` | `registerSprite(id, righe, colori)`, `drawSprite(...)`, `getSpriteSize`; crea anche le versioni specchiate e bianche |
+| `SpriteManager.ts` | `SpriteManager` | `registerSprite(id, righe, colori)`, `drawSprite(...)`, `drawSpriteSilhouette(..., colore)`, `getSpriteSize`; crea le versioni specchiate e, alla prima richiesta, le sagome a tinta unita |
 | `AnimationManager.ts` | `AnimationPlayer`, `AnimationDefinition` | riproduce un'animazione: `play`, `restart`, `update`, `currentFrameId`; durata per frame (`frameDurationsMs`) opzionale |
 | `EffectsManager.ts` | `EffectsManager` | particelle, scritte, tremolio, hit-stop |
 | `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a parallasse per `forest`, `castle`, `dungeon` |
-| `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe |
+| `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe, `addOutline` (contorno automatico), `remapSpriteKeys` (varianti) |
 | `sprites/knightSprites.ts` | `registerKnightSprites` | sprite del cavaliere |
 | `sprites/enemySprites.ts` | `registerEnemySprites` | sprite dei nemici (`SPECS`) |
 | `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES` | sprite dei boss |

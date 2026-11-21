@@ -43,7 +43,7 @@ t('playing->victory->title',ch('victory')&&ch('title'));
 t('title->controls->title',ch('controls')&&ch('title'));
 t('transizioni vietate: title->gameOver, title->paused',!ch('gameOver')&&!ch('paused'));
 // font
-t('glifo ^ valido',getGlyphRows('^').length===7&&getGlyphRows('^').every(r=>r.length===5));
+t('glifo ^ valido',getGlyphRows('^').length===9&&getGlyphRows('^').every(r=>r.length===5));
 t('startingLives=3',GAME_CONFIG.startingLives===3);
 
 }

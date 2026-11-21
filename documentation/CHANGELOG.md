@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.0.0-alpha.1 – Versione 2.0, Fase 1: fondamenta grafiche a 16 bit (2026-11-21)
+Prima fase della versione 2.0 (grafica a 16 bit, nuovi nemici, boss, ambientazioni e contenuti). Il gioco resta lo stesso:
+cambia il motore grafico, che ora offre gli strumenti per ridisegnare tutto a 16 bit nella Fase 2.
+### Aggiunto
+- **Palette a rampe** (`src/config/paletteConfig.ts`): 54 colori (massimo 64) organizzati in 11 rampe dallo scuro al chiaro (acciaio, blu, verdi, caldi, fuoco, magia, pelle, terra, pietra, palude, oro). I 16 colori della 1.0 hanno lo stesso nome e valore e fanno parte delle rampe. `PALETTE` resta importabile da `gameConfig.ts`.
+- **Effetti di colore** (`src/rendering/PaletteEffects.ts`, funzioni pure): retino ordinato di Bayer 4×4, gradienti a fasce, ombreggiatura lungo le rampe (`shadeColor`), ciclo dei colori (`cycleRampColor`, modalità `loop` e `pingPong`), ondulazione per riga.
+- **Renderer**: `fillDithered`, `fillVerticalGradient`, `applyLineWave`, opzione `shadowColor` di `drawText`. Nessuno produce colori fuori palette.
+- **Font**: minuscole con discendenti, minuscole accentate italiane, `;` e `"`, spaziatura proporzionale (le cifre restano a larghezza fissa). Altezza del glifo: 9 righe (le maiuscole occupano sempre le righe 0-6).
+- **SpriteManager**: `drawSpriteSilhouette` disegna la sagoma di uno sprite in qualsiasi colore; le sagome si creano alla prima richiesta.
+- **Strumenti per gli sprite**: `addOutline` (contorno automatico) e `remapSpriteKeys` (varianti).
+- **Test**: nuova suite `graphics-16bit.test.mjs` (42 controlli); controlli sulla palette a rampe in `config-integrity.test.mjs`. Totale: 355 controlli in 12 file.
+### Modificato
+- **Risoluzione interna 320×240** (era 256×240): stessa altezza, quindi livelli e bilanciamento non cambiano; la vista è più larga.
+- HUD, riquadri dei messaggi, titolo, controlli, pausa e vittoria sono disposti rispetto al centro dello schermo.
+- Sfondi: cieli a fasce con retino (foresta e castello), cuore delle torce del dungeon con ciclo dei colori. Corretti i cicli degli elementi ripetuti (castello lontano, colonne, archi, torce, catene), che con 320 px lasciavano vuota la parte destra dello schermo.
+- `index.html` (canvas 320×240), test unitari e test nel browser leggono le dimensioni da `GAME_CONFIG`.
+- Versione portata a 2.0.0-alpha.1; manuali aggiornati (`ARCHITECTURE` sez. 6.1 sugli strumenti a 16 bit, `CODE_MANUAL`, `FEATURES` con la tabella della 2.0, `GAME_MANUAL`, `INSTALLATION`, `TESTING`).
+### Verificato
+- `npm run typecheck`, `npm test` (355 controlli), `npm run verify-docs` (11 esempi), `npm run build`.
+- Chrome headless sulla build: titolo, controlli, pausa e i tre livelli si disegnano a 320×240 con 0 pixel fuori palette.
+### Limiti
+- **I test nel browser (`npm run test:browser`) non sono stati rieseguiti** (Playwright non installato): sono stati adattati alla nuova risoluzione ma non provati.
+- Gli sprite sono ancora quelli della 1.0: il ridisegno a 16 bit è la Fase 2.
+- L'ondulazione per riga è pronta ma non ancora usata nei livelli.
+
 ## 1.0.0 – Fase 10: test, verifiche e distribuzione (2026-11-20)
 Prima versione completa: gioco arcade con spada, combo statiche, nemici, tre livelli e boss, come previsto per la 1.0.
 ### Aggiunto – test (ora inclusi nel progetto)

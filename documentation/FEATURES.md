@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **1.0.0**.
+Versione: **2.0.0-alpha.1**.
 
 **Stati usati:**
 
@@ -44,9 +44,28 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Tasti modificabili da file di configurazione | Implementata | `controlsConfig.ts` |
 | Rimappatura dei tasti dal gioco | Non prevista | |
 | Pausa automatica alla perdita del focus | Implementata | |
-| Canvas 256×240 con scala intera e pixel nitidi | Implementata | |
-| Font a pixel 5×7 (solo maiuscole) | Implementata | |
+| Canvas 320×240 (16 bit) con scala intera e pixel nitidi | Implementata | 2.0: era 256×240 |
+| Font a pixel con maiuscole, minuscole, accentate italiane e spaziatura proporzionale | Implementata | 2.0: era 5×7 solo maiuscole; le cifre restano a larghezza fissa |
+| Testo con ombra (`shadowColor`) | Implementata | 2.0 |
 | Camera laterale che segue il giocatore | Implementata | |
+
+## Grafica a 16 bit (versione 2.0)
+
+| Funzionalità | Stato | Note |
+|---|---|---|
+| Palette a rampe (54 colori su un massimo di 64, 11 rampe dallo scuro al chiaro) | Implementata | Fase 1; i 16 colori della 1.0 sono invariati |
+| Retino ordinato (dithering Bayer 4×4) senza colori fuori palette | Implementata | Fase 1; `Renderer.fillDithered` |
+| Gradienti verticali a fasce con retino (cieli) | Implementata | Fase 1; usati nei cieli di foresta e castello |
+| Ciclo dei colori (palette cycling) | Implementata | Fase 1; usato nel cuore delle torce del dungeon |
+| Ondulazione per riga (acqua, calore, magia) | Implementata | Fase 1; strumento pronto, non ancora usato nei livelli |
+| Ombreggiatura lungo le rampe (`shadeColor`) | Implementata | Fase 1 |
+| Sagome di sprite di qualsiasi colore | Implementata | Fase 1; il lampo bianco ora è un caso particolare |
+| Contorno automatico degli sprite (`addOutline`) e varianti (`remapSpriteKeys`) | Implementata | Fase 1; strumenti per la Fase 2 |
+| Sprite ridisegnati a 16 bit (cavaliere più grande, nemici, boss, oggetti, HUD) | Da implementare | Fase 2 |
+| Sfondi ridisegnati con più livelli di parallasse | Da implementare | Fase 2 |
+| Proiettili, nemici volanti, pericoli, piattaforme mobili, attacchi dei boss come dati | Pianificata | Fase 3 |
+| Palude Maledetta, Picchi Ghiacciati, Torre dell'Ombra; 5 nemici; 3 boss | Pianificata | Fase 4 |
+| Power-up, selettore di difficoltà, selezione dei livelli | Pianificata | Fase 5 |
 
 ## Protagonista
 

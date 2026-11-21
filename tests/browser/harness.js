@@ -90,7 +90,7 @@ function checkInvariants() {
   }
   if (boss !== null && ![boss.positionX, boss.positionY, boss.currentHealth].every(finite)) problems.push("boss con valori non finiti");
   const camera = engine.camera;
-  if (camera.x < 0 || camera.x > Math.max(0, level.width - 256) || camera.y !== 0) problems.push(`camera fuori limiti x=${camera.x} y=${camera.y}`);
+  if (camera.x < 0 || camera.x > Math.max(0, level.width - engine.renderer.width) || camera.y !== 0) problems.push(`camera fuori limiti x=${camera.x} y=${camera.y}`);
   if (engine.effects.particleCount > 200) problems.push("troppe particelle");
   return problems.map((problem) => problem + where);
 }

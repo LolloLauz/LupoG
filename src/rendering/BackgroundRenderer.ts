@@ -1,4 +1,5 @@
-import { PALETTE } from "../config/gameConfig";
+import { PALETTE, PALETTE_RAMPS } from "../config/gameConfig";
+import { cycleRampColor } from "./PaletteEffects";
 import type { ThemeId } from "../types/LevelTypes";
 import type { Renderer } from "./Renderer";
 
@@ -12,9 +13,14 @@ function hashNumber(value: number): number {
   return hashed % 1000;
 }
 
+/** Colori della fiamma delle torce (ciclo avanti e indietro lungo la rampa del fuoco). */
+const TORCH_FLAME_RAMP = PALETTE_RAMPS.fire.slice(2, 5);
+
 /**
  * Sfondi a più livelli con effetto parallasse (i livelli lontani scorrono
- * più lentamente della camera). Tutto è disegnato con rettangoli, senza immagini.
+ * più lentamente della camera). Tutto è disegnato con rettangoli, retini e
+ * gradienti a fasce, senza immagini. Ogni ciclo di elementi ripetuti continua
+ * finché non copre tutta la larghezza dello schermo.
  */
 export class BackgroundRenderer {
   public render(renderer: Renderer, theme: ThemeId, cameraX: number, timeSeconds: number): void {
@@ -34,8 +40,9 @@ export class BackgroundRenderer {
   // --- Foresta oscura: luna, colline lontane, pini ---------------------------
 
   private renderForest(renderer: Renderer, cameraX: number): void {
-    renderer.clear(PALETTE.darkBlue);
-    renderer.fillRect(0, 0, renderer.width, 50, PALETTE.black);
+    // cielo a fasce: dal nero in alto al blu notte verso l'orizzonte
+    renderer.fillVerticalGradient(0, 0, renderer.width, 150, [PALETTE.black, PALETTE.darkBlue, PALETTE.deepNavy]);
+    renderer.fillRect(0, 150, renderer.width, GROUND_Y - 150, PALETTE.deepNavy);
     // luna (quasi ferma)
     const moonX = 196 - Math.round(cameraX * 0.02);
     this.fillCircle(renderer, moonX, 40, 12, PALETTE.white);
@@ -79,7 +86,7 @@ export class BackgroundRenderer {
   // --- Castello: stelle, sagoma del castello lontano, colonne con stendardi --
 
   private renderCastle(renderer: Renderer, cameraX: number, timeSeconds: number): void {
-    renderer.clear(PALETTE.darkBlue);
+    renderer.fillVerticalGradient(0, 0, renderer.width, GROUND_Y, [PALETTE.black, PALETTE.darkBlue, PALETTE.darkBlue, PALETTE.slate]);
     // stelle
     for (let starIndex = 0; starIndex < 28; starIndex++) {
       const starX = (hashNumber(starIndex) * 13) % renderer.width;
@@ -91,7 +98,7 @@ export class BackgroundRenderer {
     const farShift = cameraX * 0.3;
     const period = 192;
     const firstPeriod = Math.floor(farShift / period) - 1;
-    for (let periodIndex = firstPeriod; periodIndex <= firstPeriod + 3; periodIndex++) {
+    for (let periodIndex = firstPeriod; periodIndex * period - farShift < renderer.width; periodIndex++) {
       const baseX = periodIndex * period - farShift;
       renderer.fillRect(baseX, GROUND_Y - 44, period, 44, PALETTE.navy); // mura
       for (let merlon = 0; merlon < period; merlon += 8) {
@@ -110,7 +117,7 @@ export class BackgroundRenderer {
     const nearShift = cameraX * 0.6;
     const columnSpacing = 96;
     const firstColumn = Math.floor(nearShift / columnSpacing) - 1;
-    for (let columnIndex = firstColumn; columnIndex <= firstColumn + 4; columnIndex++) {
+    for (let columnIndex = firstColumn; columnIndex * columnSpacing - nearShift < renderer.width; columnIndex++) {
       const columnX = columnIndex * columnSpacing - nearShift;
       renderer.fillRect(columnX, 40, 12, GROUND_Y - 40, PALETTE.black);
       renderer.fillRect(columnX + 2, 40, 2, GROUND_Y - 40, PALETTE.darkBlue);
@@ -142,7 +149,7 @@ export class BackgroundRenderer {
     // archi scuri ogni 128 px
     const archSpacing = 128;
     const firstArch = Math.floor(wallShift / archSpacing) - 1;
-    for (let archIndex = firstArch; archIndex <= firstArch + 3; archIndex++) {
+    for (let archIndex = firstArch; archIndex * archSpacing + 40 - wallShift < renderer.width; archIndex++) {
       const archX = archIndex * archSpacing + 40 - wallShift;
       renderer.fillRect(archX, 90, 36, GROUND_Y - 90, PALETTE.darkBlue);
       renderer.fillRect(archX + 4, 98, 28, GROUND_Y - 98, PALETTE.black);
@@ -155,19 +162,21 @@ export class BackgroundRenderer {
     // torce ogni 128 px (sfalsate), con fiamma che tremola
     const torchShift = Math.round(cameraX * 0.5);
     const firstTorch = Math.floor(torchShift / archSpacing) - 1;
-    for (let torchIndex = firstTorch; torchIndex <= firstTorch + 3; torchIndex++) {
+    for (let torchIndex = firstTorch; torchIndex * archSpacing + 100 - torchShift < renderer.width; torchIndex++) {
       const torchX = torchIndex * archSpacing + 100 - torchShift;
       const isFlameHigh = Math.floor(timeSeconds * 6 + torchIndex) % 2 === 0;
+      // ciclo dei colori: il cuore della fiamma pulsa lungo la rampa del fuoco
+      const flameCoreColor = cycleRampColor(TORCH_FLAME_RAMP, timeSeconds, 8, torchIndex, "pingPong");
       renderer.fillRect(torchX, 70, 3, 14, PALETTE.gray);
       renderer.fillRect(torchX - 2, 66, 7, 4, PALETTE.gray);
       renderer.fillRect(torchX - 1, isFlameHigh ? 56 : 58, 5, isFlameHigh ? 10 : 8, PALETTE.orange);
-      renderer.fillRect(torchX, isFlameHigh ? 59 : 60, 3, 6, PALETTE.yellow);
+      renderer.fillRect(torchX, isFlameHigh ? 59 : 60, 3, 6, flameCoreColor);
     }
     // catene appese (si muovono un po' più veloci)
     const chainShift = Math.round(cameraX * 0.7);
     const chainSpacing = 90;
     const firstChain = Math.floor(chainShift / chainSpacing) - 1;
-    for (let chainIndex = firstChain; chainIndex <= firstChain + 4; chainIndex++) {
+    for (let chainIndex = firstChain; chainIndex * chainSpacing - chainShift < renderer.width; chainIndex++) {
       const chainX = chainIndex * chainSpacing + (hashNumber(chainIndex) % 30) - chainShift;
       const chainLength = 30 + (hashNumber(chainIndex + 50) % 40);
       for (let linkY = 0; linkY < chainLength; linkY += 4) {

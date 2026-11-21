@@ -1,6 +1,6 @@
 # Test e verifiche
 
-Versione descritta: **1.0.0**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
+Versione descritta: **2.0.0-alpha.1**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
 Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima esecuzione prima della consegna.
 
 ---
@@ -10,7 +10,7 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 308 controlli in 11 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 355 controlli in 12 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 165 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
 | `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure) | `npm install` | circa 1 minuto |
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 308 controlli)
+### 2.1 Test unitari (`tests/unit/`, 355 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -41,19 +41,25 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `combat.test.mjs` | 37 | attacchi leggeri e pesanti, combo (avanzamento, finestra di tempo, ripartenza), buffer, schivata e suo tempo di ricarica, invulnerabilità, rinculo, danno, morte e ripartenza, hitbox specchiata, sincronizzazione animazioni |
 | `enemy-ai.test.mjs` | 32 | pattuglia dentro la zona, inseguimento e perdita d'interesse, guardia, attacco in tre fasi, danno e schivata, interruzioni degli attacchi, morte e rimozione, moltiplicatori di difficoltà, niente salti nel vuoto |
 | `levels-boss-items.test.mjs` | 51 | geometria dei livelli, bot di percorribilità, boss (risveglio, fendente, carica, fasi, morte, nessuno stordimento), oggetti (cura, punti, gemme), danno da caduta |
-| `config-integrity.test.mjs` | 47 | ogni sprite si registra, ogni frame delle animazioni è uno sprite, combo e attacchi coerenti, nemici/boss/oggetti ben formati, controlli senza conflitti, palette, **tutti i livelli** (regole geometriche e percorribilità) |
+| `config-integrity.test.mjs` | 52 | ogni sprite si registra, ogni frame delle animazioni è uno sprite, combo e attacchi coerenti, nemici/boss/oggetti ben formati, controlli senza conflitti, palette (al massimo 64 colori distinti, 16 colori della 1.0 invariati, rampe ordinate dallo scuro al chiaro, ogni colore in una rampa), **tutti i livelli** (regole geometriche e percorribilità) |
 | `interface-state.test.mjs` | 28 | vite, record (archivio normale, guasto, assente, corrotto), menu, transizioni di stato, font |
 | `effects-and-jump.test.mjs` | 21 | particelle, popup, tremolio, hit-stop, coyote time, salto anticipato |
 | `rendering-and-physics.test.mjs` | 19 | rettangoli a pixel interi, scala intera in pixel fisici (14 combinazioni), gravità esatta, atterraggio, soffitto, limiti della mappa |
 | `speed-consistency.test.mjs` | 11 | camminata, salto, nemico, boss, animazioni, effetti e delta time a 20, 30, 60, 120 e 144 FPS |
 | `regressions.test.mjs` | 21 | rinculo vicino agli abissi e attacco a raffica (difetti della 0.9.1) |
+| `graphics-16bit.test.mjs` | 42 | retino di Bayer, gradienti a fasce, ombreggiatura, ciclo dei colori, ondulazione, `Renderer` su un finto canvas (retino, gradiente, ondulazione, testo con ombra), font (glifi, discendenti, spaziatura proporzionale, cifre a larghezza fissa), contorno e varianti degli sprite |
 | `static-rules.test.mjs` | 28 | strict, nessun `any`, tipi di ritorno espliciti, nomi, nessun audio né risorsa esterna, struttura del progetto, versioni e manuali aggiornati |
 
 ### 2.2 Test nel browser (`tests/browser/`, 165 controlli, Chromium)
 
+> **Stato nella 2.0.0-alpha.1.** I test nel browser sono stati adattati alla risoluzione 320×240 (leggono le dimensioni da `GAME_CONFIG`)
+> ma **non sono stati rieseguiti** con questa versione, perché Playwright non era installato. I numeri qui sotto si riferiscono alla 1.0.0.
+> Al loro posto è stata fatta una verifica con Chrome senza interfaccia (headless) sulla build: titolo, controlli, pausa e i tre livelli
+> (incluso il boss) si disegnano a 320×240 con **0 pixel fuori palette**; le immagini sono state controllate a occhio.
+
 | Sezione | Che cosa si verifica |
 |---|---|
-| **1. Build reale con `file://`** | la build riesce; nessun errore in console; tutte le richieste sono file locali di `dist/` (nessuna rete); nessuna richiesta fallita; canvas 256×240; solo colori della palette; tastiera vera (Invio, Esc, D, Spazio, K); la pausa congela l'immagine e blocca i comandi di gioco; 1500 pressioni di tasti a caso senza errori; **nessun uso dell'audio** (AudioContext, Audio, play) |
+| **1. Build reale con `file://`** | la build riesce; nessun errore in console; tutte le richieste sono file locali di `dist/` (nessuna rete); nessuna richiesta fallita; canvas 320×240; solo colori della palette; tastiera vera (Invio, Esc, D, Spazio, K); la pausa congela l'immagine e blocca i comandi di gioco; 1500 pressioni di tasti a caso senza errori; **nessun uso dell'audio** (AudioContext, Audio, play) |
 | **2. Dimensioni dello schermo** | 17 combinazioni di finestra e scala di sistema (da 320×240 a 3840×2160, 100%-300%, verticale e orizzontale): scala intera in pixel fisici, canvas centrato, `image-rendering: pixelated`, nessuna sfumatura all'interno, pixel di gioco quadrati; ridimensionamento durante il gioco |
 | **3. Motore reale** | schermate e flusso con tastiera (titolo, controlli, pausa, riprendi); palette di ogni schermata; velocità identica a 30, 60, 120 e 144 passi al secondo; tre morti → Game Over → "Riprova"; rendering dei tre livelli; **un giocatore automatico che usa solo eventi di tastiera completa tutto il gioco fino alla vittoria**; regole sempre valide (posizioni finite e dentro la mappa, salute, vite, punteggio, camera); prestazioni; record salvato e ancora presente dopo il ricaricamento; **120.000 frame di tasti a caso** con teletrasporti e passi da 7 a 50 ms |
 | **4. Velocità sotto carico** | con il loop reale e un carico artificiale fino a 55 ms per frame, la distanza percorsa resta uguale al tempo reale finché si resta sopra i 22 FPS |
@@ -112,8 +118,8 @@ Dichiarati con chiarezza:
 - **Nessuna prova con persone:** non c'è stata una partita completa giocata da una persona. Il bilanciamento è misurato con un bot (vedi `BALANCE.md`).
 - **Nessuna GPU e nessuno schermo reale:** i tempi di disegno (media 0,07 ms per frame nel test) sono quelli di Chromium senza GPU; indicano che il gioco è leggerissimo,
   non sono un benchmark su un computer reale.
-- **Finestra più piccola del gioco (sotto 256×240 pixel fisici):** la scala minima è 1 e il canvas viene **tagliato** (non esiste una scala "frazionaria": sarebbe contro
-  lo stile 8 bit). Su un telefono in verticale a 100% di scala l'area visibile è minore del gioco.
+- **Finestra più piccola del gioco (sotto 320×240 pixel fisici):** la scala minima è 1 e il canvas viene **tagliato** (non esiste una scala "frazionaria": sarebbe contro
+  lo stile a pixel). Su un telefono in verticale a 100% di scala l'area visibile è minore del gioco.
 - **Scala di sistema 150% e 300%:** il browser non può dimensionare il canvas con precisione al pixel fisico (la misura in pixel CSS non è rappresentabile esattamente).
   L'interno dell'immagine resta nitido; la prima e l'ultima colonna/riga possono fondersi di poco con lo sfondo e un blocco può spostarsi di 1 pixel fisico. Invisibile a occhio, ma non
   è la perfezione che si ottiene a 100%, 125%, 200%. I test lo ammettono solo in quei casi.

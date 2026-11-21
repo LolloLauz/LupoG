@@ -176,3 +176,38 @@ export function drawSlashArc(
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Strumenti per la grafica a 16 bit
+// ---------------------------------------------------------------------------
+
+/**
+ * Aggiunge un contorno: ogni pixel trasparente che tocca (sopra, sotto, a destra o a sinistra)
+ * un pixel colorato diventa "outlineKey". Le dimensioni dello sprite non cambiano: lasciare
+ * almeno un pixel vuoto ai bordi se il contorno deve essere completo.
+ * Così si disegna solo l'interno (con le sue ombre) e il contorno scuro si genera da solo.
+ */
+export function addOutline(rows: readonly string[], outlineKey: string): string[] {
+  const isFilled = (x: number, y: number): boolean => {
+    const row = rows[y];
+    return row !== undefined && x >= 0 && x < row.length && row[x] !== ".";
+  };
+  return rows.map((row, rowY) =>
+    Array.from(row, (key, columnX) => {
+      if (key !== ".") {
+        return key;
+      }
+      const touchesFilled =
+        isFilled(columnX - 1, rowY) || isFilled(columnX + 1, rowY) || isFilled(columnX, rowY - 1) || isFilled(columnX, rowY + 1);
+      return touchesFilled ? outlineKey : ".";
+    }).join("")
+  );
+}
+
+/**
+ * Sostituisce i caratteri di uno sprite secondo la tabella (i caratteri non presenti restano uguali).
+ * Utile per ricavare varianti da uno stesso disegno quando non basta cambiare la mappa dei colori.
+ */
+export function remapSpriteKeys(rows: readonly string[], keyMapping: Readonly<Record<string, string>>): string[] {
+  return rows.map((row) => Array.from(row, (key) => keyMapping[key] ?? key).join(""));
+}

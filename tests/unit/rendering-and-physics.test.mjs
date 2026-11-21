@@ -20,8 +20,9 @@ export default async function (t, load) {
   const listeners = [];
   globalThis.window = { innerWidth: 1280, innerHeight: 720, devicePixelRatio: 1, addEventListener: (name, fn) => listeners.push([name, fn]) };
   const renderer = new Renderer(fakeCanvas);
+  const W = GAME_CONFIG.internalWidth, H = GAME_CONFIG.internalHeight;
 
-  t("il canvas interno è 256x240 e lo smoothing è disattivato", fakeCanvas.width === 256 && fakeCanvas.height === 240 && context.imageSmoothingEnabled === false);
+  t("il canvas interno è 320x240 e lo smoothing è disattivato", fakeCanvas.width === 320 && fakeCanvas.height === 240 && W === 320 && H === 240 && context.imageSmoothingEnabled === false);
   t("il renderer ascolta il ridimensionamento della finestra", listeners.some(([name]) => name === "resize"));
 
   // ---------- fillRect: tutti i bordi a pixel interi ----------
@@ -57,22 +58,22 @@ export default async function (t, load) {
   for (const [width, height, ratio] of cases) {
     const { cssWidth, cssHeight } = scaleFor(width, height, ratio);
     const deviceWidth = cssWidth * ratio, deviceHeight = cssHeight * ratio;
-    const scale = deviceWidth / 256;
-    const isInteger = Math.abs(scale - Math.round(scale)) < 0.001 && Math.abs(deviceHeight / 240 - Math.round(deviceHeight / 240)) < 0.001;
-    const expected = Math.max(1, Math.floor(Math.min((width * ratio) / 256, (height * ratio) / 240)));
+    const scale = deviceWidth / W;
+    const isInteger = Math.abs(scale - Math.round(scale)) < 0.001 && Math.abs(deviceHeight / H - Math.round(deviceHeight / H)) < 0.001;
+    const expected = Math.max(1, Math.floor(Math.min((width * ratio) / W, (height * ratio) / H)));
     const fits = deviceWidth <= width * ratio + 0.01 && deviceHeight <= height * ratio + 0.01;
     if (!isInteger || Math.round(scale) !== expected || (expected > 1 && !fits)) wrong.push(`${width}x${height}@${ratio}: scala ${scale}`);
   }
   t("la scala è sempre un numero intero di pixel fisici, la massima che entra nella finestra (14 combinazioni di dimensione e scala di sistema)", wrong.length === 0, wrong.join("; "));
   const normal = scaleFor(1280, 720, 1);
-  t("1280x720 al 100%: canvas 768x720 (scala 3)", normal.cssWidth === 768 && normal.cssHeight === 720);
+  t("1280x720 al 100%: canvas 960x720 (scala 3)", normal.cssWidth === 960 && normal.cssHeight === 720);
   const dpi150 = scaleFor(1280, 720, 1.5);
-  t("1280x720 al 150%: 4 pixel fisici per pixel di gioco (non 3 pixel CSS = 4,5 fisici)", Math.abs(dpi150.cssWidth * 1.5 - 1024) < 0.01);
+  t("1280x720 al 150%: 4 pixel fisici per pixel di gioco (non 3 pixel CSS = 4,5 fisici)", Math.abs(dpi150.cssWidth * 1.5 - 1280) < 0.01 && Math.abs(dpi150.cssHeight * 1.5 - 960) < 0.01);
   const tiny = scaleFor(100, 100, 1);
-  t("finestra più piccola del gioco: scala minima 1 (256x240), mai zero né frazionaria", tiny.cssWidth === 256 && tiny.cssHeight === 240);
+  t("finestra più piccola del gioco: scala minima 1 (320x240), mai zero né frazionaria", tiny.cssWidth === 320 && tiny.cssHeight === 240);
   globalThis.window.devicePixelRatio = 0;
   resize();
-  t("devicePixelRatio non valido (0) trattato come 1", fakeCanvas.style.width === `${256 * Math.max(1, Math.floor(Math.min(100 / 256, 100 / 240)))}px`);
+  t("devicePixelRatio non valido (0) trattato come 1", fakeCanvas.style.width === `${W * Math.max(1, Math.floor(Math.min(100 / W, 100 / H)))}px`);
 
   // ---------- gravità con velocità media ----------
   const collision = new CollisionSystem();

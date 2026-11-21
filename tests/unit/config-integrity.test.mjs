@@ -26,7 +26,7 @@ export default async function (t, load) {
   const { ITEM_CONFIG } = itemModule;
   const { PLAYER_ANIMATIONS, ENEMY_ANIMATIONS, BOSS_ANIMATIONS } = animationModule;
   const { CONTROLS_CONFIG, INPUT_CONTEXT_ACTIONS } = controlsModule;
-  const { GAME_CONFIG, PALETTE, DIFFICULTY_CONFIG } = gameModule;
+  const { GAME_CONFIG, PALETTE, PALETTE_RAMPS, MAX_PALETTE_COLORS, DIFFICULTY_CONFIG } = gameModule;
 
   // ---------- sprite e animazioni ----------
   const sprites = new FakeSpriteManager();
@@ -102,8 +102,18 @@ export default async function (t, load) {
   t("i comandi richiesti sono mappati (A/D, frecce, W, freccia su, Spazio, J, K, Esc)", ["KeyA", "KeyD", "ArrowLeft", "ArrowRight", "KeyW", "ArrowUp", "Space", "KeyJ", "KeyK", "Escape"].every((key) => Object.values(CONTROLS_CONFIG).some((keys) => keys.includes(key))));
 
   // ---------- palette e configurazione generale ----------
-  t("la palette ha 16 colori esadecimali distinti", Object.keys(PALETTE).length === 16 && Object.values(PALETTE).every((c) => /^#[0-9a-f]{6}$/i.test(c)) && new Set(Object.values(PALETTE)).size === 16);
-  t("risoluzione interna 256x240", GAME_CONFIG.internalWidth === 256 && GAME_CONFIG.internalHeight === 240);
+  const paletteValues = Object.values(PALETTE);
+  t(`la palette ha colori esadecimali tutti distinti, non più di ${MAX_PALETTE_COLORS} (ora ${paletteValues.length})`, paletteValues.every((c) => /^#[0-9a-f]{6}$/i.test(c)) && new Set(paletteValues).size === paletteValues.length && paletteValues.length <= MAX_PALETTE_COLORS && paletteValues.length > 16);
+  const legacyColors = { black: "#0f0f1b", darkBlue: "#1a1c2c", purple: "#5d275d", red: "#b13e53", orange: "#ef7d57", yellow: "#ffcd75", lightGreen: "#a7f070", green: "#38b764", darkGreen: "#257179", navy: "#29366f", blue: "#3b5dc9", lightBlue: "#41a6f6", cyan: "#73eff7", white: "#f4f4f4", lightGray: "#94b0c2", gray: "#566c86" };
+  t("i 16 colori della versione 1.0 esistono ancora con lo stesso valore", Object.entries(legacyColors).every(([name, hex]) => PALETTE[name] === hex));
+  const rampColors = Object.values(PALETTE_RAMPS).flat();
+  t("ogni colore delle rampe è nella palette", rampColors.every((c) => paletteValues.includes(c)));
+  t("ogni colore della palette appartiene ad almeno una rampa", paletteValues.every((c) => rampColors.includes(c)), paletteValues.filter((c) => !rampColors.includes(c)).join(","));
+  const luminance = (hex) => 0.2126 * parseInt(hex.slice(1, 3), 16) + 0.7152 * parseInt(hex.slice(3, 5), 16) + 0.0722 * parseInt(hex.slice(5, 7), 16);
+  const unorderedRamps = Object.entries(PALETTE_RAMPS).filter(([, ramp]) => ramp.some((c, i) => i > 0 && luminance(c) <= luminance(ramp[i - 1]))).map(([name]) => name);
+  t("ogni rampa va dal colore più scuro al più chiaro (luminosità crescente)", unorderedRamps.length === 0, unorderedRamps.join(","));
+  t("ogni rampa ha almeno 4 colori", Object.values(PALETTE_RAMPS).every((ramp) => ramp.length >= 4));
+  t("risoluzione interna 320x240 (16 bit)", GAME_CONFIG.internalWidth === 320 && GAME_CONFIG.internalHeight === 240);
   t("vite iniziali >= 1 e gravità positiva", GAME_CONFIG.startingLives >= 1 && GAME_CONFIG.gravity > 0);
   t("moltiplicatori di difficoltà positivi", Object.values(DIFFICULTY_CONFIG).every((d) => d.enemyHealthMultiplier > 0 && d.enemyDamageMultiplier > 0));
 

@@ -47,11 +47,13 @@ export class HUDManager {
 
   /** Riquadro centrato con titolo e righe di testo (messaggi di livello). */
   public renderMessageBox(renderer: Renderer, title: string, lines: string[]): void {
+    const boxWidth = 192;
     const boxHeight = 22 + lines.length * 12;
+    const boxX = (renderer.width - boxWidth) / 2;
     const boxY = 100 - boxHeight / 2;
-    renderer.fillRect(32, boxY, 192, boxHeight, PALETTE.black);
-    renderer.strokeRect(32, boxY, 192, boxHeight, PALETTE.lightGray);
-    renderer.strokeRect(34, boxY + 2, 188, boxHeight - 4, PALETTE.gray);
+    renderer.fillRect(boxX, boxY, boxWidth, boxHeight, PALETTE.black);
+    renderer.strokeRect(boxX, boxY, boxWidth, boxHeight, PALETTE.lightGray);
+    renderer.strokeRect(boxX + 2, boxY + 2, boxWidth - 4, boxHeight - 4, PALETTE.gray);
     renderer.drawText(title, renderer.width / 2, boxY + 8, PALETTE.yellow, { align: "center" });
     lines.forEach((line, lineIndex) => {
       renderer.drawText(line, renderer.width / 2, boxY + 22 + lineIndex * 12, PALETTE.white, { align: "center" });

@@ -1,9 +1,13 @@
 /** Configurazione generale del gioco. */
 export const GAME_CONFIG = {
   title: "IRON & SHADOW",
-  version: "1.0.0",
-  /** Risoluzione interna (stile NES). */
-  internalWidth: 256,
+  version: "2.0.0-alpha.1",
+  /**
+   * Risoluzione interna (stile 16 bit, come le console di quarta generazione in modalità 320x240).
+   * L'altezza è la stessa della versione 1.0, quindi la geometria dei livelli non cambia:
+   * la vista è solo più larga (320 px invece di 256).
+   */
+  internalWidth: 320,
   internalHeight: 240,
   /** Passo massimo di aggiornamento (secondi), evita salti dopo cambi tab. */
   maxDeltaTimeSeconds: 0.05,
@@ -27,25 +31,12 @@ export const GAME_CONFIG = {
   debugMode: false,
 } as const;
 
-/** Palette limitata (stile 8 bit). Tutti i colori del gioco partono da qui. */
-export const PALETTE = {
-  black: "#0f0f1b",
-  darkBlue: "#1a1c2c",
-  purple: "#5d275d",
-  red: "#b13e53",
-  orange: "#ef7d57",
-  yellow: "#ffcd75",
-  lightGreen: "#a7f070",
-  green: "#38b764",
-  darkGreen: "#257179",
-  navy: "#29366f",
-  blue: "#3b5dc9",
-  lightBlue: "#41a6f6",
-  cyan: "#73eff7",
-  white: "#f4f4f4",
-  lightGray: "#94b0c2",
-  gray: "#566c86",
-} as const;
+/**
+ * La palette (colori e rampe) è in paletteConfig.ts; qui viene riesportata perché
+ * molti moduli importano PALETTE da gameConfig.
+ */
+export { PALETTE, PALETTE_RAMPS, MAX_PALETTE_COLORS } from "./paletteConfig";
+export type { PaletteColor, PaletteColorName, PaletteRampName } from "./paletteConfig";
 
 /** Difficoltà: moltiplicatori applicati ai valori base. */
 export const DIFFICULTY_CONFIG = {

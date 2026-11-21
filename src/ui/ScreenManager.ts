@@ -106,17 +106,18 @@ export class ScreenManager {
   private renderTitle(renderer: Renderer, data: ScreenData): void {
     // notte nel castello, con lo sfondo che scorre piano
     this.backgroundRenderer.render(renderer, "castle", this.animationTimeSeconds * 14, this.animationTimeSeconds);
+    const centerX = renderer.width / 2;
     renderer.fillRect(0, 200, renderer.width, 40, PALETTE.black);
     renderer.fillRect(0, 200, renderer.width, 2, PALETTE.gray);
     const knightFrame = Math.floor(this.animationTimeSeconds * 2) % 2 === 0 ? "knightIdle1" : "knightIdle2";
-    this.spriteManager.drawSprite(renderer, knightFrame, 120, 176, false);
+    this.spriteManager.drawSprite(renderer, knightFrame, centerX - 8, 176, false);
 
     this.drawShadowedText(renderer, "IRON & SHADOW", renderer.width / 2, 34, PALETTE.yellow, PALETTE.red, 3);
     this.drawDivider(renderer, 62);
-    this.drawPlaque(renderer, 40, 66, 176, 34);
+    this.drawPlaque(renderer, centerX - 88, 66, 176, 34);
     renderer.drawText("MEDIEVAL ACTION ARCADE", renderer.width / 2, 70, PALETTE.lightGray, { align: "center" });
     renderer.drawText(`RECORD ${String(data.bestScore).padStart(6, "0")}`, renderer.width / 2, 88, PALETTE.cyan, { align: "center" });
-    this.drawPlaque(renderer, 56, 108, 144, 40);
+    this.drawPlaque(renderer, centerX - 72, 108, 144, 40);
     this.menus.title?.render(renderer, renderer.width / 2, 116);
     renderer.drawText("W/S: SCEGLI   INVIO: CONFERMA", renderer.width / 2, 216, PALETTE.gray, { align: "center" });
   }
@@ -125,9 +126,11 @@ export class ScreenManager {
     renderer.clear(PALETTE.darkBlue);
     this.drawShadowedText(renderer, "CONTROLLI", renderer.width / 2, 14, PALETTE.yellow, PALETTE.red, 2);
     this.drawDivider(renderer, 36);
+    // la tabella (larga 256 px) è centrata nello schermo
+    const tableLeft = (renderer.width - 256) / 2;
     CONTROLS_ROWS.forEach((row, rowIndex) => {
       const rowY = 48 + rowIndex * 20;
-      let cursorX = 14;
+      let cursorX = tableLeft + 14;
       row.keyGroups.forEach((group, groupIndex) => {
         if (groupIndex > 0) {
           renderer.drawText("O", cursorX + 2, rowY + 2, PALETTE.gray);
@@ -137,7 +140,7 @@ export class ScreenManager {
           cursorX += this.drawKeyCap(renderer, keyLabel, cursorX, rowY) + 3;
         });
       });
-      renderer.drawText(row.description, 142, rowY + 2, PALETTE.white);
+      renderer.drawText(row.description, tableLeft + 142, rowY + 2, PALETTE.white);
     });
     renderer.drawText("COMBO: SPAZIO X3 DI SEGUITO", renderer.width / 2, 176, PALETTE.orange, { align: "center" });
     renderer.drawText("TIENI PREMUTO SALTA: SALTO PIU' ALTO", renderer.width / 2, 188, PALETTE.lightGray, { align: "center" });
@@ -145,10 +148,11 @@ export class ScreenManager {
   }
 
   private renderPause(renderer: Renderer): void {
+    const boxX = renderer.width / 2 - 72;
     renderer.drawDitherOverlay();
-    renderer.fillRect(56, 76, 144, 88, PALETTE.black);
-    renderer.strokeRect(56, 76, 144, 88, PALETTE.lightGray);
-    renderer.strokeRect(58, 78, 140, 84, PALETTE.gray);
+    renderer.fillRect(boxX, 76, 144, 88, PALETTE.black);
+    renderer.strokeRect(boxX, 76, 144, 88, PALETTE.lightGray);
+    renderer.strokeRect(boxX + 2, 78, 140, 84, PALETTE.gray);
     this.drawShadowedText(renderer, "PAUSA", renderer.width / 2, 88, PALETTE.yellow, PALETTE.red, 2);
     this.menus.paused?.render(renderer, renderer.width / 2, 118);
     renderer.drawText("ESC: RIPRENDI", renderer.width / 2, 148, PALETTE.gray, { align: "center" });
@@ -164,10 +168,11 @@ export class ScreenManager {
 
   private renderVictory(renderer: Renderer, data: ScreenData): void {
     this.backgroundRenderer.render(renderer, "castle", this.animationTimeSeconds * 20, this.animationTimeSeconds);
+    const boxX = renderer.width / 2 - 96;
     renderer.fillRect(0, 200, renderer.width, 40, PALETTE.black);
-    renderer.fillRect(32, 28, 192, 180, PALETTE.black);
-    renderer.strokeRect(32, 28, 192, 180, PALETTE.lightGray);
-    renderer.strokeRect(34, 30, 188, 176, PALETTE.gray);
+    renderer.fillRect(boxX, 28, 192, 180, PALETTE.black);
+    renderer.strokeRect(boxX, 28, 192, 180, PALETTE.lightGray);
+    renderer.strokeRect(boxX + 2, 30, 188, 176, PALETTE.gray);
     this.drawShadowedText(renderer, "VITTORIA!", renderer.width / 2, 42, PALETTE.yellow, PALETTE.orange, 3);
     renderer.drawText("L'OMBRA E' SCONFITTA.", renderer.width / 2, 74, PALETTE.white, { align: "center" });
     renderer.drawText("IL REGNO E' SALVO!", renderer.width / 2, 86, PALETTE.white, { align: "center" });
@@ -199,8 +204,7 @@ export class ScreenManager {
     shadowColor: string,
     scale: number
   ): void {
-    renderer.drawText(text, centerX + scale, y + scale, shadowColor, { scale, align: "center" });
-    renderer.drawText(text, centerX, y, color, { scale, align: "center" });
+    renderer.drawText(text, centerX, y, color, { scale, align: "center", shadowColor });
   }
 
   /** Riquadro scuro con bordo, per rendere leggibile il testo sopra lo sfondo. */
