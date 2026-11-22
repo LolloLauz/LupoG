@@ -12,6 +12,12 @@ export const CONTROLS_CONFIG: Record<GameAction, string[]> = {
   attack: ["Space"],
   heavyAttack: ["KeyJ"],
   dodge: ["KeyK"],
+  crouch: ["KeyS", "ArrowDown"],
+  pickUp: ["KeyE"],
+  bagSlot1: ["Digit1", "Numpad1"],
+  bagSlot2: ["Digit2", "Numpad2"],
+  bagSlot3: ["Digit3", "Numpad3"],
+  bagSlot4: ["Digit4", "Numpad4"],
   pause: ["Escape"],
   confirm: ["Enter"],
   menuUp: ["KeyW", "ArrowUp"],
@@ -23,6 +29,20 @@ export const CONTROLS_CONFIG: Record<GameAction, string[]> = {
  * In pausa e nei menu i comandi di gioco (salto, attacco...) sono bloccati.
  */
 export const INPUT_CONTEXT_ACTIONS: Record<InputContext, GameAction[]> = {
-  gameplay: ["moveLeft", "moveRight", "jump", "attack", "heavyAttack", "dodge", "pause"],
+  gameplay: [
+    "moveLeft",
+    "moveRight",
+    "jump",
+    "attack",
+    "heavyAttack",
+    "dodge",
+    "crouch",
+    "pickUp",
+    "bagSlot1",
+    "bagSlot2",
+    "bagSlot3",
+    "bagSlot4",
+    "pause",
+  ],
   menu: ["menuUp", "menuDown", "confirm", "pause"],
 };

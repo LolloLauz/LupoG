@@ -52,17 +52,25 @@ const THEME_SWATCHES: Record<ThemeId, [string, string]> = {
 };
 
 /** Riga della schermata dei controlli: tasti (come tasti disegnati) e descrizione. */
-interface ControlsRow {
+/** Righe della tabella dei controlli: prima riga e passo (i tasti sono alti 14 px). */
+export const CONTROLS_TABLE = { firstRowY: 42, rowStep: 16 } as const;
+/** Righe di testo sotto la tabella dei controlli (combo, picchiata, salto). */
+export const CONTROLS_NOTES_Y = [190, 201, 212] as const;
+
+export interface ControlsRow {
   keyGroups: string[][];
   description: string;
 }
 
-const CONTROLS_ROWS: ControlsRow[] = [
+export const CONTROLS_ROWS: ControlsRow[] = [
   { keyGroups: [["A", "D"], ["<", ">"]], description: "MUOVI" },
   { keyGroups: [["W"], ["^"]], description: "SALTA" },
   { keyGroups: [["SPAZIO"]], description: "ATTACCO" },
   { keyGroups: [["J"]], description: "ATTACCO PESANTE" },
   { keyGroups: [["K"]], description: "SCHIVATA" },
+  { keyGroups: [["S"], ["↓"]], description: "ABBASSATI" },
+  { keyGroups: [["E"]], description: "PRENDI ARMA O POZIONE" },
+  { keyGroups: [["1", "2", "3", "4"]], description: "BORSA: USA IL POSTO" },
   { keyGroups: [["ESC"]], description: "PAUSA" },
 ];
 
@@ -238,7 +246,7 @@ export class ScreenManager {
     // la tabella (larga 256 px) è centrata nello schermo
     const tableLeft = (renderer.width - 256) / 2;
     CONTROLS_ROWS.forEach((row, rowIndex) => {
-      const rowY = 48 + rowIndex * 20;
+      const rowY = CONTROLS_TABLE.firstRowY + rowIndex * CONTROLS_TABLE.rowStep;
       let cursorX = tableLeft + 14;
       row.keyGroups.forEach((group, groupIndex) => {
         if (groupIndex > 0) {
@@ -251,9 +259,10 @@ export class ScreenManager {
       });
       renderer.drawText(row.description, tableLeft + 142, rowY + 3, PALETTE.white, { shadowColor: PALETTE.black });
     });
-    renderer.drawText("COMBO: SPAZIO x3 di seguito", renderer.width / 2, 176, PALETTE.orange, { align: "center", shadowColor: PALETTE.wine });
-    renderer.drawText("Tieni premuto SALTA: salto più alto", renderer.width / 2, 189, PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
-    renderer.drawText("INVIO: indietro", renderer.width / 2, 220, PALETTE.gray, { align: "center" });
+    renderer.drawText("COMBO: SPAZIO x3 o SPAZIO, J (secondo l'arma)", renderer.width / 2, CONTROLS_NOTES_Y[0], PALETTE.orange, { align: "center", shadowColor: PALETTE.wine });
+    renderer.drawText("In aria: J = colpo in picchiata (rimbalza)", renderer.width / 2, CONTROLS_NOTES_Y[1], PALETTE.orange, { align: "center", shadowColor: PALETTE.wine });
+    renderer.drawText("Tieni premuto SALTA: salto più alto", renderer.width / 2, CONTROLS_NOTES_Y[2], PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
+    renderer.drawText("INVIO: indietro", renderer.width / 2, 225, PALETTE.gray, { align: "center" });
   }
 
   private renderPause(renderer: Renderer): void {

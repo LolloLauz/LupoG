@@ -93,8 +93,10 @@ b=new Boss(BOSS_CONFIG,1000,160,()=>0.9);b.receiveHit(5,'right');t('colpito da d
 const {ItemManager}=await load('systems/ItemManager');
 const im=new ItemManager();const sm=new ScoreManager();const pp=mkp(100);pp.takeDamage(50,0);
 im.loadItems([{type:'healthPotion',position:{x:102,y:190}},{type:'scoreCoin',position:{x:104,y:190}},{type:'collectible',position:{x:106,y:190}},{type:'scoreCoin',position:{x:500,y:190}}]);
-const n=im.collectItems(pp,sm).length;t('raccolti 3 oggetti vicini, 1 lontano resta',n===3&&im.remainingItemCount===1);
-t('pozione +30 (50->80), moneta +50, gemma +200',pp.currentHealth===80&&sm.currentScore===250&&sm.collectiblesFound===1,`${pp.currentHealth} ${sm.currentScore}`);
+const n=im.collectItems(pp,sm).length;t('toccando si raccolgono moneta e gemma vicine; la pozione (da borsa) e la moneta lontana restano',n===2&&im.remainingItemCount===2);
+t('moneta +50, gemma +200; la pozione toccata non cura (si prende con E)',pp.currentHealth===50&&sm.currentScore===250&&sm.collectiblesFound===1,`${pp.currentHealth} ${sm.currentScore}`);
+const bagItem=im.findReachableBagItem(pp);t('la pozione toccata è l\'oggetto da borsa raggiungibile',bagItem!==null&&bagItem.definition.id==='healthPotion');
+im.removeItem(bagItem);t('raccolta nella borsa, la pozione sparisce dal livello',im.remainingItemCount===1&&im.findReachableBagItem(pp)===null);
 const pp2=mkp(100);pp2.heal(500);t('cura non supera il massimo',pp2.currentHealth===100);
 t('oggetti non raccolti due volte',im.collectItems(pp,sm).length===0);
 // ---------- DANNO AMBIENTALE ----------

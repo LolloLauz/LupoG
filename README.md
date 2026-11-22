@@ -7,7 +7,7 @@ Provato solo in Chromium (vedi `documentation/TESTING.md`).
 ## Giocare
 Apri **`dist/index.html`** con un browser moderno (doppio clic). Non serve installare nulla.
 
-Controlli: **A/D** o frecce per muoversi · **W**/↑ salto · **Spazio** attacco (×3 = combo) · **J** attacco pesante · **K** schivata · **Esc** pausa · **Invio** conferma.
+Controlli: **A/D** o frecce per muoversi · **W**/↑ salto · **Spazio** attacco (×3 = combo; Spazio, J = combo mista; J in aria = picchiata) · **J** attacco pesante · **K** schivata · **S** accovacciati · **E** prendi · **1-4** borsa · **Esc** pausa · **Invio** conferma.
 Per ingrandire il gioco usa il pieno schermo del browser (F11).
 
 ## Sviluppare
@@ -22,7 +22,7 @@ npm run dev
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | build distribuibile in `dist/` |
 | `npm run preview` | anteprima della build |
-| `npm test` | 513 test unitari (meno di 1 secondo) |
+| `npm test` | 678 test unitari (meno di 1 secondo) |
 | `npm run test:browser` | 165 test nel browser (richiede Playwright, vedi `TESTING.md`) |
 | `npm run balance` | simulatore di bilanciamento |
 | `npm run verify-docs` | verifica gli esempi del manuale del codice |

@@ -2,15 +2,21 @@ import type { AttackDefinition, ComboDefinition } from "../types/EntityTypes";
 
 /**
  * Sceglie quale attacco eseguire in base alla sequenza di input premuti.
- * Le combo sono statiche (vedi COMBO_DEFINITIONS): ogni input fa avanzare
+ * Le combo sono statiche (vedi COMBO_DEFINITIONS e WEAPON_CONFIG): ogni input fa avanzare
  * la combo corrente se continua una sequenza valida, altrimenti la sequenza
  * riparte da questo input. Gli input senza combo usano l'attacco predefinito.
+ * Le sequenze possono mescolare attacco leggero e pesante e ramificarsi: dopo "Spazio, Spazio"
+ * il terzo tasto sceglie la combo. Combo con lo stesso inizio devono usare gli stessi attacchi
+ * per quell'inizio (lo verificano i test). Quando l'ultimo colpo di una combo parte, la combo
+ * risulta completata (drainCompletedCombo), anche se una combo più lunga può ancora continuarla.
  */
 export class ComboManager {
   private inputHistory: string[] = [];
   private activeCombo: ComboDefinition | null = null;
   /** Tempo rimasto (ms) per continuare la combo; null = nessun conto alla rovescia. */
   private windowRemainingMs: number | null = null;
+  /** Combo appena completata (da mostrare), finché qualcuno non la preleva. */
+  private completedCombo: ComboDefinition | null = null;
 
   constructor(
     private readonly combos: ComboDefinition[],
@@ -38,14 +44,21 @@ export class ComboManager {
     return this.getAttackById(this.defaultAttackByInput[inputAction]);
   }
 
-  /** Da chiamare quando l'attacco finisce: parte la finestra per il colpo successivo. */
+  /** Da chiamare quando l'attacco finisce: se una combo può continuare, parte la finestra per il colpo successivo. */
   public onAttackFinished(): void {
-    const combo = this.activeCombo;
-    if (combo !== null && this.inputHistory.length < combo.inputSequence.length) {
-      this.windowRemainingMs = combo.comboWindowMs;
+    const continuation = this.findContinuation(this.inputHistory);
+    if (this.activeCombo !== null && continuation !== null) {
+      this.windowRemainingMs = continuation.comboWindowMs;
     } else {
       this.reset();
     }
+  }
+
+  /** La combo completata dall'ultimo colpo partito (una volta sola), oppure null. */
+  public drainCompletedCombo(): ComboDefinition | null {
+    const combo = this.completedCombo;
+    this.completedCombo = null;
+    return combo;
   }
 
   public update(deltaTimeMs: number): void {
@@ -59,23 +72,35 @@ export class ComboManager {
   }
 
   public reset(): void {
+    this.completedCombo = null;
     this.inputHistory = [];
     this.activeCombo = null;
     this.windowRemainingMs = null;
   }
 
   private tryMatch(candidateHistory: string[]): AttackDefinition | null {
-    const matchingCombo = this.combos.find(
-      (combo) =>
-        candidateHistory.length <= combo.inputSequence.length &&
-        candidateHistory.every((input, index) => combo.inputSequence[index] === input)
-    );
-    if (matchingCombo === undefined) {
+    const matchingCombos = this.combos.filter((combo) => ComboManager.startsWith(combo.inputSequence, candidateHistory));
+    if (matchingCombos.length === 0) {
       return null;
     }
+    // a parità di inizio si preferisce la combo che finisce qui (per sapere che è completata)
+    const finishedCombo = matchingCombos.find((combo) => combo.inputSequence.length === candidateHistory.length) ?? null;
+    const matchingCombo = finishedCombo ?? matchingCombos[0]!;
     this.inputHistory = candidateHistory;
     this.activeCombo = matchingCombo;
+    if (finishedCombo !== null && candidateHistory.length > 1) {
+      this.completedCombo = finishedCombo;
+    }
     return this.getAttackById(matchingCombo.attackIds[candidateHistory.length - 1]);
+  }
+
+  /** Una combo più lunga della sequenza che la continua, oppure null. */
+  private findContinuation(history: string[]): ComboDefinition | null {
+    return this.combos.find((combo) => combo.inputSequence.length > history.length && ComboManager.startsWith(combo.inputSequence, history)) ?? null;
+  }
+
+  private static startsWith(sequence: readonly string[], prefix: readonly string[]): boolean {
+    return prefix.length <= sequence.length && prefix.every((input, index) => sequence[index] === input);
   }
 
   private getAttackById(attackId: string | undefined): AttackDefinition {

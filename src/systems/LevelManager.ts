@@ -135,7 +135,11 @@ export class LevelManager {
   /** Crea i nemici del livello corrente secondo le posizioni di generazione. */
   public createEnemies(difficulty: DifficultyId = DEFAULT_DIFFICULTY): Enemy[] {
     return this.level.enemies.map(
-      (spawn) => new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y, difficulty)
+      (spawn) =>
+        new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y, difficulty, {
+          elite: spawn.elite,
+          weaponDrop: spawn.weaponDrop,
+        })
     );
   }
 

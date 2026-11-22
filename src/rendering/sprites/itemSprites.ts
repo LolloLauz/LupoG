@@ -139,7 +139,50 @@ const REGENERATION_ROWS = [
   "...kk...",
 ];
 
+/** Forziere 16x12 (Fase 1): legno con fasce di ferro e serratura d'oro; aperto, il coperchio è sollevato. */
+const CHEST_COLORS: Record<string, string> = {
+  k: PALETTE.black,
+  e: PALETTE.earth,
+  l: PALETTE.wood,
+  d: PALETTE.slate,
+  g: PALETTE.gray,
+  n: PALETTE.gold,
+  y: PALETTE.goldLight,
+};
+
+const CHEST_CLOSED_ROWS = [
+  "................",
+  "..kkkkkkkkkkkk..",
+  ".kllllllllllllk.",
+  "kgllldgllgdlllgk",
+  "kglllldggdllllgk",
+  "kkkkkkkynkkkkkkk",
+  "kglllllyylllllgk",
+  "kglllllnnlllllgk",
+  "kgeeeeeeeeeeeegk",
+  "kgllldgllgdlllgk",
+  "kgeeeeeeeeeeeegk",
+  "kkkkkkkkkkkkkkkk",
+];
+
+const CHEST_OPEN_ROWS = [
+  "..kkkkkkkkkkkk..",
+  ".kllllllllllllk.",
+  "kglldglllgdlllgk",
+  "kkkkkkkkkkkkkkkk",
+  "k..............k",
+  "kkkkkkkkkkkkkkkk",
+  "kglllllllllllllk",
+  "kglllllnnlllllgk",
+  "kgeeeeeeeeeeeegk",
+  "kgllldgllgdlllgk",
+  "kgeeeeeeeeeeeegk",
+  "kkkkkkkkkkkkkkkk",
+];
+
 export function registerItemSprites(spriteManager: SpriteManager): void {
+  spriteManager.registerSprite("chestClosed", CHEST_CLOSED_ROWS, CHEST_COLORS);
+  spriteManager.registerSprite("chestOpen", CHEST_OPEN_ROWS, CHEST_COLORS);
   spriteManager.registerSprite("itemBerserk", BERSERK_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemSpeed", SPEED_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemShield", SHIELD_ROWS, POWER_UP_COLORS);

@@ -10,6 +10,7 @@ export type PlayerState =
   | "attack"
   | "hurt"
   | "dodge"
+  | "crouch"
   | "dead";
 
 /**
@@ -213,11 +214,25 @@ export interface AttackDefinition {
   /** Area colpita, relativa al personaggio che guarda a destra. */
   hitbox: Rectangle;
   animation: string;
+  /** Rompe la guardia (ascia): interrompe anche gli attacchi nemici già avviati. */
+  breaksGuard?: boolean;
+  /**
+   * Colpo in picchiata (solo in aria): il cavaliere scende a fallSpeed px/s finché tocca terra
+   * (fine dell'attacco, poi cooldownMs di recupero) o colpisce qualcosa (rimbalza a bounceSpeed px/s).
+   */
+  plunge?: { fallSpeed: number; bounceSpeed: number };
+  /** Schiaccia le corazze (mazza): danno pieno contro i nemici corazzati, che restano storditi. */
+  crushesArmor?: boolean;
 }
 
-/** Sequenza statica di attacchi concatenati. */
+/** Proprietà del colpo che il bersaglio deve conoscere (vedi Damageable.receiveHit). */
+export type HitProperties = Pick<AttackDefinition, "breaksGuard" | "crushesArmor">;
+
+/** Sequenza statica di attacchi concatenati (anche mista: leggero e pesante). */
 export interface ComboDefinition {
   id: string;
+  /** Nome mostrato quando la combo viene completata (facoltativo). */
+  name?: string;
   /** Azioni da premere in sequenza, es. ["attack","attack","attack"]. */
   inputSequence: string[];
   /** Id degli attacchi eseguiti, nello stesso ordine. */
@@ -226,12 +241,45 @@ export interface ComboDefinition {
   comboWindowMs: number;
 }
 
+/** Armi del giocatore (Fase 1 del piano espansioni: armi corpo a corpo). */
+export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace";
+
+/** Input che fanno partire un attacco. */
+export type AttackInputAction = "attack" | "heavyAttack";
+
+/**
+ * Un'arma: i propri attacchi, le proprie combo e l'attacco predefinito per ogni input.
+ * L'aspetto viene dalle animazioni indicate negli attacchi (e quindi dai loro sprite).
+ */
+export interface WeaponDefinition {
+  id: WeaponId;
+  /** Nome mostrato al giocatore. */
+  name: string;
+  /** Suffisso degli sprite del cavaliere con quest'arma in mano ("" per la spada, vedi knightSprites.ts). */
+  spriteSuffix: string;
+  /** Sprite 16x16 dell'arma (oggetto a terra e HUD). */
+  iconSpriteId: string;
+  /** Attacchi dell'arma, per id (gli id devono essere unici fra tutte le armi). */
+  attacks: Record<string, AttackDefinition>;
+  /** Combo dell'arma: usano solo i suoi attacchi. */
+  combos: ComboDefinition[];
+  /** Attacco eseguito quando un input non continua nessuna combo. */
+  defaultAttackByInput: Record<AttackInputAction, string>;
+  /**
+   * Attacchi in aria (categoria separata, Fase 3): combo e attacco predefinito per input, con id presi
+   * da attacks. Se manca, in aria valgono combo e attacchi di terra.
+   */
+  air?: { combos: ComboDefinition[]; defaultAttackByInput: Record<AttackInputAction, string> };
+  /** Moltiplicatore della velocità di camminata con quest'arma in mano (1 = normale). */
+  movementSpeedMultiplier: number;
+}
+
 /** Qualsiasi cosa possa essere colpita dagli attacchi (nemici, boss, bersagli di prova). */
 export interface Damageable {
   readonly isAlive: boolean;
   getBounds(): Rectangle;
   /** Chiamata dal CombatSystem quando l'attacco va a segno. */
-  receiveHit(damage: number, hitDirection: FacingDirection): void;
+  receiveHit(damage: number, hitDirection: FacingDirection, hit?: HitProperties): void;
 }
 
 /** Tipi di attacco di un boss. */
@@ -312,6 +360,8 @@ export interface BossPhaseDefinition {
 export interface BossDefinition {
   id: string;
   name: string;
+  /** Arma lasciata come trofeo: compare all'inizio del livello successivo. */
+  weaponReward?: WeaponId;
   maxHealth: number;
   movementSpeed: number;
   /** Distanza orizzontale (px) entro cui il boss si risveglia. */

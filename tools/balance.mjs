@@ -51,6 +51,8 @@ const { HazardSystem } = await loadModule("systems/HazardSystem");
 const { LEVEL_CONFIG } = await loadModule("config/levelConfig");
 const { ENEMY_CONFIG, BOSS_CONFIG, BOSS_CATALOG } = await loadModule("config/enemyConfig");
 const { GAME_CONFIG } = await loadModule("config/gameConfig");
+const { Inventory } = await loadModule("systems/Inventory");
+const { ITEM_CONFIG } = await loadModule("config/itemConfig");
 
 const collisionSystem = new CollisionSystem();
 const combatSystem = new CombatSystem();
@@ -78,7 +80,7 @@ function createRandom(seed) {
  * stopWhenClear: termina quando tutti i nemici (e il boss) sono sconfitti.
  */
 function playLevel(levelId, options = {}) {
-  const { dodgeSkill = 0, seed = 1, startHealth = 100, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
+  const { dodgeSkill = 0, seed = 1, startHealth = 100, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
   const level = LEVEL_CONFIG.find((candidate) => candidate.id === levelId);
   const random = createRandom(seed);
   // come nel gioco: piattaforme (anche mobili e cancello dell'arena), pericoli, proiettili
@@ -89,7 +91,14 @@ function playLevel(levelId, options = {}) {
   let platforms = levelManager.platforms;
   const player = new Player(level.playerStart.x, level.playerStart.y);
   player.currentHealth = startHealth;
-  const enemies = (enemyOverride ?? level.enemies).map((spawn) => new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y));
+  // come nel gioco: nemici d'élite compresi
+  const enemies = (enemyOverride ?? level.enemies).map(
+    (spawn) => new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y, undefined, { elite: spawn.elite, weaponDrop: spawn.weaponDrop })
+  );
+  // la borsa: le pozioni si raccolgono (E) e si bevono quando la salute scende (il bot usa solo la spada)
+  const inventory = new Inventory();
+  for (let index = 0; index < startPotions; index++) inventory.addPotion();
+  const potionHeal = ITEM_CONFIG.healthPotion.healAmount;
   const bossDefinition = level.hasBoss ? BOSS_CATALOG[level.bossId ?? BOSS_CONFIG.id] : null;
   const boss = bossDefinition !== null ? new Boss(bossDefinition, level.bossSpawn.x, level.bossSpawn.y, createRandom(seed + 999)) : null;
   const itemManager = new ItemManager();
@@ -192,10 +201,19 @@ function playLevel(levelId, options = {}) {
       for (const split of enemy.drainSplitRequests()) children.push(new Enemy(ENEMY_CONFIG[split.enemyType], split.position.x, split.position.y));
     }
     enemies.push(...children);
+    // corpi solidi, come GameEngine.separatePlayerFromBodies
+    const separateBodies = () => {
+      if (player.isDead || player.isDodging) return;
+      for (const body of [...enemies.filter((enemy) => enemy.isAlive && !enemy.isFlying), ...(boss !== null && boss.isAlive ? [boss] : [])]) {
+        collisionSystem.separateHorizontally(player, body, platforms, level.width);
+      }
+    };
+    separateBodies();
     combatSystem.processEnemyAttacks(enemies, player);
     if (boss !== null) {
       const minions = enemies.filter((enemy) => enemy.isSummoned && enemy.isAlive).length;
       boss.update(FRAME, player, collisionSystem, platforms, level.width, minions);
+      separateBodies();
       combatSystem.processBossAttack(boss, player);
       boss.drainProjectileLaunches().forEach((launch) => projectileSystem.spawn(launch));
       for (const summon of boss.drainSummonRequests()) {
@@ -207,6 +225,12 @@ function playLevel(levelId, options = {}) {
     projectileSystem.update(FRAME, player, platforms, level.width, level.height);
     itemManager.update(FRAME);
     itemManager.collectItems(player, scoreManager);
+    const potion = itemManager.findReachableBagItem(player);
+    if (potion !== null && inventory.addPotion()) itemManager.removeItem(potion);
+    if (!player.isDead && player.currentHealth <= player.maxHealth - potionHeal) {
+      const potionSlot = inventory.bagSlots.findIndex((slot) => slot !== null && slot.kind === "potion");
+      if (potionSlot >= 0 && inventory.consumePotion(potionSlot)) player.heal(potionHeal);
+    }
     for (let index = enemies.length - 1; index >= 0; index--) {
       if (enemies[index].isRemovable) enemies.splice(index, 1);
     }
@@ -216,24 +240,27 @@ function playLevel(levelId, options = {}) {
       healthLost += GAME_CONFIG.fallDamage;
       player.respawnAt({ x: Math.max(24, player.positionX - 60), y: 150 });
     }
-    const result = (outcome) => ({ outcome, time, healthLost, health: player.currentHealth });
+    const result = (outcome) => ({ outcome, time, healthLost, health: player.currentHealth, potions: inventory.potionCount });
     if (player.isReadyToRespawn) return result("dead");
     if (stopWhenClear && enemies.every((e) => !e.isAlive) && (boss === null || !boss.isAlive)) return result("win");
     if (!stopWhenClear && goalX !== null && player.positionX + player.width / 2 >= goalX) return result("win");
     if (boss !== null && boss.isDefeated) return result("win");
   }
-  return { outcome: "timeout", time: maxSeconds, healthLost, health: player.currentHealth };
+  return { outcome: "timeout", time: maxSeconds, healthLost, health: player.currentHealth, potions: inventory.potionCount };
 }
 
 /** Partita completa: tutti i livelli di fila, salute che si porta dietro, vite limitate. */
 function playFullRun(dodgeSkill, seed) {
   let lives = GAME_CONFIG.startingLives;
   let health = 100;
+  // pozioni nella borsa: passano da un livello all'altro; ricominciando un livello tornano a quelle di inizio livello
+  let potions = 0;
   const deathsPerLevel = LEVEL_CONFIG.map(() => 0);
   for (const level of LEVEL_CONFIG) {
     for (;;) {
-      const result = playLevel(level.id, { dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health });
+      const result = playLevel(level.id, { dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions });
       if (result.outcome === "win") {
+        potions = result.potions;
         const hasNextLevel = LEVEL_CONFIG.some((other) => other.id === level.id + 1);
         health = Math.min(100, result.health + (hasNextLevel ? GAME_CONFIG.levelCompleteHeal : 0));
         break;

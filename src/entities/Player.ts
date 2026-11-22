@@ -1,20 +1,16 @@
 import { getAttackWorldHitbox } from "../combat/AttackDefinition";
 import { ComboManager } from "../combat/ComboManager";
 import { PlayerModifiers } from "../combat/PlayerModifiers";
-import { KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
+import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
 import { GAME_CONFIG } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
-import {
-  ATTACK_DEFINITIONS,
-  COMBO_DEFINITIONS,
-  DEFAULT_ATTACK_BY_INPUT,
-  PLAYER_CONFIG,
-} from "../config/playerConfig";
+import { PLAYER_CONFIG } from "../config/playerConfig";
+import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
-import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { AttackDefinition, Damageable, PlayerEnvironment, PlayerState, PowerUpDefinition } from "../types/EntityTypes";
+import { CollisionSystem } from "../systems/CollisionSystem";
+import type { AttackDefinition, Damageable, PlayerEnvironment, PlayerState, PowerUpDefinition, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -48,11 +44,17 @@ export class Player extends GameObject {
   public readonly maxHealth: number = PLAYER_CONFIG.maxHealth;
 
   private readonly animationPlayer = new AnimationPlayer(PLAYER_ANIMATIONS, "idle");
-  private readonly comboManager = new ComboManager(
-    COMBO_DEFINITIONS,
-    ATTACK_DEFINITIONS,
-    DEFAULT_ATTACK_BY_INPUT
-  );
+  /** Arma in mano: decide attacchi e combo (vedi equipWeapon). */
+  private weapon: WeaponDefinition = WEAPON_CONFIG[DEFAULT_WEAPON_ID];
+  /** Combo a terra e in aria (categorie separate): un attacco usa quella di dove si trova il cavaliere. */
+  private groundComboManager = Player.createComboManager(this.weapon, "ground");
+  private airComboManager = Player.createComboManager(this.weapon, "air");
+  /** Il gestore usato dall'ultimo attacco: cambiando categoria l'altro riparte da capo. */
+  private comboManager: ComboManager = this.groundComboManager;
+  /** Nome dell'ultima combo completata, finché il motore non lo preleva (per mostrarlo). */
+  private completedComboName: string | null = null;
+  /** Vero per un frame dopo che un colpo in picchiata ha toccato terra (polvere, tremolio). */
+  private hasPendingPlungeLanding = false;
 
   // --- attacco ---
   private currentAttack: AttackDefinition | null = null;
@@ -88,6 +90,16 @@ export class Player extends GameObject {
     return this.animationPlayer.animationName;
   }
 
+  /** Vero quando il cavaliere è accovacciato (hitbox più bassa, i piedi restano a terra). */
+  public get isCrouching(): boolean {
+    return this.height < PLAYER_CONFIG.hitboxHeight;
+  }
+
+  /** Vero durante la schivata: l'unico momento in cui si attraversano i nemici. */
+  public get isDodging(): boolean {
+    return this.dodgeRemainingMs > 0;
+  }
+
   public get isDead(): boolean {
     return this.currentHealth <= 0;
   }
@@ -105,6 +117,54 @@ export class Player extends GameObject {
   /** Attacco in corso (anche se non ancora attivo), oppure null. */
   public get activeAttack(): AttackDefinition | null {
     return this.currentAttack;
+  }
+
+  public get equippedWeapon(): WeaponDefinition {
+    return this.weapon;
+  }
+
+  /** Cambia arma (di solito una voce di WEAPON_CONFIG): l'attacco in corso e la combo vengono annullati. */
+  public equipWeapon(weapon: WeaponDefinition): void {
+    if (this.weapon === weapon) {
+      return;
+    }
+    this.cancelAttack();
+    this.weapon = weapon;
+    this.groundComboManager = Player.createComboManager(weapon, "ground");
+    this.airComboManager = Player.createComboManager(weapon, "air");
+    this.comboManager = this.groundComboManager;
+  }
+
+  /** Nome della combo appena completata (una volta sola), oppure null. */
+  public drainCompletedComboName(): string | null {
+    const name = this.completedComboName;
+    this.completedComboName = null;
+    return name;
+  }
+
+  /** Vero una volta sola dopo che un colpo in picchiata ha toccato terra. */
+  public drainPlungeLanding(): boolean {
+    const hasLanded = this.hasPendingPlungeLanding;
+    this.hasPendingPlungeLanding = false;
+    return hasLanded;
+  }
+
+  /**
+   * Il colpo in corso ha preso un bersaglio. Se è un colpo in picchiata il cavaliere rimbalza verso
+   * l'alto e l'attacco finisce (si può subito colpire di nuovo in picchiata). Restituisce true se rimbalza.
+   */
+  public bounceOffTarget(): boolean {
+    const plunge = this.currentAttack?.plunge;
+    if (plunge === undefined || this.isOnGround) {
+      return false;
+    }
+    this.velocityY = -plunge.bounceSpeed;
+    this.currentAttack = null;
+    this.attackElapsedMs = 0;
+    this.attackCooldownRemainingMs = 0;
+    this.targetsHitByCurrentAttack.clear();
+    this.airComboManager.reset();
+    return true;
   }
 
   /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
@@ -151,6 +211,7 @@ export class Player extends GameObject {
   public respawnAt(position: Vector2): void {
     this.positionX = position.x;
     this.positionY = position.y;
+    this.height = PLAYER_CONFIG.hitboxHeight;
     this.velocityX = 0;
     this.velocityY = 0;
     this.facingDirection = "right";
@@ -228,12 +289,19 @@ export class Player extends GameObject {
     this.updateTimers(deltaTimeSeconds * 1000);
     this.lastDeltaTimeSeconds = deltaTimeSeconds;
 
+    this.updateCrouch(input, platforms);
     if (this.isDead) {
       this.velocityX = 0;
     } else if (this.hurtRemainingMs > 0) {
       // stordito: nessun controllo, il rinculo prosegue
     } else {
       this.handleInput(input);
+    }
+
+    // colpo in picchiata: si scende a velocità fissa (la gravità del frame si aggiunge, entro maxFallSpeed)
+    const plunge = this.currentAttack?.plunge;
+    if (plunge !== undefined && !this.isOnGround) {
+      this.velocityY = plunge.fallSpeed;
     }
 
     // Il rinculo non può spingere il giocatore giù da un bordo: se dietro di lui c'è il vuoto si ferma.
@@ -252,6 +320,9 @@ export class Player extends GameObject {
     if (this.hurtRemainingMs > 0 && this.isOnGround && this.velocityY === 0) {
       this.velocityX = 0; // il rinculo finisce toccando terra
     }
+    if (this.currentAttack?.plunge !== undefined && this.isOnGround) {
+      this.finishPlungeOnLanding();
+    }
     this.updateState();
     this.animationPlayer.play(this.getAnimationName());
     this.animationPlayer.update(deltaTimeSeconds);
@@ -269,13 +340,14 @@ export class Player extends GameObject {
     this.renderPowerUpAuras(renderer, cameraX, cameraY);
     // Lo sprite è più grande dell'hitbox (pennacchio, spada, scie): l'allineamento usa
     // la colonna d'ancoraggio registrata con lo sprite (vedi knightSprites.ts).
-    // Con il power-up del fuoco si usano le varianti con la lama incandescente.
+    // Con il power-up del fuoco si usano le varianti con la lama incandescente;
+    // attaccando da accovacciati, le varianti in cui il cavaliere resta basso.
     const fireSuffix = this.modifiers.has("fire") ? KNIGHT_FIRE_SUFFIX : "";
     spriteManager.drawSpriteAligned(
       renderer,
-      `${this.animationPlayer.currentFrameId}${fireSuffix}`,
+      `${this.getRenderedFrameId()}${fireSuffix}`,
       this.positionX - cameraX,
-      this.positionY + PLAYER_CONFIG.hitboxHeight - cameraY,
+      this.positionY + this.height - cameraY,
       PLAYER_CONFIG.hitboxWidth,
       this.facingDirection === "left"
     );
@@ -306,7 +378,8 @@ export class Player extends GameObject {
     this.invulnerabilityRemainingMs = Math.max(0, this.invulnerabilityRemainingMs - deltaTimeMs);
     this.attackCooldownRemainingMs = Math.max(0, this.attackCooldownRemainingMs - deltaTimeMs);
     this.dodgeCooldownRemainingMs = Math.max(0, this.dodgeCooldownRemainingMs - deltaTimeMs);
-    this.comboManager.update(deltaTimeMs);
+    this.groundComboManager.update(deltaTimeMs);
+    this.airComboManager.update(deltaTimeMs);
     // prima la cura del frame, poi la scadenza: così l'ultimo frame del power-up conta
     this.applyRegeneration(deltaTimeMs);
     this.modifiers.update(deltaTimeMs);
@@ -349,6 +422,39 @@ export class Player extends GameObject {
         this.comboManager.onAttackFinished();
       }
     }
+  }
+
+  /**
+   * Accovacciarsi: solo a terra, tenendo il tasto. La hitbox si abbassa e i piedi restano dove sono.
+   * Ci si rialza solo se non c'è una piattaforma solida sopra la testa (quelle a senso unico non contano).
+   */
+  private updateCrouch(input: InputSource, platforms: PlatformDefinition[]): void {
+    const canCrouch =
+      input.isHeld("crouch") &&
+      this.isOnGround &&
+      !this.isDead &&
+      this.hurtRemainingMs <= 0 &&
+      this.dodgeRemainingMs <= 0;
+    this.setCrouched(canCrouch, platforms);
+  }
+
+  private setCrouched(crouched: boolean, platforms: PlatformDefinition[]): void {
+    if (crouched === this.isCrouching) {
+      return;
+    }
+    const feetY = this.positionY + this.height;
+    const newHeight = crouched ? PLAYER_CONFIG.crouchHitboxHeight : PLAYER_CONFIG.hitboxHeight;
+    if (!crouched) {
+      const standingBounds = { x: this.positionX, y: feetY - newHeight, width: this.width, height: newHeight };
+      const isBlockedByCeiling = platforms.some(
+        (platform) => !platform.oneWay && CollisionSystem.intersects(standingBounds, platform)
+      );
+      if (isBlockedByCeiling) {
+        return;
+      }
+    }
+    this.height = newHeight;
+    this.positionY = feetY - newHeight;
   }
 
   private handleInput(input: InputSource): void {
@@ -420,8 +526,18 @@ export class Player extends GameObject {
     return Math.max(remainingMs, this.dodgeRemainingMs);
   }
 
+  /** Attacco a terra o in aria (categorie di combo separate: passando dall'una all'altra la combo riparte). */
   private startAttack(attackInput: GameAction): void {
-    const attack = this.comboManager.getNextAttack(attackInput);
+    const manager = this.isOnGround ? this.groundComboManager : this.airComboManager;
+    if (manager !== this.comboManager) {
+      this.comboManager.reset();
+      this.comboManager = manager;
+    }
+    const attack = manager.getNextAttack(attackInput);
+    const completedCombo = manager.drainCompletedCombo();
+    if (completedCombo?.name !== undefined) {
+      this.completedComboName = completedCombo.name;
+    }
     this.currentAttack = attack;
     this.attackElapsedMs = 0;
     this.targetsHitByCurrentAttack.clear();
@@ -434,7 +550,18 @@ export class Player extends GameObject {
     this.attackCooldownRemainingMs = 0;
     this.bufferedAttackInput = null;
     this.targetsHitByCurrentAttack.clear();
-    this.comboManager.reset();
+    this.groundComboManager.reset();
+    this.airComboManager.reset();
+  }
+
+  /** Il colpo in picchiata tocca terra: finisce, con il suo tempo di recupero. */
+  private finishPlungeOnLanding(): void {
+    this.attackCooldownRemainingMs = this.currentAttack?.cooldownMs ?? 0;
+    this.currentAttack = null;
+    this.attackElapsedMs = 0;
+    this.targetsHitByCurrentAttack.clear();
+    this.airComboManager.reset();
+    this.hasPendingPlungeLanding = true;
   }
 
   private canStartDodge(): boolean {
@@ -461,8 +588,15 @@ export class Player extends GameObject {
     if (input.isHeld("moveRight")) {
       direction += 1;
     }
+    // accovacciato non ci si sposta: ci si può solo girare
+    const crouchFactor = this.isCrouching ? 0 : 1;
     this.approachHorizontalVelocity(
-      direction * PLAYER_CONFIG.movementSpeed * this.environment.speedMultiplier * this.modifiers.getValue("movementSpeedMultiplier")
+      crouchFactor *
+        direction *
+        PLAYER_CONFIG.movementSpeed *
+        this.weapon.movementSpeedMultiplier *
+        this.environment.speedMultiplier *
+        this.modifiers.getValue("movementSpeedMultiplier")
     );
     // la direzione resta bloccata mentre si attacca
     if (direction !== 0 && this.currentAttack === null) {
@@ -529,6 +663,8 @@ export class Player extends GameObject {
       this.currentState = "dodge";
     } else if (this.currentAttack !== null) {
       this.currentState = "attack";
+    } else if (this.isCrouching && this.isOnGround) {
+      this.currentState = "crouch";
     } else if (!this.isOnGround) {
       this.currentState = this.velocityY < 0 ? "jump" : "fall";
     } else if (this.velocityX !== 0) {
@@ -536,6 +672,26 @@ export class Player extends GameObject {
     } else {
       this.currentState = "idle";
     }
+  }
+
+  /**
+   * Frame da disegnare: quello dell'animazione con il suffisso dell'arma in mano ("" per la spada);
+   * durante un attacco da accovacciati, la variante bassa dello sprite.
+   * Si guarda l'animazione in corso, non lo stato: un colpo subito cambia subito l'animazione
+   * (danno), mentre lo stato si aggiorna solo al frame successivo.
+   */
+  public getRenderedFrameId(): string {
+    const frameId = this.animationPlayer.currentFrameId;
+    const isCrouchedAttackFrame =
+      this.isCrouching && this.currentAttack !== null && this.animationPlayer.animationName === this.currentAttack.animation;
+    const crouchSuffix = isCrouchedAttackFrame ? KNIGHT_CROUCH_SUFFIX : "";
+    return `${frameId}${crouchSuffix}${this.weapon.spriteSuffix}`;
+  }
+
+  /** Gestore delle combo dell'arma per terra o aria (senza combo aeree, in aria valgono quelle di terra). */
+  private static createComboManager(weapon: WeaponDefinition, category: "ground" | "air"): ComboManager {
+    const comboSet = category === "air" && weapon.air !== undefined ? weapon.air : weapon;
+    return new ComboManager(comboSet.combos, weapon.attacks, comboSet.defaultAttackByInput);
   }
 
   private getAnimationName(): string {

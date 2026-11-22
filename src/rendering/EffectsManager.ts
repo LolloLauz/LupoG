@@ -1,3 +1,4 @@
+import { measureTextWidth } from "./BitmapFont";
 import { PALETTE } from "../config/gameConfig";
 import type { Renderer } from "./Renderer";
 
@@ -201,8 +202,11 @@ export class EffectsManager {
       const progress = 1 - popup.remainingMs / POPUP_DURATION_MS;
       const popupY = popup.y - cameraY - Math.round(progress * POPUP_RISE_PIXELS);
       // il bordo nero tiene leggibile il testo su qualsiasi sfondo
-      renderer.drawText(popup.text, popup.x - cameraX + 1, popupY + 1, PALETTE.black, { align: "center" });
-      renderer.drawText(popup.text, popup.x - cameraX, popupY, popup.color, { align: "center" });
+      // le scritte lunghe (nomi delle combo) restano dentro lo schermo anche vicino ai bordi
+      const halfWidth = Math.ceil(measureTextWidth(popup.text, 1) / 2);
+      const popupX = Math.min(Math.max(popup.x - cameraX, halfWidth + 1), renderer.width - halfWidth - 2);
+      renderer.drawText(popup.text, popupX + 1, popupY + 1, PALETTE.black, { align: "center" });
+      renderer.drawText(popup.text, popupX, popupY, popup.color, { align: "center" });
     }
   }
 

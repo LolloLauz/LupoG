@@ -187,11 +187,12 @@ export class Boss extends GameObject implements Damageable {
       return null;
     }
     if (attack.kind === "melee") {
-      const direction = this.facingDirection === "right" ? 1 : -1;
+      // dalla metà del corpo fino a range davanti: colpisce anche chi gli sta addosso
+      const halfWidth = this.width / 2;
       return {
-        x: direction > 0 ? this.positionX + this.width : this.positionX - attack.range,
+        x: this.facingDirection === "right" ? this.positionX + halfWidth : this.positionX - attack.range,
         y: this.positionY + this.height * 0.1,
-        width: attack.range,
+        width: halfWidth + attack.range,
         height: this.height * 0.8,
       };
     }

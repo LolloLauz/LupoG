@@ -5,7 +5,7 @@ import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { Damageable, EnemyDefinition, EnemyState, ProjectileLaunch, SummonRequest } from "../types/EntityTypes";
+import type { Damageable, EnemyDefinition, EnemyState, HitProperties, ProjectileLaunch, SummonRequest, WeaponId } from "../types/EntityTypes";
 import type { FacingDirection, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -24,8 +24,15 @@ const HIT_FLASH_MS = 100;
  *    e attacca in picchiata (il corpo ferisce durante la fase attiva); da morto cade;
  *  - balzo (definition.lunge): nella fase attiva scatta in avanti (ma non oltre il bordo di un abisso);
  *  - divisione (definition.splitInto): alla morte chiede di far comparire nemici più piccoli (drainSplitRequests);
- *  - corazza (definition.armor): i colpi deboli fanno solo una parte del danno.
+ *  - corazza (definition.armor): i colpi deboli fanno solo una parte del danno;
+ *  - d'élite (options.elite): più salute, danno e punti, alone dorato; può lasciare un'arma (weaponDrop).
  */
+export interface EnemyOptions {
+  elite?: boolean;
+  /** Arma lasciata a terra alla morte (la raccoglie il motore, vedi WeaponPickupManager). */
+  weaponDrop?: WeaponId;
+}
+
 export class Enemy extends GameObject implements Damageable {
   public currentState: EnemyState = "idle";
   public currentHealth: number;
@@ -39,6 +46,9 @@ export class Enemy extends GameObject implements Damageable {
   public patrolDirection: 1 | -1 = 1;
   /** Vero se sta inseguendo il giocatore (comportamento "chase"). */
   public isChasing = false;
+  public readonly isElite: boolean;
+  /** Arma che lascia morendo (null se nessuna). */
+  public readonly weaponDrop: WeaponId | null;
 
   private readonly animationPlayer: AnimationPlayer;
   private desiredDirection: -1 | 0 | 1 = 0;
@@ -58,18 +68,25 @@ export class Enemy extends GameObject implements Damageable {
   private hasSplit = false;
   /** Danno effettivamente subito con l'ultimo colpo (dopo la corazza). */
   private lastDamageTaken = 0;
+  /** Tempo per la pulsazione dell'alone d'élite. */
+  private eliteGlowElapsedMs = 0;
 
   constructor(
     public readonly definition: EnemyDefinition,
     startX: number,
     startY: number,
-    difficulty: DifficultyId = DEFAULT_DIFFICULTY
+    difficulty: DifficultyId = DEFAULT_DIFFICULTY,
+    options: EnemyOptions = {}
   ) {
     super(startX, startY, definition.hitbox.width, definition.hitbox.height);
     const difficultyConfig = DIFFICULTY_CONFIG[difficulty];
-    this.maxHealth = Math.round(definition.maxHealth * difficultyConfig.enemyHealthMultiplier);
+    this.isElite = options.elite === true;
+    this.weaponDrop = options.weaponDrop ?? null;
+    const eliteHealth = this.isElite ? ENEMY_AI_CONFIG.eliteHealthMultiplier : 1;
+    const eliteDamage = this.isElite ? ENEMY_AI_CONFIG.eliteDamageMultiplier : 1;
+    this.maxHealth = Math.round(definition.maxHealth * difficultyConfig.enemyHealthMultiplier * eliteHealth);
     this.currentHealth = this.maxHealth;
-    this.attackDamage = Math.round(definition.attackDamage * difficultyConfig.enemyDamageMultiplier);
+    this.attackDamage = Math.round(definition.attackDamage * difficultyConfig.enemyDamageMultiplier * eliteDamage);
     this.spawnPositionX = startX;
     this.spawnPositionY = startY;
     this.animationPlayer = new AnimationPlayer(ENEMY_ANIMATIONS[definition.id], "idle");
@@ -85,7 +102,7 @@ export class Enemy extends GameObject implements Damageable {
   }
 
   public get scoreReward(): number {
-    return this.definition.scoreReward;
+    return this.isElite ? this.definition.scoreReward * ENEMY_AI_CONFIG.eliteScoreMultiplier : this.definition.scoreReward;
   }
 
   /** Può decidere cosa fare: vivo, non stordito e non nel mezzo di un attacco. */
@@ -220,11 +237,13 @@ export class Enemy extends GameObject implements Damageable {
         height: this.height,
       };
     }
+    // dalla metà del corpo fino a attackRange davanti: colpisce anche chi gli sta addosso
     const range = this.definition.attackRange;
+    const halfWidth = this.width / 2;
     return {
-      x: this.facingDirection === "right" ? this.positionX + this.width : this.positionX - range,
+      x: this.facingDirection === "right" ? this.positionX + halfWidth : this.positionX - range,
       y: this.positionY + this.height * 0.2,
-      width: range,
+      width: halfWidth + range,
       height: this.height * 0.6,
     };
   }
@@ -234,21 +253,29 @@ export class Enemy extends GameObject implements Damageable {
     this.hasHitPlayerThisAttack = true;
   }
 
-  public receiveHit(damage: number, hitDirection: FacingDirection): void {
+  /**
+   * Colpo ricevuto. hit (facoltativo) porta le proprietà dell'arma: breaksGuard (ascia) interrompe
+   * anche un attacco già avviato; crushesArmor (mazza) ignora la corazza e stordisce il nemico corazzato.
+   */
+  public receiveHit(damage: number, hitDirection: FacingDirection, hit: HitProperties = {}): void {
     if (!this.isAlive) {
       return;
     }
     const armor = this.definition.armor;
+    const isArmorCrushed = armor !== undefined && hit.crushesArmor === true;
     const effectiveDamage =
-      armor !== undefined && damage < armor.breakDamage ? Math.max(1, Math.round(damage * armor.damageMultiplier)) : damage;
+      armor !== undefined && !isArmorCrushed && damage < armor.breakDamage ? Math.max(1, Math.round(damage * armor.damageMultiplier)) : damage;
     this.lastDamageTaken = effectiveDamage;
     this.currentHealth = Math.max(0, this.currentHealth - effectiveDamage);
     this.hitFlashRemainingMs = HIT_FLASH_MS;
-    // Un attacco già avviato (oltre la finestra di interruzione) prosegue: niente stordimento.
+    // Un attacco già avviato (oltre la finestra di interruzione) prosegue: niente stordimento,
+    // a meno che il colpo rompa la guardia o schiacci la corazza.
     const isUninterruptible =
       this.isAttackInProgress &&
       this.isAlive &&
-      this.attackElapsedMs >= this.definition.attackInterruptWindowMs;
+      this.attackElapsedMs >= this.definition.attackInterruptWindowMs &&
+      hit.breaksGuard !== true &&
+      !isArmorCrushed;
     if (isUninterruptible) {
       return;
     }
@@ -258,7 +285,9 @@ export class Enemy extends GameObject implements Damageable {
       this.velocityY = -this.definition.knockbackSpeed * 0.5;
     }
     if (this.isAlive) {
-      this.hurtRemainingMs = this.definition.hurtDurationMs;
+      this.hurtRemainingMs = isArmorCrushed
+        ? Math.max(this.definition.hurtDurationMs, ENEMY_AI_CONFIG.armorCrushStunMs)
+        : this.definition.hurtDurationMs;
       this.animationPlayer.restart("hurt");
     } else {
       this.hurtRemainingMs = 0;
@@ -309,6 +338,11 @@ export class Enemy extends GameObject implements Damageable {
 
   public render(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
     const screenX = this.positionX - cameraX;
+    if (this.isElite && this.isAlive) {
+      // alone dorato che pulsa: si riconosce un nemico d'élite (più forte, può lasciare un'arma)
+      const pulse = Math.floor(this.eliteGlowElapsedMs / 200) % 2;
+      renderer.fillGlow(screenX + this.width / 2, this.positionY + this.height / 2 - cameraY, Math.max(this.width, this.height) * 0.8 + pulse, PALETTE.goldLight, 2, 4);
+    }
     spriteManager.drawSpriteAligned(
       renderer,
       this.animationPlayer.currentFrameId,
@@ -333,6 +367,7 @@ export class Enemy extends GameObject implements Damageable {
   }
 
   private updateTimers(deltaTimeMs: number): void {
+    this.eliteGlowElapsedMs += deltaTimeMs;
     this.attackCooldownRemainingMs = Math.max(0, this.attackCooldownRemainingMs - deltaTimeMs);
     this.hitFlashRemainingMs = Math.max(0, this.hitFlashRemainingMs - deltaTimeMs);
     if (!this.isAlive) {

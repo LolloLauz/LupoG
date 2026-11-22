@@ -10,6 +10,12 @@ export const ENEMY_AI_CONFIG = {
   patrolSpeedMultiplier: 0.6,
   /** Tempo (ms) tra la morte e la scomparsa del nemico. */
   deathDurationMs: 700,
+  /** Stordimento (ms) di un nemico corazzato colpito dalla mazza (anche se di norma non si stordisce). */
+  armorCrushStunMs: 600,
+  /** Nemici d'élite: moltiplicatori di salute, danno e punti rispetto al nemico normale. */
+  eliteHealthMultiplier: 2,
+  eliteDamageMultiplier: 1.3,
+  eliteScoreMultiplier: 3,
 } as const;
 
 /**
@@ -221,6 +227,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
 export const BOSS_CONFIG: BossDefinition = {
   id: "blackKnight",
   name: "CAVALIERE NERO",
+  weaponReward: "mace",
   maxHealth: 290,
   movementSpeed: 40,
   activationRange: 220,
@@ -251,6 +258,7 @@ export const BOSS_CONFIG: BossDefinition = {
 export const SWAMP_WITCH_CONFIG: BossDefinition = {
   id: "swampWitch",
   name: "STREGA DELLA PALUDE",
+  weaponReward: "axe",
   maxHealth: 300,
   movementSpeed: 30,
   activationRange: 220,
@@ -277,6 +285,7 @@ export const SWAMP_WITCH_CONFIG: BossDefinition = {
 export const WOLF_KING_CONFIG: BossDefinition = {
   id: "wolfKing",
   name: "RE DEI LUPI",
+  weaponReward: "spear",
   maxHealth: 300,
   movementSpeed: 55,
   activationRange: 220,

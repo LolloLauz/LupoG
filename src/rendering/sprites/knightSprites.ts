@@ -1,6 +1,9 @@
 import { PALETTE } from "../../config/gameConfig";
+import { WEAPON_CONFIG, WEAPON_ICON_SIZE } from "../../config/weaponConfig";
+import type { WeaponId } from "../../types/EntityTypes";
 import type { SpriteManager } from "../SpriteManager";
-import { createGrid, drawSlashArc, drawSword, setPixel, stampRows, type BladeKeys } from "./spriteTools";
+import { drawAxe, drawMace, drawSpear, type WeaponDrawer } from "./weaponShapes";
+import { addOutline, createGrid, drawSlashArc, drawSword, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
 
 /**
  * Sprite del cavaliere in stile 16 bit (24x30 pixel, rivolto a destra).
@@ -155,37 +158,105 @@ const HAND_X = 19;
 const HAND_Y = 18;
 const ATTACK_SPRITE_WIDTH = 44;
 
+interface SwordPose {
+  tipX: number;
+  tipY: number;
+  arcs?: Array<{ radius: number; startDegrees: number; endDegrees: number }>;
+  bodyDrop?: number;
+  /** Larghezza del frame (se omessa ATTACK_SPRITE_WIDTH). */
+  frameWidth?: number;
+  /** Vero per le pose disegnate per un'arma precisa: la lunghezza dell'arma non viene scalata. */
+  fixedLength?: boolean;
+}
+
+/**
+ * Aspetto di un'arma in mano al cavaliere. Le pose della spada valgono per tutte le armi:
+ * la punta si avvicina o si allontana dalla mano secondo lengthScale (anche le scie).
+ */
+interface WeaponVisual {
+  /** Lunghezza rispetto alla spada (1 = spada). */
+  lengthScale: number;
+  draw: WeaponDrawer;
+  /** Pose d'attacco registrate per quest'arma (anche in versione accovacciata). */
+  attackPoses: Record<string, SwordPose>;
+  /** Icona 16x16 (oggetto a terra e HUD): impugnatura e punta. */
+  icon: { handX: number; handY: number; tipX: number; tipY: number };
+}
+
+const drawKnightSword: WeaponDrawer = (grid, handX, handY, tipX, tipY) => drawSword(grid, handX, handY, tipX, tipY, SWORD_KEYS);
+
+/**
+ * Arma usata dalle funzioni compose* mentre si compongono i frame (vedi registerKnightSprites):
+ * così l'elenco dei frame si scrive una volta sola e vale per tutte le armi.
+ */
+let activeVisual: WeaponVisual | null = null;
+
+/** Disegna l'arma attiva dalla mano verso la punta della posa (accorciata o allungata). */
+function drawActiveWeapon(grid: PixelGrid, handX: number, handY: number, tipX: number, tipY: number, fixedLength = false): void {
+  const visual = activeVisual;
+  if (visual === null) {
+    drawKnightSword(grid, handX, handY, tipX, tipY);
+    return;
+  }
+  const scale = fixedLength ? 1 : visual.lengthScale;
+  visual.draw(grid, handX, handY, Math.round(handX + (tipX - handX) * scale), Math.round(handY + (tipY - handY) * scale));
+}
+
 /**
  * Unisce parte superiore e gambe. bodyDrop = pixel di cui abbassare la parte superiore
- * (respiro, passo). withSword = spada a riposo in mano.
+ * (respiro, passo). withSword = arma a riposo in mano (la spada, o l'arma che si sta componendo).
  */
 function composeKnightFrame(legRows: string[], bodyDrop: number, withSword = true): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
   stampRows(grid, legRows, 0, BODY_ROWS.length);
   stampRows(grid, BODY_ROWS, 0, bodyDrop);
   if (withSword) {
-    drawSword(grid, HAND_X, HAND_Y + bodyDrop, HAND_X + 1, 2 + bodyDrop, SWORD_KEYS);
+    drawActiveWeapon(grid, HAND_X, HAND_Y + bodyDrop, HAND_X + 1, 2 + bodyDrop);
   }
   return grid.map((row) => row.join(""));
 }
 
-interface SwordPose {
-  tipX: number;
-  tipY: number;
-  arcs?: Array<{ radius: number; startDegrees: number; endDegrees: number }>;
-  bodyDrop?: number;
+/** Suffisso delle varianti accovacciate dei frame d'attacco (es. "knightAttack1ACrouch"). */
+export const KNIGHT_CROUCH_SUFFIX = "Crouch";
+
+/** Gambe piegate in basso, busto (senza le ultime 3 righe) abbassato di CROUCH_BODY_DROP pixel. */
+const CROUCH_BODY_DROP = KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length - BODY_ROWS.length + 3;
+
+function stampCrouchedBody(grid: PixelGrid, shiftX: number): void {
+  stampRows(grid, KNIGHT_LEGS_CROUCH, shiftX, KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length);
+  stampRows(grid, BODY_ROWS.slice(0, BODY_ROWS.length - 3), shiftX, CROUCH_BODY_DROP);
 }
 
-/** Frame di attacco largo 44 pixel: corpo a sinistra, spada e scia (bianca e azzurra) a destra. */
-function composeAttackFrame(pose: SwordPose): string[] {
-  const bodyDrop = pose.bodyDrop ?? 0;
-  const grid = createGrid(ATTACK_SPRITE_WIDTH, KNIGHT_HEIGHT);
-  stampRows(grid, composeKnightFrame(LEGS_STAND, bodyDrop, false));
-  for (const arc of pose.arcs ?? []) {
-    drawSlashArc(grid, HAND_X, HAND_Y + bodyDrop, arc.radius, arc.startDegrees, arc.endDegrees, "a");
-    drawSlashArc(grid, HAND_X, HAND_Y + bodyDrop, arc.radius - 1, arc.startDegrees, arc.endDegrees, "c");
+/** Cavaliere accovacciato con la spada dritta davanti. */
+function composeCrouchFrame(): string[] {
+  const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
+  stampCrouchedBody(grid, 0);
+  drawActiveWeapon(grid, HAND_X, HAND_Y + CROUCH_BODY_DROP, HAND_X + 1, 2 + CROUCH_BODY_DROP);
+  return grid.map((row) => row.join(""));
+}
+
+/**
+ * Frame di attacco largo 44 pixel: corpo a sinistra, arma e scia (bianca e azzurra) a destra.
+ * crouched = variante accovacciata: busto e arma si abbassano, la punta non scende sotto i piedi.
+ */
+function composeAttackFrame(pose: SwordPose, crouched = false): string[] {
+  const grid = createGrid(pose.frameWidth ?? ATTACK_SPRITE_WIDTH, KNIGHT_HEIGHT);
+  const arcScale = pose.fixedLength === true || activeVisual === null ? 1 : activeVisual.lengthScale;
+  let handY = HAND_Y + (pose.bodyDrop ?? 0);
+  let tipY = pose.tipY;
+  if (crouched) {
+    stampCrouchedBody(grid, 0);
+    handY = HAND_Y + CROUCH_BODY_DROP;
+    tipY = Math.min(KNIGHT_HEIGHT - 1, pose.tipY + CROUCH_BODY_DROP);
+  } else {
+    stampRows(grid, composeKnightFrame(LEGS_STAND, pose.bodyDrop ?? 0, false));
   }
-  drawSword(grid, HAND_X, HAND_Y + bodyDrop, pose.tipX, pose.tipY, SWORD_KEYS);
+  for (const arc of pose.arcs ?? []) {
+    const radius = Math.max(6, Math.round(arc.radius * arcScale));
+    drawSlashArc(grid, HAND_X, handY, radius, arc.startDegrees, arc.endDegrees, "a");
+    drawSlashArc(grid, HAND_X, handY, radius - 1, arc.startDegrees, arc.endDegrees, "c");
+  }
+  drawActiveWeapon(grid, HAND_X, handY, pose.tipX, tipY, pose.fixedLength === true);
   return grid.map((row) => row.join(""));
 }
 
@@ -194,7 +265,7 @@ function composeHurtFrame(): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
   stampRows(grid, LEGS_FALL, 0, BODY_ROWS.length);
   stampRows(grid, BODY_ROWS, -1, 1);
-  drawSword(grid, HAND_X - 1, HAND_Y + 1, KNIGHT_WIDTH - 1, KNIGHT_HEIGHT - 3, SWORD_KEYS);
+  drawActiveWeapon(grid, HAND_X - 1, HAND_Y + 1, KNIGHT_WIDTH - 1, KNIGHT_HEIGHT - 3);
   for (const [x, y] of [[3, 2], [2, 4], [4, 1], [6, 0], [1, 7], [20, 3], [22, 5]] as const) {
     setPixel(grid, x, y, "y", true);
   }
@@ -204,9 +275,7 @@ function composeHurtFrame(): string[] {
 /** Schivata: cavaliere accovacciato dietro lo scudo. shiftX sposta il corpo a destra. */
 function composeDodgeFrame(shiftX: number): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
-  const crouchDrop = KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length - BODY_ROWS.length + 3;
-  stampRows(grid, KNIGHT_LEGS_CROUCH, shiftX, KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length);
-  stampRows(grid, BODY_ROWS.slice(0, BODY_ROWS.length - 3), shiftX, crouchDrop);
+  stampCrouchedBody(grid, shiftX);
   return grid.map((row) => row.join(""));
 }
 
@@ -224,8 +293,102 @@ function composeLyingFrame(): string[] {
   return [...Array<string>(KNIGHT_HEIGHT - lyingRows.length).fill(".".repeat(width)), ...lyingRows];
 }
 
-/** Registra tutti gli sprite del cavaliere nello SpriteManager. */
+/** Pose della spada nei frame d'attacco (registrate anche in versione accovacciata). */
+const ATTACK_POSES: Record<string, SwordPose> = {
+  // attacco leggero 1: dall'alto verso il basso-avanti
+  knightAttack1A: { tipX: 21, tipY: 1, bodyDrop: 1 },
+  knightAttack1B: { tipX: 40, tipY: 15, arcs: [{ radius: 20, startDegrees: -80, endDegrees: -5 }] },
+  knightAttack1C: { tipX: 33, tipY: 28, arcs: [{ radius: 20, startDegrees: 5, endDegrees: 50 }] },
+  // attacco leggero 2: dal basso verso l'alto
+  knightAttack2A: { tipX: 30, tipY: 28, bodyDrop: 1 },
+  knightAttack2B: { tipX: 40, tipY: 18, arcs: [{ radius: 20, startDegrees: 75, endDegrees: 5 }] },
+  knightAttack2C: { tipX: 33, tipY: 4, arcs: [{ radius: 20, startDegrees: -5, endDegrees: -55 }] },
+  // attacco leggero 3 (finale): fendente in quattro tempi
+  knightAttack3A: { tipX: 22, tipY: 0, bodyDrop: 1 },
+  knightAttack3B: { tipX: 36, tipY: 5, arcs: [{ radius: 22, startDegrees: -85, endDegrees: -30 }] },
+  knightAttack3C: { tipX: 41, tipY: 17, arcs: [{ radius: 22, startDegrees: -30, endDegrees: 20 }] },
+  knightAttack3D: { tipX: 35, tipY: 29, arcs: [{ radius: 22, startDegrees: 20, endDegrees: 80 }] },
+  // attacco pesante: carica lunga e fendente ampio
+  knightHeavyA: { tipX: 16, tipY: 1, bodyDrop: 1 },
+  knightHeavyB: { tipX: 21, tipY: 0 },
+  knightHeavyC: {
+    tipX: 42,
+    tipY: 12,
+    arcs: [
+      { radius: 23, startDegrees: -88, endDegrees: -10 },
+      { radius: 18, startDegrees: -80, endDegrees: -20 },
+    ],
+  },
+  knightHeavyD: {
+    tipX: 38,
+    tipY: 29,
+    arcs: [
+      { radius: 23, startDegrees: 10, endDegrees: 80 },
+      { radius: 18, startDegrees: 20, endDegrees: 75 },
+    ],
+  },  // colpo in picchiata (Fase 3): arma alzata, poi puntata in basso davanti ai piedi
+  knightPlungeA: { tipX: 20, tipY: 0, bodyDrop: 1 },
+  knightPlungeB: { tipX: 21, tipY: 29, arcs: [{ radius: 10, startDegrees: 60, endDegrees: 110 }] },
+};
+
+/** Pose della lancia: affondi orizzontali e un fendente ampio (frame larghi 58 pixel). */
+const SPEAR_FRAME_WIDTH = 58;
+const SPEAR_POSES: Record<string, SwordPose> = {
+  knightSpearThrustA: { tipX: 34, tipY: 17, bodyDrop: 1, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearThrustB: { tipX: 54, tipY: 18, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearThrustC: { tipX: 46, tipY: 18, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearSweepA: { tipX: 27, tipY: 0, bodyDrop: 1, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearSweepB: { tipX: 45, tipY: 8, arcs: [{ radius: 26, startDegrees: -75, endDegrees: -15 }], frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearSweepC: { tipX: 45, tipY: 25, arcs: [{ radius: 26, startDegrees: -10, endDegrees: 30 }], frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearSweepD: { tipX: 38, tipY: 29, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearChargeA: { tipX: 31, tipY: 16, bodyDrop: 1, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearChargeB: { tipX: 29, tipY: 17, bodyDrop: 1, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightSpearLunge: { tipX: 57, tipY: 18, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightPlungeA: { tipX: 24, tipY: 0, bodyDrop: 1, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+  knightPlungeB: { tipX: 21, tipY: 29, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
+};
+
+/** Aspetto di ogni arma. Il suffisso degli sprite è WEAPON_CONFIG[id].spriteSuffix. */
+const WEAPON_VISUALS: Record<WeaponId, WeaponVisual> = {
+  sword: { lengthScale: 1, draw: drawKnightSword, attackPoses: ATTACK_POSES, icon: { handX: 3, handY: 12, tipX: 13, tipY: 2 } },
+  dagger: { lengthScale: 0.55, draw: drawKnightSword, attackPoses: ATTACK_POSES, icon: { handX: 5, handY: 11, tipX: 11, tipY: 5 } },
+  spear: { lengthScale: 1.25, draw: drawSpear, attackPoses: SPEAR_POSES, icon: { handX: 6, handY: 10, tipX: 14, tipY: 2 } },
+  axe: { lengthScale: 0.85, draw: drawAxe, attackPoses: ATTACK_POSES, icon: { handX: 3, handY: 13, tipX: 10, tipY: 6 } },
+  mace: { lengthScale: 0.8, draw: drawMace, attackPoses: ATTACK_POSES, icon: { handX: 3, handY: 13, tipX: 10, tipY: 6 } },
+};
+
+/** Icona di un'arma: l'arma in diagonale con il contorno nero. */
+function composeWeaponIcon(visual: WeaponVisual): string[] {
+  const grid = createGrid(WEAPON_ICON_SIZE - 2, WEAPON_ICON_SIZE - 2);
+  const icon = visual.icon;
+  visual.draw(grid, icon.handX - 1, icon.handY - 1, icon.tipX - 1, icon.tipY - 1);
+  const padded = createGrid(WEAPON_ICON_SIZE, WEAPON_ICON_SIZE);
+  stampRows(padded, grid.map((row) => row.join("")), 1, 1);
+  return addOutline(padded.map((row) => row.join("")), "k");
+}
+
+/**
+ * Registra tutti gli sprite del cavaliere nello SpriteManager: una serie completa per ogni arma
+ * (suffisso dell'arma, "" per la spada), ognuna anche nella versione con il fuoco, più le icone delle armi.
+ * Id di un frame: frame + "Crouch" (attacco da accovacciati) + suffisso dell'arma + "Fire".
+ */
 export function registerKnightSprites(spriteManager: SpriteManager): void {
+  for (const [weaponId, visual] of Object.entries(WEAPON_VISUALS) as Array<[WeaponId, WeaponVisual]>) {
+    const weapon = WEAPON_CONFIG[weaponId];
+    activeVisual = visual;
+    const frames = composeKnightFrames(visual.attackPoses);
+    activeVisual = null;
+    for (const [spriteId, pixelRows] of Object.entries(frames)) {
+      const weaponSpriteId = `${spriteId}${weapon.spriteSuffix}`;
+      spriteManager.registerSprite(weaponSpriteId, pixelRows, KNIGHT_COLORS, KNIGHT_ANCHOR_X);
+      spriteManager.registerSprite(`${weaponSpriteId}${KNIGHT_FIRE_SUFFIX}`, pixelRows, KNIGHT_FIRE_COLORS, KNIGHT_ANCHOR_X);
+    }
+    spriteManager.registerSprite(weapon.iconSpriteId, composeWeaponIcon(visual), KNIGHT_COLORS);
+  }
+}
+
+/** Tutti i frame del cavaliere con l'arma attiva (activeVisual). */
+function composeKnightFrames(attackPoses: Record<string, SwordPose>): Record<string, string[]> {
   const frames: Record<string, string[]> = {
     knightIdle1: composeKnightFrame(LEGS_STAND, 0),
     knightIdle2: composeKnightFrame(LEGS_STAND, 1),
@@ -234,46 +397,16 @@ export function registerKnightSprites(spriteManager: SpriteManager): void {
     knightWalk3: composeKnightFrame(LEGS_STRIDE.map((row) => [...row].reverse().join("")), 1),
     knightJump: composeKnightFrame(LEGS_JUMP, 0),
     knightFall: composeKnightFrame(LEGS_FALL, 0),
-    // attacco leggero 1: dall'alto verso il basso-avanti
-    knightAttack1A: composeAttackFrame({ tipX: 21, tipY: 1, bodyDrop: 1 }),
-    knightAttack1B: composeAttackFrame({ tipX: 40, tipY: 15, arcs: [{ radius: 20, startDegrees: -80, endDegrees: -5 }] }),
-    knightAttack1C: composeAttackFrame({ tipX: 33, tipY: 28, arcs: [{ radius: 20, startDegrees: 5, endDegrees: 50 }] }),
-    // attacco leggero 2: dal basso verso l'alto
-    knightAttack2A: composeAttackFrame({ tipX: 30, tipY: 28, bodyDrop: 1 }),
-    knightAttack2B: composeAttackFrame({ tipX: 40, tipY: 18, arcs: [{ radius: 20, startDegrees: 75, endDegrees: 5 }] }),
-    knightAttack2C: composeAttackFrame({ tipX: 33, tipY: 4, arcs: [{ radius: 20, startDegrees: -5, endDegrees: -55 }] }),
-    // attacco leggero 3 (finale): fendente in quattro tempi
-    knightAttack3A: composeAttackFrame({ tipX: 22, tipY: 0, bodyDrop: 1 }),
-    knightAttack3B: composeAttackFrame({ tipX: 36, tipY: 5, arcs: [{ radius: 22, startDegrees: -85, endDegrees: -30 }] }),
-    knightAttack3C: composeAttackFrame({ tipX: 41, tipY: 17, arcs: [{ radius: 22, startDegrees: -30, endDegrees: 20 }] }),
-    knightAttack3D: composeAttackFrame({ tipX: 35, tipY: 29, arcs: [{ radius: 22, startDegrees: 20, endDegrees: 80 }] }),
-    // attacco pesante: carica lunga e fendente ampio
-    knightHeavyA: composeAttackFrame({ tipX: 16, tipY: 1, bodyDrop: 1 }),
-    knightHeavyB: composeAttackFrame({ tipX: 21, tipY: 0 }),
-    knightHeavyC: composeAttackFrame({
-      tipX: 42,
-      tipY: 12,
-      arcs: [
-        { radius: 23, startDegrees: -88, endDegrees: -10 },
-        { radius: 18, startDegrees: -80, endDegrees: -20 },
-      ],
-    }),
-    knightHeavyD: composeAttackFrame({
-      tipX: 38,
-      tipY: 29,
-      arcs: [
-        { radius: 23, startDegrees: 10, endDegrees: 80 },
-        { radius: 18, startDegrees: 20, endDegrees: 75 },
-      ],
-    }),
+    knightCrouch: composeCrouchFrame(),
     knightHurt: composeHurtFrame(),
     knightDodge1: composeDodgeFrame(0),
     knightDodge2: composeDodgeFrame(1),
     knightDeadFall: composeKnightFrame(LEGS_FALL, 2, false),
     knightDeadLie: composeLyingFrame(),
   };
-  for (const [spriteId, pixelRows] of Object.entries(frames)) {
-    spriteManager.registerSprite(spriteId, pixelRows, KNIGHT_COLORS, KNIGHT_ANCHOR_X);
-    spriteManager.registerSprite(`${spriteId}${KNIGHT_FIRE_SUFFIX}`, pixelRows, KNIGHT_FIRE_COLORS, KNIGHT_ANCHOR_X);
+  for (const [spriteId, pose] of Object.entries(attackPoses)) {
+    frames[spriteId] = composeAttackFrame(pose);
+    frames[`${spriteId}${KNIGHT_CROUCH_SUFFIX}`] = composeAttackFrame(pose, true);
   }
+  return frames;
 }

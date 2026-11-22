@@ -1,4 +1,4 @@
-import type { EnemyTypeId } from "./EntityTypes";
+import type { EnemyTypeId, WeaponId } from "./EntityTypes";
 import type { Rectangle, Vector2 } from "./GameTypes";
 
 /** Ambientazioni disponibili. */
@@ -72,6 +72,16 @@ export interface HazardDefinition extends Rectangle {
 export interface EnemySpawnDefinition {
   type: EnemyTypeId;
   position: Vector2;
+  /** Nemico d'élite: più salute, più danno, più punti, alone dorato. */
+  elite?: boolean;
+  /** Arma lasciata a terra quando muore (solo per i nemici d'élite). */
+  weaponDrop?: WeaponId;
+}
+
+/** Forziere: si apre colpendolo e lascia un'arma. y = superficie - CHEST_SIZE.height. */
+export interface ChestSpawnDefinition {
+  position: Vector2;
+  weaponId: WeaponId;
 }
 
 export interface ItemSpawnDefinition {
@@ -108,4 +118,6 @@ export interface LevelDefinition {
   hazards?: HazardDefinition[];
   /** Piattaforme mobili (facoltative). */
   movingPlatforms?: MovingPlatformDefinition[];
+  /** Forzieri con un'arma (facoltativi). */
+  chests?: ChestSpawnDefinition[];
 }

@@ -14,6 +14,11 @@ export interface ItemDefinition {
   isCollectible: boolean;
   /** Power-up attivato raccogliendo l'oggetto (vedi powerUpConfig.ts). */
   powerUpId?: PowerUpId;
+  /**
+   * Oggetto da borsa (la pozione): non si usa toccandolo, si raccoglie con E e si usa dopo
+   * con il tasto numerico del suo posto (vedi Inventory). healAmount vale quando lo si beve.
+   */
+  storedInBag?: boolean;
 }
 
 export const ITEM_SIZE = 8;
@@ -26,6 +31,7 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     healAmount: 30,
     scoreBonus: 0,
     isCollectible: false,
+    storedInBag: true,
   },
   scoreCoin: {
     id: "scoreCoin",

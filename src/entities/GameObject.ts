@@ -16,7 +16,7 @@ export abstract class GameObject {
     public positionX: number,
     public positionY: number,
     public readonly width: number,
-    public readonly height: number
+    public height: number
   ) {}
 
   public getBounds(): Rectangle {

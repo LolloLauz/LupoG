@@ -109,6 +109,7 @@ function createBot(skill, seed) {
   const dodgeDecisions = new Map();
   let frameCount = 0;
   let jumpHeldUntil = 0;
+  let isJumpKeyHeld = false;
   return function botFrame() {
     frameCount++;
     const time = frameCount / 60;
@@ -154,7 +155,9 @@ function createBot(skill, seed) {
       const wantsToDodge = isAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);
       if (wantsToDodge && elapsedMs >= windupMs - 100 && elapsedMs <= windupMs - 30 && player.isOnGround && !player.activeAttack) { wantsDodge = true; dodgeDecisions.set(nearest, false); }
       const holdAttack = wantsToDodge && elapsedMs >= windupMs - 520;
-      if (gap <= 16) { heldWanted.clear(); wantsAttack = !holdAttack; }
+      // a contatto: se guarda dalla parte sbagliata prima si gira (tiene la direzione), poi attacca
+      const isFacingTarget = (direction > 0) === (player.facingDirection === "right");
+      if (gap <= 16) { if (isFacingTarget) heldWanted.clear(); wantsAttack = !holdAttack && isFacingTarget; }
       else {
         if (gap < 22 && !holdAttack) wantsAttack = true;
         const aheadX = direction > 0 ? player.positionX + player.width + 10 : player.positionX - 10;
@@ -167,11 +170,18 @@ function createBot(skill, seed) {
     }
     setKey("KeyA", heldWanted.has("KeyA"));
     setKey("KeyD", heldWanted.has("KeyD"));
-    // il salto si tiene premuto fino all'apice (rilasciando subito il salto si accorcia, come per una persona)
-    if (wantsJump) { setKey("KeyW", true); jumpHeldUntil = frameCount + 26; }
-    if (frameCount >= jumpHeldUntil) setKey("KeyW", false);
+    // il salto si tiene premuto fino all'apice (rilasciando subito il salto si accorcia, come per una persona);
+    // se serve un altro salto (es. bloccato contro un bordo dall'acqua) si rilascia e si ripreme il tasto
+    if (wantsJump && !isJumpKeyHeld) { setKey("KeyW", true); isJumpKeyHeld = true; jumpHeldUntil = frameCount + 26; }
+    if (isJumpKeyHeld && frameCount >= jumpHeldUntil) { setKey("KeyW", false); isJumpKeyHeld = false; }
     if (wantsAttack) tap("Space");
     if (wantsDodge) tap("KeyK");
+    // borsa: prende le pozioni con E e ne beve una (tasto del suo posto) quando ha perso almeno quanto cura
+    if (!player.isDead && engine.itemManager.findReachableBagItem(player) !== null && engine.inventory.canAddPotion()) tap("KeyE");
+    if (!player.isDead && player.currentHealth <= player.maxHealth - 30) {
+      const potionSlot = engine.inventory.bagSlots.findIndex((slot) => slot !== null && slot.kind === "potion");
+      if (potionSlot >= 0) tap(`Digit${potionSlot + 1}`);
+    }
   };
 }
 

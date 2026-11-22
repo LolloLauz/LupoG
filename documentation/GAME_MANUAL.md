@@ -50,6 +50,9 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Attacco leggero | **Spazio** |
 | Attacco pesante | **J** |
 | Schivata | **K** |
+| Accovacciarsi | **S** oppure **↓** (solo a terra: non ci si muove e non ci si rialza sotto un soffitto; si può attaccare restando accovacciati, con un colpo più basso) |
+| Prendere un'arma o una pozione | **E** stando sopra (va nella borsa, vedi "La borsa") |
+| Usare un posto della borsa | **1**, **2**, **3**, **4** (arma: la impugni; pozione: la bevi) |
 | Pausa / riprendi | **Esc** |
 | Menu: scegliere | **W** / **S** oppure **↑** / **↓** |
 | Menu: confermare | **Invio** |
@@ -98,6 +101,7 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
 | icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
 | icona dell'elmo **x3** | vite rimaste |
+| 4 riquadri numerati sotto la barra, a destra | la borsa: armi e pozioni (con quante sono); l'arma in mano ha la cornice dorata |
 | **LIVELLO n** | livello corrente |
 | numero dorato a 6 cifre | punteggio |
 | gemma blu **xn** | gemme raccolte |
@@ -107,7 +111,8 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 
 ## 6. Il combattimento
 
-Il cavaliere ha una sola arma: la **spada**.
+Il cavaliere parte con la **spada** e ne tiene **una alla volta**: lungo il viaggio trova altre armi (vedi "Le armi" più avanti).
+Le tabelle qui sotto valgono per la spada.
 
 ### Attacchi
 
@@ -120,9 +125,15 @@ Il cavaliere ha una sola arma: la **spada**.
 
 ### Combo
 
+Le combo possono mescolare attacco leggero (Spazio) e pesante (J). Ogni arma ha le sue; quando completi una combo il suo nome
+compare sopra il cavaliere. Con la spada:
+
 | Combo | Sequenza | Colpi | Danno totale |
 |---|---|---|---|
 | **Triplo fendente** | Spazio → Spazio → Spazio | fendente 1, 2, 3 | 15 + 15 + 30 = **60** |
+| **Fendente montante** | Spazio → J | fendente 1, montante (colpisce anche in alto) | 15 + 28 = **43** |
+
+Le combo delle altre armi sono nella tabella "Le armi" più avanti.
 
 Per concatenare la combo premi il tasto successivo **entro 0,4 secondi dalla fine del colpo precedente**: se aspetti troppo,
 la sequenza riparte dal primo colpo. Se premi il tasto negli **ultimi 0,2 secondi** prima che l'attacco successivo possa partire, il colpo viene **memorizzato** e parte appena possibile: non serve premere con precisione al millisecondo. Un tasto premuto molto prima viene invece **ignorato**, e quando smetti di premere il cavaliere si ferma (al massimo parte un ultimo attacco, entro 0,2 secondi dall'ultima pressione).
@@ -130,7 +141,11 @@ la sequenza riparte dal primo colpo. Se premi il tasto negli **ultimi 0,2 second
 ### Regole degli attacchi
 
 - A **terra**, mentre attacchi non puoi muoverti, saltare o girarti: l'attacco ti impegna fino alla fine.
-- In **aria** puoi attaccare e continuare a controllare il movimento.
+- In **aria** puoi attaccare e continuare a controllare il movimento. Gli attacchi in aria sono una **categoria a parte**:
+  - **Spazio, Spazio**: combo in volo di due colpi (i primi due colpi leggeri dell'arma; un'eventuale combo a terra riparte da capo);
+  - **J**: **colpo in picchiata**: scendi velocemente con l'arma puntata in basso e colpisci chi sta sotto (anche poco sotto i piedi).
+    Se colpisci qualcosa **rimbalzi verso l'alto** e puoi colpire di nuovo in picchiata; se tocchi terra la picchiata finisce, con un breve
+    recupero (0,25 s). Danni: spada 24, pugnale 16, lancia 26, ascia 34 (rompe la guardia), mazza 30 (schiaccia le corazze).
 - Ogni attacco **colpisce ogni nemico una sola volta**.
 - L'area colpita è davanti a te; si specchia se guardi a sinistra.
 
@@ -138,8 +153,58 @@ la sequenza riparte dal primo colpo. Se premi il tasto negli **ultimi 0,2 second
 
 - Uno **scatto di circa 48 px** nella direzione in cui guardi, della durata di 0,3 secondi.
 - Durante la schivata sei **invulnerabile**: puoi attraversare gli attacchi dei nemici.
+- È anche **l'unico modo per passare attraverso un nemico**: camminando ti fermi contro il suo corpo (vale anche per il boss; i nemici volanti non bloccano). Se la schivata finisce dentro un nemico, vieni spinto fuori dal lato più vicino.
 - Dopo la schivata devi aspettare 0,7 secondi.
 - Si può fare solo **a terra** e non mentre stai attaccando.
+
+### Le armi
+
+Oltre alla spada ci sono quattro armi corpo a corpo. Si usano con gli stessi tasti (Spazio, J) e ognuna ha i propri colpi e la propria combo.
+
+| Arma | Colpi leggeri (Spazio) | Combo | Attacco pesante (J) | Passo | Particolarità |
+|---|---|---|---|---|---|
+| **Spada** | 15 danni, 250 ms | **Triplo fendente** (Spazio ×3): 15 + 15 + 30; **Fendente montante** (Spazio, J): 15 + 28 | 30 danni, 500 ms | normale | equilibrata |
+| **Pugnale** | 9 danni, 160 ms | **Raffica** (Spazio ×4): 9 + 9 + 9 + 18; **Morso del serpente** (Spazio ×3, J): 9 + 9 + 9 + 30 | 22 danni, 360 ms | più svelto (×1,15) | il più rapido, portata corta |
+| **Lancia** | affondi da 13 danni, 300 ms | **Danza della lancia** (Spazio ×3): 13 + 13 + fendente ampio da 20; **Carica del drago** (Spazio, J): 13 + affondo da 34 lungo 44 px | affondo da 32 danni, 560 ms | un po' più lento (×0,95) | **la portata più lunga**: colpisce fino a circa 40 px davanti, ma l'affondo è stretto |
+| **Ascia** | 22 / 26 danni, 400-440 ms | **Doppio taglio** (Spazio ×2): 22 + 26; **Spaccaossa** (Spazio ×2, J): 22 + 26 + 52 | 46 danni, 700 ms | più lento (×0,85) | **rompe la guardia**: interrompe anche un nemico che ha già iniziato il suo colpo |
+| **Mazza** | 17 danni, 340 ms | **Tempesta di colpi** (Spazio ×3): 17 + 17 + 28; **Terremoto** (Spazio, J): 17 + 32, colpisce in basso anche **dietro** di te | 36 danni, 620 ms | più lento (×0,9) | **schiaccia le corazze**: danno pieno al golem, che resta stordito per 0,6 secondi |
+
+I boss non vengono mai storditi: contro di loro ascia e mazza contano solo per il danno.
+
+**Dove si trovano**
+
+- **Forzieri**: colpiscili con qualsiasi arma per aprirli; l'arma compare sopra il coperchio.
+- **Nemici d'élite**: hanno un **alone dorato**, il doppio della salute, il 30% di danno in più e valgono il triplo dei punti. Sconfitti, lasciano la loro arma.
+- **Trofei dei boss**: il Cavaliere Nero, la Strega e il Re dei Lupi lasciano un'arma, che trovi poco dopo la partenza del livello successivo. Il riquadro di fine livello la annuncia ("TROFEO").
+
+| Livello | Arma | Dove |
+|---|---|---|
+| 1 | Pugnale | forziere vicino alla partenza |
+| 2 | Lancia | soldato d'élite |
+| 3 | Ascia | forziere |
+| 4 | Mazza | trofeo del Cavaliere Nero, all'inizio del livello |
+| 4 | Pugnale | scheletro d'élite |
+| 5 | Ascia | trofeo della Strega, all'inizio del livello |
+| 5 | Mazza | forziere vicino al golem |
+| 6 | Lancia | trofeo del Re dei Lupi, all'inizio del livello |
+| 6 | Mazza | soldato d'élite |
+
+**Prendere e cambiare arma**: le armi vanno nella **borsa** (vedi sotto). Stando sopra un'arma compare la scritta "E PRENDI ...":
+premi **E** e la prendi; la impugni subito. Per cambiare arma premi il **numero** del suo posto nella borsa.
+
+### La borsa
+
+La borsa ha **4 posti**, mostrati sotto la barra in alto a destra, ognuno con il suo numero. Contiene **armi** e **pozioni**.
+
+- **E** raccoglie l'arma o la pozione che stai toccando. Le **pozioni non curano più al tocco**: le conservi e le bevi quando vuoi.
+- **1-4** usano il posto: un'arma diventa quella in mano (cornice dorata); una pozione cura **30 HP** (a salute piena non viene sprecata).
+- Le pozioni stanno tutte in un posto, **al massimo 2**: conservarle per i boss aiuta molto, quindi la scorta è piccola.
+- Un'arma che hai già non si prende due volte ("GIÀ NELLA BORSA").
+- **Borsa piena**: una nuova arma prende il posto di quella in mano, che resta a terra nello stesso punto (puoi riprenderla dopo
+  esserti allontanato un attimo); una pozione in più non entra ("BORSA PIENA").
+- Se perdi una vita, la borsa torna **com'era all'inizio del livello** (come punteggio e gemme): ciò che avevi raccolto nel livello è di nuovo a terra.
+- Le **armi** della borsa e quella in mano sono **salvate**: le ritrovi alla partita successiva. Le pozioni no: ogni partita parte senza.
+- I **power-up**, le monete e le gemme non cambiano: si usano toccandoli.
 
 ### Come ti feriscono
 
@@ -151,7 +216,7 @@ Un colpo subito **interrompe** il tuo attacco in corso. Il rinculo **non ti spin
 ## 7. Nemici
 
 Tutti i nemici, quando sei a portata, **preparano un attacco** (un breve gesto che puoi vedere) e poi colpiscono.
-I nemici a terra non camminano nel vuoto, attraverso i muri, sugli spuntoni o nell'acqua.
+I nemici a terra non camminano nel vuoto, attraverso i muri, sugli spuntoni o nell'acqua. Il loro corpo è solido: non puoi entrarci dentro (se non schivando), e se gli stai addosso il loro colpo ti raggiunge comunque.
 
 | Nemico | Salute | Danno | Velocità | Comportamento | Punti |
 |---|---|---|---|---|---|
@@ -278,17 +343,18 @@ Ogni livello ha **abissi**, **piattaforme sospese** (si attraversano dal basso e
 I livelli 4-6 hanno anche **pericoli** (vasche d'acqua, ghiaccio, spuntoni) e **piattaforme mobili**. La telecamera segue il cavaliere.
 Dopo il Signore dell'Ombra compare la schermata di vittoria.
 
-A inizio livello compare il nome; a fine livello un riquadro mostra bonus, gemme e salute recuperata.
+A inizio livello compare il nome; a fine livello un riquadro mostra bonus, gemme, salute recuperata e l'eventuale trofeo del boss.
+Alcuni livelli hanno **forzieri** e **nemici d'élite** con un'arma (vedi "Le armi").
 
 ---
 
 ## 10. Oggetti
 
-Si raccolgono semplicemente toccandoli. Alcuni sono su piattaforme sospese: bisogna saltare.
+Si raccolgono semplicemente toccandoli, tranne la **pozione**, che si prende con **E** e va nella borsa. Alcuni sono su piattaforme sospese: bisogna saltare.
 
 | Oggetto | Aspetto | Effetto |
 |---|---|---|
-| **Pozione** | boccetta rossa | **+30 HP** (non oltre il massimo) |
+| **Pozione** | boccetta rossa | si prende con **E** e va nella borsa; bevuta (tasto del suo posto) dà **+30 HP** (non oltre il massimo) |
 | **Moneta** | disco giallo | **+50 punti** |
 | **Gemma** | cristallo azzurro | **+200 punti** e conta come *gemma* (almeno 1 per livello, 2 nella torre) |
 

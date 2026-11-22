@@ -1,21 +1,41 @@
 import type { AnimationDefinition } from "../rendering/AnimationManager";
 import type { BossAttackKind, BossDefinition, EnemyTypeId } from "../types/EntityTypes";
 import { BOSS_CATALOG, ENEMY_CONFIG } from "./enemyConfig";
-import { ATTACK_DEFINITIONS } from "./playerConfig";
+import { getAllWeaponAttacks } from "./weaponConfig";
 
 /** Animazione di attacco: la durata dei frame segue la durata dell'attacco. */
 function createAttackAnimation(attackId: string, frameIds: string[]): AnimationDefinition {
-  const attack = ATTACK_DEFINITIONS[attackId];
+  const attack = getAllWeaponAttacks()[attackId];
   if (attack === undefined) {
     throw new Error(`Attacco non definito: ${attackId}`);
   }
   return { frameIds, frameDurationMs: attack.durationMs / frameIds.length, loop: false };
 }
 
+/** Pose d'attacco della spada riusate dalle altre armi. */
+const SLASH_DOWN_FRAMES = ["knightAttack1A", "knightAttack1B", "knightAttack1C"];
+const SLASH_UP_FRAMES = ["knightAttack2A", "knightAttack2B", "knightAttack2C"];
+const FINISHER_FRAMES = ["knightAttack3A", "knightAttack3B", "knightAttack3C", "knightAttack3D"];
+const HEAVY_FRAMES = ["knightHeavyA", "knightHeavyB", "knightHeavyC", "knightHeavyD"];
+/**
+ * Colpo in picchiata: l'arma si alza per un attimo (1 frame su 15, circa 67 ms), poi punta in basso
+ * per tutta la discesa (la durata dell'attacco è quella massima: di solito si tocca terra prima).
+ */
+const PLUNGE_FRAMES = ["knightPlungeA", ...Array<string>(14).fill("knightPlungeB")];
+
+/** Un'animazione per ogni attacco indicato, con lo stesso nome dell'attacco. */
+function weaponAttackAnimations(framesByAttackId: Record<string, string[]>): Record<string, AnimationDefinition> {
+  const animations: Record<string, AnimationDefinition> = {};
+  for (const [attackId, frameIds] of Object.entries(framesByAttackId)) {
+    animations[attackId] = createAttackAnimation(attackId, frameIds);
+  }
+  return animations;
+}
+
 /**
  * Animazioni del cavaliere: nome -> elenco di sprite e durata di ogni frame.
  * Gli id degli sprite sono registrati in rendering/sprites/knightSprites.ts.
- * Le animazioni di attacco usano il nome indicato in ATTACK_DEFINITIONS.
+ * Le animazioni di attacco usano il nome indicato negli attacchi delle armi (WEAPON_CONFIG).
  */
 export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
   idle: { frameIds: ["knightIdle1", "knightIdle2"], frameDurationMs: 500, loop: true },
@@ -28,6 +48,7 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
   fall: { frameIds: ["knightFall"], frameDurationMs: 100, loop: true },
   hurt: { frameIds: ["knightHurt"], frameDurationMs: 100, loop: true },
   dodge: { frameIds: ["knightDodge1", "knightDodge2"], frameDurationMs: 100, loop: true },
+  crouch: { frameIds: ["knightCrouch"], frameDurationMs: 100, loop: true },
   dead: { frameIds: ["knightDeadFall", "knightDeadLie"], frameDurationMs: 300, loop: false },
   attack1: createAttackAnimation("swordLight1", ["knightAttack1A", "knightAttack1B", "knightAttack1C"]),
   attack2: createAttackAnimation("swordLight2", ["knightAttack2A", "knightAttack2B", "knightAttack2C"]),
@@ -43,6 +64,37 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
     "knightHeavyC",
     "knightHeavyD",
   ]),
+  // --- armi della Fase 1: l'id dell'attacco è anche il nome dell'animazione ---
+  // Pugnale, ascia e mazza riusano le pose della spada (disegnate con la propria arma, vedi
+  // WEAPON_VISUALS in knightSprites.ts); la lancia ha pose proprie (affondi).
+  ...weaponAttackAnimations({
+    daggerStab1: SLASH_DOWN_FRAMES,
+    daggerStab2: SLASH_UP_FRAMES,
+    daggerFinisher: FINISHER_FRAMES,
+    daggerLunge: HEAVY_FRAMES,
+    spearThrust1: ["knightSpearThrustA", "knightSpearThrustB", "knightSpearThrustC"],
+    spearThrust2: ["knightSpearThrustA", "knightSpearThrustB", "knightSpearThrustC"],
+    spearSweep: ["knightSpearSweepA", "knightSpearSweepB", "knightSpearSweepC", "knightSpearSweepD"],
+    spearHeavy: ["knightSpearChargeA", "knightSpearChargeB", "knightSpearLunge", "knightSpearThrustC"],
+    axeChop1: SLASH_DOWN_FRAMES,
+    axeChop2: SLASH_UP_FRAMES,
+    axeHeavy: HEAVY_FRAMES,
+    maceSwing1: SLASH_DOWN_FRAMES,
+    maceSwing2: SLASH_UP_FRAMES,
+    maceSmash: FINISHER_FRAMES,
+    maceHeavy: HEAVY_FRAMES,
+    // Fase 3: finali delle combo miste e colpi in picchiata
+    swordRising: SLASH_UP_FRAMES,
+    daggerPiercer: HEAVY_FRAMES,
+    spearDragon: ["knightSpearChargeA", "knightSpearChargeB", "knightSpearLunge", "knightSpearThrustC"],
+    axeSkullSplitter: HEAVY_FRAMES,
+    maceQuake: HEAVY_FRAMES,
+    swordPlunge: PLUNGE_FRAMES,
+    daggerPlunge: PLUNGE_FRAMES,
+    spearPlunge: PLUNGE_FRAMES,
+    axePlunge: PLUNGE_FRAMES,
+    macePlunge: PLUNGE_FRAMES,
+  }),
 };
 
 /**

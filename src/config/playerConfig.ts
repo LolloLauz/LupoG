@@ -1,4 +1,4 @@
-import type { AttackDefinition, ComboDefinition } from "../types/EntityTypes";
+import type { AttackDefinition, AttackInputAction, ComboDefinition } from "../types/EntityTypes";
 
 /** Statistiche base del cavaliere. Modificare qui per cambiare il bilanciamento. */
 export const PLAYER_CONFIG = {
@@ -17,6 +17,8 @@ export const PLAYER_CONFIG = {
   /** Dimensioni dell'hitbox del corpo (pixel). */
   hitboxWidth: 12,
   hitboxHeight: 24,
+  /** Altezza dell'hitbox quando il cavaliere è accovacciato (i piedi restano a terra). */
+  crouchHitboxHeight: 16,
   /**
    * Dimensioni dello sprite a riposo (16 bit): più largo e più alto dell'hitbox per pennacchio,
    * scudo e spada. Solo informative: l'allineamento usa l'ancora registrata con ogni sprite.
@@ -89,7 +91,7 @@ export const ATTACK_DEFINITIONS: Record<string, AttackDefinition> = {
 };
 
 /** Attacco usato quando un input non corrisponde a nessuna combo. */
-export const DEFAULT_ATTACK_BY_INPUT: Record<string, string> = {
+export const DEFAULT_ATTACK_BY_INPUT: Record<AttackInputAction, string> = {
   attack: "swordLight1",
   heavyAttack: "swordHeavy",
 };
@@ -98,6 +100,7 @@ export const DEFAULT_ATTACK_BY_INPUT: Record<string, string> = {
 export const COMBO_DEFINITIONS: ComboDefinition[] = [
   {
     id: "tripleSlash",
+    name: "TRIPLO FENDENTE",
     inputSequence: ["attack", "attack", "attack"],
     attackIds: ["swordLight1", "swordLight2", "swordLight3"],
     comboWindowMs: 400,

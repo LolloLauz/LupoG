@@ -10,6 +10,11 @@ export interface HUDData {
   score: number;
   collectibles: number;
   levelNumber: number;
+  /**
+   * Posti della borsa, in ordine (null = vuoto): icona, numero di pozioni (0 per le armi) e se è
+   * l'arma in mano. Disegnati sotto il pannello, a destra, con il tasto numerico di ognuno.
+   */
+  bag: Array<{ iconSpriteId: string; count: number; isEquipped: boolean } | null>;
   /** Power-up attivi: icona, colore e frazione di tempo che resta (1 = appena preso). */
   powerUps: Array<{ iconSpriteId: string; color: string; remainingFraction: number }>;
   boss: {
@@ -29,6 +34,8 @@ export const HEALTH_SEGMENT_COUNT = 10;
 /** Geometria di ogni segmento della salute (il rettangolo principale, nel colore di riempimento). */
 export const HEALTH_SEGMENT_GEOMETRY = { firstX: 19, stepX: 6, y: 4, width: 5, height: 7 } as const;
 const LOW_HEALTH_PERCENT = 30;
+/** Riquadri della borsa sotto il pannello, a destra: lato (cornice compresa) e distanza tra i riquadri. */
+export const BAG_SLOT_GEOMETRY = { size: 20, step: 22, rightMargin: 4, y: HUD_HEIGHT + 3 } as const;
 
 /**
  * HUD di gioco in stile 16 bit: pannello metallico con bordo dorato, cuore e barra della salute
@@ -49,6 +56,7 @@ export class HUDManager {
     spriteManager.drawSprite(renderer, "itemGem", renderer.width - 34, 13, false);
     renderer.drawText(`x${data.collectibles}`, renderer.width - 6, 13, PALETTE.cyan, { align: "right", shadowColor: PALETTE.black });
     this.renderPowerUps(renderer, spriteManager, data.powerUps, timeSeconds);
+    this.renderBag(renderer, spriteManager, data.bag);
     if (data.boss !== null) {
       this.renderBossBar(renderer, spriteManager, data.boss);
     }
@@ -117,6 +125,35 @@ export class HUDManager {
         renderer.fillRect(segmentX, geometry.y + geometry.height - 2, geometry.width, 2, PALETTE.purple);
       }
     }
+  }
+
+  /** X del riquadro della borsa numero slotIndex (0 = tasto 1). */
+  public static getBagSlotX(slotIndex: number, slotCount: number, screenWidth: number): number {
+    const geometry = BAG_SLOT_GEOMETRY;
+    return screenWidth - geometry.rightMargin - geometry.size - (slotCount - 1 - slotIndex) * geometry.step;
+  }
+
+  /**
+   * Borsa: un riquadro per posto con il suo tasto numerico in alto a sinistra. L'arma in mano ha la
+   * cornice dorata; le pozioni mostrano quante sono.
+   */
+  private renderBag(renderer: Renderer, spriteManager: SpriteManager, bag: HUDData["bag"]): void {
+    const geometry = BAG_SLOT_GEOMETRY;
+    bag.forEach((slot, slotIndex) => {
+      const slotX = HUDManager.getBagSlotX(slotIndex, bag.length, renderer.width);
+      renderer.fillRect(slotX + 1, geometry.y + 1, geometry.size - 2, geometry.size - 2, PALETTE.black);
+      renderer.strokeRect(slotX, geometry.y, geometry.size, geometry.size, slot?.isEquipped === true ? PALETTE.goldLight : PALETTE.gray);
+      if (slot !== null) {
+        const isPotion = slot.count > 0;
+        // icone delle armi 16x16, pozione 8x8 (centrata)
+        const iconOffset = isPotion ? 6 : 2;
+        spriteManager.drawSprite(renderer, slot.iconSpriteId, slotX + iconOffset, geometry.y + iconOffset, false);
+        if (isPotion) {
+          renderer.drawText(String(slot.count), slotX + geometry.size - 2, geometry.y + geometry.size - 8, PALETTE.white, { align: "right", shadowColor: PALETTE.black });
+        }
+      }
+      renderer.drawText(String(slotIndex + 1), slotX + 2, geometry.y + 2, slot?.isEquipped === true ? PALETTE.goldLight : PALETTE.stonePale, { shadowColor: PALETTE.black });
+    });
   }
 
   private renderLives(renderer: Renderer, spriteManager: SpriteManager, lives: number): void {

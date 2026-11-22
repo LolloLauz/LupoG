@@ -112,6 +112,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
     ],
     completion: { kind: "reachExit", exitX: 1500 },
     hasBoss: false,
+    chests: [{ position: { x: 130, y: 188 }, weaponId: "dagger" }],
   },
   {
     id: 2,
@@ -147,7 +148,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
     enemies: [
       { type: "soldier", position: { x: 200, y: 176 } },
       { type: "skeleton", position: { x: 560, y: 176 } },
-      { type: "soldier", position: { x: 700, y: 176 } },
+      { type: "soldier", position: { x: 700, y: 176 }, elite: true, weaponDrop: "spear" },
       { type: "goblin", position: { x: 820, y: 184 } },
       { type: "goblin", position: { x: 1100, y: 184 } },
       { type: "skeleton", position: { x: 1320, y: 176 } },
@@ -208,6 +209,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "healthPotion", position: { x: 1230, y: 192 } },
       { type: "powerBerserk", position: { x: 480, y: 192 } },
     ],
+    chests: [{ position: { x: 760, y: 188 }, weaponId: "axe" }],
     completion: { kind: "defeatBoss" },
     hasBoss: true,
     bossSpawn: { x: 1320, y: 160 },
@@ -263,7 +265,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "bat", position: { x: 1150, y: 110 } },
       { type: "slime", position: { x: 1340, y: 190 } },
       { type: "skeletonArcher", position: { x: 1470, y: 176 } },
-      { type: "skeleton", position: { x: 1600, y: 176 } },
+      { type: "skeleton", position: { x: 1600, y: 176 }, elite: true, weaponDrop: "dagger" },
       { type: "bat", position: { x: 1660, y: 120 } },
     ],
     items: [
@@ -337,6 +339,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "powerFire", position: { x: 790, y: 192 } },
       { type: "powerShield", position: { x: 1060, y: 192 } },
     ],
+    chests: [{ position: { x: 750, y: 188 }, weaponId: "mace" }],
     completion: { kind: "defeatBoss" },
     hasBoss: true,
     bossId: "wolfKing",
@@ -389,7 +392,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "skeleton", position: { x: 1300, y: 176 } },
       { type: "bat", position: { x: 1400, y: 100 } },
       { type: "skeletonArcher", position: { x: 1560, y: 176 } },
-      { type: "soldier", position: { x: 1760, y: 176 } },
+      { type: "soldier", position: { x: 1760, y: 176 }, elite: true, weaponDrop: "mace" },
       { type: "wolf", position: { x: 1840, y: 188 } },
     ],
     items: [

@@ -1,3 +1,4 @@
+import { PALETTE } from "../config/gameConfig";
 import { ITEM_SIZE } from "../config/itemConfig";
 import { POWER_UP_CONFIG } from "../config/powerUpConfig";
 import { Item } from "../entities/Item";
@@ -30,14 +31,17 @@ export class ItemManager {
   /**
    * Raccoglie gli oggetti toccati dal giocatore e ne applica gli effetti
    * (salute, punti, collezionabili, power-up). Restituisce gli oggetti raccolti
-   * (servono al motore per mostrare gli effetti).
+   * (servono al motore per mostrare gli effetti). Gli oggetti da borsa (pozioni) restano
+   * a terra: si raccolgono con E (vedi findReachableBagItem).
    */
   public collectItems(player: Player, scoreManager: ScoreManager): Item[] {
     if (player.isDead) {
       return [];
     }
     const playerBounds = player.getBounds();
-    const touched = this.items.filter((item) => CollisionSystem.intersects(playerBounds, item.getBounds()));
+    const touched = this.items.filter(
+      (item) => item.definition.storedInBag !== true && CollisionSystem.intersects(playerBounds, item.getBounds())
+    );
     for (const item of touched) {
       const definition = item.definition;
       if (definition.healAmount > 0) {
@@ -57,7 +61,26 @@ export class ItemManager {
     return touched;
   }
 
-  public render(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
+  /** L'oggetto da borsa (pozione) che il giocatore sta toccando, oppure null. */
+  public findReachableBagItem(player: Player): Item | null {
+    if (player.isDead) {
+      return null;
+    }
+    const playerBounds = player.getBounds();
+    return this.items.find((item) => item.definition.storedInBag === true && CollisionSystem.intersects(playerBounds, item.getBounds())) ?? null;
+  }
+
+  /** Toglie un oggetto dal livello (raccolto nella borsa). */
+  public removeItem(item: Item): void {
+    this.items = this.items.filter((candidate) => candidate !== item);
+  }
+
+  /**
+   * Disegna gli oggetti; se player è indicato, sopra l'oggetto da borsa che sta toccando compare
+   * il suggerimento "E PRENDI ...".
+   */
+  public render(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number, player: Player | null = null): void {
+    const reachable = player === null ? null : this.findReachableBagItem(player);
     for (const item of this.items) {
       const screenX = item.positionX - cameraX;
       if (screenX < -ITEM_SIZE || screenX > renderer.width) {
@@ -66,6 +89,12 @@ export class ItemManager {
       // leggera oscillazione verticale di 1 pixel
       const bobOffset = Math.sin(this.elapsedSeconds * 4 + item.bobPhase) > 0 ? -1 : 0;
       spriteManager.drawSprite(renderer, item.definition.spriteId, screenX, item.positionY - cameraY + bobOffset, false);
+      if (item === reachable) {
+        renderer.drawText(`E PRENDI ${item.definition.name.toUpperCase()}`, screenX + ITEM_SIZE / 2, item.positionY - cameraY - 10, PALETTE.goldLight, {
+          align: "center",
+          shadowColor: PALETTE.black,
+        });
+      }
     }
   }
 }

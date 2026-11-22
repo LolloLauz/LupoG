@@ -42,6 +42,27 @@ Modifiche:
 5. Danni dei nemici normali **invariati** (scheletro 10, goblin 8, soldato 15): variarli non cambiava
    l'esito dei bot, quindi non c'era evidenza per toccarli.
 
+## Piano espansioni: armi, nemici d'élite, corpi solidi, borsa (non ancora rilasciata)
+
+> **Correzione.** Una prima misura dopo la Fase 1 dava 68% / 27%, ma era sbagliata: `tools/balance.mjs` non creava i nemici d'élite e non aveva
+> i corpi solidi. Ora lo strumento fa come il gioco: nemici d'élite, corpi solidi (`separateHorizontally`) e borsa (il bot raccoglie le
+> pozioni e ne beve una quando ha perso almeno 30 HP).
+
+Partite complete vinte (`npm run balance`, bot che usa solo la spada):
+
+| Situazione | bot medio | rusher |
+|---|---|---|
+| 2.0.0 (prima delle espansioni) | circa 75% | circa 32% |
+| élite + corpi solidi, pozioni che curano al tocco | 48% | 7% |
+| ... con la borsa, al massimo 1 pozione | 73% | 90% |
+| ... con la borsa, al massimo **2 pozioni (scelta attuale)** | **88%** | **93%** |
+| ... con la borsa, al massimo 3 pozioni | 90% | 98% |
+
+Nemici d'élite e corpi solidi rendono il gioco molto più difficile (soprattutto livelli 3 e 6). La borsa lo rende molto più facile, perché
+prima le pozioni prese a salute piena andavano sprecate e ora si conservano per i boss. Il limite si cambia in `INVENTORY_CONFIG`
+(`maxPotionsPerSlot`, `maxPotionSlots`): con 1 pozione il bot medio torna vicino alla 2.0. Il rusher (che non schiva) beneficia
+più del medio delle pozioni conservate. **Il bot non usa le armi nuove**, e le statistiche delle armi non sono state provate da persone.
+
 ## Versione 2.0 con i power-up (2.0.0-alpha.5)
 
 Con i power-up nei livelli: partita completa vinta dal bot "medio" circa **75%** (era 73%), dal rusher circa 32% (invariato); boss da solo:

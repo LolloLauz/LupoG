@@ -26,7 +26,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 513 controlli) | Implementata | |
+| Test unitari inclusi (`npm test`, 678 controlli) | Implementata | |
 | Test nel browser (`npm run test:browser`, 165 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
@@ -93,6 +93,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Collisioni con terreno, blocchi, piattaforme sospese, bordi mappa | Implementata | |
 | Animazioni: idle, camminata, salto, caduta | Implementata | |
 | Animazioni: attacco (4), danno, schivata, morte | Implementata | |
+| Accovacciarsi (S / ↓): hitbox più bassa, piedi fermi, niente movimento; si attacca restando accovacciati | Implementata | sprite accovacciati (anche per i 14 frame d'attacco), da verificare nel gioco |
 | Corsa | Non prevista | `run` esiste nel tipo `PlayerState` ma non è usato |
 | Salute, vite, invulnerabilità temporanea | Implementata | |
 | Gestione delle cadute (danno e ripartenza dall'ultimo punto sicuro) | Implementata | |
@@ -102,6 +103,12 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Funzionalità | Stato | Note |
 |---|---|---|
 | Spada: attacco leggero e pesante | Implementata | |
+| Struttura delle armi (`WeaponDefinition`): attacchi, combo e velocità per arma; arma in mano salvata nei progressi | Implementata | Fase 0 del piano espansioni |
+| Armi corpo a corpo: pugnale, lancia, ascia (rompe la guardia), mazza (schiaccia le corazze) | Implementata | Fase 1; sprite del cavaliere per ogni arma, da verificare nel gioco; bilanciamento misurato solo con il bot |
+| Forzieri (si aprono colpendoli), nemici d'élite (alone dorato, lasciano un'arma), trofei dei boss | Implementata | Fase 1 |
+| Combo miste e ramificate (leggero e pesante) per arma, con il nome mostrato al completamento; attacchi in aria come categoria separata: combo in volo e colpo in picchiata con rimbalzo | Implementata | Fase 3 del piano espansioni; non provato da persone |
+| Borsa (4 posti): armi e pozioni raccolte con E, scelte con 1-4; pozioni conservate (massimo 2) invece di curare al tocco; borsa piena: l'arma in mano resta a terra; armi salvate nei progressi; ripristino a inizio livello quando si perde una vita | Implementata | dopo la Fase 1, su richiesta; i power-up restano automatici; bilanciamento misurato solo con il bot (vedi `BALANCE.md`) |
+| Corpi solidi: il giocatore non entra nei nemici a terra né nel boss, se non con la schivata; chi gli sta addosso lo colpisce comunque | Implementata | `CollisionSystem.separateHorizontally`, `GameEngine.separatePlayerFromBodies` |
 | Combo statiche predefinite e configurabili | Implementata | `tripleSlash` |
 | Buffer degli attacchi premuti in anticipo (ultimi 200 ms) | Implementata | un tasto premuto molto prima viene ignorato |
 | Schivata con invulnerabilità | Implementata | |

@@ -75,6 +75,10 @@ export default async function (t, load) {
   t("ogni frame di cavaliere, nemici e boss contiene l'hitbox e tutti i frame di un personaggio hanno la stessa ancora", badAnchors.length === 0, badAnchors.slice(0, 3).join("; "));
   t("gli sprite del cavaliere sono più alti dell'hitbox (pennacchio ed elmo sporgono, 16 bit)", sprites.getSpriteSize("knightIdle1").height > playerModule.PLAYER_CONFIG.hitboxHeight);
 
+  const { WEAPON_CONFIG } = await load("config/weaponConfig");
+  const allWeaponSuffixes = Object.values(WEAPON_CONFIG).map((weapon) => weapon.spriteSuffix);
+  const suffixesByPlayerAnimation = {};
+  for (const weapon of Object.values(WEAPON_CONFIG)) for (const attack of Object.values(weapon.attacks)) (suffixesByPlayerAnimation[attack.animation] ??= []).push(weapon.spriteSuffix);
   const allAnimationSets = [
     ["giocatore", PLAYER_ANIMATIONS],
     ...Object.entries(ENEMY_ANIMATIONS).map(([id, set]) => [`nemico ${id}`, set]),
@@ -85,11 +89,13 @@ export default async function (t, load) {
     for (const [name, animation] of Object.entries(set)) {
       if (animation.frameIds.length === 0) missing.push(`${name}: nessun frame`);
       if (animation.frameDurationsMs !== undefined && animation.frameDurationsMs.length !== animation.frameIds.length) missing.push(`${name}: durate diverse dai frame`);
-      for (const frameId of animation.frameIds) if (!sprites.has(frameId)) missing.push(`${name}: sprite ${frameId} non registrato`);
+      // cavaliere: un frame esiste con il suffisso di ogni arma che usa l'animazione (attacchi: solo l'arma che li possiede)
+      const suffixes = owner === "giocatore" ? (suffixesByPlayerAnimation[name] ?? allWeaponSuffixes) : [""];
+      for (const frameId of animation.frameIds) for (const suffix of suffixes) if (!sprites.has(frameId + suffix)) missing.push(`${name}: sprite ${frameId + suffix} non registrato`);
     }
     t(`animazioni di ${owner}: ogni frame è uno sprite registrato`, missing.length === 0, missing.slice(0, 3).join("; "));
   }
-  t("le animazioni del giocatore coprono tutti gli stati (idle, walk, jump, fall, hurt, dodge, dead)", ["idle", "walk", "jump", "fall", "hurt", "dodge", "dead"].every((name) => PLAYER_ANIMATIONS[name] !== undefined));
+  t("le animazioni del giocatore coprono tutti gli stati (idle, walk, jump, fall, hurt, dodge, crouch, dead)", ["idle", "walk", "jump", "fall", "hurt", "dodge", "crouch", "dead"].every((name) => PLAYER_ANIMATIONS[name] !== undefined));
   t("ogni attacco ha la sua animazione", Object.values(ATTACK_DEFINITIONS).every((attack) => PLAYER_ANIMATIONS[attack.animation] !== undefined));
   t("la durata dei frame di ogni attacco coincide con la durata dell'attacco", Object.values(ATTACK_DEFINITIONS).every((attack) => {
     const animation = PLAYER_ANIMATIONS[attack.animation];

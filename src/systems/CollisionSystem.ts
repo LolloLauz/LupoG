@@ -2,7 +2,7 @@ import type { GameObject } from "../entities/GameObject";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import type { Rectangle } from "../types/GameTypes";
 
-/** Collisioni tra entità e terreno (e, in seguito, tra attacchi e bersagli). */
+/** Collisioni tra entità e terreno, tra corpi solidi e tra attacchi e bersagli. */
 export class CollisionSystem {
   /** Vero se i due rettangoli si sovrappongono (il semplice contatto non conta). */
   public static intersects(first: Rectangle, second: Rectangle): boolean {
@@ -92,5 +92,51 @@ export class CollisionSystem {
         gameObject.velocityY = 0;
       }
     }
+  }
+
+  /**
+   * Corpi solidi (giocatore contro nemici): se mover e obstacle si sovrappongono, mover viene spinto
+   * fuori di lato, dalla parte in cui si trova il suo centro. Se lì c'è un muro o il bordo della
+   * mappa, si sposta invece l'ostacolo dall'altra parte (se può). Restituisce true se si toccavano.
+   */
+  public separateHorizontally(
+    mover: GameObject,
+    obstacle: GameObject,
+    platforms: PlatformDefinition[],
+    mapWidth: number
+  ): boolean {
+    const moverBounds = mover.getBounds();
+    const obstacleBounds = obstacle.getBounds();
+    if (!CollisionSystem.intersects(moverBounds, obstacleBounds)) {
+      return false;
+    }
+    const moverCenterX = moverBounds.x + moverBounds.width / 2;
+    const obstacleCenterX = obstacleBounds.x + obstacleBounds.width / 2;
+    // a centri allineati decide da che parte arrivava chi si muove
+    const side =
+      moverCenterX !== obstacleCenterX
+        ? Math.sign(moverCenterX - obstacleCenterX)
+        : mover.velocityX !== 0
+          ? -Math.sign(mover.velocityX)
+          : mover.facingDirection === "right" ? -1 : 1;
+    const moverTargetX = side < 0 ? obstacleBounds.x - moverBounds.width : obstacleBounds.x + obstacleBounds.width;
+    if (CollisionSystem.canOccupy(mover, moverTargetX, platforms, mapWidth)) {
+      mover.positionX = moverTargetX;
+      return true;
+    }
+    const obstacleTargetX = side < 0 ? moverBounds.x + moverBounds.width : moverBounds.x - obstacleBounds.width;
+    if (CollisionSystem.canOccupy(obstacle, obstacleTargetX, platforms, mapWidth)) {
+      obstacle.positionX = obstacleTargetX;
+    }
+    return true;
+  }
+
+  /** Vero se l'oggetto, spostato in orizzontale a x, resta nella mappa e non entra in un muro. */
+  private static canOccupy(gameObject: GameObject, x: number, platforms: PlatformDefinition[], mapWidth: number): boolean {
+    if (x < 0 || x + gameObject.width > mapWidth) {
+      return false;
+    }
+    const bounds = { x, y: gameObject.positionY, width: gameObject.width, height: gameObject.height };
+    return !platforms.some((platform) => platform.oneWay !== true && CollisionSystem.intersects(bounds, platform));
   }
 }
