@@ -1,6 +1,6 @@
 # Test e verifiche
 
-Versione descritta: **2.0.0-alpha.5**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
+Versione descritta: **2.0.0**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
 Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima esecuzione prima della consegna.
 
 ---
@@ -10,7 +10,7 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 512 controlli in 14 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 513 controlli in 14 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 165 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
 | `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure) | `npm install` | circa 1 minuto |
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 512 controlli)
+### 2.1 Test unitari (`tests/unit/`, 513 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -44,7 +44,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `config-integrity.test.mjs` | 78 | ogni sprite si registra (colori della palette, ancore che contengono l'hitbox), ogni frame delle animazioni è uno sprite, combo e attacchi coerenti, nemici/boss/oggetti ben formati, controlli senza conflitti, palette (al massimo 64 colori distinti, 16 colori della 1.0 invariati, rampe ordinate dallo scuro al chiaro, ogni colore in una rampa), **tutti i livelli** (regole geometriche e percorribilità) |
 | `interface-state.test.mjs` | 28 | vite, record (archivio normale, guasto, assente, corrotto), menu, transizioni di stato, font |
 | `effects-and-jump.test.mjs` | 21 | particelle, popup, tremolio, hit-stop, coyote time, salto anticipato |
-| `rendering-and-physics.test.mjs` | 19 | rettangoli a pixel interi, scala intera in pixel fisici (14 combinazioni), gravità esatta, atterraggio, soffitto, limiti della mappa |
+| `rendering-and-physics.test.mjs` | 20 | rettangoli a pixel interi, scala intera in pixel fisici rappresentabile dal browser (16 combinazioni, telefono al 300%), gravità esatta, atterraggio, soffitto, limiti della mappa |
 | `speed-consistency.test.mjs` | 11 | camminata, salto, nemico, boss, animazioni, effetti e delta time a 20, 30, 60, 120 e 144 FPS |
 | `regressions.test.mjs` | 21 | rinculo vicino agli abissi e attacco a raffica (difetti della 0.9.1) |
 | `graphics-16bit.test.mjs` | 54 | retino di Bayer, retino sovrapposto, aloni, cerchi, testo a fasce, sprite allineati all'hitbox (anche specchiati), gradienti a fasce, ombreggiatura, ciclo dei colori, ondulazione, `Renderer` su un finto canvas (retino, gradiente, ondulazione, testo con ombra), font (glifi, discendenti, spaziatura proporzionale, cifre a larghezza fissa), contorno e varianti degli sprite |
@@ -54,26 +54,13 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ### 2.2 Test nel browser (`tests/browser/`, 165 controlli, Chromium)
 
-> **Stato nella 2.0.0-alpha.5.** `npm run test:browser` non eseguito. In Chrome headless: partite complete del bot (1 vinta su 3 in questa esecuzione,
-> le altre perse al livello 6, come previsto dal simulatore), 0 colori fuori palette. Il fuzz (6000 frame di tasti a caso, che ora entra anche nella
-> selezione dei livelli e cambia la difficoltà) segnalava 37 "problemi": erano regole del test non aggiornate (stato `levelSelect` sconosciuto, più di
-> 3 vite a difficoltà facile), non difetti del gioco; corrette in `harness.js`, ora 0. Il controllo "Riprova con 3 vite" di `run.mjs` fissa la difficoltà normale.
->
-> **Stato nella 2.0.0-alpha.4.** `npm run test:browser` non eseguito. Il bot di `harness.js` (che ora salta anche gli spuntoni) ha giocato in Chrome
-> headless partite complete di 6 livelli: 2 vinte su 3 (la terza persa al livello 6, coerente con il simulatore), 0 colori fuori palette, 0 violazioni,
-> 0,2 ms per frame. Schermate dei livelli 4-6 controllate a occhio (0 pixel fuori palette).
->
-> **Stato nella 2.0.0-alpha.3.** Come nelle alpha precedenti `npm run test:browser` non è stato eseguito. Le novità della Fase 3 sono state provate in
-> Chrome headless con un livello di prova (non incluso nel gioco) con acqua, ghiaccio, spuntoni, piattaforme mobili, arcieri, pipistrelli e un boss con
-> tutti i tipi di attacco: 0 pixel fuori palette, evocazioni limitate a 2, proiettili visibili. I tre livelli del gioco non usano ancora queste novità.
->
-> **Stato nella 2.0.0-alpha.2.** Come nella alpha.1, `npm run test:browser` non è stato eseguito. In più, il bot di `harness.js` è stato fatto
-> giocare in Chrome headless senza Playwright: 3 partite complete vinte, 0 colori fuori palette, 0 violazioni; 6000 frame di tasti a caso senza problemi.
->
-> **Stato nella 2.0.0-alpha.1.** I test nel browser sono stati adattati alla risoluzione 320×240 (leggono le dimensioni da `GAME_CONFIG`)
-> ma **non sono stati rieseguiti** con questa versione, perché Playwright non era installato. I numeri qui sotto si riferiscono alla 1.0.0.
-> Al loro posto è stata fatta una verifica con Chrome senza interfaccia (headless) sulla build: titolo, controlli, pausa e i tre livelli
-> (incluso il boss) si disegnano a 320×240 con **0 pixel fuori palette**; le immagini sono state controllate a occhio.
+> **Stato nella 2.0.0.** La suite è stata **rieseguita con Playwright** (Chromium headless, macOS): **165 controlli, 0 falliti**, dopo due correzioni:
+> - un controllo cercava i "Controlli" come seconda voce del menu, che ora ne ha quattro (si usa W, il menu è circolare);
+> - **un difetto reale**: a 844×390 con scala di sistema 300% (telefono in orizzontale) il 18% dei blocchi di pixel era irregolare. Con 320 px di larghezza,
+>   4 pixel fisici per pixel di gioco danno 1280 pixel fisici = 426,667 px CSS, che il browser (misure in multipli di 1/64 di pixel) riduce a 1279,97 e
+>   ricampiona. Ora `computeIntegerScale` (in `Renderer.ts`) sceglie la scala intera più grande che il browser rappresenta esattamente (lì 3): 0% di blocchi irregolari.
+> Durante le alpha intermedie (2.0.0-alpha.1 - alpha.5) la suite non era stata eseguita; al suo posto il bot di `harness.js` e il fuzz giravano in Chrome headless
+> senza Playwright (vedi `CHANGELOG.md`).
 
 | Sezione | Che cosa si verifica |
 |---|---|
@@ -131,18 +118,18 @@ Errori dei test, non del gioco (per completezza): il bot automatico rilasciava i
 
 Dichiarati con chiarezza:
 
-- **Browser:** tutto è stato provato **solo in Chromium** (via Playwright) su Linux. **Firefox, Safari, Edge e i browser mobili non sono stati provati.**
+- **Browser:** tutto è stato provato **solo in Chromium** (via Playwright; la 1.0 su Linux, la 2.0 su macOS). **Firefox, Safari, Edge e i browser mobili non sono stati provati.**
   Il codice usa funzioni standard (Canvas 2D, `requestAnimationFrame`, `KeyboardEvent`, `localStorage`), ma questo non equivale a una verifica.
 - **Nessuna prova con persone:** non c'è stata una partita completa giocata da una persona. Il bilanciamento è misurato con un bot (vedi `BALANCE.md`).
 - **Nessuna GPU e nessuno schermo reale:** i tempi di disegno (media 0,07 ms per frame nel test) sono quelli di Chromium senza GPU; indicano che il gioco è leggerissimo,
   non sono un benchmark su un computer reale.
 - **Finestra più piccola del gioco (sotto 320×240 pixel fisici):** la scala minima è 1 e il canvas viene **tagliato** (non esiste una scala "frazionaria": sarebbe contro
   lo stile a pixel). Su un telefono in verticale a 100% di scala l'area visibile è minore del gioco.
-- **Scala di sistema 150% e 300%:** il browser non può dimensionare il canvas con precisione al pixel fisico (la misura in pixel CSS non è rappresentabile esattamente).
-  L'interno dell'immagine resta nitido; la prima e l'ultima colonna/riga possono fondersi di poco con lo sfondo e un blocco può spostarsi di 1 pixel fisico. Invisibile a occhio, ma non
-  è la perfezione che si ottiene a 100%, 125%, 200%. I test lo ammettono solo in quei casi.
+- **Scala di sistema 150% e 300%:** alcune dimensioni in pixel fisici non sono esprimibili in pixel CSS (multipli di 1/64). Il gioco sceglie la scala intera più grande
+  che il browser rappresenta con meno di 0,01 pixel di scarto (a volte una in meno della massima: es. 3 invece di 4 su un telefono al 300%). La soglia di 0,01 è stata
+  trovata sperimentalmente in Chromium; in altri browser potrebbe essere diversa. Dove resta uno scarto, il bordo può fondersi di 1 pixel fisico con lo sfondo.
 - **Sotto i 22 FPS** il tetto del delta time (0,05 s) rallenta il gioco invece di farlo "saltare": voluto, per non attraversare i muri.
-- **Il fuzz non raggiunge Game Over e vittoria da solo** (lo fanno i test dedicati e il bot); nei tasti a caso gli stati visitati sono titolo, controlli, gioco e pausa.
+- **Il fuzz non raggiunge Game Over e vittoria da solo** (lo fanno i test dedicati e il bot); nei tasti a caso gli stati visitati sono titolo, controlli, selezione dei livelli, gioco e pausa.
 - **Touch e gamepad** non sono previsti: il gioco è solo da tastiera.
 - **`npm audit`:** restano 2 segnalazioni su `vite`/`esbuild` nel server di sviluppo (vedi `INSTALLATION.md`); non riguardano il gioco compilato.
 

@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.0.0 – Versione 2.0: grafica a 16 bit e gioco ampliato (2026-11-22)
+Prima versione stabile della 2.0. Riunisce le cinque fasi di sviluppo (le voci 2.0.0-alpha.1 - alpha.5 qui sotto ne descrivono i dettagli) più la verifica finale.
+
+**In sintesi, rispetto alla 1.0.0:**
+- **Grafica a 16 bit**: risoluzione 320×240, palette a rampe (54 colori), retini, gradienti, ciclo dei colori, ondulazione; personaggi, sfondi a più livelli di parallasse, terreni, HUD e schermate ridisegnati (alpha.1-2).
+- **Sistemi nuovi**: proiettili, nemici a distanza e volanti, pericoli (acqua, ghiaccio, spuntoni), piattaforme mobili, attacchi dei boss come dati (alpha.3).
+- **Contenuti**: da 3 a **6 livelli** (Palude Maledetta, Picchi Ghiacciati, Torre dell'Ombra), **11 tipi di nemici**, **4 boss** (Cavaliere Nero, Strega della Palude, Re dei Lupi, Signore dell'Ombra) (alpha.4).
+- **Power-up** (Furia, Velocità, Scudo, Fuoco, Rigenerazione), **difficoltà** (Facile, Normale, Difficile), **selezione dei livelli** e progressi salvati (alpha.5).
+- I livelli 1-3 e il Cavaliere Nero hanno la stessa geometria e le stesse statistiche della 1.0.
+
+### Fase 6 (verifica finale e rilascio)
+- **Test nel browser rieseguiti con Playwright** (non lo erano dalla 1.0.0): 165 controlli, 0 falliti dopo le correzioni sotto.
+- **Corretto – pixel irregolari su un telefono in orizzontale al 300%** (844×390): il 18% dei blocchi di pixel era irregolare. 1280 pixel fisici corrispondono a 426,667 px CSS, che il browser (misure in multipli di 1/64 di pixel) riduce a 1279,97 e ricampiona. Nuova funzione `computeIntegerScale` (`Renderer.ts`): sceglie la scala intera più grande che entra nella finestra **e** che il browser rappresenta con meno di 0,01 pixel di scarto (qui 3 invece di 4). Il difetto è nato con il passaggio a 320 px di larghezza.
+- Test nel browser: il controllo della schermata dei controlli usa la nuova posizione della voce nel menu; la scala attesa segue la stessa regola del gioco. Test unitario della scala con 16 combinazioni, telefono al 300% compreso. Totale: 513 controlli unitari in 14 file.
+- Versione 2.0.0 in `package.json`, `GAME_CONFIG` e manuali; archivi `IRON_AND_SHADOW_v2.0.0.zip` e `IRON_AND_SHADOW_v2.0.0_gioco.zip` (allegati alla release GitHub).
+### Verificato
+- `npm run typecheck`, `npm test` (513), `npm run verify-docs` (11 esempi), `npm run balance`, `npm run build`, `npm run test:browser` (165/165).
+### Limiti noti
+- Provato solo in Chromium; Firefox, Safari, Edge e browser mobili non verificati.
+- Bilanciamento misurato con un bot (partita completa vinta circa il 75% delle volte dal bot che schiva a volte, 32% senza schivate): serve una prova con persone.
+- `npm audit`: 2 segnalazioni su `vite`/`esbuild` nel server di sviluppo (non riguardano il gioco compilato), come nella 1.0.
+
 ## 2.0.0-alpha.5 – Versione 2.0, Fase 5: power-up, difficoltà, selezione dei livelli (2026-11-22)
 ### Aggiunto
 - **Cinque power-up temporanei** (`config/powerUpConfig.ts`): **Furia** (danno ×1,5), **Velocità** (movimento ×1,4), **Scudo** (danni subiti dimezzati, almeno 1), **Fuoco** (+8 danni a ogni colpo, spada e scie incandescenti), **Rigenerazione** (+4 HP al secondo). Si raccolgono come oggetti (runa, stivali alati, scudo, fiamma, foglia; 25 punti), sono nei sei livelli e mai subito prima di un boss.

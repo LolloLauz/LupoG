@@ -1,7 +1,7 @@
 # IRON & SHADOW
 *Medieval Action Arcade* in pixel art a 16 bit – TypeScript, HTML5 Canvas, Vite. Nessun audio, nessuna dipendenza di esecuzione.
 
-**Versione 2.0.0-alpha.5** – in sviluppo la versione 2.0 a 16 bit: grafica a 16 bit, 6 livelli, 11 tipi di nemici, 4 boss, 5 power-up, 3 difficoltà, selezione dei livelli (vedi `documentation/CHANGELOG.md`). Il gioco è completo e giocabile dall'inizio alla vittoria: spada, combo, schivata, sei livelli (foresta, castello, dungeon, palude, picchi ghiacciati, torre), nemici a terra, a distanza e volanti, quattro boss, pericoli, vite, record, HUD e menu. La versione 1.0.0 a 8 bit resta disponibile nel primo commit del repository.
+**Versione 2.0.0** – grafica a 16 bit (320×240), 6 livelli, 11 tipi di nemici, 4 boss, 5 power-up, 3 difficoltà, selezione dei livelli.
 Provato solo in Chromium (vedi `documentation/TESTING.md`).
 
 ## Giocare
@@ -22,7 +22,7 @@ npm run dev
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | build distribuibile in `dist/` |
 | `npm run preview` | anteprima della build |
-| `npm test` | 308 test unitari (meno di 1 secondo) |
+| `npm test` | 513 test unitari (meno di 1 secondo) |
 | `npm run test:browser` | 165 test nel browser (richiede Playwright, vedi `TESTING.md`) |
 | `npm run balance` | simulatore di bilanciamento |
 | `npm run verify-docs` | verifica gli esempi del manuale del codice |

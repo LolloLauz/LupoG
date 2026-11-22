@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.0.0-alpha.5**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.0.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -127,8 +127,9 @@ Per cambiare i tasti basta modificare `CONTROLS_CONFIG`.
 
 - **Canvas a risoluzione fissa.** `Renderer` lavora sempre in 320×240 (`GAME_CONFIG.internalWidth/Height`); il canvas viene ingrandito con CSS di un **fattore intero di pixel FISICI** (il massimo che entra
   nella finestra, calcolato con `devicePixelRatio`), con `image-rendering: pixelated`. Ragionare in pixel fisici evita pixel irregolari con la scala di sistema frazionaria (125%, 150%) tipica dei
-  portatili Windows. Verificato con 17 combinazioni di finestra e scala (vedi `TESTING.md`); con 150% e 300% il browser non riesce a dimensionare il canvas esattamente al pixel fisico e il bordo
-  può sfumare di 1 pixel.
+  portatili Windows. **2.0:** i browser misurano le dimensioni CSS in multipli di 1/64 di pixel, quindi non ogni misura in pixel fisici è esprimibile
+  (1280 pixel fisici al 300% = 426,667 px CSS diventerebbero 1279,97 e l'immagine verrebbe ricampionata). `computeIntegerScale` prende la scala intera più grande
+  che entra nella finestra **e** che il browser rappresenta con meno di 0,01 pixel di scarto. Verificato con 17 combinazioni di finestra e scala (vedi `TESTING.md`).
 - **Rettangoli a pixel interi.** `Renderer.fillRect` arrotonda **tutti e quattro** i bordi: con coordinate frazionarie il browser sfumerebbe i bordi creando colori fuori palette.
 - **Niente testo del browser.** Il testo del canvas sarebbe sfocato: `BitmapFont` disegna pixel per pixel un font con maiuscole (5×7), minuscole con discendenti (altezza totale 9 righe) e spaziatura proporzionale; le cifre restano a larghezza fissa perché i numeri dell'HUD non "ballino". `drawText` accetta un colore d'ombra.
 - **Sprite come testo.** `SpriteManager.registerSprite` trasforma righe di caratteri in piccoli canvas (uno normale e uno specchiato; le sagome a

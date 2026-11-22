@@ -97,20 +97,54 @@ export class Renderer extends PixelPainter {
 
   /** Ingrandisce il canvas del massimo moltiplicatore intero (in pixel fisici) che entra nella finestra. */
   private readonly applyIntegerScale = (): void => {
-    // La scala è un numero intero di PIXEL DELLO SCHERMO per ogni pixel del gioco: con una scala di
-    // sistema frazionaria (es. 125% o 150% su Windows) un multiplo intero di pixel CSS darebbe
-    // pixel irregolari. Si ragiona quindi in pixel fisici e si converte in pixel CSS.
-    const devicePixelRatio = window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
-    const deviceScale = Math.max(
-      1,
-      Math.floor(
-        Math.min(
-          (window.innerWidth * devicePixelRatio) / GAME_CONFIG.internalWidth,
-          (window.innerHeight * devicePixelRatio) / GAME_CONFIG.internalHeight
-        )
-      )
-    );
-    this.canvas.style.width = `${(GAME_CONFIG.internalWidth * deviceScale) / devicePixelRatio}px`;
-    this.canvas.style.height = `${(GAME_CONFIG.internalHeight * deviceScale) / devicePixelRatio}px`;
+    const scale = computeIntegerScale(window.innerWidth, window.innerHeight, window.devicePixelRatio);
+    this.canvas.style.width = `${scale.cssWidth}px`;
+    this.canvas.style.height = `${scale.cssHeight}px`;
+  };
+}
+
+/** I browser misurano le dimensioni CSS in multipli di 1/64 di pixel. */
+const LAYOUT_UNITS_PER_CSS_PIXEL = 64;
+/** Scarto massimo (pixel fisici) tra la dimensione voluta e quella che il browser può rappresentare. */
+const MAX_DEVICE_PIXEL_ERROR = 0.01;
+
+/** Scala scelta per il canvas: pixel fisici per pixel di gioco e dimensioni CSS da impostare. */
+export interface IntegerScale {
+  deviceScale: number;
+  cssWidth: number;
+  cssHeight: number;
+}
+
+/**
+ * Sceglie la scala del canvas: un numero intero di PIXEL DELLO SCHERMO per ogni pixel del gioco (con una
+ * scala di sistema frazionaria, es. 125% o 150%, un multiplo intero di pixel CSS darebbe pixel irregolari).
+ *
+ * Tra le scale intere che entrano nella finestra si prende la più grande che il browser può rappresentare
+ * quasi esattamente: le dimensioni CSS sono multipli di 1/64 di pixel e, per esempio, 1280 pixel fisici con
+ * scala di sistema 300% (426,667 px CSS) diventerebbero 1279,97: il browser ricampionerebbe l'immagine e
+ * tutti i blocchi di pixel diventerebbero irregolari. In quel caso si scende alla scala intera successiva.
+ * Se nessuna scala è rappresentabile si usa comunque la più grande (al minimo 1).
+ */
+export function computeIntegerScale(windowWidth: number, windowHeight: number, devicePixelRatio: number): IntegerScale {
+  const ratio = devicePixelRatio > 0 ? devicePixelRatio : 1;
+  const maxScale = Math.max(
+    1,
+    Math.floor(Math.min((windowWidth * ratio) / GAME_CONFIG.internalWidth, (windowHeight * ratio) / GAME_CONFIG.internalHeight))
+  );
+  const toCss = (devicePixels: number): { css: number; error: number } => {
+    const css = Math.round((devicePixels / ratio) * LAYOUT_UNITS_PER_CSS_PIXEL) / LAYOUT_UNITS_PER_CSS_PIXEL;
+    return { css, error: Math.abs(css * ratio - devicePixels) };
+  };
+  for (let deviceScale = maxScale; deviceScale >= 1; deviceScale--) {
+    const width = toCss(GAME_CONFIG.internalWidth * deviceScale);
+    const height = toCss(GAME_CONFIG.internalHeight * deviceScale);
+    if (width.error < MAX_DEVICE_PIXEL_ERROR && height.error < MAX_DEVICE_PIXEL_ERROR) {
+      return { deviceScale, cssWidth: width.css, cssHeight: height.css };
+    }
+  }
+  return {
+    deviceScale: maxScale,
+    cssWidth: toCss(GAME_CONFIG.internalWidth * maxScale).css,
+    cssHeight: toCss(GAME_CONFIG.internalHeight * maxScale).css,
   };
 }

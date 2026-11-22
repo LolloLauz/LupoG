@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.0.0-alpha.5**.
+Versione: **2.0.0**.
 
 **Stati usati:**
 
@@ -26,9 +26,9 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 308 controlli) | Implementata | |
-| Test nel browser (`npm run test:browser`, 165 controlli) | Implementata | richiede Playwright, non incluso |
-| Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni; con 150% e 300% il bordo può sfumare di 1 pixel fisico |
+| Test unitari inclusi (`npm test`, 513 controlli) | Implementata | |
+| Test nel browser (`npm run test:browser`, 165 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165 |
+| Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
 | Compatibilità con Firefox, Safari, Edge e browser mobili | Da implementare | non provata: verificato solo Chromium |
 | Prova di gioco con persone reali | Da implementare | il bilanciamento è stato misurato solo con un bot |

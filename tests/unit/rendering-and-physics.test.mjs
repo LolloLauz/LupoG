@@ -53,22 +53,31 @@ export default async function (t, load) {
     resize();
     return { cssWidth: parseFloat(fakeCanvas.style.width), cssHeight: parseFloat(fakeCanvas.style.height) };
   };
-  const cases = [[320, 240, 1], [640, 480, 1], [800, 600, 1], [1280, 720, 1], [1366, 768, 1], [1920, 1080, 1], [2560, 1440, 1], [3840, 2160, 1], [1536, 864, 1.25], [1280, 720, 1.5], [1280, 720, 2], [390, 844, 3], [200, 150, 1], [100, 100, 2]];
+  const cases = [[320, 240, 1], [640, 480, 1], [800, 600, 1], [1280, 720, 1], [1366, 768, 1], [1920, 1080, 1], [2560, 1440, 1], [3840, 2160, 1], [1536, 864, 1.25], [1280, 720, 1.5], [1707, 960, 1.5], [1280, 720, 2], [390, 844, 3], [844, 390, 3], [200, 150, 1], [100, 100, 2]];
+  // una dimensione CSS è "rappresentabile" se, in multipli di 1/64 di pixel, dà i pixel fisici voluti con meno di 0,01 di scarto
+  const representable = (devicePixels, ratio) => Math.abs((Math.round((devicePixels / ratio) * 64) / 64) * ratio - devicePixels) < 0.01;
   const wrong = [];
   for (const [width, height, ratio] of cases) {
     const { cssWidth, cssHeight } = scaleFor(width, height, ratio);
     const deviceWidth = cssWidth * ratio, deviceHeight = cssHeight * ratio;
     const scale = deviceWidth / W;
     const isInteger = Math.abs(scale - Math.round(scale)) < 0.001 && Math.abs(deviceHeight / H - Math.round(deviceHeight / H)) < 0.001;
-    const expected = Math.max(1, Math.floor(Math.min((width * ratio) / W, (height * ratio) / H)));
+    const maxScale = Math.max(1, Math.floor(Math.min((width * ratio) / W, (height * ratio) / H)));
+    // la scala scelta è la più grande tra quelle che entrano e che il browser rappresenta esattamente
+    let expected = maxScale;
+    while (expected > 1 && !(representable(W * expected, ratio) && representable(H * expected, ratio))) expected--;
+    if (!(representable(W * expected, ratio) && representable(H * expected, ratio))) expected = maxScale;
     const fits = deviceWidth <= width * ratio + 0.01 && deviceHeight <= height * ratio + 0.01;
-    if (!isInteger || Math.round(scale) !== expected || (expected > 1 && !fits)) wrong.push(`${width}x${height}@${ratio}: scala ${scale}`);
+    const onLayoutGrid = Number.isInteger(cssWidth * 64) && Number.isInteger(cssHeight * 64);
+    if (!isInteger || Math.round(scale) !== expected || !onLayoutGrid || (expected > 1 && !fits)) wrong.push(`${width}x${height}@${ratio}: scala ${scale}`);
   }
-  t("la scala è sempre un numero intero di pixel fisici, la massima che entra nella finestra (14 combinazioni di dimensione e scala di sistema)", wrong.length === 0, wrong.join("; "));
+  t("la scala è un numero intero di pixel fisici, la più grande che entra nella finestra e che il browser rappresenta esattamente (16 combinazioni)", wrong.length === 0, wrong.join("; "));
   const normal = scaleFor(1280, 720, 1);
   t("1280x720 al 100%: canvas 960x720 (scala 3)", normal.cssWidth === 960 && normal.cssHeight === 720);
   const dpi150 = scaleFor(1280, 720, 1.5);
-  t("1280x720 al 150%: 4 pixel fisici per pixel di gioco (non 3 pixel CSS = 4,5 fisici)", Math.abs(dpi150.cssWidth * 1.5 - 1280) < 0.01 && Math.abs(dpi150.cssHeight * 1.5 - 960) < 0.01);
+  t("1280x720 al 150%: 4 pixel fisici per pixel di gioco (non 3 pixel CSS = 4,5 fisici)", Math.abs(dpi150.cssWidth * 1.5 - 1280) < 0.01 && Math.abs(dpi150.cssHeight * 1.5 - 960) < 0.01, `${dpi150.cssWidth} x ${dpi150.cssHeight}`);
+  const phone300 = scaleFor(844, 390, 3);
+  t("telefono 844x390 al 300%: scala 3 (960x720 fisici) invece di 4, perché 1280 pixel fisici non sono esprimibili in pixel CSS (426,667 diventerebbe 1279,97 e il browser ricampionerebbe)", phone300.cssWidth === 320 && phone300.cssHeight === 240, `${phone300.cssWidth} x ${phone300.cssHeight}`);
   const tiny = scaleFor(100, 100, 1);
   t("finestra più piccola del gioco: scala minima 1 (320x240), mai zero né frazionaria", tiny.cssWidth === 320 && tiny.cssHeight === 240);
   globalThis.window.devicePixelRatio = 0;

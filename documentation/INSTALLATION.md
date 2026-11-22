@@ -1,6 +1,6 @@
 # Manuale di installazione
 
-Versione descritta: **2.0.0-alpha.5**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
+Versione descritta: **2.0.0**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
 **modificare il codice** (serve Node.js).
 
 ---
@@ -55,7 +55,7 @@ Installa `typescript` e `vite` nella cartella `node_modules/` (non si distribuis
 | `npm run typecheck` | controlla gli errori di TypeScript (strict) senza creare file |
 | `npm run build` | controlla i tipi e crea la versione distribuibile in `dist/` |
 | `npm run preview` | avvia un server locale che mostra il contenuto di `dist/` (per provare la build) |
-| `npm test` | esegue i test unitari (308 controlli, meno di 1 secondo); vedi `TESTING.md` |
+| `npm test` | esegue i test unitari (513 controlli, meno di 1 secondo); vedi `TESTING.md` |
 | `npm run test:browser` | test nel browser (richiede Playwright: `npm install --no-save playwright` e `npx playwright install chromium`) |
 | `npm run balance` | simulatore di bilanciamento con un bot (vedi `BALANCE.md`); `-- --quick` per una versione rapida |
 | `npm run verify-docs` | verifica gli esempi del `CODE_MANUAL.md` (vedi la sezione 7 di quel manuale) |
@@ -113,8 +113,10 @@ Con il progetto vengono consegnati due archivi:
 
 | Archivio | Contenuto | Per chi |
 |---|---|---|
-| `IRON_AND_SHADOW_v1.0.0.zip` | progetto completo: sorgenti, test, strumenti, manuali, `package-lock.json` e la versione compilata `dist/` (senza `node_modules`) | chi vuole modificare il gioco |
-| `IRON_AND_SHADOW_v1.0.0_gioco.zip` | solo la versione giocabile e un file `LEGGIMI.txt` | chi vuole solo giocare |
+| `IRON_AND_SHADOW_v2.0.0.zip` | progetto completo: sorgenti, test, strumenti, manuali, `package-lock.json` e la versione compilata `dist/` (senza `node_modules` e senza la cartella `.git`) | chi vuole modificare il gioco |
+| `IRON_AND_SHADOW_v2.0.0_gioco.zip` | solo la versione giocabile e un file `LEGGIMI.txt` | chi vuole solo giocare |
+
+Gli archivi sono allegati alla release `v2.0.0` del repository GitHub. Quelli della 1.0.0 restano validi per la versione a 8 bit.
 
 Nel progetto completo `package-lock.json` garantisce le stesse versioni delle dipendenze: `npm ci` le installa esattamente.
 

@@ -46,6 +46,7 @@ const section = (title) => console.log(`\n=== ${title} ===`);
 
 // ---------------------------------------------------------------- preparazione
 const { PALETTE, GAME_CONFIG } = await load("config/gameConfig");
+const { computeIntegerScale } = await load("rendering/Renderer");
 const W = GAME_CONFIG.internalWidth, H = GAME_CONFIG.internalHeight;
 const hexToRgba = (hex) => `${parseInt(hex.slice(1, 3), 16)},${parseInt(hex.slice(3, 5), 16)},${parseInt(hex.slice(5, 7), 16)},255`;
 const paletteColors = Object.values(PALETTE).map(hexToRgba);
@@ -219,7 +220,8 @@ try {
       await page.goto(distUrl);
       await page.waitForTimeout(250);
       const rect = await evaluate(page, `(() => { const r = document.getElementById("game-canvas").getBoundingClientRect(); return { left: r.left, top: r.top, width: r.width, height: r.height, rendering: getComputedStyle(document.getElementById("game-canvas")).imageRendering, overflow: document.documentElement.scrollWidth > innerWidth || document.documentElement.scrollHeight > innerHeight }; })()`);
-      const deviceScale = Math.max(1, Math.floor(Math.min((width * ratio) / W, (height * ratio) / H)));
+      // stessa regola del gioco: la scala intera più grande che entra e che il browser rappresenta esattamente
+      const deviceScale = computeIntegerScale(width, height, ratio).deviceScale;
       const label = `${width}x${height} a ${Math.round(ratio * 100)}%`;
       check(`${label}: scala di ${deviceScale} pixel fisici per pixel di gioco (canvas ${(rect.width * ratio).toFixed(0)}x${(rect.height * ratio).toFixed(0)} px fisici)`, Math.abs(rect.width * ratio - deviceScale * W) < 0.05 && Math.abs(rect.height * ratio - deviceScale * H) < 0.05);
       const fits = rect.width <= width + 0.01 && rect.height <= height + 0.01;
@@ -298,7 +300,8 @@ try {
     const palette = ${colorsArg}; const e = iron.engine; const result = {};
     const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
     for (let i = 0; i < 5; i++) iron.step(); result.title = colorsOk();
-    iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step(); result.controlsState = e.gameState.current; result.controls = colorsOk();
+    // "Controlli" è l'ultima delle quattro voci: W dalla prima voce ci arriva girando il menu
+    iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.step(); result.controlsState = e.gameState.current; result.controls = colorsOk();
     iron.tap("Enter"); iron.step(); iron.step(); result.backToTitle = e.gameState.current;
     iron.tap("Enter"); for (let i = 0; i < 20; i++) iron.step(); result.playing = e.gameState.current; result.game = colorsOk();
     iron.tap("Escape"); iron.step(); iron.step(); result.pausedState = e.gameState.current; result.pause = colorsOk();
@@ -308,7 +311,7 @@ try {
     e.gameState.change("title"); iron.step();
     return result;
   })()`);
-  check("tastiera: S + Invio sul titolo apre i controlli, Invio torna al titolo", screenStates.controlsState === "controls" && screenStates.backToTitle === "title");
+  check("tastiera: W (menu circolare) + Invio sul titolo apre i controlli, Invio torna al titolo", screenStates.controlsState === "controls" && screenStates.backToTitle === "title");
   check("Invio avvia la partita; Esc mette in pausa e Esc riprende", screenStates.playing === "playing" && screenStates.pausedState === "paused" && screenStates.resumed === "playing");
   check("palette: titolo, controlli, gioco, pausa, Game Over, vittoria usano solo i colori della palette", ["title", "controls", "game", "pause", "gameOver", "victory"].every((k) => screenStates[k] === true), Object.entries(screenStates).filter(([, v]) => v === false).map(([k]) => k).join(","));
 
