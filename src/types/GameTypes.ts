@@ -4,6 +4,7 @@
 export type GameStateName =
   | "title"
   | "controls"
+  | "levelSelect"
   | "playing"
   | "paused"
   | "gameOver"

@@ -1,5 +1,7 @@
 import { getAttackWorldHitbox } from "../combat/AttackDefinition";
 import { ComboManager } from "../combat/ComboManager";
+import { PlayerModifiers } from "../combat/PlayerModifiers";
+import { KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
 import { GAME_CONFIG } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
 import {
@@ -12,7 +14,7 @@ import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { AttackDefinition, Damageable, PlayerEnvironment, PlayerState } from "../types/EntityTypes";
+import type { AttackDefinition, Damageable, PlayerEnvironment, PlayerState, PowerUpDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -21,6 +23,9 @@ import { GameObject } from "./GameObject";
 const BLINK_INTERVAL_MS = 80;
 
 type AttackInput = "attack" | "heavyAttack";
+
+/** Negli ultimi ms di un power-up l'alone lampeggia (sta per scadere). */
+const POWER_UP_WARNING_MS = 2000;
 
 /** Ambiente normale: nessun modificatore. */
 export const NORMAL_PLAYER_ENVIRONMENT: PlayerEnvironment = {
@@ -37,6 +42,8 @@ export class Player extends GameObject {
   public currentState: PlayerState = "idle";
   /** Ambiente in cui si trova (acqua, ghiaccio...): lo imposta il motore prima di ogni aggiornamento. */
   public environment: PlayerEnvironment = NORMAL_PLAYER_ENVIRONMENT;
+  /** Power-up attivi: le statistiche effettive si calcolano da qui, PLAYER_CONFIG resta invariato. */
+  public readonly modifiers = new PlayerModifiers();
   public currentHealth: number = PLAYER_CONFIG.maxHealth;
   public readonly maxHealth: number = PLAYER_CONFIG.maxHealth;
 
@@ -66,6 +73,10 @@ export class Player extends GameObject {
   private invulnerabilityRemainingMs = 0;
   /** Durata dell'ultimo aggiornamento (serve all'aderenza sul ghiaccio). */
   private lastDeltaTimeSeconds = 0;
+  /** Salute rigenerata non ancora applicata (frazioni di HP). */
+  private regenerationAccumulator = 0;
+  /** Tempo per la pulsazione degli aloni dei power-up. */
+  private auraElapsedMs = 0;
   private deathElapsedMs = 0;
 
   constructor(startX: number, startY: number) {
@@ -98,7 +109,19 @@ export class Player extends GameObject {
 
   /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
   public getDamageMultiplier(): number {
-    return 1;
+    return this.modifiers.getValue("damageMultiplier");
+  }
+
+  /** Danno aggiunto a ogni colpo (power-up del fuoco). */
+  public getBonusDamage(): number {
+    return this.modifiers.getValue("bonusDamage");
+  }
+
+  /** Attiva un power-up raccolto. */
+  public applyPowerUp(definition: PowerUpDefinition): void {
+    if (!this.isDead) {
+      this.modifiers.add(definition);
+    }
   }
 
   /** Recupera salute (senza superare il massimo). */
@@ -141,6 +164,8 @@ export class Player extends GameObject {
 
   /** Dopo la morte: salute piena e nessuna invulnerabilità residua. */
   public revive(): void {
+    this.modifiers.clear();
+    this.regenerationAccumulator = 0;
     this.currentHealth = this.maxHealth;
     this.deathElapsedMs = 0;
     this.invulnerabilityRemainingMs = 0;
@@ -155,7 +180,9 @@ export class Player extends GameObject {
     if (this.isDead || this.isInvulnerable) {
       return false;
     }
-    this.currentHealth = Math.max(0, this.currentHealth - damage);
+    // lo scudo riduce il danno, ma un colpo toglie sempre almeno 1 HP
+    const reducedDamage = Math.max(1, Math.round(damage * this.modifiers.getValue("damageTakenMultiplier")));
+    this.currentHealth = Math.max(0, this.currentHealth - reducedDamage);
     this.cancelAttack();
     this.invulnerabilityRemainingMs = PLAYER_CONFIG.invulnerabilityDurationMs;
     const knockbackDirection = this.positionX + this.width / 2 < sourceCenterX ? -1 : 1;
@@ -239,16 +266,36 @@ export class Player extends GameObject {
     if (isBlinkHidden) {
       return;
     }
+    this.renderPowerUpAuras(renderer, cameraX, cameraY);
     // Lo sprite è più grande dell'hitbox (pennacchio, spada, scie): l'allineamento usa
     // la colonna d'ancoraggio registrata con lo sprite (vedi knightSprites.ts).
+    // Con il power-up del fuoco si usano le varianti con la lama incandescente.
+    const fireSuffix = this.modifiers.has("fire") ? KNIGHT_FIRE_SUFFIX : "";
     spriteManager.drawSpriteAligned(
       renderer,
-      this.animationPlayer.currentFrameId,
+      `${this.animationPlayer.currentFrameId}${fireSuffix}`,
       this.positionX - cameraX,
       this.positionY + PLAYER_CONFIG.hitboxHeight - cameraY,
       PLAYER_CONFIG.hitboxWidth,
       this.facingDirection === "left"
     );
+  }
+
+  /**
+   * Alone (retino che pulsa) dietro il cavaliere per ogni power-up attivo, nel suo colore.
+   * Negli ultimi 2 secondi lampeggia per avvisare che sta per scadere.
+   */
+  private renderPowerUpAuras(renderer: Renderer, cameraX: number, cameraY: number): void {
+    const centerX = this.positionX + this.width / 2 - cameraX;
+    const centerY = this.positionY + this.height / 2 - 2 - cameraY;
+    this.modifiers.activePowerUps.forEach((powerUp, auraIndex) => {
+      const isExpiring = powerUp.remainingMs < POWER_UP_WARNING_MS;
+      if (isExpiring && Math.floor(powerUp.remainingMs / 120) % 2 === 0) {
+        return;
+      }
+      const pulse = Math.floor((this.auraElapsedMs + auraIndex * 150) / 180) % 2;
+      renderer.fillGlow(centerX, centerY, 17 + pulse + auraIndex * 2, powerUp.definition.auraColor, 2, 4);
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -260,6 +307,10 @@ export class Player extends GameObject {
     this.attackCooldownRemainingMs = Math.max(0, this.attackCooldownRemainingMs - deltaTimeMs);
     this.dodgeCooldownRemainingMs = Math.max(0, this.dodgeCooldownRemainingMs - deltaTimeMs);
     this.comboManager.update(deltaTimeMs);
+    // prima la cura del frame, poi la scadenza: così l'ultimo frame del power-up conta
+    this.applyRegeneration(deltaTimeMs);
+    this.modifiers.update(deltaTimeMs);
+    this.auraElapsedMs += deltaTimeMs;
     // tolleranza nel salto: "coyote time" (si salta anche subito dopo aver lasciato il bordo)
     this.coyoteRemainingMs = this.isOnGround
       ? PLAYER_CONFIG.coyoteTimeMs
@@ -410,7 +461,9 @@ export class Player extends GameObject {
     if (input.isHeld("moveRight")) {
       direction += 1;
     }
-    this.approachHorizontalVelocity(direction * PLAYER_CONFIG.movementSpeed * this.environment.speedMultiplier);
+    this.approachHorizontalVelocity(
+      direction * PLAYER_CONFIG.movementSpeed * this.environment.speedMultiplier * this.modifiers.getValue("movementSpeedMultiplier")
+    );
     // la direzione resta bloccata mentre si attacca
     if (direction !== 0 && this.currentAttack === null) {
       this.facingDirection = direction < 0 ? "left" : "right";
@@ -430,6 +483,22 @@ export class Player extends GameObject {
     // Salto variabile: rilasciando il tasto in salita il salto si accorcia.
     if (input.wasReleased("jump") && this.velocityY < 0) {
       this.velocityY *= PLAYER_CONFIG.jumpCutMultiplier;
+    }
+  }
+
+  /** Rigenerazione (power-up): accumula frazioni di HP e cura a punti interi. */
+  private applyRegeneration(deltaTimeMs: number): void {
+    const healthPerSecond = this.modifiers.getValue("healthRegenPerSecond");
+    if (healthPerSecond <= 0 || this.isDead) {
+      this.regenerationAccumulator = 0;
+      return;
+    }
+    this.regenerationAccumulator += (healthPerSecond * deltaTimeMs) / 1000;
+    // piccola tolleranza: la somma di molti frame (es. 600 x 0,0667) non deve perdere un punto per arrotondamento
+    const wholePoints = Math.floor(this.regenerationAccumulator + 1e-6);
+    if (wholePoints > 0) {
+      this.regenerationAccumulator -= wholePoints;
+      this.heal(wholePoints);
     }
   }
 

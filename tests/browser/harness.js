@@ -7,6 +7,7 @@
  * Accede alle variabili private del motore (in JavaScript è possibile): serve solo ai test.
  */
 import { GameEngine } from "../../src/core/GameEngine";
+import { DIFFICULTY_CONFIG } from "../../src/config/gameConfig";
 import "../../src/style.css";
 
 const canvas = document.getElementById("game-canvas");
@@ -68,7 +69,9 @@ function readCanvasColors() {
   return colors;
 }
 
-const VALID_STATES = ["title", "controls", "playing", "paused", "gameOver", "victory"];
+const VALID_STATES = ["title", "controls", "levelSelect", "playing", "paused", "gameOver", "victory"];
+/** Le vite iniziali dipendono dalla difficoltà (facile ne ha di più). */
+const MAX_LIVES = Math.max(...Object.values(DIFFICULTY_CONFIG).map((difficulty) => difficulty.startingLives));
 
 /** Controlla le regole che devono valere sempre. Restituisce l'elenco dei problemi. */
 function checkInvariants() {
@@ -81,7 +84,7 @@ function checkInvariants() {
   if (![player.positionX, player.positionY, player.velocityX, player.velocityY].every(finite)) problems.push("giocatore con valori non finiti");
   if (player.currentHealth < 0 || player.currentHealth > player.maxHealth) problems.push(`salute fuori intervallo ${player.currentHealth}`);
   if (player.positionX < -0.01 || player.positionX + player.width > level.width + 0.01) problems.push(`giocatore fuori mappa x=${player.positionX}`);
-  if (engine.livesManager.remainingLives < 0 || engine.livesManager.remainingLives > 3) problems.push(`vite fuori intervallo ${engine.livesManager.remainingLives}`);
+  if (engine.livesManager.remainingLives < 0 || engine.livesManager.remainingLives > MAX_LIVES) problems.push(`vite fuori intervallo ${engine.livesManager.remainingLives}`);
   if (!Number.isInteger(engine.scoreManager.currentScore) || engine.scoreManager.currentScore < 0) problems.push(`punteggio non valido ${engine.scoreManager.currentScore}`);
   for (const enemy of enemies) {
     if (![enemy.positionX, enemy.positionY].every(finite)) problems.push("nemico con valori non finiti");
@@ -255,4 +258,4 @@ function fuzz({ frames, seed, paletteColors }) {
   return { problems: [...problems], badColors: [...badColors], statesVisited: [...statesVisited] };
 }
 
-window.iron = { engine, setKey, tap, step, releaseAll, playGame, fuzz, checkInvariants, readCanvasColors, createRandom };
+window.iron = { engine, setKey, tap, step, releaseAll, playGame, fuzz, checkInvariants, readCanvasColors, createRandom, difficultyConfig: DIFFICULTY_CONFIG };

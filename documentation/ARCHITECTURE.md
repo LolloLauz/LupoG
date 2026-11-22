@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.0.0-alpha.4**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.0.0-alpha.5**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -92,8 +92,9 @@ senza aggiornare il mondo né consumare gli input: un tasto premuto in quell'int
 
 | Da | A (transizioni ammesse) |
 |---|---|
-| `title` | `controls`, `playing` |
+| `title` | `controls`, `levelSelect`, `playing` |
 | `controls` | `title` |
+| `levelSelect` (2.0) | `title`, `playing` |
 | `playing` | `paused`, `gameOver`, `victory` |
 | `paused` | `playing`, `title` |
 | `gameOver` | `title`, `playing` (è il "Riprova") |
@@ -212,8 +213,12 @@ lo stato (`idle`, `walk`, `attack`...) con una priorità fissa. È più semplice
 **Tolleranza nel salto.** *Coyote time* (80 ms dopo aver lasciato un bordo si salta ancora) e *salto anticipato* (100 ms): rendono il gioco più
 indulgente senza cambiare le regole.
 
-**Difficoltà.** `DIFFICULTY_CONFIG` definisce tre moltiplicatori (salute e danno dei nemici) e `Enemy` li applica alla creazione. Oggi il livello usa sempre
-`normal` e **non c'è un selettore di difficoltà in gioco** (vedi `FEATURES.md`).
+**Difficoltà (2.0).** `DIFFICULTY_CONFIG` definisce per ogni difficoltà i moltiplicatori di salute e danno di nemici **e boss** e le vite iniziali.
+Si sceglie nel menu del titolo; `GameEngine` la passa a `LevelManager.createEnemies/createBoss` e ai nemici evocati o nati da una divisione, e
+`LivesManager.reset` usa le sue vite. La scelta è salvata da `ProgressManager`.
+
+**Progressi (2.0).** `ProgressManager` ricorda nel browser il livello più avanzato raggiunto (aggiornato da `startLevel`) e la difficoltà. La schermata
+`levelSelect` permette una partita nuova da uno qualsiasi dei livelli raggiunti. Come il record, è tollerante: senza archivio si riparte dal livello 1.
 
 ---
 
@@ -306,7 +311,8 @@ d'aggancio elencati, volutamente minimi.
 |---|---|---|---|
 | Nuove combo | già possibile | `COMBO_DEFINITIONS` | solo dati (esempio 5 del manuale) |
 | Nuovi nemici / boss / oggetti / livelli | già possibile | `ENEMY_CONFIG`, `BOSS_CATALOG`, `ITEM_CONFIG`, `LEVEL_CONFIG` | solo dati e sprite (esempi 6-10) |
-| Power-up temporanei e permanenti | 1.2 | `Player.getDamageMultiplier()` e `CombatSystem.calculateDamage()` | un elenco di **modificatori** nel giocatore, separato dalle statistiche base di `PLAYER_CONFIG` (vedi sotto) |
+| Power-up temporanei | implementato (2.0) | `POWER_UP_CONFIG`, `PlayerModifiers` | nuovi power-up: solo dati (effetti su statistiche esistenti) e uno sprite; una statistica nuova richiede di leggerla dove serve |
+| Power-up permanenti | punto di estensione | `PowerUpDefinition.type = "permanent"` (non scade) | oggi la partita li toglierebbe a ogni livello (`modifiers.clear()` in `startLevel`): servirebbe conservarli |
 | Danni elementali | 1.2-1.3 | `calculateDamage()` e `HitResult` | un tipo di elemento nell'attacco e un effetto sul bersaglio |
 | Attacchi speciali, magie, abilità | 1.2-1.3 | `GameAction`, `Player.handleInput`, `ATTACK_DEFINITIONS` | nuove azioni nei controlli, un costo (risorsa) e un nuovo stato di animazione |
 | Nuove armi | 1.3 | `ATTACK_DEFINITIONS`, `COMBO_DEFINITIONS` | oggi esiste un solo insieme globale di attacchi: servirebbe una `WeaponDefinition` con i propri attacchi e combo, scelta dal giocatore |
@@ -316,10 +322,10 @@ d'aggancio elencati, volutamente minimi.
 | Nuove ambientazioni | già possibile (2.0: sei) | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer`, `TerrainRenderer` | un caso in `BackgroundRenderer.buildTheme` (livelli di parallasse) e i colori del terreno; una tessitura nuova richiede un caso in `TerrainRenderer` |
 | Personaggi alternativi, equipaggiamento | 2.0 | `PLAYER_CONFIG`, `knightSprites.ts` | un `CharacterDefinition` che sostituisce la configurazione e gli sprite del giocatore |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |
-| Selettore di difficoltà | da implementare | `DIFFICULTY_CONFIG` (già presente) | un menu e passare la scelta a `LevelManager.createEnemies` |
+| Selettore di difficoltà | implementato (2.0) | `DIFFICULTY_CONFIG`, menu del titolo, `ProgressManager` | - |
 | Audio | escluso dal progetto | eventi già individuabili in `GameEngine` (colpi, raccolte, morte) | un `AudioManager` chiamato da quei punti |
 
-### Come si distinguerebbero statistiche base e modificatori (progetto, non codice esistente)
+### Statistiche base e modificatori (implementato nella 2.0 con i power-up)
 
 Il requisito è che "la scadenza di un power-up ripristini i valori precedenti senza perdere gli altri". La strada più semplice è **non modificare mai** i valori base:
 
@@ -327,10 +333,12 @@ Il requisito è che "la scadenza di un power-up ripristini i valori precedenti s
 valoreEffettivo(stat) = (base[stat] + somma dei bonus additivi attivi) × prodotto dei moltiplicatori attivi
 ```
 
-Ogni power-up sarebbe un oggetto con `id`, `name`, `description`, `type` (temporaneo/permanente), `effect` (quali statistiche e come), `durationMs` e
-`requirements`. Il giocatore terrebbe una lista di quelli attivi e, a ogni frame, scarterebbe quelli scaduti: il valore effettivo si ricalcola dalla lista,
-quindi rimuovere uno non può danneggiare gli altri. I punti dove oggi si leggono le statistiche (`PLAYER_CONFIG.movementSpeed`, `getDamageMultiplier()`, `calculateDamage`)
-sarebbero i luoghi da sostituire con `valoreEffettivo`.
+Ogni power-up (`PowerUpDefinition` in `powerUpConfig.ts`) ha `id`, `name`, `description`, `type` (temporaneo/permanente), `effects` (quali statistiche e
+come: `add` o `multiply`), `durationMs` e `requirements` (punto di estensione). Il giocatore tiene l'elenco di quelli attivi in `PlayerModifiers` e, a ogni
+frame, scarta quelli scaduti: il valore effettivo (`getValue`) si ricalcola dall'elenco, quindi la scadenza di uno non può danneggiare gli altri, e
+`PLAYER_CONFIG` non cambia mai. Le statistiche lette così sono: moltiplicatore del danno e danno aggiunto (in `CombatSystem.processPlayerAttack`),
+velocità (in `Player.applyHorizontalInput`), danni subiti (in `Player.takeDamage`), rigenerazione (in `Player.updateTimers`). Lo stesso power-up raccolto
+di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni nuovo livello e alla perdita di una vita (scelta di bilanciamento).
 
 ---
 

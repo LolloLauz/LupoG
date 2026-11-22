@@ -37,7 +37,8 @@ export class CombatSystem {
         continue;
       }
       if (CollisionSystem.intersects(hitbox, target.getBounds())) {
-        const damage = CombatSystem.calculateDamage(attack.damage, player.getDamageMultiplier());
+        // danno = (danno dell'attacco + bonus del fuoco) x moltiplicatore della furia
+        const damage = CombatSystem.calculateDamage(attack.damage + player.getBonusDamage(), player.getDamageMultiplier());
         player.registerHit(target);
         target.receiveHit(damage, player.facingDirection);
         hits.push({ target, damage });

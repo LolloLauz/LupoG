@@ -1,7 +1,7 @@
 /** Configurazione generale del gioco. */
 export const GAME_CONFIG = {
   title: "IRON & SHADOW",
-  version: "2.0.0-alpha.4",
+  version: "2.0.0-alpha.5",
   /**
    * Risoluzione interna (stile 16 bit, come le console di quarta generazione in modalità 320x240).
    * L'altezza è la stessa della versione 1.0, quindi la geometria dei livelli non cambia:
@@ -38,12 +38,18 @@ export const GAME_CONFIG = {
 export { PALETTE, PALETTE_RAMPS, MAX_PALETTE_COLORS } from "./paletteConfig";
 export type { PaletteColor, PaletteColorName, PaletteRampName } from "./paletteConfig";
 
-/** Difficoltà: moltiplicatori applicati ai valori base. */
+/**
+ * Difficoltà (si sceglie nel menu del titolo): moltiplicatori della salute e del danno di nemici e
+ * boss, e vite iniziali.
+ */
 export const DIFFICULTY_CONFIG = {
-  easy: { enemyHealthMultiplier: 0.75, enemyDamageMultiplier: 0.75 },
-  normal: { enemyHealthMultiplier: 1, enemyDamageMultiplier: 1 },
-  hard: { enemyHealthMultiplier: 1.5, enemyDamageMultiplier: 1.25 },
+  easy: { name: "FACILE", enemyHealthMultiplier: 0.75, enemyDamageMultiplier: 0.75, startingLives: 5 },
+  normal: { name: "NORMALE", enemyHealthMultiplier: 1, enemyDamageMultiplier: 1, startingLives: 3 },
+  hard: { name: "DIFFICILE", enemyHealthMultiplier: 1.5, enemyDamageMultiplier: 1.25, startingLives: 2 },
 } as const;
+
+/** Ordine in cui il menu passa da una difficoltà all'altra. */
+export const DIFFICULTY_ORDER = ["easy", "normal", "hard"] as const;
 
 export type DifficultyId = keyof typeof DIFFICULTY_CONFIG;
 export const DEFAULT_DIFFICULTY: DifficultyId = "normal";

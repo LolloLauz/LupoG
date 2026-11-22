@@ -23,7 +23,8 @@ export class LivesManager {
     this.lives++;
   }
 
-  public reset(): void {
-    this.lives = GAME_CONFIG.startingLives;
+  /** Nuova partita: vite iniziali (quelle della difficoltà scelta, se indicate). */
+  public reset(startingLives: number = GAME_CONFIG.startingLives): void {
+    this.lives = startingLives;
   }
 }

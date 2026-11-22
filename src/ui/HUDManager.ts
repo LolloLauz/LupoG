@@ -10,6 +10,8 @@ export interface HUDData {
   score: number;
   collectibles: number;
   levelNumber: number;
+  /** Power-up attivi: icona, colore e frazione di tempo che resta (1 = appena preso). */
+  powerUps: Array<{ iconSpriteId: string; color: string; remainingFraction: number }>;
   boss: {
     name: string;
     health: number;
@@ -46,9 +48,24 @@ export class HUDManager {
     });
     spriteManager.drawSprite(renderer, "itemGem", renderer.width - 34, 13, false);
     renderer.drawText(`x${data.collectibles}`, renderer.width - 6, 13, PALETTE.cyan, { align: "right", shadowColor: PALETTE.black });
+    this.renderPowerUps(renderer, spriteManager, data.powerUps, timeSeconds);
     if (data.boss !== null) {
       this.renderBossBar(renderer, spriteManager, data.boss);
     }
+  }
+
+  /** Power-up attivi sotto il pannello: icona e barra del tempo che resta (lampeggia quando sta per finire). */
+  private renderPowerUps(renderer: Renderer, spriteManager: SpriteManager, powerUps: HUDData["powerUps"], timeSeconds: number): void {
+    powerUps.forEach((powerUp, powerUpIndex) => {
+      const slotX = 5 + powerUpIndex * 30;
+      const slotY = HUD_HEIGHT + 4;
+      renderer.fillRect(slotX - 1, slotY - 1, 28, 10, PALETTE.black);
+      spriteManager.drawSprite(renderer, powerUp.iconSpriteId, slotX, slotY, false);
+      const isExpiring = powerUp.remainingFraction < 0.2 && Math.floor(timeSeconds * 6) % 2 === 0;
+      const barWidth = Math.max(1, Math.round(16 * powerUp.remainingFraction));
+      renderer.fillRect(slotX + 10, slotY + 3, 16, 3, PALETTE.slate);
+      renderer.fillRect(slotX + 10, slotY + 3, barWidth, 3, isExpiring ? PALETTE.white : powerUp.color);
+    });
   }
 
   /** Riquadro centrato con titolo e righe di testo (messaggi di livello). */

@@ -30,8 +30,24 @@ const KNIGHT_COLORS: Record<string, string> = {
   N: PALETTE.navy,
   B: PALETTE.blue,
   L: PALETTE.lightBlue,
+  // spada e scie (chiavi proprie, così il power-up del fuoco può ricolorarle senza toccare l'armatura)
+  b: PALETTE.lightGray,
+  v: PALETTE.white,
+  a: PALETTE.white,
   c: PALETTE.cyan,
 };
+
+/** Colori con il power-up del fuoco: lama incandescente e scie di fiamma. */
+const KNIGHT_FIRE_COLORS: Record<string, string> = {
+  ...KNIGHT_COLORS,
+  b: PALETTE.orange,
+  v: PALETTE.yellow,
+  a: PALETTE.yellow,
+  c: PALETTE.flame,
+};
+
+/** Suffisso degli sprite del cavaliere con il power-up del fuoco (es. "knightIdle1Fire"). */
+export const KNIGHT_FIRE_SUFFIX = "Fire";
 
 /** Larghezza dei frame normali; i frame d'attacco sono più larghi (la spada sporge a destra). */
 const KNIGHT_WIDTH = 24;
@@ -133,7 +149,7 @@ const LEGS_JUMP = KNIGHT_LEGS_JUMP;
 const LEGS_FALL = KNIGHT_LEGS_FALL;
 
 /** Spada a riposo: tenuta dritta davanti, la mano è su HAND_X/HAND_Y. */
-const SWORD_KEYS: BladeKeys = { grip: "e", blade: "s", edge: "w", guard: "y" };
+const SWORD_KEYS: BladeKeys = { grip: "e", blade: "b", edge: "v", guard: "y" };
 /** Posizione dell'impugnatura rispetto allo sprite (la mano destra, davanti). */
 const HAND_X = 19;
 const HAND_Y = 18;
@@ -166,7 +182,7 @@ function composeAttackFrame(pose: SwordPose): string[] {
   const grid = createGrid(ATTACK_SPRITE_WIDTH, KNIGHT_HEIGHT);
   stampRows(grid, composeKnightFrame(LEGS_STAND, bodyDrop, false));
   for (const arc of pose.arcs ?? []) {
-    drawSlashArc(grid, HAND_X, HAND_Y + bodyDrop, arc.radius, arc.startDegrees, arc.endDegrees, "w");
+    drawSlashArc(grid, HAND_X, HAND_Y + bodyDrop, arc.radius, arc.startDegrees, arc.endDegrees, "a");
     drawSlashArc(grid, HAND_X, HAND_Y + bodyDrop, arc.radius - 1, arc.startDegrees, arc.endDegrees, "c");
   }
   drawSword(grid, HAND_X, HAND_Y + bodyDrop, pose.tipX, pose.tipY, SWORD_KEYS);
@@ -258,5 +274,6 @@ export function registerKnightSprites(spriteManager: SpriteManager): void {
   };
   for (const [spriteId, pixelRows] of Object.entries(frames)) {
     spriteManager.registerSprite(spriteId, pixelRows, KNIGHT_COLORS, KNIGHT_ANCHOR_X);
+    spriteManager.registerSprite(`${spriteId}${KNIGHT_FIRE_SUFFIX}`, pixelRows, KNIGHT_FIRE_COLORS, KNIGHT_ANCHOR_X);
   }
 }

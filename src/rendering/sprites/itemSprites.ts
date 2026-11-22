@@ -60,7 +60,91 @@ const GEM_ROWS = [
   "........",
 ];
 
+/** Colori dei power-up. */
+const POWER_UP_COLORS: Record<string, string> = {
+  k: PALETTE.black,
+  w: PALETTE.white,
+  s: PALETTE.stone,
+  S: PALETTE.stoneLight,
+  r: PALETTE.red,
+  o: PALETTE.orange,
+  f: PALETTE.flame,
+  y: PALETTE.goldLight,
+  c: PALETTE.cream,
+  B: PALETTE.blue,
+  L: PALETTE.lightBlue,
+  N: PALETTE.navy,
+  g: PALETTE.green,
+  G: PALETTE.lightGreen,
+  d: PALETTE.darkGreen,
+};
+
+/** Runa della Furia: pietra con una runa rossa incandescente. */
+const BERSERK_ROWS = [
+  ".kkkkkk.",
+  "kSssssSk",
+  "ksrssrsk",
+  "kssrrssk",
+  "kssrrssk",
+  "ksrssrsk",
+  "kSssssSk",
+  ".kkkkkk.",
+];
+
+/** Stivali Alati. */
+const SPEED_ROWS = [
+  ".....ww.",
+  "....wwk.",
+  ".kkkkwk.",
+  ".koook..",
+  ".koook..",
+  "kkoookk.",
+  "koooooyk",
+  "kkkkkkkk",
+];
+
+/** Scudo Benedetto: scudo blu con croce d'oro. */
+const SHIELD_ROWS = [
+  "kkkkkkkk",
+  "kLLyLLBk",
+  "kLByLBNk",
+  "kyyyyyNk",
+  "kBByBBNk",
+  ".kByBNk.",
+  "..kBNk..",
+  "...kk...",
+];
+
+/** Fiamma Eterna. */
+const FIRE_ROWS = [
+  "...k....",
+  "..kok...",
+  "..koyk..",
+  ".kofyok.",
+  ".kfyyfk.",
+  "kfyccyfk",
+  "kfyyyyfk",
+  ".kkkkkk.",
+];
+
+/** Erba della Vita: foglia verde con croce bianca. */
+const REGENERATION_ROWS = [
+  "...kk...",
+  "..kgGk..",
+  ".kgGwgk.",
+  "kgGwwwgk",
+  "kgGgwGgk",
+  ".kgGGgk.",
+  "..kddk..",
+  "...kk...",
+];
+
 export function registerItemSprites(spriteManager: SpriteManager): void {
+  spriteManager.registerSprite("itemBerserk", BERSERK_ROWS, POWER_UP_COLORS);
+  spriteManager.registerSprite("itemSpeed", SPEED_ROWS, POWER_UP_COLORS);
+  spriteManager.registerSprite("itemShield", SHIELD_ROWS, POWER_UP_COLORS);
+  spriteManager.registerSprite("itemFire", FIRE_ROWS, POWER_UP_COLORS);
+  spriteManager.registerSprite("itemRegeneration", REGENERATION_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemPotion", POTION_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemCoin", COIN_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemGem", GEM_ROWS, ITEM_COLORS);

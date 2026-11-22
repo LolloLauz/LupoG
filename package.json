@@ -1,6 +1,6 @@
 {
   "name": "iron-and-shadow",
-  "version": "2.0.0-alpha.4",
+  "version": "2.0.0-alpha.5",
   "description": "IRON & SHADOW - Medieval Retro Action Arcade (TypeScript + Canvas + Vite)",
   "private": true,
   "type": "module",

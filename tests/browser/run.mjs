@@ -331,6 +331,7 @@ try {
   const gameOverFlow = await evaluate(page, `(() => {
     const e = iron.engine; const log = [];
     if (e.gameState.current !== "playing") { iron.tap("Enter"); iron.step(); }
+    e.progressManager.setDifficulty("normal"); // il controllo conta 3 vite (difficoltà normale)
     e.startNewGame(); e.bannerRemainingMs = 0; e.enemies = [];
     for (let life = 3; life >= 1; life--) {
       e.player.takeDamage(10000, 0);
@@ -339,10 +340,10 @@ try {
     }
     const stateAtEnd = e.gameState.current; const livesAtEnd = e.livesManager.remainingLives;
     iron.step(); iron.tap("Enter"); iron.step(); iron.step();
-    return { log, stateAtEnd, livesAtEnd, afterRetry: e.gameState.current, livesAfterRetry: e.livesManager.remainingLives, level: e.currentLevelId, health: e.player.currentHealth };
+    return { log, stateAtEnd, livesAtEnd, afterRetry: e.gameState.current, livesAfterRetry: e.livesManager.remainingLives, expectedLives: iron.difficultyConfig[e.progressManager.difficulty].startingLives, level: e.currentLevelId, health: e.player.currentHealth };
   })()`);
   check("tre morti di fila: vite 3→2→1→0 e poi Game Over", gameOverFlow.log.map((l) => l[1]).join(",") === "2,1,0" && gameOverFlow.stateAtEnd === "gameOver", JSON.stringify(gameOverFlow.log));
-  check("Invio su 'Riprova': nuova partita con 3 vite, livello 1 e salute piena", gameOverFlow.afterRetry === "playing" && gameOverFlow.livesAfterRetry === 3 && gameOverFlow.level === 1 && gameOverFlow.health === 100);
+  check("Invio su 'Riprova': nuova partita con le vite della difficoltà scelta, livello 1 e salute piena", gameOverFlow.afterRetry === "playing" && gameOverFlow.livesAfterRetry === gameOverFlow.expectedLives && gameOverFlow.level === 1 && gameOverFlow.health === 100);
 
   // --- rendering di ogni livello
   const levelRender = await evaluate(page, `(() => {

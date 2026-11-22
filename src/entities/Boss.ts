@@ -1,6 +1,6 @@
 import { BOSS_ATTACK_ANIMATIONS, createBossAnimations } from "../config/animationConfig";
 import { ENEMY_CONFIG } from "../config/enemyConfig";
-import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
+import { DEFAULT_DIFFICULTY, DIFFICULTY_CONFIG, GAME_CONFIG, PALETTE, type DifficultyId } from "../config/gameConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
@@ -44,6 +44,8 @@ const WAKE_UP_COOLDOWN_MS = 800;
 export class Boss extends GameObject implements Damageable {
   public currentHealth: number;
   public readonly maxHealth: number;
+  /** Moltiplicatore del danno di tutti i suoi attacchi (difficoltà). */
+  private readonly damageMultiplier: number;
 
   private readonly animationPlayer: AnimationPlayer;
   private baseState: BossBaseState = "dormant";
@@ -63,15 +65,18 @@ export class Boss extends GameObject implements Damageable {
     public readonly definition: BossDefinition,
     startX: number,
     startY: number,
-    private readonly randomNumber: () => number = Math.random
+    private readonly randomNumber: () => number = Math.random,
+    difficulty: DifficultyId = DEFAULT_DIFFICULTY
   ) {
     super(startX, startY, definition.hitbox.width, definition.hitbox.height);
     const firstAttack = definition.attacks[0];
     if (firstAttack === undefined) {
       throw new Error(`Il boss "${definition.id}" non ha attacchi`);
     }
-    this.maxHealth = definition.maxHealth;
-    this.currentHealth = definition.maxHealth;
+    const difficultyConfig = DIFFICULTY_CONFIG[difficulty];
+    this.maxHealth = Math.round(definition.maxHealth * difficultyConfig.enemyHealthMultiplier);
+    this.currentHealth = this.maxHealth;
+    this.damageMultiplier = difficultyConfig.enemyDamageMultiplier;
     this.facingDirection = "left";
     // le animazioni si ricavano dalla definizione (attacchi compresi): funziona con qualsiasi boss
     this.animationPlayer = new AnimationPlayer(createBossAnimations(definition), "idle");
@@ -134,7 +139,7 @@ export class Boss extends GameObject implements Damageable {
   /** Danno dell'attacco in corso (0 se l'attacco non ferisce con il corpo o con l'arma). */
   public get currentAttackDamage(): number {
     const attack = this.currentAttack;
-    return attack !== null && (attack.kind === "melee" || attack.kind === "charge") ? attack.damage : 0;
+    return attack !== null && (attack.kind === "melee" || attack.kind === "charge") ? Math.round(attack.damage * this.damageMultiplier) : 0;
   }
 
   /** Durata della preparazione dell'attacco in corso, se è in preparazione (utile ai bot di prova), altrimenti null. */
@@ -338,7 +343,7 @@ export class Boss extends GameObject implements Damageable {
           projectileId: attack.projectileId,
           origin: { ...origin },
           direction: { x: Math.cos(angle), y: Math.sin(angle) },
-          damage: attack.damage,
+          damage: Math.round(attack.damage * this.damageMultiplier),
         });
       }
     } else if (attack.kind === "summon") {

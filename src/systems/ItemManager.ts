@@ -1,4 +1,5 @@
 import { ITEM_SIZE } from "../config/itemConfig";
+import { POWER_UP_CONFIG } from "../config/powerUpConfig";
 import { Item } from "../entities/Item";
 import type { Player } from "../entities/Player";
 import type { Renderer } from "../rendering/Renderer";
@@ -28,7 +29,7 @@ export class ItemManager {
 
   /**
    * Raccoglie gli oggetti toccati dal giocatore e ne applica gli effetti
-   * (salute, punti, collezionabili). Restituisce gli oggetti raccolti
+   * (salute, punti, collezionabili, power-up). Restituisce gli oggetti raccolti
    * (servono al motore per mostrare gli effetti).
    */
   public collectItems(player: Player, scoreManager: ScoreManager): Item[] {
@@ -47,6 +48,9 @@ export class ItemManager {
       }
       if (definition.isCollectible) {
         scoreManager.registerCollectible();
+      }
+      if (definition.powerUpId !== undefined) {
+        player.applyPowerUp(POWER_UP_CONFIG[definition.powerUpId]);
       }
     }
     this.items = this.items.filter((item) => !touched.includes(item));

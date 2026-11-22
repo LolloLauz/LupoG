@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.4.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.0.0-alpha.5.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -83,7 +83,8 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 
 | Schermata | Cosa mostra |
 |---|---|
-| **Titolo** | logo, record, menu *Nuova partita* e *Controlli* |
+| **Titolo** | logo, record, menu *Nuova partita*, *Scegli livello*, *Difficoltà* (Invio la cambia: Facile → Normale → Difficile) e *Controlli* |
+| **Scegli livello** | i sei livelli: quelli già raggiunti si possono giocare (partita nuova da quel livello), gli altri sono chiusi da un lucchetto; W/S per scegliere, Invio per giocare, Esc per tornare |
 | **Controlli** | l'elenco dei tasti |
 | **Gioco** | il livello con la barra in alto (HUD) |
 | **Pausa** | menu *Riprendi* e *Esci al titolo* (lo schermo si oscura con un retino di pixel) |
@@ -95,6 +96,7 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 | Elemento | Significato |
 |---|---|
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
+| icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
 | icona dell'elmo **x3** | vite rimaste |
 | **LIVELLO n** | livello corrente |
 | numero dorato a 6 cifre | punteggio |
@@ -292,6 +294,33 @@ Si raccolgono semplicemente toccandoli. Alcuni sono su piattaforme sospese: biso
 
 Quando raccogli un oggetto compare una scritta con il bonus (per esempio "+30 HP").
 
+### Power-up
+
+Oggetti speciali che danno un potere per qualche secondo (e 25 punti). Mentre sono attivi il cavaliere è circondato da un **alone** del loro colore
+e sotto la barra in alto compare l'icona con il tempo che resta; negli ultimi 2 secondi l'alone lampeggia. Si possono avere più power-up insieme;
+raccogliere di nuovo lo stesso ne fa ripartire il tempo. **Si perdono** cambiando livello o perdendo una vita.
+
+| Power-up | Aspetto | Effetto | Durata |
+|---|---|---|---|
+| **Furia** | runa rossa su pietra | danno degli attacchi ×1,5 | 12 s |
+| **Velocità** | stivali alati | movimento ×1,4 | 12 s |
+| **Scudo** | scudo blu con croce d'oro | danni subiti dimezzati (almeno 1) | 15 s |
+| **Fuoco** | fiamma | +8 danni a ogni colpo; la spada diventa incandescente | 12 s |
+| **Rigenerazione** | foglia verde | +4 HP al secondo | 10 s |
+
+Si trovano lungo i livelli (alcuni su piattaforme in alto), **mai subito prima di un boss**: aiutano contro i nemici, il boss resta la prova finale.
+Furia e Fuoco si sommano: (15 + 8) × 1,5 = 35 danni con l'attacco leggero.
+
+### Difficoltà
+
+| Difficoltà | Salute dei nemici e dei boss | Danno dei nemici e dei boss | Vite |
+|---|---|---|---|
+| Facile | ×0,75 | ×0,75 | 5 |
+| Normale | ×1 | ×1 | 3 |
+| Difficile | ×1,5 | ×1,25 | 2 |
+
+La difficoltà scelta e i livelli raggiunti vengono **ricordati dal browser** (come il record).
+
 ---
 
 ## 11. Punteggio
@@ -304,10 +333,11 @@ Quando raccogli un oggetto compare una scritta con il bonus (per esempio "+30 HP
 | Cavaliere Nero / Strega / Re dei Lupi / Signore dell'Ombra | 1000 / 1200 / 1400 / 2500 |
 | Moneta | 50 |
 | Gemma | 200 |
+| Power-up | 25 |
 | Livello completato | 500 |
 
 Il punteggio massimo teorico (tutto raccolto, tutti i nemici del livello sconfitti, senza contare quelli evocati dai boss) è
-**16875** punti: 5900 nei primi tre livelli e 10975 negli altri tre. Anche i nemici evocati dai boss danno punti.
+**17100** punti: 5975 nei primi tre livelli e 11125 negli altri tre (power-up compresi, 25 punti l'uno). Anche i nemici evocati dai boss danno punti.
 Se perdi una vita, il punteggio torna al valore che avevi all'inizio di quel livello.
 
 **Record.** Il tuo miglior punteggio viene salvato **nel browser** (non su un server). Compare nella schermata del titolo, nel

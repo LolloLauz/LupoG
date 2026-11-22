@@ -1,4 +1,5 @@
 import { BOSS_CATALOG, BOSS_CONFIG, ENEMY_CONFIG } from "../config/enemyConfig";
+import { DEFAULT_DIFFICULTY, type DifficultyId } from "../config/gameConfig";
 import { LEVEL_CONFIG, THEME_STYLES } from "../config/levelConfig";
 import { Boss } from "../entities/Boss";
 import { Enemy } from "../entities/Enemy";
@@ -118,7 +119,7 @@ export class LevelManager {
   }
 
   /** Crea il boss del livello (se previsto). */
-  public createBoss(): Boss | null {
+  public createBoss(difficulty: DifficultyId = DEFAULT_DIFFICULTY): Boss | null {
     const spawn = this.level.bossSpawn;
     if (!this.level.hasBoss || spawn === undefined) {
       return null;
@@ -128,13 +129,13 @@ export class LevelManager {
     if (definition === undefined) {
       throw new Error(`Boss non presente in BOSS_CATALOG: ${bossId}`);
     }
-    return new Boss(definition, spawn.x, spawn.y);
+    return new Boss(definition, spawn.x, spawn.y, Math.random, difficulty);
   }
 
   /** Crea i nemici del livello corrente secondo le posizioni di generazione. */
-  public createEnemies(): Enemy[] {
+  public createEnemies(difficulty: DifficultyId = DEFAULT_DIFFICULTY): Enemy[] {
     return this.level.enemies.map(
-      (spawn) => new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y)
+      (spawn) => new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y, difficulty)
     );
   }
 

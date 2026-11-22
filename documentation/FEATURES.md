@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.0.0-alpha.4**.
+Versione: **2.0.0-alpha.5**.
 
 **Stati usati:**
 
@@ -80,7 +80,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Livelli 4-6 con pericoli, piattaforme mobili e boss; vittoria dopo il livello 6 | Implementata | Fase 4 |
 | Nuovi nemici: Lupo (balzo), Melma (si divide), Golem di ghiaccio (corazzato); Arciere e Pipistrello nei livelli | Implementata | Fase 4 |
 | Nuovi boss: Strega della Palude, Re dei Lupi (forma di belva), Signore dell'Ombra (finale a tre fasi) | Implementata | Fase 4 |
-| Power-up, selettore di difficoltà, selezione dei livelli | Pianificata | Fase 5 |
+| Power-up temporanei: Furia, Velocità, Scudo, Fuoco (spada incandescente), Rigenerazione; alone e tempo nell'HUD | Implementata | Fase 5; `POWER_UP_CONFIG`, `PlayerModifiers`, statistiche base mai modificate |
+| Selezione dei livelli già raggiunti (salvati nel browser) | Implementata | Fase 5; `ProgressManager`, stato `levelSelect` |
 
 ## Protagonista
 
@@ -110,7 +111,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Combo personalizzabili dal giocatore | Non prevista | |
 | Altre armi | Pianificata | v1.3 |
 | Attacchi speciali, magie, abilità | Pianificata | v1.2-1.3 |
-| Danni elementali | Pianificata | v1.2-1.3; punto d'aggancio: `CombatSystem.calculateDamage` |
+| Danni elementali | In sviluppo | 2.0: il Fuoco aggiunge danno a ogni colpo; mancano resistenze ed effetti sul bersaglio |
 
 ## Nemici e boss
 
@@ -142,8 +143,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Schermata di vittoria | Implementata | |
 | Pozione, moneta, gemma | Implementata | |
 | Nuovi oggetti tramite configurazione | Implementata | esempio 8 del manuale |
-| Power-up temporanei (Berserk, Velocità, Scudo, Fuoco, Salute) | Pianificata | v1.2; vedi `ARCHITECTURE.md` sez. 10 |
-| Potenziamenti permanenti | Pianificata | v1.2-2.0 |
+| Power-up temporanei (Furia, Velocità, Scudo, Fuoco, Rigenerazione) | Implementata | 2.0 Fase 5; vedi `ARCHITECTURE.md` sez. 10 |
+| Potenziamenti permanenti | Pianificata | punto d'aggancio: `PowerUpDefinition.type = "permanent"` (2.0) |
 | Nuove ambientazioni | Implementata | Fase 4: sei ambientazioni |
 
 ## Interfaccia
@@ -161,7 +162,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Punteggio (nemici, oggetti, livelli) | Implementata | |
 | Record locale (miglior punteggio) | Implementata | salvato nel browser; dipende da browser e cartella |
 | Classifica con più punteggi | Pianificata | `HighScoreManager` salva un solo valore |
-| Selettore di difficoltà | Da implementare | `DIFFICULTY_CONFIG` esiste, ma il gioco usa sempre `normal` |
+| Selettore di difficoltà (Facile, Normale, Difficile: nemici, boss e vite) | Implementata | 2.0 Fase 5; scelta salvata nel browser |
 
 ## Audio
 

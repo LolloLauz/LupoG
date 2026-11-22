@@ -27,6 +27,51 @@ export interface PlayerEnvironment {
   canSwim: boolean;
 }
 
+/** Identificatori dei power-up (vedi powerUpConfig.ts). */
+export type PowerUpId = "berserk" | "speed" | "shield" | "fire" | "regeneration";
+
+/**
+ * Statistiche del giocatore modificabili dai power-up. Il valore effettivo è
+ * (base + somma dei bonus "add") x prodotto dei fattori "multiply"; la base è 1 per i
+ * moltiplicatori e 0 per i bonus (vedi PlayerModifiers).
+ */
+export type PlayerStatName =
+  | "damageMultiplier"
+  | "movementSpeedMultiplier"
+  | "damageTakenMultiplier"
+  | "bonusDamage"
+  | "healthRegenPerSecond";
+
+/** Effetto di un power-up su una statistica. */
+export interface StatModifierEffect {
+  stat: PlayerStatName;
+  operation: "add" | "multiply";
+  value: number;
+}
+
+/** Definizione di un power-up (dati, nessuna logica). */
+export interface PowerUpDefinition {
+  id: PowerUpId;
+  name: string;
+  description: string;
+  /** "temporary" scade dopo durationMs; "permanent" resta fino alla fine della partita (punto di estensione). */
+  type: "temporary" | "permanent";
+  effects: StatModifierEffect[];
+  durationMs: number;
+  /** Requisiti (punto di estensione): livello minimo a partire dal quale ha effetto. */
+  requirements?: { minLevel?: number };
+  /** Icona nell'HUD (sprite 8x8: lo stesso dell'oggetto da raccogliere). */
+  iconSpriteId: string;
+  /** Colore dell'alone attorno al cavaliere e della barra del tempo nell'HUD. */
+  auraColor: string;
+}
+
+/** Power-up attivo: la definizione e il tempo che resta (per l'HUD). */
+export interface ActivePowerUp {
+  definition: PowerUpDefinition;
+  remainingMs: number;
+}
+
 /** Stati possibili dei nemici. */
 export type EnemyState =
   | "idle"

@@ -15,8 +15,13 @@ const SELECTED_ROW_COLORS: readonly string[] = [
 ];
 
 export interface MenuItem<TCommand extends string> {
-  label: string;
+  /** Testo della voce; una funzione se cambia (es. "DIFFICOLTÀ: NORMALE"). */
+  label: string | (() => string);
   command: TCommand;
+}
+
+function getLabel<TCommand extends string>(item: MenuItem<TCommand>): string {
+  return typeof item.label === "function" ? item.label() : item.label;
 }
 
 /**
@@ -54,13 +59,14 @@ export class MenuManager<TCommand extends string> {
     this.items.forEach((item, itemIndex) => {
       const isSelected = itemIndex === this.selectedIndex;
       const itemY = startY + itemIndex * lineHeight;
-      renderer.drawText(item.label, centerX, itemY, isSelected ? PALETTE.white : PALETTE.gray, {
+      const label = getLabel(item);
+      renderer.drawText(label, centerX, itemY, isSelected ? PALETTE.white : PALETTE.gray, {
         align: "center",
         shadowColor: PALETTE.black,
         rowColors: isSelected ? SELECTED_ROW_COLORS : undefined,
       });
       if (isSelected) {
-        const halfWidth = Math.floor(measureTextWidth(item.label, 1) / 2);
+        const halfWidth = Math.floor(measureTextWidth(label, 1) / 2);
         renderer.drawText(">", centerX - halfWidth - 11, itemY, PALETTE.orange, { shadowColor: PALETTE.black });
         renderer.drawText("<", centerX + halfWidth + 7, itemY, PALETTE.orange, { shadowColor: PALETTE.black });
       }

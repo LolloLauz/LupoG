@@ -1,5 +1,5 @@
 import { CombatSystem } from "../combat/CombatSystem";
-import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
+import { DIFFICULTY_CONFIG, DIFFICULTY_ORDER, GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import type { Boss } from "../entities/Boss";
 import { Enemy } from "../entities/Enemy";
 import { Player } from "../entities/Player";
@@ -16,7 +16,8 @@ import { CollisionSystem } from "../systems/CollisionSystem";
 import { EnemyAISystem } from "../systems/EnemyAISystem";
 import { HazardSystem } from "../systems/HazardSystem";
 import { ProjectileSystem, type ProjectileEvent } from "../systems/ProjectileSystem";
-import { ENEMY_CONFIG } from "../config/enemyConfig";
+import { BOSS_CATALOG, BOSS_CONFIG, ENEMY_CONFIG } from "../config/enemyConfig";
+import { POWER_UP_CONFIG } from "../config/powerUpConfig";
 import { registerProjectileSprites } from "../rendering/sprites/projectileSprites";
 import { HighScoreManager } from "../systems/HighScoreManager";
 import { ItemManager } from "../systems/ItemManager";
@@ -26,6 +27,8 @@ import { ScoreManager } from "../systems/ScoreManager";
 import type { Vector2 } from "../types/GameTypes";
 import { HUDManager, type HUDData } from "../ui/HUDManager";
 import { ScreenManager, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
+import { ProgressManager } from "../systems/ProgressManager";
+import { LEVEL_CONFIG } from "../config/levelConfig";
 import { GameLoop } from "./GameLoop";
 import { GameState } from "./GameState";
 import { InputManager } from "./InputManager";
@@ -80,6 +83,8 @@ export class GameEngine {
   private readonly scoreManager = new ScoreManager();
   private readonly livesManager = new LivesManager();
   private readonly highScoreManager = new HighScoreManager();
+  /** Livelli sbloccati e difficoltà scelta (salvati nel browser). */
+  private readonly progressManager = new ProgressManager();
   private readonly hud = new HUDManager();
   private readonly effects = new EffectsManager();
   private readonly screens: ScreenManager;
@@ -167,7 +172,7 @@ export class GameEngine {
     } else if (currentState === "paused" && this.input.wasPressed("pause")) {
       this.gameState.change("playing");
     } else {
-      this.applyMenuCommand(this.screens.update(currentState, this.input));
+      this.applyMenuCommand(this.screens.update(currentState, this.input, this.getScreenData()));
     }
     this.input.endFrame();
   }
@@ -181,6 +186,18 @@ export class GameEngine {
       case "showControls":
         this.gameState.change("controls");
         break;
+      case "showLevelSelect":
+        this.gameState.change("levelSelect");
+        break;
+      case "cycleDifficulty": {
+        const currentIndex = DIFFICULTY_ORDER.indexOf(this.progressManager.difficulty);
+        this.progressManager.setDifficulty(DIFFICULTY_ORDER[(currentIndex + 1) % DIFFICULTY_ORDER.length]!);
+        break;
+      }
+      case "startSelectedLevel":
+        this.startNewGame(this.screens.selectedLevelId);
+        this.gameState.change("playing");
+        break;
       case "backToTitle":
         this.gameState.change("title");
         break;
@@ -192,18 +209,22 @@ export class GameEngine {
     }
   }
 
-  /** Nuova partita: primo livello, salute piena, vite e punteggio azzerati. */
-  private startNewGame(): void {
+  /**
+   * Nuova partita (dal primo livello o da un livello scelto tra quelli sbloccati): salute piena,
+   * vite della difficoltà scelta, punteggio azzerato.
+   */
+  private startNewGame(levelId: number = FIRST_LEVEL_ID): void {
     this.scoreManager.reset();
-    this.livesManager.reset();
+    this.livesManager.reset(DIFFICULTY_CONFIG[this.progressManager.difficulty].startingLives);
     this.isNewRecord = false;
     this.player.revive();
-    this.startLevel(FIRST_LEVEL_ID);
+    this.startLevel(this.levelManager.hasLevel(levelId) ? levelId : FIRST_LEVEL_ID);
   }
 
   /** Carica un livello: nemici, boss, oggetti, giocatore alla partenza e camera. */
   private startLevel(levelId: number): void {
     this.currentLevelId = levelId;
+    this.progressManager.unlockLevel(levelId);
     this.levelManager.loadLevel(levelId);
     this.populateLevel();
     const playerStart = this.levelManager.level.playerStart;
@@ -211,6 +232,8 @@ export class GameEngine {
     this.lastSafePosition = { ...playerStart };
     this.effects.clear();
     this.projectileSystem.clear();
+    // i power-up non passano da un livello all'altro
+    this.player.modifiers.clear();
     this.levelPhase = "playing";
     this.bannerRemainingMs = GAME_CONFIG.levelBannerDurationMs;
     this.levelElapsedSeconds = 0;
@@ -220,8 +243,9 @@ export class GameEngine {
   }
 
   private populateLevel(): void {
-    this.enemies = this.levelManager.createEnemies();
-    this.boss = this.levelManager.createBoss();
+    const difficulty = this.progressManager.difficulty;
+    this.enemies = this.levelManager.createEnemies(difficulty);
+    this.boss = this.levelManager.createBoss(difficulty);
     this.itemManager.loadItems(this.levelManager.level.items);
   }
 
@@ -379,7 +403,7 @@ export class GameEngine {
       enemy.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
       // le melme si dividono quando muoiono
       for (const split of enemy.drainSplitRequests()) {
-        splitChildren.push(new Enemy(ENEMY_CONFIG[split.enemyType], split.position.x, split.position.y));
+        splitChildren.push(new Enemy(ENEMY_CONFIG[split.enemyType], split.position.x, split.position.y, this.progressManager.difficulty));
         this.effects.spawnBurst(enemy.centerX, enemy.centerY, [PALETTE.moss, PALETTE.olive, PALETTE.reed], 8);
       }
     }
@@ -391,7 +415,7 @@ export class GameEngine {
       this.combatSystem.processBossAttack(this.boss, this.player);
       this.boss.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
       for (const summon of this.boss.drainSummonRequests()) {
-        const minion = new Enemy(ENEMY_CONFIG[summon.enemyType], summon.position.x, summon.position.y);
+        const minion = new Enemy(ENEMY_CONFIG[summon.enemyType], summon.position.x, summon.position.y, this.progressManager.difficulty);
         minion.isSummoned = true;
         this.enemies.push(minion);
         this.effects.spawnBurst(minion.centerX, minion.centerY, [PALETTE.violet, PALETTE.lilac, PALETTE.white], 12);
@@ -433,7 +457,11 @@ export class GameEngine {
       const centerX = item.positionX + item.width / 2;
       this.effects.spawnSparkle(centerX, item.positionY + 4);
       const definition = item.definition;
-      if (definition.healAmount > 0) {
+      if (definition.powerUpId !== undefined) {
+        const powerUp = POWER_UP_CONFIG[definition.powerUpId];
+        this.effects.addPopup(`${powerUp.name}!`, centerX, item.positionY - 4, powerUp.auraColor);
+        this.effects.spawnBurst(centerX, item.positionY + 4, [powerUp.auraColor, PALETTE.white], 12);
+      } else if (definition.healAmount > 0) {
         this.effects.addPopup(`+${definition.healAmount} HP`, centerX, item.positionY - 4, PALETTE.lightGreen);
       } else if (definition.scoreBonus > 0) {
         this.effects.addPopup(`+${definition.scoreBonus}`, centerX, item.positionY - 4, PALETTE.cyan);
@@ -525,6 +553,11 @@ export class GameEngine {
       score: this.scoreManager.currentScore,
       collectibles: this.scoreManager.collectiblesFound,
       levelNumber: this.currentLevelId,
+      powerUps: this.player.modifiers.activePowerUps.map((powerUp) => ({
+        iconSpriteId: powerUp.definition.iconSpriteId,
+        color: powerUp.definition.auraColor,
+        remainingFraction: Math.max(0, powerUp.remainingMs / powerUp.definition.durationMs),
+      })),
       boss: isBossVisible
         ? {
             name: boss.definition.name,
@@ -545,6 +578,14 @@ export class GameEngine {
       bestScore: this.highScoreManager.bestScore,
       collectibles: this.scoreManager.collectiblesFound,
       isNewRecord: this.isNewRecord,
+      difficultyName: DIFFICULTY_CONFIG[this.progressManager.difficulty].name,
+      levels: LEVEL_CONFIG.map((level) => ({
+        id: level.id,
+        name: level.name,
+        theme: level.theme,
+        isUnlocked: this.progressManager.isLevelUnlocked(level.id),
+        bossName: level.hasBoss ? (BOSS_CATALOG[level.bossId ?? BOSS_CONFIG.id]?.name ?? null) : null,
+      })),
     };
   }
 

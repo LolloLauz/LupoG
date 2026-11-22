@@ -42,6 +42,16 @@ Modifiche:
 5. Danni dei nemici normali **invariati** (scheletro 10, goblin 8, soldato 15): variarli non cambiava
    l'esito dei bot, quindi non c'era evidenza per toccarli.
 
+## Versione 2.0 con i power-up (2.0.0-alpha.5)
+
+Con i power-up nei livelli: partita completa vinta dal bot "medio" circa **75%** (era 73%), dal rusher circa 32% (invariato); boss da solo:
+Cavaliere Nero 100% / 95%, Strega 100% / 100%, Re dei Lupi 100% / 98%, Signore dell'Ombra 48% / 70%; livelli 1-6 (medio): 100 / 95 / 78 / 98 / 95 / 45%.
+
+**Una prima versione era troppo generosa:** con Furia e Scudo raccolti subito prima delle arene il bot vinceva il 100% delle partite (anche senza
+schivare), perché il power-up era ancora attivo contro il boss. I power-up sono stati spostati più indietro: aiutano contro i nemici del livello e scadono
+prima del boss. Nella misura "boss da solo" (livello senza nemici) il bot arriva all'arena in fretta e ha ancora la Furia del livello 3: per questo il
+Cavaliere Nero risulta più facile lì che nella misura del livello intero.
+
 ## Versione 2.0: sei livelli (`npm run balance`, 40-60 ripetizioni, 2.0.0-alpha.4)
 
 Dalla 2.0.0-alpha.4 il simulatore usa gli stessi sistemi del gioco: boss di ogni livello (`bossId`), proiettili, pericoli (acqua, ghiaccio, spuntoni:

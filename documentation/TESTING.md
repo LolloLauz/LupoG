@@ -1,6 +1,6 @@
 # Test e verifiche
 
-Versione descritta: **2.0.0-alpha.4**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
+Versione descritta: **2.0.0-alpha.5**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
 Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima esecuzione prima della consegna.
 
 ---
@@ -10,7 +10,7 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 484 controlli in 13 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 512 controlli in 14 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 165 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
 | `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure) | `npm install` | circa 1 minuto |
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 484 controlli)
+### 2.1 Test unitari (`tests/unit/`, 512 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -49,10 +49,16 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `regressions.test.mjs` | 21 | rinculo vicino agli abissi e attacco a raffica (difetti della 0.9.1) |
 | `graphics-16bit.test.mjs` | 54 | retino di Bayer, retino sovrapposto, aloni, cerchi, testo a fasce, sprite allineati all'hitbox (anche specchiati), gradienti a fasce, ombreggiatura, ciclo dei colori, ondulazione, `Renderer` su un finto canvas (retino, gradiente, ondulazione, testo con ombra), font (glifi, discendenti, spaziatura proporzionale, cifre a larghezza fissa), contorno e varianti degli sprite |
 | `systems-phase3.test.mjs` | 58 | (Fase 4) balzo del lupo e bordo degli abissi, divisione della melma, corazza del golem, 6 livelli con i nuovi elementi, forme dei boss; proiettili (volo, durata, colpo, passaggio durante la schivata, muri e piattaforme sospese, deviazione con la spada, palla di fuoco non deviabile, uscita dalla mappa), arciere (tiro alla fine della preparazione, una freccia per attacco, raggio, altezza, ritirata, interruzione), pipistrello (volo senza gravità, picchiata che ferisce, piattaforme sospese, caduta da morto), acqua, ghiaccio, spuntoni, nemici che evitano i pericoli, piattaforme mobili (andata e ritorno, trasporto), boss (ventaglio di proiettili, evocazione con limite, ripiego sul corpo a corpo, pesi zero) |
+| `powerups-progress.test.mjs` | 28 | modificatori (combinazione, durata che riparte, scadenza che non tocca gli altri, permanenti), effetti di Furia, Fuoco, Scudo, Velocità e Rigenerazione, raccolta, difficoltà (nemici, boss, vite), progressi salvati (assenti, corrotti, archivio bloccato), selezione dei livelli e voce della difficoltà nel menu |
 | `static-rules.test.mjs` | 28 | strict, nessun `any`, tipi di ritorno espliciti, nomi, nessun audio né risorsa esterna, struttura del progetto, versioni e manuali aggiornati |
 
 ### 2.2 Test nel browser (`tests/browser/`, 165 controlli, Chromium)
 
+> **Stato nella 2.0.0-alpha.5.** `npm run test:browser` non eseguito. In Chrome headless: partite complete del bot (1 vinta su 3 in questa esecuzione,
+> le altre perse al livello 6, come previsto dal simulatore), 0 colori fuori palette. Il fuzz (6000 frame di tasti a caso, che ora entra anche nella
+> selezione dei livelli e cambia la difficoltà) segnalava 37 "problemi": erano regole del test non aggiornate (stato `levelSelect` sconosciuto, più di
+> 3 vite a difficoltà facile), non difetti del gioco; corrette in `harness.js`, ora 0. Il controllo "Riprova con 3 vite" di `run.mjs` fissa la difficoltà normale.
+>
 > **Stato nella 2.0.0-alpha.4.** `npm run test:browser` non eseguito. Il bot di `harness.js` (che ora salta anche gli spuntoni) ha giocato in Chrome
 > headless partite complete di 6 livelli: 2 vinte su 3 (la terza persa al livello 6, coerente con il simulatore), 0 colori fuori palette, 0 violazioni,
 > 0,2 ms per frame. Schermate dei livelli 4-6 controllate a occhio (0 pixel fuori palette).

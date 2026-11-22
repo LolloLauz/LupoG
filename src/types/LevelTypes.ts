@@ -23,7 +23,15 @@ export interface ThemeStyle {
 }
 
 /** Tipi di oggetto raccoglibile. */
-export type ItemTypeId = "healthPotion" | "scoreCoin" | "collectible";
+export type ItemTypeId =
+  | "healthPotion"
+  | "scoreCoin"
+  | "collectible"
+  | "powerBerserk"
+  | "powerSpeed"
+  | "powerShield"
+  | "powerFire"
+  | "powerRegeneration";
 
 /**
  * Piattaforma del livello. Se oneWay è true si può attraversare dal basso

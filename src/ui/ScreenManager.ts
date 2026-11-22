@@ -5,12 +5,29 @@ import { measureTextWidth } from "../rendering/BitmapFont";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { GameStateName } from "../types/GameTypes";
+import type { ThemeId } from "../types/LevelTypes";
 import { MenuManager } from "./MenuManager";
 import { TITLE_GOLD_ROWS, drawOrnateFrame } from "./HUDManager";
 import { cycleRampColor } from "../rendering/PaletteEffects";
 
 /** Comandi che i menu possono richiedere al motore. */
-export type MenuCommand = "newGame" | "showControls" | "backToTitle" | "resume";
+export type MenuCommand =
+  | "newGame"
+  | "showControls"
+  | "showLevelSelect"
+  | "cycleDifficulty"
+  | "startSelectedLevel"
+  | "backToTitle"
+  | "resume";
+
+/** Un livello come appare nella schermata di selezione. */
+export interface LevelSummary {
+  id: number;
+  name: string;
+  theme: ThemeId;
+  isUnlocked: boolean;
+  bossName: string | null;
+}
 
 /** Dati che le schermate mostrano (forniti dal motore). */
 export interface ScreenData {
@@ -18,7 +35,21 @@ export interface ScreenData {
   bestScore: number;
   collectibles: number;
   isNewRecord: boolean;
+  /** Nome della difficoltà scelta (mostrato nel menu del titolo). */
+  difficultyName: string;
+  /** Tutti i livelli, con quelli già raggiunti sbloccati. */
+  levels: LevelSummary[];
 }
+
+/** Colore rappresentativo di ogni ambientazione (riquadro nella selezione dei livelli). */
+const THEME_SWATCHES: Record<ThemeId, [string, string]> = {
+  forest: [PALETTE.green, PALETTE.deepForest],
+  castle: [PALETTE.stoneLight, PALETTE.stoneShadow],
+  dungeon: [PALETTE.amethyst, PALETTE.violetDark],
+  swamp: [PALETTE.olive, PALETTE.bogDark],
+  ice: [PALETTE.iceWhite, PALETTE.blue],
+  tower: [PALETTE.lilac, PALETTE.violet],
+};
 
 /** Riga della schermata dei controlli: tasti (come tasti disegnati) e descrizione. */
 interface ControlsRow {
@@ -36,13 +67,15 @@ const CONTROLS_ROWS: ControlsRow[] = [
 ];
 
 /**
- * Schermate a tutto campo: titolo, controlli, pausa, Game Over, vittoria.
+ * Schermate a tutto campo: titolo, controlli, selezione dei livelli, pausa, Game Over, vittoria.
  * I menu sono gestiti da MenuManager; qui c'è soprattutto il disegno.
  */
 export class ScreenManager {
   private readonly menus: Partial<Record<GameStateName, MenuManager<MenuCommand>>> = {
     title: new MenuManager<MenuCommand>([
       { label: "NUOVA PARTITA", command: "newGame" },
+      { label: "SCEGLI LIVELLO", command: "showLevelSelect" },
+      { label: (): string => `DIFFICOLTÀ: ${this.latestData?.difficultyName ?? ""}`, command: "cycleDifficulty" },
       { label: "CONTROLLI", command: "showControls" },
     ]),
     paused: new MenuManager<MenuCommand>([
@@ -60,6 +93,15 @@ export class ScreenManager {
   };
   private readonly backgroundRenderer = new BackgroundRenderer();
   private animationTimeSeconds = 0;
+  /** Ultimi dati ricevuti dal motore (servono alle voci di menu che cambiano). */
+  private latestData: ScreenData | null = null;
+  /** Livello evidenziato nella schermata di selezione. */
+  private selectedLevelIndex = 0;
+
+  /** Id del livello scelto nella schermata di selezione. */
+  public get selectedLevelId(): number {
+    return this.latestData?.levels[this.selectedLevelIndex]?.id ?? 1;
+  }
 
   constructor(private readonly spriteManager: SpriteManager) {}
 
@@ -71,23 +113,54 @@ export class ScreenManager {
   /** Riporta il cursore alla prima voce (da chiamare a ogni cambio di stato). */
   public resetSelection(): void {
     Object.values(this.menus).forEach((menu) => menu?.reset());
+    this.selectedLevelIndex = 0;
   }
 
   /** Legge l'input e restituisce l'eventuale comando scelto dal giocatore. */
-  public update(state: GameStateName, input: InputManager): MenuCommand | null {
+  public update(state: GameStateName, input: InputManager, data: ScreenData): MenuCommand | null {
+    this.latestData = data;
     if (state === "controls") {
       return input.wasPressed("confirm") || input.wasPressed("pause") ? "backToTitle" : null;
+    }
+    if (state === "levelSelect") {
+      return this.updateLevelSelect(input, data);
     }
     return this.menus[state]?.update(input) ?? null;
   }
 
+  /** Selezione dei livelli: il cursore passa solo sui livelli sbloccati (in modo circolare). */
+  private updateLevelSelect(input: InputManager, data: ScreenData): MenuCommand | null {
+    const unlocked = data.levels.map((level, index) => (level.isUnlocked ? index : -1)).filter((index) => index >= 0);
+    if (unlocked.length === 0) {
+      return input.wasPressed("pause") ? "backToTitle" : null;
+    }
+    if (!unlocked.includes(this.selectedLevelIndex)) {
+      this.selectedLevelIndex = unlocked[0]!;
+    }
+    const position = unlocked.indexOf(this.selectedLevelIndex);
+    if (input.wasPressed("menuUp")) {
+      this.selectedLevelIndex = unlocked[(position - 1 + unlocked.length) % unlocked.length]!;
+    }
+    if (input.wasPressed("menuDown")) {
+      this.selectedLevelIndex = unlocked[(position + 1) % unlocked.length]!;
+    }
+    if (input.wasPressed("confirm")) {
+      return "startSelectedLevel";
+    }
+    return input.wasPressed("pause") ? "backToTitle" : null;
+  }
+
   public render(renderer: Renderer, state: GameStateName, data: ScreenData): void {
+    this.latestData = data;
     switch (state) {
       case "title":
         this.renderTitle(renderer, data);
         break;
       case "controls":
         this.renderControls(renderer);
+        break;
+      case "levelSelect":
+        this.renderLevelSelect(renderer, data);
         break;
       case "paused":
         this.renderPause(renderer);
@@ -118,9 +191,44 @@ export class ScreenManager {
     drawOrnateFrame(renderer, centerX - 92, 68, 184, 34);
     renderer.drawText("Medieval Action Arcade", centerX, 74, PALETTE.stonePale, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText(`RECORD ${String(data.bestScore).padStart(6, "0")}`, centerX, 87, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
-    drawOrnateFrame(renderer, centerX - 76, 110, 152, 42);
-    this.menus.title?.render(renderer, centerX, 119);
+    drawOrnateFrame(renderer, centerX - 84, 106, 168, 62);
+    this.menus.title?.render(renderer, centerX, 113, 13);
     renderer.drawText("W/S: scegli   INVIO: conferma", centerX, 222, PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
+  }
+
+  /** Selezione dei livelli: elenco con ambientazione, boss e lucchetto per quelli non ancora raggiunti. */
+  private renderLevelSelect(renderer: Renderer, data: ScreenData): void {
+    const centerX = renderer.width / 2;
+    renderer.fillVerticalGradient(0, 0, renderer.width, renderer.height, [PALETTE.deepNavy, PALETTE.darkBlue, PALETTE.black]);
+    this.drawGradientTitle(renderer, "SCEGLI LIVELLO", centerX, 12, 2, TITLE_GOLD_ROWS);
+    this.drawDivider(renderer, 36);
+    const rowHeight = 22;
+    const listLeft = centerX - 120;
+    data.levels.forEach((level, levelIndex) => {
+      const rowY = 46 + levelIndex * rowHeight;
+      const isSelected = levelIndex === this.selectedLevelIndex && level.isUnlocked;
+      if (isSelected) {
+        drawOrnateFrame(renderer, listLeft - 6, rowY - 4, 252, rowHeight - 2);
+      }
+      const [swatchLight, swatchDark] = THEME_SWATCHES[level.theme];
+      renderer.fillRect(listLeft, rowY, 14, 11, PALETTE.black);
+      if (level.isUnlocked) {
+        renderer.fillVerticalGradient(listLeft + 1, rowY + 1, 12, 9, [swatchLight, swatchDark], 2);
+      } else {
+        renderer.fillRect(listLeft + 1, rowY + 1, 12, 9, PALETTE.slate);
+        // lucchetto
+        renderer.strokeRect(listLeft + 5, rowY + 2, 4, 4, PALETTE.gray);
+        renderer.fillRect(listLeft + 4, rowY + 5, 6, 4, PALETTE.gray);
+      }
+      const nameColor = !level.isUnlocked ? PALETTE.slate : isSelected ? PALETTE.white : PALETTE.lightGray;
+      const name = level.isUnlocked ? level.name.toUpperCase() : "? ? ? ? ?";
+      renderer.drawText(`${level.id}`, listLeft + 22, rowY + 2, level.isUnlocked ? PALETTE.goldLight : PALETTE.slate, { shadowColor: PALETTE.black });
+      renderer.drawText(name, listLeft + 34, rowY + 2, nameColor, { shadowColor: PALETTE.black });
+      if (level.bossName !== null && level.isUnlocked) {
+        this.spriteManager.drawSprite(renderer, "hudSkull", listLeft + 228, rowY + 1, false);
+      }
+    });
+    renderer.drawText("W/S: scegli   INVIO: gioca   ESC: indietro", centerX, 220, PALETTE.gray, { align: "center" });
   }
 
   private renderControls(renderer: Renderer): void {

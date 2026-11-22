@@ -1,5 +1,26 @@
 # Changelog
 
+## 2.0.0-alpha.5 – Versione 2.0, Fase 5: power-up, difficoltà, selezione dei livelli (2026-11-22)
+### Aggiunto
+- **Cinque power-up temporanei** (`config/powerUpConfig.ts`): **Furia** (danno ×1,5), **Velocità** (movimento ×1,4), **Scudo** (danni subiti dimezzati, almeno 1), **Fuoco** (+8 danni a ogni colpo, spada e scie incandescenti), **Rigenerazione** (+4 HP al secondo). Si raccolgono come oggetti (runa, stivali alati, scudo, fiamma, foglia; 25 punti), sono nei sei livelli e mai subito prima di un boss.
+- **Modificatori** (`combat/PlayerModifiers.ts`): le statistiche base non cambiano mai; il valore effettivo è (base + bonus) × moltiplicatori dei power-up attivi, quindi la scadenza di uno non tocca gli altri; lo stesso power-up raccolto di nuovo riparte da capo. Realizza il progetto descritto in `ARCHITECTURE.md` sez. 10.
+- Alone colorato attorno al cavaliere per ogni power-up (lampeggia negli ultimi 2 s), icone con la barra del tempo nell'HUD, scritta e scintille alla raccolta; varianti "incandescenti" di tutti gli sprite del cavaliere (chiavi di colore separate per lama e scie).
+- **Difficoltà nel menu del titolo** (Facile, Normale, Difficile): salute e danno di nemici **e boss**, vite iniziali 5 / 3 / 2.
+- **Selezione dei livelli** (nuovo stato `levelSelect`): una partita nuova da qualsiasi livello già raggiunto; i livelli non raggiunti hanno il lucchetto.
+- **Progressi salvati** (`systems/ProgressManager.ts`): livello più avanzato e difficoltà, nel browser, tolleranti ad archivio assente, bloccato o dati corrotti.
+- **Test**: nuova suite `powerups-progress.test.mjs` (28 controlli). Totale 512 controlli in 14 file.
+### Modificato
+- `DIFFICULTY_CONFIG` ha anche `name` e `startingLives`; `DIFFICULTY_ORDER`. `Boss` accetta la difficoltà; `LevelManager.createEnemies/createBoss` la ricevono; `LivesManager.reset` accetta le vite.
+- `ItemDefinition.powerUpId`, nuovi `ItemTypeId`; `MenuItem.label` può essere una funzione; `ScreenManager.update` riceve `ScreenData` (difficoltà e livelli); `HUDData.powerUps`.
+- Bot dei test nel browser e fuzz: accettano lo stato `levelSelect` e le vite della difficoltà facile; il controllo del Game Over fissa la difficoltà normale.
+- Manuali aggiornati (`GAME_MANUAL` con power-up, difficoltà e selezione dei livelli, punteggio massimo 17100; `CODE_MANUAL`, `ARCHITECTURE`, `FEATURES`, `TESTING`, `BALANCE`).
+### Verificato
+- `npm run typecheck`, `npm test` (512 controlli), `npm run verify-docs` (11 esempi), `npm run balance`, `npm run build`.
+- Chrome headless: titolo con il nuovo menu, selezione dei livelli, power-up in gioco (HUD, alone, spada incandescente) con 0 pixel fuori palette; fuzz senza problemi.
+### Limiti
+- `npm run test:browser` (Playwright) non eseguito.
+- Power-up permanenti: solo il punto d'aggancio (`type: "permanent"`).
+
 ## 2.0.0-alpha.4 – Versione 2.0, Fase 4: nuovi livelli, nemici e boss (2026-11-21)
 Quarta fase della versione 2.0: il gioco passa da 3 a **6 livelli**. I primi tre non cambiano; dopo il Cavaliere Nero la storia continua fino al
 **Signore dell'Ombra**, il vero nemico.

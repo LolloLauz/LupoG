@@ -1,6 +1,6 @@
 # Manuale del codice
 
-Versione del gioco descritta: **2.0.0-alpha.4**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
+Versione del gioco descritta: **2.0.0-alpha.5**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
 per le regole di gioco `GAME_MANUAL.md`.
 
 Questo manuale spiega **cosa c'è in ogni file**, **come si muove il codice** e, nella parte finale,
@@ -85,13 +85,14 @@ modificare qui, senza toccare la logica.
 
 | File | Contenuto |
 |---|---|
-| `gameConfig.ts` | `GAME_CONFIG` (risoluzione, gravità, vite, bonus, cura, danno da caduta...), `DIFFICULTY_CONFIG`; riesporta `PALETTE` e `PALETTE_RAMPS` |
+| `gameConfig.ts` | `GAME_CONFIG` (risoluzione, gravità, vite, bonus, cura, danno da caduta...), `DIFFICULTY_CONFIG` (nome, moltiplicatori di salute e danno di nemici e boss, vite iniziali) e `DIFFICULTY_ORDER`; riesporta `PALETTE` e `PALETTE_RAMPS` |
+| `powerUpConfig.ts` (2.0) | `POWER_UP_CONFIG`: Furia, Velocità, Scudo, Fuoco, Rigenerazione (nome, descrizione, tipo, effetti sulle statistiche, durata, requisiti, icona, colore dell'alone) |
 | `paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS`), `PALETTE_RAMPS` (rampe dallo scuro al chiaro), tipi `PaletteColor`, `PaletteRampName` |
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG`, `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss) |
 | `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco (velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) |
 | `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
-| `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili), `ITEM_SIZE` |
+| `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili; quelli con `powerUpId` attivano un power-up), `ITEM_SIZE` |
 | `levelConfig.ts` | `LEVEL_CONFIG` (i 6 livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
 | `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
 | `animationConfig.ts` | `PLAYER_ANIMATIONS`, `ENEMY_ANIMATIONS`, `BOSS_ANIMATIONS` |
@@ -199,9 +200,9 @@ carica è prima del fendente: con lo stesso numero casuale si ottiene lo stesso 
 | `InputManager.ts` | `InputManager` | tastiera centralizzata (vedi sotto) |
 | `GameEngine.ts` | `GameEngine` | coordina tutto: stati, livelli, combattimento, effetti, disegno |
 
-**`GameState`** – stati: `title`, `controls`, `playing`, `paused`, `gameOver`, `victory`. Transizioni valide:
-`title→controls/playing`, `controls→title`, `playing→paused/gameOver/victory`, `paused→playing/title`,
-`gameOver→title/playing`, `victory→title`.
+**`GameState`** – stati: `title`, `controls`, `levelSelect`, `playing`, `paused`, `gameOver`, `victory`. Transizioni valide:
+`title→controls/levelSelect/playing`, `controls→title`, `levelSelect→title/playing`, `playing→paused/gameOver/victory`,
+`paused→playing/title`, `gameOver→title/playing`, `victory→title`.
 
 **`InputManager`** – traduce i tasti (`KeyboardEvent.code`) in azioni (`GameAction`) secondo
 `CONTROLS_CONFIG`. Metodi: `isHeld(action)` (tenuto premuto), `wasPressed(action)` (premuto in questo frame,
@@ -250,7 +251,8 @@ regolano hit-stop, tremolio e polvere.
 | `heal(amount)` | cura fino al massimo |
 | `getActiveAttackHitbox()` | area d'urto se il colpo è attivo, altrimenti `null` |
 | `hasAlreadyHit(target)`, `registerHit(target)` | un bersaglio si colpisce una volta per attacco |
-| `getDamageMultiplier()` | punto di estensione per i futuri power-up (ora 1) |
+| `getDamageMultiplier()`, `getBonusDamage()` | moltiplicatore del danno (Furia) e danno aggiunto (Fuoco), da `modifiers` |
+| `modifiers`, `applyPowerUp(definizione)` | power-up attivi (`PlayerModifiers`); la velocità usa `movementSpeedMultiplier`, `takeDamage` usa `damageTakenMultiplier` (Scudo, almeno 1 danno), la rigenerazione cura a punti interi; `revive` li toglie tutti |
 | `respawnAt(position)`, `revive()` | ripartenza e rianimazione |
 | `isInvulnerable`, `isDead`, `isReadyToRespawn`, `activeAttack` | stato letto dal motore |
 
@@ -287,7 +289,8 @@ Le animazioni si ricavano dalla definizione (`createBossAnimations`). Il generat
 |---|---|
 | `AttackDefinition.ts` | ri-esporta il tipo `AttackDefinition`; `getAttackWorldHitbox()` converte l'area d'urto in coordinate del mondo, specchiandola se si guarda a sinistra |
 | `ComboManager.ts` | sceglie l'attacco in base alla sequenza di input |
-| `CombatSystem.ts` | applica i danni |
+| `CombatSystem.ts` | applica i danni: (danno dell'attacco + `getBonusDamage()`) × `getDamageMultiplier()` |
+| `PlayerModifiers.ts` (2.0) | power-up attivi del giocatore: `add` (o riparte la durata), `update` (toglie gli scaduti), `clear`, `has`, `getValue(stat)` = (base + bonus) × moltiplicatori; le statistiche base non cambiano mai |
 
 **`ComboManager`** – `getNextAttack(input)`: prova a **continuare** la combo in corso (la sequenza di input finora deve essere
 l'inizio di una combo definita); se non va, **riparte** da questo input; se nessuna combo inizia con questo input usa
@@ -310,6 +313,7 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `ScoreManager.ts` | `ScoreManager` | `currentScore`, `collectiblesFound`, `addScore`, `registerCollectible`, `restore`, `reset` |
 | `LivesManager.ts` | `LivesManager` | `remainingLives`, `hasLivesLeft`, `loseLife`, `addLife`, `reset` |
 | `HighScoreManager.ts` | `HighScoreManager` | record nel browser (`localStorage`), tollerante agli errori; `bestScore`, `submitScore` |
+| `ProgressManager.ts` (2.0) | `ProgressManager` | livello più avanzato raggiunto e difficoltà scelta, salvati nel browser (JSON nella chiave `ironAndShadow.progress`); tollerante a dati assenti, corrotti o archivio bloccato; `unlockedLevelId`, `isLevelUnlocked`, `unlockLevel` (non torna indietro), `difficulty`, `setDifficulty` |
 
 ### 3.6 `src/rendering/`
 
@@ -358,16 +362,16 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 
 | File | Classe | Responsabilità |
 |---|---|---|
-| `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, livello, punteggio dorato, gemme), barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
-| `MenuManager.ts` | `MenuManager<TCommand>` | menu verticale: `update(input)` restituisce il comando confermato, `render(...)` (voce scelta in bianco-oro con frecce) |
-| `ScreenManager.ts` | `ScreenManager` | schermate titolo, controlli, pausa, Game Over, vittoria; usa un `MenuManager` per ciascuna |
+| `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, livello, punteggio dorato, gemme), power-up attivi con la barra del tempo, barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
+| `MenuManager.ts` | `MenuManager<TCommand>` | menu verticale: `update(input)` restituisce il comando confermato, `render(...)` (voce scelta in bianco-oro con frecce); l'etichetta di una voce può essere una funzione (testo che cambia) |
+| `ScreenManager.ts` | `ScreenManager` | schermate titolo (con la difficoltà nel menu), controlli, **selezione dei livelli** (cursore solo sui livelli sbloccati, `selectedLevelId`), pausa, Game Over, vittoria; usa un `MenuManager` per ciascuna; riceve dal motore `ScreenData` (anche `difficultyName` e `levels`) |
 
 ### 3.8 `src/types/`
 
 | File | Tipi |
 |---|---|
 | `GameTypes.ts` | `GameStateName`, `GameAction`, `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
-| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition`, `ComboDefinition`, `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
+| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition`, `ComboDefinition`, `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
 | `LevelTypes.ts` | `ThemeId` (6 ambientazioni), `TerrainTexture` (6 tessiture), `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` |
 
 ---
@@ -796,28 +800,27 @@ dalla vecchia zona di pattuglia; non cammina nel vuoto.
 
 Codice originale:
 ```ts
-export type ItemTypeId = "healthPotion" | "scoreCoin" | "collectible";
+  | "powerRegeneration";
 ```
 Codice aggiornato:
 ```ts
-export type ItemTypeId = "healthPotion" | "scoreCoin" | "collectible" | "elixir";
+  | "powerRegeneration"
+  | "elixir";
 ```
 
 #### Passo 2 – `src/config/itemConfig.ts`
 
-**Cerca:** `ITEM_CONFIG`, in fondo alla voce `collectible`.
+**Cerca:** `ITEM_CONFIG`, in fondo alla voce `powerRegeneration` (l'ultima).
 
 Codice originale:
 ```ts
-    scoreBonus: 200,
-    isCollectible: true,
+    powerUpId: "regeneration",
   },
 };
 ```
 Codice aggiornato:
 ```ts
-    scoreBonus: 200,
-    isCollectible: true,
+    powerUpId: "regeneration",
   },
   elixir: {
     id: "elixir",
