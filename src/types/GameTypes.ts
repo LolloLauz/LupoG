@@ -20,6 +20,7 @@ export type GameAction =
   | "attack"
   | "heavyAttack"
   | "dodge"
+  | "ability"
   | "crouch"
   | "pickUp"
   | "dropItem"

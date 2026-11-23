@@ -77,10 +77,10 @@ export const CONTROLS_ROWS: ControlsRow[] = [
   { keyGroups: [["W"], ["^"]], description: "SALTA" },
   { keyGroups: [["SPAZIO"]], description: "ATTACCO" },
   { keyGroups: [["J"]], description: "ATTACCO PESANTE" },
-  { keyGroups: [["K"]], description: "SCHIVATA" },
+  { keyGroups: [["K"]], description: "SCHIVATA (COSTA STAMINA)" },
+  { keyGroups: [["L"]], description: "ABILITÀ DEL PERSONAGGIO" },
   { keyGroups: [["S"], ["↓"]], description: "ABBASSATI" },
-  { keyGroups: [["E"]], description: "PRENDI ARMA O POZIONE" },
-  { keyGroups: [["Q"]], description: "LASCIA A TERRA (Q+1-4)" },
+  { keyGroups: [["E"], ["Q"]], description: "E PRENDI, Q LASCIA (Q+1-4)" },
   { keyGroups: [["1", "2", "3", "4"]], description: "BORSA: USA IL POSTO" },
   { keyGroups: [["ESC"]], description: "PAUSA" },
 ];

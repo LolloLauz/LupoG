@@ -1,11 +1,12 @@
 import type { AnimationDefinition } from "../rendering/AnimationManager";
 import type { BossAttackKind, BossDefinition, EnemyTypeId } from "../types/EntityTypes";
 import { BOSS_CATALOG, ENEMY_CONFIG } from "./enemyConfig";
+import { getAbilityAttacks } from "./abilityConfig";
 import { getAllWeaponAttacks } from "./weaponConfig";
 
-/** Animazione di attacco: la durata dei frame segue la durata dell'attacco. */
+/** Animazione di attacco (anche delle abilità): la durata dei frame segue la durata dell'attacco. */
 function createAttackAnimation(attackId: string, frameIds: string[]): AnimationDefinition {
-  const attack = getAllWeaponAttacks()[attackId];
+  const attack = getAllWeaponAttacks()[attackId] ?? getAbilityAttacks()[attackId];
   if (attack === undefined) {
     throw new Error(`Attacco non definito: ${attackId}`);
   }
@@ -53,6 +54,12 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
   hurt: { frameIds: ["knightHurt"], frameDurationMs: 100, loop: true },
   dodge: { frameIds: ["knightDodge1", "knightDodge2"], frameDurationMs: 100, loop: true },
   crouch: { frameIds: ["knightCrouch"], frameDurationMs: 100, loop: true },
+  // scudo alzato (abilità del Paladino): il cavaliere si raccoglie dietro lo scudo, come nella schivata
+  guard: { frameIds: ["knightDodge1"], frameDurationMs: 100, loop: true },
+  // abilità (Fase 5): pose comuni a tutte le armi
+  abilityShockwave: createAttackAnimation("abilityShockwave", ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"]),
+  abilityBackstepShot: createAttackAnimation("abilityBackstepShot", ["knightDodge1", "knightDodge2", "knightAbilityThrust"]),
+  abilityFuriousCharge: createAttackAnimation("abilityFuriousCharge", ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust", "knightAbilityThrust", "knightAbilitySlam"]),
   dead: { frameIds: ["knightDeadFall", "knightDeadLie"], frameDurationMs: 300, loop: false },
   attack1: createAttackAnimation("swordLight1", ["knightAttack1A", "knightAttack1B", "knightAttack1C"]),
   attack2: createAttackAnimation("swordLight2", ["knightAttack2A", "knightAttack2B", "knightAttack2C"]),

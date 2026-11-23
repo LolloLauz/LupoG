@@ -12,6 +12,8 @@ export const CONTROLS_CONFIG: Record<GameAction, string[]> = {
   attack: ["Space"],
   heavyAttack: ["KeyJ"],
   dodge: ["KeyK"],
+  /** Abilità speciale del personaggio (Fase 5); lo scudo del Paladino si tiene premuto. */
+  ability: ["KeyL"],
   crouch: ["KeyS", "ArrowDown"],
   pickUp: ["KeyE"],
   /** Q: lascia a terra l'arma in mano; Q tenuto + 1-4: lascia il contenuto di quel posto (anche una pozione). */
@@ -40,6 +42,7 @@ export const INPUT_CONTEXT_ACTIONS: Record<InputContext, GameAction[]> = {
     "attack",
     "heavyAttack",
     "dodge",
+    "ability",
     "crouch",
     "pickUp",
     "dropItem",

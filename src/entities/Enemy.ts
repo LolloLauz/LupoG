@@ -296,6 +296,20 @@ export class Enemy extends GameObject implements Damageable {
     }
   }
 
+  /**
+   * Parata perfetta del giocatore (scudo del Paladino): l'attacco si interrompe e il nemico resta stordito
+   * per durationMs, senza subire danno.
+   */
+  public stun(durationMs: number): void {
+    if (!this.isAlive) {
+      return;
+    }
+    this.isAttackInProgress = false;
+    this.velocityX = 0;
+    this.hurtRemainingMs = Math.max(this.hurtRemainingMs, durationMs);
+    this.animationPlayer.restart("hurt");
+  }
+
   public update(
     deltaTimeSeconds: number,
     collisionSystem: CollisionSystem,

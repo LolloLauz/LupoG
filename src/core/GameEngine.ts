@@ -128,6 +128,8 @@ export class GameEngine {
   private readonly registeredCharacters = new Set<CharacterId>();
   /** Vero se, tenendo Q, si è già lasciato un posto con 1-4 (allora il rilascio di Q non lascia l'arma in mano). */
   private hasDroppedWithSlotKey = false;
+  /** Momento (secondi di livello) dell'ultimo "STANCO": la scritta non si ripete di continuo. */
+  private lastTiredPopupSeconds = -1;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
@@ -409,6 +411,7 @@ export class GameEngine {
     this.updateSafePosition();
     this.updateArena();
     this.updateCombatAndEnemies(deltaTimeSeconds);
+    this.showStaminaAndAbilityEffects();
     this.itemManager.update(deltaTimeSeconds);
     this.collectItemsWithEffects();
     this.updatePlayerDamageEffects(healthBeforeUpdate);
@@ -809,6 +812,43 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Fase 5: nome dell'abilità usata, "STANCO" quando manca la stamina (al massimo ogni mezzo secondo), tremolio e
+   * polvere dell'onda d'urto, scintille delle parate con lo scudo.
+   */
+  private showStaminaAndAbilityEffects(): void {
+    const centerX = this.player.positionX + this.player.width / 2;
+    const popupY = this.player.positionY - 8;
+    const abilityName = this.player.drainStartedAbilityName();
+    if (abilityName !== null) {
+      this.effects.addPopup(abilityName, centerX, popupY, PALETTE.cyan);
+    }
+    if (this.player.drainTired() && (this.levelElapsedSeconds - this.lastTiredPopupSeconds >= 0.5 || this.levelElapsedSeconds < this.lastTiredPopupSeconds)) {
+      this.lastTiredPopupSeconds = this.levelElapsedSeconds;
+      this.effects.addPopup("STANCO", centerX, popupY, PALETTE.lightGray);
+    }
+    if (this.player.drainAbilityImpact()) {
+      const feetY = this.player.positionY + this.player.height;
+      for (const offsetX of [-36, -18, 18, 36]) {
+        this.effects.spawnDust(centerX + offsetX, feetY - 1);
+      }
+      this.effects.triggerShake(2, 160);
+    }
+    const shieldX = this.player.facingDirection === "right" ? this.player.positionX + this.player.width + 4 : this.player.positionX - 4;
+    const shieldY = this.player.positionY + this.player.height / 2;
+    for (const outcome of this.player.drainGuardEvents()) {
+      if (outcome === "perfect") {
+        this.effects.spawnBurst(shieldX, shieldY, [PALETTE.white, PALETTE.cyan, PALETTE.yellow], 10);
+        this.effects.addPopup("PARATA!", centerX, popupY, PALETTE.yellow);
+        this.effects.triggerHitStop(60);
+      } else if (outcome === "blocked") {
+        this.effects.spawnHitSparks(shieldX, shieldY, this.player.facingDirection === "right" ? 1 : -1);
+      } else {
+        this.effects.addPopup("GUARDIA ROTTA", centerX, popupY, PALETTE.orange);
+      }
+    }
+  }
+
   /** Polvere all'atterraggio e all'inizio della schivata. */
   private updateMovementEffects(wasOnGround: boolean, previousVelocityY: number, wasDodging: boolean): void {
     const feetX = this.player.positionX + this.player.width / 2;
@@ -919,6 +959,13 @@ export class GameEngine {
     return {
       health: this.player.currentHealth,
       maxHealth: this.player.maxHealth,
+      stamina: this.player.stamina,
+      maxStamina: this.player.maxStamina,
+      ability: {
+        cooldownFraction: this.player.abilityCooldownFraction,
+        isReady: this.player.abilityCooldownFraction === 0 && this.player.stamina >= this.player.ability.staminaCost,
+        isActive: this.player.isGuarding,
+      },
       lives: this.livesManager.remainingLives,
       score: this.scoreManager.currentScore,
       collectibles: this.scoreManager.collectiblesFound,

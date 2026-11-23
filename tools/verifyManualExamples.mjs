@@ -211,7 +211,7 @@ const behaviorChecks = {
     // un segmento della barra = il rettangolo principale con la geometria dichiarata dall'HUD
     const geometry = m.HUDManager.HEALTH_SEGMENT_GEOMETRY;
     const isSegment = (c) => c.w === geometry.width && c.h === geometry.height && c.y === geometry.y;
-    const hudData = (health) => ({ health, maxHealth: 150, lives: 3, score: 0, collectibles: 0, levelNumber: 1, bag: [], powerUps: [], boss: null });
+    const hudData = (health) => ({ health, maxHealth: 150, stamina: 100, maxStamina: 100, ability: { cooldownFraction: 0, isReady: true, isActive: false }, lives: 3, score: 0, collectibles: 0, levelNumber: 1, bag: [], powerUps: [], boss: null });
     hud.render(renderer, new FakeSpriteManager(), hudData(150), 0);
     const segments = fillCalls.filter(isSegment);
     const full = segments.filter((c) => c.color === m.GameConfig.PALETTE.red).length;

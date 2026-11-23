@@ -62,6 +62,9 @@ export class CombatSystem {
       enemy.markPlayerHit();
       if (player.takeDamage(enemy.attackDamage, enemy.centerX)) {
         landedHits++;
+      } else if (player.lastGuardOutcome === "perfect" && player.ability.kind === "guard") {
+        // parata perfetta: l'attaccante resta stordito (i boss no: non vengono mai storditi)
+        enemy.stun(player.ability.parryStunMs);
       }
     }
     return landedHits;

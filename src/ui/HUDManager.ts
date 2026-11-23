@@ -6,6 +6,11 @@ import type { SpriteManager } from "../rendering/SpriteManager";
 export interface HUDData {
   health: number;
   maxHealth: number;
+  /** Stamina (Fase 5): barra verde sotto la salute. */
+  stamina: number;
+  maxStamina: number;
+  /** Abilità (tasto L): ricarica che manca (1 = appena usata), pronta (ricarica finita e stamina sufficiente), in uso (scudo alzato). */
+  ability: { cooldownFraction: number; isReady: boolean; isActive: boolean };
   lives: number;
   score: number;
   collectibles: number;
@@ -35,6 +40,9 @@ export const HEALTH_SEGMENT_COUNT = 10;
 /** Geometria di ogni segmento della salute (il rettangolo principale, nel colore di riempimento). */
 export const HEALTH_SEGMENT_GEOMETRY = { firstX: 19, stepX: 6, y: 4, width: 5, height: 7 } as const;
 const LOW_HEALTH_PERCENT = 30;
+/** Barra della stamina (a destra delle vite) e riquadro dell'abilità (tasto L) subito dopo. */
+export const STAMINA_BAR_GEOMETRY = { x: 36, y: 15, width: 40, height: 4 } as const;
+export const ABILITY_BOX_GEOMETRY = { x: 80, y: 12, size: 10 } as const;
 /** Riquadri della borsa sotto il pannello, a destra: lato (cornice compresa) e distanza tra i riquadri. */
 export const BAG_SLOT_GEOMETRY = { size: 20, step: 22, rightMargin: 4, y: HUD_HEIGHT + 3 } as const;
 
@@ -48,6 +56,7 @@ export class HUDManager {
     this.renderPanel(renderer);
     this.renderHealth(renderer, spriteManager, data, timeSeconds);
     this.renderLives(renderer, spriteManager, data.lives);
+    this.renderStaminaAndAbility(renderer, data, timeSeconds);
     renderer.drawText(`LIVELLO ${data.levelNumber}`, renderer.width / 2, 8, PALETTE.stonePale, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText(String(data.score).padStart(6, "0"), renderer.width - 6, 3, PALETTE.goldLight, {
       align: "right",
@@ -126,6 +135,36 @@ export class HUDManager {
         renderer.fillRect(segmentX, geometry.y + geometry.height - 2, geometry.width, 2, PALETTE.purple);
       }
     }
+  }
+
+  /**
+   * Stamina: barra verde con il contorno (gialla quando è sotto un terzo). Abilità: riquadro con la "L", dorata
+   * quando è pronta, grigia con il riempimento che scende durante la ricarica, azzurra con lo scudo alzato.
+   */
+  private renderStaminaAndAbility(renderer: Renderer, data: HUDData, timeSeconds: number): void {
+    const staminaBar = STAMINA_BAR_GEOMETRY;
+    const fraction = data.maxStamina <= 0 ? 0 : Math.max(0, Math.min(1, data.stamina / data.maxStamina));
+    renderer.fillRect(staminaBar.x - 1, staminaBar.y - 1, staminaBar.width + 2, staminaBar.height + 2, PALETTE.black);
+    renderer.fillRect(staminaBar.x, staminaBar.y, staminaBar.width, staminaBar.height, PALETTE.deepForest);
+    const filledWidth = Math.round(staminaBar.width * fraction);
+    if (filledWidth > 0) {
+      const isLow = fraction < 1 / 3;
+      renderer.fillRect(staminaBar.x, staminaBar.y, filledWidth, staminaBar.height, isLow ? PALETTE.goldLight : PALETTE.green);
+      renderer.fillRect(staminaBar.x, staminaBar.y, filledWidth, 1, isLow ? PALETTE.yellow : PALETTE.lightGreen);
+    }
+    const abilityBox = ABILITY_BOX_GEOMETRY;
+    const ability = data.ability;
+    renderer.fillRect(abilityBox.x, abilityBox.y, abilityBox.size, abilityBox.size, PALETTE.black);
+    const innerSize = abilityBox.size - 2;
+    const background = ability.isActive ? PALETTE.blue : ability.isReady ? PALETTE.bronze : PALETTE.slate;
+    renderer.fillRect(abilityBox.x + 1, abilityBox.y + 1, innerSize, innerSize, background);
+    if (ability.cooldownFraction > 0) {
+      const coveredHeight = Math.ceil(innerSize * ability.cooldownFraction);
+      renderer.fillRect(abilityBox.x + 1, abilityBox.y + 1, innerSize, coveredHeight, PALETTE.darkBlue);
+    }
+    const isPulsing = ability.isReady && !ability.isActive && Math.floor(timeSeconds * 2) % 2 === 0;
+    const letterColor = ability.isActive ? PALETTE.white : ability.isReady ? (isPulsing ? PALETTE.cream : PALETTE.goldLight) : PALETTE.gray;
+    renderer.drawText("L", abilityBox.x + 3, abilityBox.y + 2, letterColor);
   }
 
   /** X del riquadro della borsa numero slotIndex (0 = tasto 1). */

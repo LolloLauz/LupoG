@@ -5,6 +5,7 @@ import { PLAYER_CONFIG } from "./playerConfig";
  * Personaggi giocabili (Fase 4), scelti dal menu del titolo e salvati nei progressi.
  * Il cavaliere legge i propri valori da PLAYER_CONFIG (equilibrato): cambiando PLAYER_CONFIG cambia lui.
  * Gli altri personaggi hanno valori propri. Salto, hitbox e tempi sono comuni (PLAYER_CONFIG).
+ * Fase 5: stamina (massimo, recupero, costo della schivata) e abilità speciale (ABILITY_CONFIG).
  */
 export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
   knight: {
@@ -21,12 +22,16 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     dodgeDurationMs: PLAYER_CONFIG.dodgeDurationMs,
     dodgeCooldownMs: PLAYER_CONFIG.dodgeCooldownMs,
     dodgeSpeed: PLAYER_CONFIG.dodgeSpeed,
+    maxStamina: 100,
+    staminaRegenPerSecond: 30,
+    dodgeStaminaCost: 25,
+    abilityId: "shockwave",
   },
   ranger: {
     id: "ranger",
     name: "RANGER",
     description: "Veloce, colpisce da lontano.",
-    trait: "SCHIVATA LUNGA E RAPIDA",
+    trait: "SCHIVATA LUNGA E LEGGERA",
     spriteSuffix: "Ranger",
     startingWeaponId: "bow",
     maxHealth: 75,
@@ -36,12 +41,16 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     dodgeDurationMs: 300,
     dodgeCooldownMs: 450,
     dodgeSpeed: 190,
+    maxStamina: 100,
+    staminaRegenPerSecond: 40,
+    dodgeStaminaCost: 20,
+    abilityId: "backstepShot",
   },
   berserker: {
     id: "berserker",
     name: "BERSERKER",
     description: "Colpi pesanti, pelle dura.",
-    trait: "SCHIVATA CORTA E LENTA",
+    trait: "SCHIVATA CORTA E FATICOSA",
     spriteSuffix: "Berserker",
     startingWeaponId: "axe",
     maxHealth: 130,
@@ -49,8 +58,12 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     damageMultiplier: 1.3,
     damageTakenMultiplier: 1,
     dodgeDurationMs: 250,
-    dodgeCooldownMs: 1600,
+    dodgeCooldownMs: 1000,
     dodgeSpeed: 130,
+    maxStamina: 100,
+    staminaRegenPerSecond: 25,
+    dodgeStaminaCost: 40,
+    abilityId: "furiousCharge",
   },
   paladin: {
     id: "paladin",
@@ -67,6 +80,10 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     dodgeCooldownMs: 800,
     dodgeSpeed: 150,
     regeneration: { healthPerSecond: 1, delayAfterHitMs: 4000 },
+    maxStamina: 120,
+    staminaRegenPerSecond: 25,
+    dodgeStaminaCost: 30,
+    abilityId: "shieldGuard",
   },
 };
 

@@ -2,7 +2,7 @@
 
 Questo documento è un piano, non una specifica. Lo stato reale delle funzionalità resta in `FEATURES.md`.
 
-**Stato:** Fasi 0, 1, 2, 3 e 4 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Le fasi 5-8 non sono iniziate.
+**Stato:** Fasi 0, 1, 2, 3, 4 e 5 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Le fasi 6-8 non sono iniziate.
 
 ## Punto di partenza
 
@@ -99,7 +99,19 @@ Il punto critico è la grafica: ogni personaggio richiede sprite a 16 bit. Convi
 - **Tasto Q**: lascia a terra l'arma in mano; Q + 1-4 lascia un posto della borsa (anche una pozione).
 - **Cancella dati** nel menu del titolo, con conferma.
 
-## Fase 5 – Risorsa e abilità speciali
+## Fase 5 – Risorsa e abilità speciali – completata
+
+Fatto: **stamina** per personaggio (massimo, recupero al secondo dopo 0,6 s dall'ultimo consumo, barra nell'HUD) consumata da schivata
+(20-40), attacchi pesanti (15, `PLAYER_CONFIG.heavyAttackStaminaCost`) e abilità; senza stamina l'azione non parte ("STANCO"). Il Berserker
+ora ha la schivata "non economica" con la stamina (40, la più cara) e un'attesa di 1 s invece di 1,6. **Abilità** sul tasto L
+(`ABILITY_CONFIG`, `AbilityDefinition`): onda d'urto (Cavaliere), tiro in ritirata (Ranger), carica furiosa (Berserker), scudo (Paladino),
+con costo, ricarica e riquadro nell'HUD. Le abilità d'attacco sono attacchi come quelli delle armi, con due campi nuovi (`dash`,
+`projectile.usesAmmo`); le pose sono comuni a tutte le armi. **Parata con lo scudo**: para da davanti (anche le frecce), costa stamina in
+proporzione al danno; la parata perfetta (scudo alzato da meno di 0,25 s) è gratuita e stordisce il nemico per 1 s (`Enemy.stun`).
+Gli scatti si fermano sul bordo degli abissi (il bot di bilanciamento cadeva di continuo con il balzo del Ranger). 40 test in
+`stamina-abilities.test.mjs`. Da fare con persone: provare costi e ricariche.
+
+Piano originale:
 
 - Introdurre una **stamina** che regola schivata, attacchi pesanti e abilità. Oggi non esiste: è una scelta di design da decidere prima di questa fase.
 - Abilità speciali per classe, con cooldown o costo in stamina. Esempi: onda d'urto, colpo di carica, scatto indietro con colpo di ritorno.

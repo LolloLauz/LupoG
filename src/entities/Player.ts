@@ -5,6 +5,7 @@ import { PlayerModifiers } from "../combat/PlayerModifiers";
 import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
 import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
+import { ABILITY_CONFIG } from "../config/abilityConfig";
 import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
 import { PLAYER_CONFIG } from "../config/playerConfig";
 import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
@@ -12,7 +13,7 @@ import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import { CollisionSystem } from "../systems/CollisionSystem";
-import type { AttackDefinition, CharacterDefinition, Damageable, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, WeaponDefinition } from "../types/EntityTypes";
+import type { AbilityDefinition, AttackDefinition, CharacterDefinition, Damageable, GuardOutcome, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -21,6 +22,9 @@ import { GameObject } from "./GameObject";
 const BLINK_INTERVAL_MS = 80;
 
 type AttackInput = "attack" | "heavyAttack";
+
+/** Dopo una parata, per questo tempo (ms) gli altri colpi dello stesso attacco vengono parati senza costo. */
+const GUARD_BLOCK_GRACE_MS = 300;
 
 /** Negli ultimi ms di un power-up l'alone lampeggia (sta per scadere). */
 const POWER_UP_WARNING_MS = 2000;
@@ -48,6 +52,21 @@ export class Player extends GameObject {
   /** Classe del personaggio (Fase 4): salute, velocità, danno, schivata, cura lenta e sprite. */
   private character: CharacterDefinition = CHARACTER_CONFIG[DEFAULT_CHARACTER_ID];
   public currentHealth: number = this.character.maxHealth;
+
+  // --- stamina e abilità (Fase 5) ---
+  private staminaValue: number = this.character.maxStamina;
+  private staminaRegenDelayRemainingMs = 0;
+  private abilityCooldownRemainingMs = 0;
+  /** Scudo alzato (abilità del Paladino) e da quanto tempo (per la parata perfetta). */
+  private isGuardUp = false;
+  private guardElapsedMs = 0;
+  private guardGraceRemainingMs = 0;
+  /** Esito della parata dell'ultimo colpo ricevuto (null = nessuna parata): CombatSystem stordisce l'attaccante. */
+  public lastGuardOutcome: GuardOutcome | null = null;
+  private guardEvents: GuardOutcome[] = [];
+  private hasPendingTired = false;
+  private pendingAbilityName: string | null = null;
+  private hasPendingAbilityImpact = false;
 
   private readonly animationPlayer = new AnimationPlayer(PLAYER_ANIMATIONS, "idle");
   /** Arma in mano: decide attacchi e combo (vedi equipWeapon). */
@@ -118,10 +137,64 @@ export class Player extends GameObject {
     return this.character;
   }
 
+  /** Stamina attuale (Fase 5): la consumano schivata, attacchi pesanti e abilità. */
+  public get stamina(): number {
+    return this.staminaValue;
+  }
+
+  public get maxStamina(): number {
+    return this.character.maxStamina;
+  }
+
+  /** Abilità speciale del personaggio (tasto L). */
+  public get ability(): AbilityDefinition {
+    return ABILITY_CONFIG[this.character.abilityId];
+  }
+
+  /** Ricarica dell'abilità che manca (1 = appena usata, 0 = pronta). */
+  public get abilityCooldownFraction(): number {
+    const cooldownMs = this.ability.cooldownMs;
+    return cooldownMs <= 0 ? 0 : Math.min(1, this.abilityCooldownRemainingMs / cooldownMs);
+  }
+
+  /** Vero con lo scudo alzato (abilità del Paladino). */
+  public get isGuarding(): boolean {
+    return this.isGuardUp;
+  }
+
+  /** Vero una volta sola dopo un'azione rifiutata per mancanza di stamina. */
+  public drainTired(): boolean {
+    const isTired = this.hasPendingTired;
+    this.hasPendingTired = false;
+    return isTired;
+  }
+
+  /** Nome dell'abilità appena usata (una volta sola), oppure null. */
+  public drainStartedAbilityName(): string | null {
+    const name = this.pendingAbilityName;
+    this.pendingAbilityName = null;
+    return name;
+  }
+
+  /** Vero una volta sola quando il colpo di un'abilità con effetto (onda d'urto) diventa attivo. */
+  public drainAbilityImpact(): boolean {
+    const hasImpact = this.hasPendingAbilityImpact;
+    this.hasPendingAbilityImpact = false;
+    return hasImpact;
+  }
+
+  /** Parate avvenute dall'ultima chiamata (per gli effetti). */
+  public drainGuardEvents(): GuardOutcome[] {
+    const events = this.guardEvents;
+    this.guardEvents = [];
+    return events;
+  }
+
   /** Cambia personaggio (inizio partita): la salute torna al massimo della nuova classe. */
   public setCharacter(character: CharacterDefinition): void {
     this.character = character;
     this.currentHealth = character.maxHealth;
+    this.resetStaminaAndAbility();
     this.regenerationAccumulator = 0;
     this.msSinceLastHit = 0;
   }
@@ -138,7 +211,22 @@ export class Player extends GameObject {
 
   /** Vero durante la schivata: l'unico momento in cui si attraversano i nemici. */
   public get isDodging(): boolean {
-    return this.dodgeRemainingMs > 0;
+    return this.dodgeRemainingMs > 0 || this.activeDash !== null;
+  }
+
+  /** Scatto in corso (abilità), oppure null. */
+  private get activeDash(): NonNullable<AttackDefinition["dash"]> | null {
+    const dash = this.currentAttack?.dash;
+    if (dash === undefined) {
+      return null;
+    }
+    return this.attackElapsedMs >= dash.startMs && this.attackElapsedMs < dash.endMs ? dash : null;
+  }
+
+  /** Vero se l'attacco in corso è l'abilità del personaggio. */
+  private get isAbilityAttackActive(): boolean {
+    const ability = this.ability;
+    return ability.kind === "attack" && this.currentAttack === ability.attack;
   }
 
   public get isDead(): boolean {
@@ -147,7 +235,7 @@ export class Player extends GameObject {
 
   /** Vero se i colpi subiti vengono ignorati (dopo un colpo o durante la schivata). */
   public get isInvulnerable(): boolean {
-    return this.invulnerabilityRemainingMs > 0 || this.dodgeRemainingMs > 0;
+    return this.invulnerabilityRemainingMs > 0 || this.dodgeRemainingMs > 0 || this.activeDash?.invulnerable === true;
   }
 
   /** Vero quando la morte è durata abbastanza e si può ripartire. */
@@ -300,6 +388,7 @@ export class Player extends GameObject {
     this.velocityY = 0;
     this.facingDirection = "right";
     this.cancelAttack();
+    this.isGuardUp = false;
     this.dodgeRemainingMs = 0;
     this.hurtRemainingMs = 0;
     this.coyoteRemainingMs = 0;
@@ -313,6 +402,7 @@ export class Player extends GameObject {
     this.regenerationAccumulator = 0;
     this.msSinceLastHit = 0;
     this.currentHealth = this.maxHealth;
+    this.resetStaminaAndAbility();
     this.deathElapsedMs = 0;
     this.invulnerabilityRemainingMs = 0;
     this.dodgeCooldownRemainingMs = 0;
@@ -323,9 +413,14 @@ export class Player extends GameObject {
    * Restituisce false se il colpo viene ignorato (invulnerabile o già morto).
    */
   public takeDamage(damage: number, sourceCenterX: number): boolean {
+    this.lastGuardOutcome = null;
     if (this.isDead || this.isInvulnerable) {
       return false;
     }
+    if (this.tryBlockWithShield(damage, sourceCenterX)) {
+      return false;
+    }
+    this.isGuardUp = false;
     // lo scudo (power-up e paladino) riduce il danno, ma un colpo toglie sempre almeno 1 HP
     const takenMultiplier = this.modifiers.getValue("damageTakenMultiplier") * this.character.damageTakenMultiplier;
     const reducedDamage = Math.max(1, Math.round(damage * takenMultiplier));
@@ -345,6 +440,44 @@ export class Player extends GameObject {
       this.hurtRemainingMs = PLAYER_CONFIG.hurtDurationMs;
       this.animationPlayer.restart("hurt");
     }
+    return true;
+  }
+
+  /**
+   * Scudo alzato e colpo da davanti: parata perfetta (appena alzato: nessun costo), parata normale (costa stamina
+   * in proporzione al danno) o guardia rotta (stamina finita: il colpo passa). Restituisce true se il colpo è parato.
+   */
+  private tryBlockWithShield(damage: number, sourceCenterX: number): boolean {
+    const ability = this.ability;
+    if (!this.isGuardUp || ability.kind !== "guard") {
+      return false;
+    }
+    const centerX = this.positionX + this.width / 2;
+    const isInFront = this.facingDirection === "right" ? sourceCenterX >= centerX : sourceCenterX <= centerX;
+    if (!isInFront) {
+      return false;
+    }
+    if (this.guardGraceRemainingMs > 0) {
+      this.lastGuardOutcome = "blocked"; // stesso attacco appena parato: niente costo
+      return true;
+    }
+    let outcome: GuardOutcome = "perfect";
+    if (this.guardElapsedMs > ability.perfectWindowMs) {
+      const cost = damage * ability.staminaPerBlockedDamage;
+      if (this.staminaValue < cost) {
+        this.staminaValue = 0;
+        this.lowerGuard();
+        this.lastGuardOutcome = "broken";
+        this.guardEvents.push("broken");
+        return false;
+      }
+      this.staminaValue -= cost;
+      this.staminaRegenDelayRemainingMs = PLAYER_CONFIG.staminaRegenDelayMs;
+      outcome = "blocked";
+    }
+    this.lastGuardOutcome = outcome;
+    this.guardEvents.push(outcome);
+    this.guardGraceRemainingMs = GUARD_BLOCK_GRACE_MS;
     return true;
   }
 
@@ -394,8 +527,9 @@ export class Player extends GameObject {
       this.velocityY = plunge.fallSpeed;
     }
 
-    // Il rinculo non può spingere il giocatore giù da un bordo: se dietro di lui c'è il vuoto si ferma.
-    if (this.hurtRemainingMs > 0 && this.velocityX !== 0 && !this.hasGroundInDirectionOfMovement(platforms)) {
+    // Il rinculo e gli scatti delle abilità non portano giù da un bordo: se oltre c'è il vuoto ci si ferma.
+    const isPushedOrDashing = this.hurtRemainingMs > 0 || (this.activeDash !== null && this.isOnGround);
+    if (isPushedOrDashing && this.velocityX !== 0 && !this.hasGroundInDirectionOfMovement(platforms)) {
       this.velocityX = 0;
     }
 
@@ -441,6 +575,15 @@ export class Player extends GameObject {
       PLAYER_CONFIG.hitboxWidth,
       this.facingDirection === "left"
     );
+    // scudo alzato: una barriera di luce davanti (bianca finché la parata è perfetta)
+    if (this.isGuardUp) {
+      const ability = this.ability;
+      const isPerfectWindow = ability.kind === "guard" && this.guardElapsedMs <= ability.perfectWindowMs;
+      const barrierX = (this.facingDirection === "right" ? this.positionX + this.width + 3 : this.positionX - 5) - cameraX;
+      const barrierColor = isPerfectWindow ? PALETTE.white : PALETTE.cyan;
+      renderer.fillGlow(barrierX + 1, this.positionY + this.height / 2 - cameraY, 9, barrierColor, 2, 4);
+      renderer.fillRect(barrierX, this.positionY + 1 - cameraY, 2, this.height - 2, barrierColor);
+    }
     // arco a piena carica: un bagliore che pulsa davanti alla mano
     if (this.chargeFraction === 1) {
       const handX = this.facingDirection === "right" ? this.positionX + this.width + 4 : this.positionX - 4;
@@ -473,6 +616,7 @@ export class Player extends GameObject {
   private updateTimers(deltaTimeMs: number): void {
     this.invulnerabilityRemainingMs = Math.max(0, this.invulnerabilityRemainingMs - deltaTimeMs);
     this.attackCooldownRemainingMs = Math.max(0, this.attackCooldownRemainingMs - deltaTimeMs);
+    this.updateStamina(deltaTimeMs);
     this.dodgeCooldownRemainingMs = Math.max(0, this.dodgeCooldownRemainingMs - deltaTimeMs);
     this.groundComboManager.update(deltaTimeMs);
     this.airComboManager.update(deltaTimeMs);
@@ -510,7 +654,18 @@ export class Player extends GameObject {
       }
     }
     if (this.currentAttack !== null) {
+      const elapsedBefore = this.attackElapsedMs;
       this.attackElapsedMs += deltaTimeMs;
+      const ability = this.ability;
+      if (
+        this.isAbilityAttackActive &&
+        ability.kind === "attack" &&
+        ability.impactEffect !== undefined &&
+        elapsedBefore < ability.attack.hitStartMs &&
+        this.attackElapsedMs >= ability.attack.hitStartMs
+      ) {
+        this.hasPendingAbilityImpact = true;
+      }
       this.launchProjectileIfDue();
       if (this.currentAttack.charge !== undefined && this.attackElapsedMs >= this.currentAttack.durationMs) {
         this.releaseCharge(); // tenuto troppo a lungo: l'arco tira da solo
@@ -533,7 +688,9 @@ export class Player extends GameObject {
       this.isOnGround &&
       !this.isDead &&
       this.hurtRemainingMs <= 0 &&
-      this.dodgeRemainingMs <= 0;
+      this.dodgeRemainingMs <= 0 &&
+      !this.isGuardUp &&
+      !this.isAbilityAttackActive; // le abilità non hanno pose accovacciate
     this.setCrouched(canCrouch, platforms);
   }
 
@@ -559,7 +716,18 @@ export class Player extends GameObject {
   private handleInput(input: InputSource): void {
     const isDodging = this.dodgeRemainingMs > 0;
 
-    if (input.wasPressed("dodge") && this.canStartDodge()) {
+    // abilità (L): lo scudo si tiene premuto, le altre partono alla pressione
+    this.updateGuard(input);
+    if (this.isGuardUp) {
+      this.bufferedAttackInput = null;
+      this.approachHorizontalVelocity(0);
+      this.applyFacingInput(input); // con lo scudo alzato ci si gira ma non ci si muove
+      return;
+    }
+    if (input.wasPressed("ability")) {
+      this.tryStartAbility();
+    }
+    if (input.wasPressed("dodge") && this.canStartDodge() && this.spendStamina(this.character.dodgeStaminaCost)) {
       this.startDodge();
     }
     // arco: rilasciando il tasto parte il tiro caricato
@@ -584,8 +752,11 @@ export class Player extends GameObject {
     if (this.dodgeRemainingMs > 0) {
       return; // durante la schivata la velocità è fissata
     }
+    const dash = this.activeDash;
     const isGroundedAttack = this.currentAttack !== null && this.isOnGround;
-    if (isGroundedAttack) {
+    if (dash !== null) {
+      this.velocityX = (this.facingDirection === "right" ? 1 : -1) * dash.speed; // scatto dell'abilità
+    } else if (isGroundedAttack) {
       this.approachHorizontalVelocity(0); // a terra l'attacco ferma il movimento (sul ghiaccio scivola)
     } else {
       this.applyHorizontalInput(input);
@@ -636,12 +807,21 @@ export class Player extends GameObject {
       this.comboManager.reset();
       this.comboManager = manager;
     }
+    // l'attacco pesante costa stamina: senza, non parte
+    const staminaCost = attackInput === "heavyAttack" ? PLAYER_CONFIG.heavyAttackStaminaCost : 0;
+    if (this.staminaValue < staminaCost) {
+      this.hasPendingTired = true;
+      return;
+    }
     const attack = manager.getNextAttack(attackInput);
     // senza munizioni l'arma non tira e non comincia nemmeno a caricare (arco)
     if ((attack.projectile !== undefined || attack.charge !== undefined) && this.ammo !== null && this.ammo <= 0) {
       manager.reset();
       this.hasPendingOutOfAmmo = true; // senza munizioni l'arma non attacca
       return;
+    }
+    if (staminaCost > 0) {
+      this.spendStamina(staminaCost);
     }
     this.hasLaunchedCurrentAttack = false;
     this.releasedCharge = null;
@@ -722,7 +902,7 @@ export class Player extends GameObject {
       speedMultiplier,
       hit: { breaksGuard: attack.breaksGuard, crushesArmor: attack.crushesArmor },
     });
-    if (this.ammo !== null) {
+    if (this.ammo !== null && spec.usesAmmo !== false) {
       this.ammo = Math.max(0, this.ammo - 1);
     }
   }
@@ -735,6 +915,117 @@ export class Player extends GameObject {
     this.targetsHitByCurrentAttack.clear();
     this.airComboManager.reset();
     this.hasPendingPlungeLanding = true;
+  }
+
+  /** Consuma stamina; se non basta non consuma niente, segnala "stanco" e restituisce false. */
+  private spendStamina(cost: number): boolean {
+    if (this.staminaValue < cost) {
+      this.hasPendingTired = true;
+      return false;
+    }
+    this.staminaValue -= cost;
+    this.staminaRegenDelayRemainingMs = PLAYER_CONFIG.staminaRegenDelayMs;
+    return true;
+  }
+
+  /** Recupero della stamina (dopo una pausa dall'ultimo consumo); lo scudo alzato la consuma. */
+  private updateStamina(deltaTimeMs: number): void {
+    this.abilityCooldownRemainingMs = Math.max(0, this.abilityCooldownRemainingMs - deltaTimeMs);
+    this.guardGraceRemainingMs = Math.max(0, this.guardGraceRemainingMs - deltaTimeMs);
+    const ability = this.ability;
+    if (this.isGuardUp && ability.kind === "guard") {
+      this.guardElapsedMs += deltaTimeMs;
+      this.staminaValue = Math.max(0, this.staminaValue - (ability.drainPerSecond * deltaTimeMs) / 1000);
+      this.staminaRegenDelayRemainingMs = PLAYER_CONFIG.staminaRegenDelayMs;
+      if (this.staminaValue <= 0) {
+        this.lowerGuard();
+      }
+      return;
+    }
+    if (this.staminaRegenDelayRemainingMs > 0) {
+      this.staminaRegenDelayRemainingMs = Math.max(0, this.staminaRegenDelayRemainingMs - deltaTimeMs);
+      return;
+    }
+    this.staminaValue = Math.min(this.character.maxStamina, this.staminaValue + (this.character.staminaRegenPerSecond * deltaTimeMs) / 1000);
+  }
+
+  private resetStaminaAndAbility(): void {
+    this.staminaValue = this.character.maxStamina;
+    this.staminaRegenDelayRemainingMs = 0;
+    this.abilityCooldownRemainingMs = 0;
+    this.isGuardUp = false;
+    this.guardGraceRemainingMs = 0;
+  }
+
+  /** Abilità d'attacco (L): solo a terra, in piedi, senza un altro attacco o una schivata in corso. */
+  private tryStartAbility(): void {
+    const ability = this.ability;
+    if (
+      ability.kind !== "attack" ||
+      !this.isOnGround ||
+      this.isCrouching ||
+      this.currentAttack !== null ||
+      this.dodgeRemainingMs > 0 ||
+      this.abilityCooldownRemainingMs > 0 ||
+      !this.spendStamina(ability.staminaCost)
+    ) {
+      return;
+    }
+    this.abilityCooldownRemainingMs = ability.cooldownMs;
+    this.groundComboManager.reset();
+    this.airComboManager.reset();
+    this.bufferedAttackInput = null;
+    this.chargeInput = null;
+    this.releasedCharge = null;
+    this.hasLaunchedCurrentAttack = false;
+    this.currentAttack = ability.attack;
+    this.attackElapsedMs = 0;
+    this.targetsHitByCurrentAttack.clear();
+    this.animationPlayer.restart(ability.attack.animation);
+    this.pendingAbilityName = ability.name;
+  }
+
+  /** Scudo (abilità del Paladino): si alza premendo L, resta alzato finché lo si tiene e c'è stamina. */
+  private updateGuard(input: InputSource): void {
+    const ability = this.ability;
+    if (ability.kind !== "guard") {
+      return;
+    }
+    if (this.isGuardUp) {
+      if (!input.isHeld("ability") || !this.isOnGround) {
+        this.lowerGuard();
+      }
+      return;
+    }
+    const canRaise =
+      input.wasPressed("ability") &&
+      this.isOnGround &&
+      !this.isCrouching &&
+      this.currentAttack === null &&
+      this.dodgeRemainingMs <= 0 &&
+      this.abilityCooldownRemainingMs <= 0;
+    if (canRaise && this.spendStamina(ability.staminaCost)) {
+      this.isGuardUp = true;
+      this.guardElapsedMs = 0;
+      this.guardGraceRemainingMs = 0;
+      this.pendingAbilityName = ability.name;
+    }
+  }
+
+  private lowerGuard(): void {
+    if (this.isGuardUp) {
+      this.isGuardUp = false;
+      this.abilityCooldownRemainingMs = this.ability.cooldownMs;
+    }
+  }
+
+  /** Solo la direzione (scudo alzato): ci si gira senza muoversi. */
+  private applyFacingInput(input: InputSource): void {
+    if (input.isHeld("moveLeft") && !input.isHeld("moveRight")) {
+      this.facingDirection = "left";
+    } else if (input.isHeld("moveRight") && !input.isHeld("moveLeft")) {
+      this.facingDirection = "right";
+    }
   }
 
   private canStartDodge(): boolean {
@@ -833,7 +1124,7 @@ export class Player extends GameObject {
     }
   }
 
-  /** Priorità: morto > stordito > schivata > attacco > aria > camminata > fermo. */
+  /** Priorità: morto > stordito > schivata > scudo > attacco > accovacciato > aria > camminata > fermo. */
   private updateState(): void {
     if (this.isDead) {
       this.currentState = "dead";
@@ -841,6 +1132,8 @@ export class Player extends GameObject {
       this.currentState = "hurt";
     } else if (this.dodgeRemainingMs > 0) {
       this.currentState = "dodge";
+    } else if (this.isGuardUp) {
+      this.currentState = "guard";
     } else if (this.currentAttack !== null) {
       this.currentState = "attack";
     } else if (this.isCrouching && this.isOnGround) {

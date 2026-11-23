@@ -346,6 +346,16 @@ const ATTACK_POSES: Record<string, SwordPose> = {
   knightPlungeB: { tipX: 21, tipY: 29, arcs: [{ radius: 10, startDegrees: 60, endDegrees: 110 }] },
 };
 
+/**
+ * Pose delle abilità (Fase 5): arma alzata, colpo a terra, affondo in avanti. Valgono per tutte le armi
+ * (la lunghezza segue l'arma), quindi un'abilità si può usare con qualsiasi arma in mano.
+ */
+const ABILITY_POSES: Record<string, SwordPose> = {
+  knightAbilityRaise: { tipX: 20, tipY: 0, bodyDrop: 1 },
+  knightAbilitySlam: { tipX: 34, tipY: 27, arcs: [{ radius: 16, startDegrees: 20, endDegrees: 80 }] },
+  knightAbilityThrust: { tipX: 38, tipY: 17, arcs: [{ radius: 18, startDegrees: -15, endDegrees: 15 }] },
+};
+
 /** Pose della lancia: affondi orizzontali e un fendente ampio (frame larghi 58 pixel). */
 const SPEAR_FRAME_WIDTH = 58;
 const SPEAR_POSES: Record<string, SwordPose> = {
@@ -576,6 +586,9 @@ function composeKnightFrames(attackPoses: Record<string, SwordPose>): Record<str
     knightDeadFall: composeKnightFrame(LEGS_FALL, 2, false),
     knightDeadLie: composeLyingFrame(),
   };
+  for (const [spriteId, pose] of Object.entries(ABILITY_POSES)) {
+    frames[spriteId] = composeAttackFrame(pose);
+  }
   for (const [spriteId, pose] of Object.entries(attackPoses)) {
     frames[spriteId] = composeAttackFrame(pose);
     frames[`${spriteId}${KNIGHT_CROUCH_SUFFIX}`] = composeAttackFrame(pose, true);

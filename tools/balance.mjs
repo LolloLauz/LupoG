@@ -84,7 +84,8 @@ function createRandom(seed) {
  */
 function playLevel(levelId, options = {}) {
   // character: le statistiche del personaggio (il bot usa sempre la spada, quindi misura solo quelle)
-  const { character = CHARACTER_CONFIG.knight, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
+  // useAbility: il bot usa anche l'abilità del personaggio (tasto L; lo scudo al posto della schivata)
+  const { character = CHARACTER_CONFIG.knight, useAbility = false, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
   const level = LEVEL_CONFIG.find((candidate) => candidate.id === levelId);
   const random = createRandom(seed);
   // come nel gioco: piattaforme (anche mobili e cancello dell'arena), pericoli, proiettili
@@ -164,14 +165,31 @@ function playLevel(levelId, options = {}) {
         : nearest.definition.attackWindupMs;
       const attackElapsedMs = (time - (attackStartTimes.get(nearest) ?? time)) * 1000;
       const wantsToDodge = isTargetAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);
+      const ability = player.ability;
+      const isAbilityReady = player.abilityCooldownFraction === 0 && player.stamina >= ability.staminaCost;
+      // scudo (paladino): al posto della schivata lo alza poco prima del colpo e lo tiene finché l'attacco dura
+      const wantsToGuard = useAbility && ability.kind === "guard" && wantsToDodge && attackElapsedMs >= windupMs - 150;
+      if (wantsToGuard && (player.isGuarding || isAbilityReady)) {
+        held.length = 0;
+        held.push("ability");
+        if (!player.isGuarding) pressed.push("ability");
+      }
+      // abilità d'attacco: appena il bersaglio è a portata e l'abilità è pronta
+      if (useAbility && ability.kind === "attack" && isAbilityReady && gap <= PLAYER_REACH && player.isOnGround && !player.activeAttack) {
+        pressed.push("ability");
+      }
       // schiva poco prima del colpo; smette di attaccare in tempo per essere libero
-      if (wantsToDodge && attackElapsedMs >= windupMs - 100 && attackElapsedMs <= windupMs - 30 && player.isOnGround && !player.activeAttack) {
+      if (!wantsToGuard && wantsToDodge && attackElapsedMs >= windupMs - 100 && attackElapsedMs <= windupMs - 30 && player.isOnGround && !player.activeAttack) {
         pressed.push("dodge");
         dodgeDecisions.set(nearest, false);
       }
       const holdAttack = wantsToDodge && attackElapsedMs >= windupMs - 520;
-      if (gap <= PLAYER_REACH) {
-        held.length = 0;
+      if (wantsToGuard) {
+        // con lo scudo alzato non attacca
+      } else if (gap <= PLAYER_REACH) {
+        // a portata: si ferma, ma prima si gira verso il bersaglio (dopo una carica può trovarselo alle spalle)
+        const isFacingTarget = (direction > 0) === (player.facingDirection === "right");
+        if (isFacingTarget) held.length = 0;
         if (!holdAttack) pressed.push("attack");
       } else {
         if (gap < PLAYER_REACH + 6 && !holdAttack) pressed.push("attack");
@@ -254,7 +272,7 @@ function playLevel(levelId, options = {}) {
 }
 
 /** Partita completa: tutti i livelli di fila, salute che si porta dietro, vite limitate. */
-function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight) {
+function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight, useAbility = false) {
   let lives = GAME_CONFIG.startingLives;
   let health = character.maxHealth;
   // pozioni nella borsa: passano da un livello all'altro; ricominciando un livello tornano a quelle di inizio livello
@@ -262,7 +280,7 @@ function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight) {
   const deathsPerLevel = LEVEL_CONFIG.map(() => 0);
   for (const level of LEVEL_CONFIG) {
     for (;;) {
-      const result = playLevel(level.id, { character, dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions });
+      const result = playLevel(level.id, { character, useAbility, dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions });
       if (result.outcome === "win") {
         potions = result.potions;
         const hasNextLevel = LEVEL_CONFIG.some((other) => other.id === level.id + 1);
@@ -330,14 +348,14 @@ for (const [label, skill] of skills) {
 }
 }
 
-console.log(`\n=== PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, cura) ===`);
+console.log(`\n=== PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, stamina, cura; con e senza l'abilità L) ===`);
 for (const characterId of CHARACTER_ORDER) {
   const character = CHARACTER_CONFIG[characterId];
-  for (const [label, skill] of skills) {
-    const runs = Array.from({ length: runRepetitions }, (_, i) => playFullRun(skill, i + 1, character));
+  for (const [label, skill] of skills) for (const useAbility of [false, true]) {
+    const runs = Array.from({ length: runRepetitions }, (_, i) => playFullRun(skill, i + 1, character, useAbility));
     const won = runs.filter((r) => r.won);
     const totalDeaths = average(runs.map((r) => r.deathsPerLevel.reduce((a, b) => a + b, 0)));
-    console.log(`${pad(character.name, 10)} ${pad(label, 24)} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)}`);
+    console.log(`${pad(character.name, 10)} ${pad(label, 24)} ${useAbility ? "con abilità  " : "senza abilità"} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)}`);
   }
 }
 console.log("\n(rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)");

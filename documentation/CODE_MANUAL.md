@@ -90,13 +90,14 @@ modificare qui, senza toccare la logica.
 | `powerUpConfig.ts` (2.0) | `POWER_UP_CONFIG`: Furia, Velocità, Scudo, Fuoco, Rigenerazione (nome, descrizione, tipo, effetti sulle statistiche, durata, requisiti, icona, colore dell'alone) |
 | `paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS`), `PALETTE_RAMPS` (rampe dallo scuro al chiaro), tipi `PaletteColor`, `PaletteRampName` |
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere e valori comuni a tutti i personaggi: salto, hitbox, tempi), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
-| `characterConfig.ts` (Fase 4) | `CHARACTER_CONFIG` (cavaliere, ranger, berserker, paladino: nome, descrizione, tratto, suffisso degli sprite, arma iniziale, salute, velocità, moltiplicatori del danno inflitto e subito, schivata, `regeneration` facoltativa), `CHARACTER_ORDER`, `DEFAULT_CHARACTER_ID`, `isCharacterId()`. Il cavaliere legge salute, velocità e schivata da `PLAYER_CONFIG` |
+| `abilityConfig.ts` (Fase 5) | `ABILITY_CONFIG` (onda d'urto, tiro in ritirata, carica furiosa: abilità d'attacco con il loro `AttackDefinition`; scudo: abilità di guardia con consumo al secondo, finestra della parata perfetta, costo per punto di danno, stordimento), `getAbilityAttacks()` (usata dalle animazioni) |
+| `characterConfig.ts` (Fase 4) | `CHARACTER_CONFIG` (cavaliere, ranger, berserker, paladino: nome, descrizione, tratto, suffisso degli sprite, arma iniziale, salute, velocità, moltiplicatori del danno inflitto e subito, schivata, `regeneration` facoltativa; Fase 5: `maxStamina`, `staminaRegenPerSecond`, `dodgeStaminaCost`, `abilityId`), `CHARACTER_ORDER`, `DEFAULT_CHARACTER_ID`, `isCharacterId()`. Il cavaliere legge salute, velocità e schivata da `PLAYER_CONFIG` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG` (anche `armorCrushStunMs` e i moltiplicatori dei nemici d'élite), `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss; `weaponReward` = trofeo) |
 | `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco (velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) |
 | `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili; quelli con `powerUpId` attivano un power-up, `storedInBag` = pozione da borsa, `refillsAmmo` = faretra), `ITEM_SIZE` |
 | `levelConfig.ts` | `LEVEL_CONFIG` (i 6 livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
-| `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti; anche `pickUp` = E, `dropItem` = Q, `bagSlot1`-`bagSlot4` = 1-4 e, nei menu, `menuLeft`/`menuRight` = A/D e frecce), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
+| `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti; anche `pickUp` = E, `dropItem` = Q, `ability` = L, `bagSlot1`-`bagSlot4` = 1-4 e, nei menu, `menuLeft`/`menuRight` = A/D e frecce), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
 | `inventoryConfig.ts` | `INVENTORY_CONFIG` (`slotCount` 4, `maxPotionsPerSlot` 2, `maxPotionSlots` 1), `BAG_SLOT_ACTIONS` (tasto di ogni posto) |
 | `animationConfig.ts` | `PLAYER_ANIMATIONS`, `ENEMY_ANIMATIONS`, `BOSS_ANIMATIONS` |
 
@@ -236,7 +237,8 @@ Funzioni principali: `start()`, `update()` (un frame di logica), `render()`, `st
 cambiato, mette in mano e nella borsa la sua arma iniziale), `ensureCharacterSprites()` (registra la serie di sprite di un
 personaggio la prima volta che serve), `resetAllData()` ("Cancella dati": `ProgressManager.reset`, `HighScoreManager.reset`, borsa e
 personaggio iniziali), `dropFromBag()` (tasto Q: Q tenuto + 1-4 lascia quel posto, Q da solo, al rilascio, l'arma in mano; solo a terra),
-`refillAmmoFromQuiver()` (faretra: raccolta solo se `Inventory.refillAllAmmo` ricarica qualcosa). Le costanti `EFFECT_CONFIG` (in cima al file)
+`refillAmmoFromQuiver()` (faretra: raccolta solo se `Inventory.refillAllAmmo` ricarica qualcosa), `showStaminaAndAbilityEffects()`
+(Fase 5: nome dell'abilità, "STANCO", polvere e tremolio dell'onda d'urto, scintille e "PARATA!" dello scudo). Le costanti `EFFECT_CONFIG` (in cima al file)
 regolano hit-stop, tremolio e polvere.
 
 ### 3.3 `src/entities/` – gli oggetti di gioco
@@ -245,7 +247,7 @@ regolano hit-stop, tremolio e polvere.
 |---|---|---|
 | `GameObject.ts` | `GameObject` (astratta) | `positionX`, `positionY`, `velocityX`, `velocityY`, `facingDirection`, `isOnGround`, `width`, `height`, `getBounds()` |
 | `Player.ts` | `Player` | il cavaliere |
-| `Enemy.ts` | `Enemy` | nemico normale guidato da una `EnemyDefinition` (anche a distanza e volante) |
+| `Enemy.ts` | `Enemy` | nemico normale guidato da una `EnemyDefinition` (anche a distanza e volante); `stun(ms)` (parata perfetta: attacco interrotto, nessun danno) |
 | `Boss.ts` | `Boss` | boss con IA propria, attacchi come dati e fasi; `arenaMinX` (impostato da `LevelManager.createBoss` oltre il cancello, `ARENA_GATE_WIDTH`): il boss non esce mai dall'arena |
 | `Projectile.ts` (2.0) | `Projectile` | proiettile nemico o del giocatore (`owner`): si muove, scade (`hasTimedOut`), si anima, ricorda i bersagli già colpiti (`targetsHit`); le regole di contatto sono in `ProjectileSystem` |
 | `AmmoDrop.ts` | `AmmoDrop`, `AMMO_DROP_SIZE` | munizione caduta a terra (coltello lanciato): cade con la gravità, si recupera passandoci sopra |
@@ -265,6 +267,7 @@ regolano hit-stop, tremolio e polvere.
 | `getActiveAttackHitbox()` | area d'urto se il colpo è attivo, altrimenti `null` |
 | `hasAlreadyHit(target)`, `registerHit(target)` | un bersaglio si colpisce una volta per attacco |
 | `getDamageMultiplier()`, `getBonusDamage()` | moltiplicatore del danno (Furia × quello del personaggio) e danno aggiunto (Fuoco), da `modifiers` |
+| `stamina`, `maxStamina`, `ability`, `abilityCooldownFraction`, `isGuarding`, `lastGuardOutcome`, `drainTired()`, `drainStartedAbilityName()`, `drainAbilityImpact()`, `drainGuardEvents()` | Fase 5: la stamina si consuma con `spendStamina` (schivata: `dodgeStaminaCost`; attacco pesante: `PLAYER_CONFIG.heavyAttackStaminaCost`; abilità) e si recupera in `updateStamina` dopo `staminaRegenDelayMs`. L'abilità d'attacco (`tryStartAbility`) diventa l'attacco in corso: area d'urto, proiettile (`usesAmmo: false`) e scatto (`AttackDefinition.dash`: velocità, finestra, invulnerabilità; durante lo scatto `isDodging` è vero e il bordo di un abisso lo ferma). Lo scudo (`updateGuard`, stato `guard`) si tiene con L; `takeDamage` passa da `tryBlockWithShield` (parata perfetta, normale o guardia rotta, solo da davanti) e scrive `lastGuardOutcome`, che `CombatSystem.processEnemyAttacks` usa per stordire l'attaccante (`Enemy.stun`) e `ProjectileSystem` per fermare le frecce. Le abilità non hanno pose accovacciate: durante un'abilità non ci si accovaccia |
 | `characterDefinition`, `setCharacter(definizione)`, `maxHealth` | Fase 4: classe del personaggio (`CharacterDefinition`, terzo parametro facoltativo del costruttore; senza, il cavaliere). Ne vengono salute massima, velocità, danno inflitto e subito, schivata, cura lenta (dopo `delayAfterHitMs` senza colpi subiti, anche ambientali) e suffisso degli sprite. `setCharacter` riporta la salute al massimo; il motore la chiama a ogni nuova partita |
 | `modifiers`, `applyPowerUp(definizione)` | power-up attivi (`PlayerModifiers`); la velocità usa `movementSpeedMultiplier`, `takeDamage` usa `damageTakenMultiplier` (Scudo, almeno 1 danno), la rigenerazione cura a punti interi; `revive` li toglie tutti |
 | `respawnAt(position)`, `revive()` | ripartenza e rianimazione |
@@ -275,7 +278,7 @@ regolano hit-stop, tremolio e polvere.
 | `isInvulnerable`, `isDodging`, `isCrouching`, `isDead`, `isReadyToRespawn`, `activeAttack` | stato letto dal motore (`isDodging`: si attraversano i nemici) |
 
 L'ordine dentro `update`: timer → (morto / stordito / input) → gravità → `moveAndCollide` → stato → animazione.
-Priorità degli stati in `updateState()`: morto > stordito > schivata > attacco > accovacciato > aria > camminata > fermo.
+Priorità degli stati in `updateState()`: morto > stordito > schivata > scudo > attacco > accovacciato > aria > camminata > fermo.
 
 **`Enemy`** – decide `EnemyAISystem`, esegue `Enemy`. Balzo, divisione (`drainSplitRequests`, il motore crea i nemici) e corazza (`lastHitDamage` = danno davvero subito) sono gestiti qui. Funzioni: `setMovement(direction, speedMultiplier)`,
 `faceTowards(x)`, `beginAttack(target?)`, `setFlightTarget(x, y)` (volanti), `getAttackHitbox()`, `markPlayerHit()`,
@@ -350,7 +353,7 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`, `swamp`, `ice`, `tower`: 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia, lucciole, aurora, neve, fulmini, vetrate, bracieri) |
 | `TerrainRenderer.ts` | `TerrainRenderer` | terreno e piattaforme con la tessitura dell'ambientazione (`THEME_STYLES`: erba, pietra, mattoni, fango, neve, pietra runica), piattaforme mobili, pericoli (spuntoni, ghiaccio, acqua in due tempi), porta d'uscita, cancello dell'arena |
 | `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe, `addOutline` (contorno automatico), `remapSpriteKeys` (varianti) |
-| `sprites/knightSprites.ts` | `registerKnightSprites`, `registerCharacterPreviews`, `getCharacterPreviewFrameId`, `KNIGHT_ANCHOR_X`, `KNIGHT_FIRE_SUFFIX`, `KNIGHT_CROUCH_SUFFIX` | cavaliere 24×30 (attacchi 44×30, lancia 58×30): parte superiore + gambe + arma; ancora alla colonna 7. `registerKnightSprites(spriteManager, personaggio)` compone **una serie completa di frame per ogni arma** (`WEAPON_VISUALS`: lunghezza rispetto alla spada, funzione di disegno, pose d'attacco, icona): le funzioni `compose*` disegnano l'arma e il busto attivi, quindi un frame aggiunto all'elenco vale per tutte le armi e tutti i personaggi. **Personaggi** (Fase 4, `CHARACTER_VISUALS`): stesso corpo del cavaliere, colori propri (stesse chiavi: armatura `d g s w`, sopravveste `m r o`, scudo `N B L`) e, se serve, le 12 righe della testa (`RANGER_HEAD_ROWS`, `BERSERKER_HEAD_ROWS`; il paladino ricolora il pennacchio). Id di uno sprite: frame + `Crouch` (attacco da accovacciati) + suffisso dell'arma + suffisso del personaggio + `Fire`. Una serie è di circa 600 sprite: il motore registra quella di un personaggio quando serve (`GameEngine.ensureCharacterSprites`) e, all'avvio, solo i due frame d'attesa di ognuno per i menu (`registerCharacterPreviews`). Registra anche le icone 16×16 delle armi. `Player.getRenderedFrameId()` sceglie il frame |
+| `sprites/knightSprites.ts` | `registerKnightSprites`, `registerCharacterPreviews`, `getCharacterPreviewFrameId`, `KNIGHT_ANCHOR_X`, `KNIGHT_FIRE_SUFFIX`, `KNIGHT_CROUCH_SUFFIX` | cavaliere 24×30 (attacchi 44×30, lancia 58×30): parte superiore + gambe + arma; ancora alla colonna 7. `registerKnightSprites(spriteManager, personaggio)` compone **una serie completa di frame per ogni arma** (`WEAPON_VISUALS`: lunghezza rispetto alla spada, funzione di disegno, pose d'attacco, icona): le funzioni `compose*` disegnano l'arma e il busto attivi, quindi un frame aggiunto all'elenco vale per tutte le armi e tutti i personaggi. **Personaggi** (Fase 4, `CHARACTER_VISUALS`): stesso corpo del cavaliere, colori propri (stesse chiavi: armatura `d g s w`, sopravveste `m r o`, scudo `N B L`) e, se serve, le 12 righe della testa (`RANGER_HEAD_ROWS`, `BERSERKER_HEAD_ROWS`; il paladino ricolora il pennacchio). Pose delle abilità (`ABILITY_POSES`: arma alzata, colpo a terra, affondo) comuni a tutte le armi. Id di uno sprite: frame + `Crouch` (attacco da accovacciati) + suffisso dell'arma + suffisso del personaggio + `Fire`. Una serie è di circa 600 sprite: il motore registra quella di un personaggio quando serve (`GameEngine.ensureCharacterSprites`) e, all'avvio, solo i due frame d'attesa di ognuno per i menu (`registerCharacterPreviews`). Registra anche le icone 16×16 delle armi. `Player.getRenderedFrameId()` sceglie il frame |
 | `sprites/weaponShapes.ts` | `drawSpear`, `drawAxe`, `drawMace`, `drawBow`, `drawCrossbow`, `WeaponDrawer` | forme delle armi della Fase 1 dalla mano alla punta (metallo con le chiavi della lama: il fuoco le ricolora) |
 | `sprites/enemySprites.ts` | `registerEnemySprites` | umanoidi da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma spada o arco, mano, ancora): scheletro, arciere, goblin, soldato, golem; pipistrello disegnato a metà e specchiato; lupo e melme con le forme procedurali di `creatureTools.ts` |
 | `sprites/creatureTools.ts` (2.0) | `composeWolf`, `composeBlob`, `fillShadedEllipse` | creature non umanoidi composte da ellissi ombreggiate e rettangoli, con contorno automatico: lo stesso codice disegna il lupo (scala 1) e il Re dei Lupi (scala 2) |
@@ -383,7 +386,7 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 
 | File | Classe | Responsabilità |
 |---|---|---|
-| `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, livello, punteggio dorato, gemme), borsa sotto il pannello a destra (`BAG_SLOT_GEOMETRY`, `getBagSlotX`: riquadri numerati, arma in mano con la cornice dorata, numero di pozioni), power-up attivi con la barra del tempo, barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
+| `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `STAMINA_BAR_GEOMETRY`, `ABILITY_BOX_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, barra della stamina e riquadro dell'abilità con la L (Fase 5), livello, punteggio dorato, gemme), borsa sotto il pannello a destra (`BAG_SLOT_GEOMETRY`, `getBagSlotX`: riquadri numerati, arma in mano con la cornice dorata, numero di pozioni), power-up attivi con la barra del tempo, barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
 | `MenuManager.ts` | `MenuManager<TCommand>` | menu verticale: `update(input)` restituisce il comando confermato, `render(...)` (voce scelta in bianco-oro con frecce); l'etichetta di una voce può essere una funzione (testo che cambia) |
 | `ScreenManager.ts` | `ScreenManager`, `getCharacterRatings` | schermate titolo (con personaggio e difficoltà nel menu), controlli, **selezione dei livelli** (cursore solo sui livelli sbloccati, `selectedLevelId`), **scelta del personaggio** (Fase 4: A/D o W/S circolari, parte dal personaggio salvato, `selectedCharacterId`; comandi `showCharacterSelect`, `confirmCharacter`; **conferma di "Cancella dati"** (`confirmReset`, voce predefinita "no", comandi `showResetConfirm`, `resetAllData`; `showNotice` mostra "DATI CANCELLATI" sul titolo); le tacche da 1 a 5 vengono da `getCharacterRatings`, calcolate dai valori di `CHARACTER_CONFIG`), pausa, Game Over, vittoria; usa un `MenuManager` per ciascuna; riceve dal motore `ScreenData` (anche `difficultyName`, `characterId` e `levels`) |
 
@@ -392,7 +395,7 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 | File | Tipi |
 |---|---|
 | `GameTypes.ts` | `GameStateName`, `GameAction`, `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
-| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition` (`breaksGuard`, `crushesArmor`, `plunge`, `projectile`, `charge`), `ProjectileDefinition` (`isPiercing`, `recoveredAsAmmoOf`), `ProjectileLaunch` (`owner`, `speedMultiplier`, `hit`), `WeaponDefinition` (`ammo`), `HitProperties`, `ComboDefinition` (`name`), `WeaponDefinition` (`air`), `WeaponId`, `AttackInputAction`, `WeaponDefinition`, `CharacterId`, `CharacterDefinition` (Fase 4), `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
+| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition` (`breaksGuard`, `crushesArmor`, `plunge`, `projectile`, `charge`), `ProjectileDefinition` (`isPiercing`, `recoveredAsAmmoOf`), `ProjectileLaunch` (`owner`, `speedMultiplier`, `hit`), `WeaponDefinition` (`ammo`), `HitProperties`, `ComboDefinition` (`name`), `WeaponDefinition` (`air`), `WeaponId`, `AttackInputAction`, `WeaponDefinition`, `CharacterId`, `CharacterDefinition` (Fase 4), `AbilityId`, `AbilityDefinition`, `GuardOutcome`, `AttackDefinition.dash` (Fase 5), `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
 | `LevelTypes.ts` | `ThemeId` (6 ambientazioni), `TerrainTexture` (6 tessiture), `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition` (`elite`, `weaponDrop`), `ChestSpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` (`chests`) |
 
 ---
@@ -1139,14 +1142,14 @@ Servono: un nuovo stato del giocatore, due sprite, la definizione dell'animazion
 
 Codice originale:
 ```ts
-  | "dodge"
   | "crouch"
+  | "guard"
   | "dead";
 ```
 Codice aggiornato:
 ```ts
-  | "dodge"
   | "crouch"
+  | "guard"
   | "cheer"
   | "dead";
 ```

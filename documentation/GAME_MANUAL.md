@@ -49,7 +49,8 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Saltare | **W** oppure **↑** (tieni premuto per saltare più in alto; rilascia per un salto più corto) |
 | Attacco leggero | **Spazio** |
 | Attacco pesante | **J** |
-| Schivata | **K** |
+| Schivata | **K** (costa stamina) |
+| Abilità del personaggio | **L** (lo scudo del Paladino si tiene premuto) |
 | Accovacciarsi | **S** oppure **↓** (solo a terra: non ci si muove e non ci si rialza sotto un soffitto; si può attaccare restando accovacciati, con un colpo più basso) |
 | Prendere un'arma o una pozione | **E** stando sopra (va nella borsa, vedi "La borsa") |
 | Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa) |
@@ -101,26 +102,57 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 ### Personaggi
 
 Il personaggio si sceglie dal titolo (*Personaggio*) e resta salvato. Tutti hanno gli stessi tasti, lo stesso salto e la stessa hitbox;
-cambiano salute, velocità, danno, difesa, schivata e arma iniziale.
+cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale e abilità (vedi *Stamina* e *Abilità* più sotto).
 
-| Personaggio | Salute | Velocità | Danno | Danno subito | Schivata (attesa) | Arma iniziale | Tratto |
-|---|---|---|---|---|---|---|---|
-| **Cavaliere** | 100 | 80 | ×1 | ×1 | normale (0,7 s) | spada | equilibrato |
-| **Ranger** | 75 | 96 | ×1 | ×1 | più lunga, ogni 0,45 s | arco | colpisce da lontano, ma regge pochi colpi |
-| **Berserker** | 130 | 80 | ×1,3 | ×1 | corta, ogni 1,6 s | ascia | nessuna schivata "economica": va usata con cura |
-| **Paladino** | 110 | 72 | ×1 | ×0,75 | normale (0,8 s) | mazza | dopo 4 s senza colpi subiti si cura di 1 HP al secondo |
+| Personaggio | Salute | Velocità | Danno | Danno subito | Stamina (recupero/s) | Schivata (stamina, attesa) | Arma iniziale | Abilità (L) |
+|---|---|---|---|---|---|---|---|---|
+| **Cavaliere** | 100 | 80 | ×1 | ×1 | 100 (30) | 25, 0,7 s | spada | **Onda d'urto** |
+| **Ranger** | 75 | 96 | ×1 | ×1 | 100 (40) | 20, 0,45 s (più lunga) | arco | **Tiro in ritirata** |
+| **Berserker** | 130 | 80 | ×1,3 | ×1 | 100 (25) | 40, 1 s (più corta) | ascia | **Carica furiosa** |
+| **Paladino** | 110 | 72 | ×1 | ×0,75 | 120 (25) | 30, 0,8 s | mazza | **Scudo** (e cura lenta: 1 HP/s dopo 4 s senza colpi) |
 
 - Scegliendo un personaggio diverso **impugni la sua arma iniziale**, che entra nella borsa; le armi già raccolte restano. Puoi sempre
   cambiare arma: il personaggio non limita le armi, cambia solo le statistiche.
 - Velocità: la velocità dell'arma in mano si moltiplica con quella del personaggio (es. Paladino con l'ascia: 72 × 0,85).
 - I power-up si sommano ai tratti: la Furia moltiplica anche il danno del Berserker, lo Scudo anche la difesa del Paladino.
-- Nella **Fase 5** del piano arrivano la stamina, la parata con lo scudo e le abilità speciali di ogni personaggio.
+
+### Stamina
+
+La **barra verde** sotto la salute è la **stamina** (diventa gialla sotto un terzo). La consumano:
+
+- la **schivata** (K): da 20 a 40 secondo il personaggio (il Berserker è quello che fa più fatica);
+- ogni **attacco pesante** (J), compresi il tiro caricato dell'arco e il colpo in picchiata: **15**;
+- l'**abilità** (L) e lo scudo alzato.
+
+Gli attacchi leggeri (Spazio), il salto e la corsa non costano niente. La stamina si ricarica da sola **0,6 secondi** dopo l'ultimo consumo.
+Se non basta l'azione non parte e compare "STANCO".
+
+### Abilità (L)
+
+Ogni personaggio ha un'abilità propria, sul tasto **L**. Costa stamina e poi va ricaricata: nel riquadro con la **L**, accanto alla barra
+della stamina, la parte scura scende mentre si ricarica; la L è dorata quando l'abilità è pronta (ricaricata e con abbastanza stamina).
+Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma cambia solo l'aspetto).
+
+| Abilità | Personaggio | Costo | Ricarica | Effetto |
+|---|---|---|---|---|
+| **Onda d'urto** | Cavaliere | 40 | 6 s | colpo a terra da **25** che investe tutti fino a **40 px davanti e dietro**; rompe la guardia; tremolio e polvere |
+| **Tiro in ritirata** | Ranger | 30 | 4 s | **balzo all'indietro** (circa 55 px, invulnerabile) e una **freccia da 20** in avanti che non consuma munizioni |
+| **Carica furiosa** | Berserker | 40 | 5 s | **scatto in avanti** di circa 70 px che **travolge** e attraversa i nemici (35 danni, rompe la guardia); non rende invulnerabili |
+| **Scudo** | Paladino | 10 per alzarlo | 0,3 s | **tieni premuto L**: lo scudo para i colpi **da davanti** (anche le frecce); non ti muovi ma puoi girarti; consuma 12 di stamina al secondo |
+
+- Gli scatti (balzo del Ranger, carica del Berserker) **si fermano sul bordo** di un abisso.
+- **Parata perfetta**: se lo scudo è alzato da **meno di 0,25 secondi** quando arriva il colpo (la barriera davanti al Paladino è
+  **bianca**, poi diventa azzurra), il colpo non costa niente e chi ha attaccato resta **stordito per 1 secondo** ("PARATA!"). I boss non vengono storditi.
+- **Parata normale**: costa 1,5 di stamina per ogni punto di danno. Se la stamina non basta la **guardia si rompe** ("GUARDIA ROTTA") e il colpo passa.
+- I colpi **alle spalle** non si parano.
 
 ### L'HUD (la barra in alto)
 
 | Elemento | Significato |
 |---|---|
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
+| barra verde sotto la salute | stamina (gialla sotto un terzo) |
+| riquadro con la **L** | abilità: dorata quando è pronta, scura mentre si ricarica, azzurra con lo scudo alzato |
 | icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
 | icona dell'elmo **x3** | vite rimaste |
 | 4 riquadri numerati sotto la barra, a destra | la borsa: armi e pozioni (con quante sono); l'arma in mano ha la cornice dorata |
@@ -176,7 +208,7 @@ la sequenza riparte dal primo colpo. Se premi il tasto negli **ultimi 0,2 second
 - Uno **scatto di circa 48 px** nella direzione in cui guardi, della durata di 0,3 secondi.
 - Durante la schivata sei **invulnerabile**: puoi attraversare gli attacchi dei nemici.
 - È anche **l'unico modo per passare attraverso un nemico**: camminando ti fermi contro il suo corpo (vale anche per il boss; i nemici volanti non bloccano). Se la schivata finisce dentro un nemico, vieni spinto fuori dal lato più vicino.
-- Dopo la schivata devi aspettare 0,7 secondi.
+- Dopo la schivata devi aspettare 0,7 secondi (il tempo cambia con il personaggio) e la schivata **costa stamina**.
 - Si può fare solo **a terra** e non mentre stai attaccando.
 
 ### Le armi

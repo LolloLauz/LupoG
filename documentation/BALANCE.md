@@ -87,6 +87,31 @@ quindi misura salute, velocità, danno, difesa, schivata e cura, non l'arma iniz
 - **Berserker**: più salute e più danno compensano la schivata rara. Il bot medio schiva poco, quindi la penalità pesa meno che per una persona.
 - Sono misure di un bot, da confermare giocando.
 
+### Fase 5: stamina, abilità e una correzione del bot
+
+> **Correzione del bot.** Il bot di `tools/balance.mjs` non si girava mai verso un nemico che gli finiva alle spalle: dopo una schivata
+> (che attraversa i nemici) continuava ad attaccare l'aria e prendeva colpi. Ora, come il bot dei test nel browser, prima si gira verso il
+> bersaglio. **Le misure precedenti erano quindi troppo pessimiste** (bot medio: 82% con il cavaliere). Il difetto è emerso con la carica
+> del Berserker, che porta oltre il nemico.
+
+Partite complete (60 ripetizioni, tutti con la spada; "con abilità" = il bot usa anche L: le abilità d'attacco appena il bersaglio è a
+portata, lo scudo al posto della schivata):
+
+| Personaggio | medio senza / con abilità | rusher senza / con abilità |
+|---|---|---|
+| Cavaliere | 100% / 100% | 100% / 100% |
+| Ranger | 100% / 100% | 65% / 68% |
+| Berserker | 100% / 100% | 100% / 100% |
+| Paladino | 100% / 100% | 100% / 100% |
+
+- La stamina non cambia i risultati del bot: schiva di rado e non resta mai senza. Per una persona che schiva spesso, invece, è un limite vero.
+- Con il bot corretto quasi tutte le partite sono vinte: **il gioco potrebbe essere diventato facile**. La borsa con 2 pozioni conservabili
+  (vedi sopra) è la ragione principale. Prima di cambiare valori conviene una prova con persone; le leve più semplici sono
+  `INVENTORY_CONFIG.maxPotionsPerSlot` e la difficoltà.
+- Il Ranger che non schiva resta fragile (75 HP): è voluto.
+- **Scatti sul bordo**: con l'abilità, il Ranger del bot moriva sempre nel livello 1, perché il balzo all'indietro lo portava nell'abisso appena saltato.
+  Lo stesso poteva succedere a una persona: ora gli scatti delle abilità si fermano sul bordo (come il rinculo).
+
 ## Versione 2.0 con i power-up (2.0.0-alpha.5)
 
 Con i power-up nei livelli: partita completa vinta dal bot "medio" circa **75%** (era 73%), dal rusher circa 32% (invariato); boss da solo:

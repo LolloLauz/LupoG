@@ -75,6 +75,12 @@ export class ProjectileSystem {
           events.push({ kind: "hitPlayer", x: projectile.centerX, y: projectile.centerY });
           continue;
         }
+        if (player.lastGuardOutcome === "perfect" || player.lastGuardOutcome === "blocked") {
+          // parato con lo scudo: il proiettile si ferma contro lo scudo
+          projectile.destroy();
+          events.push({ kind: "deflected", x: projectile.centerX, y: projectile.centerY });
+          continue;
+        }
       }
       const hitsWall = platforms.some((platform) => platform.oneWay !== true && CollisionSystem.intersects(bounds, platform));
       if (hitsWall) {

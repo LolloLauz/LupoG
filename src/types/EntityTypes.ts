@@ -11,6 +11,7 @@ export type PlayerState =
   | "hurt"
   | "dodge"
   | "crouch"
+  | "guard"
   | "dead";
 
 /**
@@ -237,7 +238,20 @@ export interface AttackDefinition {
    * Armi a distanza (Fase 2): a launchAtMs dall'inizio dell'attacco parte un proiettile da (originX, originY),
    * relativi al cavaliere che guarda a destra, nella direzione (avanti, aimY). L'attacco non ha area d'urto.
    */
-  projectile?: { projectileId: ProjectileTypeId; launchAtMs: number; originX: number; originY: number; aimY: number };
+  projectile?: {
+    projectileId: ProjectileTypeId;
+    launchAtMs: number;
+    originX: number;
+    originY: number;
+    aimY: number;
+    /** false = il tiro non consuma munizioni dell'arma in mano (abilità del Ranger). Se omesso: le consuma. */
+    usesAmmo?: boolean;
+  };
+  /**
+   * Scatto durante l'attacco (abilità, Fase 5): tra startMs ed endMs il personaggio si muove a speed px/s
+   * (positivo = in avanti, negativo = all'indietro) e attraversa i nemici; invulnerable = non viene colpito.
+   */
+  dash?: { speed: number; startMs: number; endMs: number; invulnerable?: boolean };
   /**
    * Carica (arco): finché si tiene premuto il tasto il cavaliere tende l'arco (fino a maxChargeMs; dopo durationMs
    * tira da solo); rilasciando parte releaseAttackId, con danno e velocità tra il minimo e il massimo secondo la carica.
@@ -300,6 +314,46 @@ export interface WeaponDefinition {
   };
 }
 
+/** Abilità speciali dei personaggi (Fase 5). */
+export type AbilityId = "shockwave" | "backstepShot" | "furiousCharge" | "shieldGuard";
+
+/**
+ * Abilità speciale (tasto L): costa stamina e ha un tempo di ricarica.
+ * - attack: un attacco speciale (area d'urto, scatto, proiettile), usato solo a terra;
+ *   impactEffect = effetto del motore quando il colpo diventa attivo (onda d'urto: tremolio e polvere).
+ * - guard: si tiene premuto per alzare lo scudo (para i colpi davanti); alzato da meno di perfectWindowMs, la
+ *   parata è perfetta (nessun costo, l'attaccante resta stordito parryStunMs); altrimenti costa
+ *   staminaPerBlockedDamage per punto di danno parato, e se la stamina non basta la guardia si rompe.
+ */
+export type AbilityDefinition =
+  | {
+      id: AbilityId;
+      kind: "attack";
+      name: string;
+      description: string;
+      staminaCost: number;
+      cooldownMs: number;
+      attack: AttackDefinition;
+      impactEffect?: "shockwave";
+    }
+  | {
+      id: AbilityId;
+      kind: "guard";
+      name: string;
+      description: string;
+      /** Stamina per alzare lo scudo. */
+      staminaCost: number;
+      /** Attesa (ms) dopo aver abbassato lo scudo. */
+      cooldownMs: number;
+      drainPerSecond: number;
+      perfectWindowMs: number;
+      staminaPerBlockedDamage: number;
+      parryStunMs: number;
+    };
+
+/** Esito di un colpo ricevuto con lo scudo alzato (abilità del Paladino). */
+export type GuardOutcome = "perfect" | "blocked" | "broken";
+
 /** Personaggi giocabili (Fase 4). */
 export type CharacterId = "knight" | "ranger" | "berserker" | "paladin";
 
@@ -332,6 +386,13 @@ export interface CharacterDefinition {
   dodgeSpeed: number;
   /** Cura lenta: HP al secondo dopo delayAfterHitMs senza subire colpi. Se omessa, nessuna cura. */
   regeneration?: { healthPerSecond: number; delayAfterHitMs: number };
+  /** Stamina (Fase 5): massimo e recupero al secondo (dopo PLAYER_CONFIG.staminaRegenDelayMs dall'ultimo consumo). */
+  maxStamina: number;
+  staminaRegenPerSecond: number;
+  /** Stamina consumata da una schivata. */
+  dodgeStaminaCost: number;
+  /** Abilità speciale (tasto L). */
+  abilityId: AbilityId;
 }
 
 /** Qualsiasi cosa possa essere colpita dagli attacchi (nemici, boss, bersagli di prova). */

@@ -10,7 +10,7 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 813 controlli in 23 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 853 controlli in 24 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 172 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
 | `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure); `-- --characters` misura solo i personaggi | `npm install` | circa 1 minuto |
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 813 controlli)
+### 2.1 Test unitari (`tests/unit/`, 853 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -59,6 +59,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `weapons-phase2.test.mjs` | 45 | armi a distanza: configurazione (proiettili del giocatore e loro sprite, niente area d'urto, carica dell'arco, munizioni), tiri dell'arco (direzione, carica minima, metà, piena, tiro automatico), coltelli finiti e avviso, giavellotto, power-up sui tiri; proiettili del giocatore (colpiscono i nemici e non il giocatore, trafiggere, coltello contro muro e nemico che cade a terra, perso fuori mappa, non deviabili); munizioni nella borsa (ricarica, recupero, giavellotti finiti, borsa piena); coltelli a terra; presenza nei livelli; collegamenti nel motore; cambio d'arma a metà attacco (il frame disegnato esiste per la nuova arma, a terra e in aria) |
 | `characters.test.mjs` | 58 | personaggi (Fase 4): configurazione (il cavaliere legge `PLAYER_CONFIG`, ranger, berserker e paladino come da piano), salute e cambio di personaggio, velocità con e senza arma, danno inflitto e subito (anche con Furia e Scudo, almeno 1 HP), cura lenta del paladino (attesa dopo i colpi, anche ambientali; non oltre il massimo), schivata (distanza e attesa), percorribilità di ogni livello per ogni personaggio con l'arma più lenta, sprite (ogni frame di ogni arma, colori della palette, anteprime, varianti accovacciate), salvataggio (assente, vecchio, non valido), schermata di scelta (parte dal salvato, A/D circolari, Invio, Esc, voce del titolo), tacche delle statistiche |
 | `feedback-fixes.test.mjs` | 32 | segnalazioni dopo la Fase 4: il boss non esce dall'arena (senza limite il difetto si riproduce; con il limite nessun boss supera il cancello in 15 s, nemmeno caricando), munizioni di arco (12) e balestra (6), niente tiro caricato senza frecce, faretra (ricarica tutte le armi, resta a terra se non serve, una per livello prima dell'arena), tasto Q (arma con munizioni, una pozione alla volta, mai l'ultima arma, solo a terra, Q+1-4 e Q da solo), cancella dati (progressi e record, anche ricaricando e con archivio bloccato; conferma con "no" predefinito) |
+| `stamina-abilities.test.mjs` | 40 | Fase 5: configurazione (stamina e abilità per personaggio, tasto L, animazioni sincronizzate con i frame di ogni arma), stamina (costo della schivata, pausa e recupero, massimo, "stanco", attacco pesante sì e leggero no), onda d'urto (costo, ricarica, area davanti e dietro, un solo impatto, non in aria, non da accovacciati, niente accovacciata durante l'abilità), tiro in ritirata (balzo invulnerabile, freccia senza munizioni), carica furiosa (scatto con colpo, attraversa i nemici), scudo (alzare, girarsi senza muoversi, consumo, parata perfetta con stordimento, parata normale, colpo alle spalle, guardia rotta, abbassamento senza stamina, frecce fermate), HUD (barra, riquadro L, colori), collegamenti nel motore |
 | `static-rules.test.mjs` | 28 | strict, nessun `any`, tipi di ritorno espliciti, nomi, nessun audio né risorsa esterna, struttura del progetto, versioni e manuali aggiornati |
 
 ### 2.2 Test nel browser (`tests/browser/`, 172 controlli, Chromium)

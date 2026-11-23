@@ -44,6 +44,10 @@ export const PLAYER_CONFIG = {
   attackBufferMs: 200,
   /** Tempo (ms) tra la morte e la perdita della vita (ricomincia il livello o Game Over). */
   deathDurationMs: 1500,
+  /** Stamina (Fase 5) consumata da ogni attacco pesante (J), anche dal tiro caricato e dalla picchiata. */
+  heavyAttackStaminaCost: 15,
+  /** Dopo aver consumato stamina, il recupero riparte dopo questo tempo (ms). */
+  staminaRegenDelayMs: 600,
 } as const;
 
 /** Definizione degli attacchi della spada (usata dal sistema di combattimento). */
