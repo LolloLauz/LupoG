@@ -10,7 +10,7 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 902 controlli in 25 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 935 controlli in 26 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 174 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
 | `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure); `-- --characters` misura solo i personaggi | `npm install` | circa 1 minuto |
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 902 controlli)
+### 2.1 Test unitari (`tests/unit/`, 935 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -61,6 +61,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `feedback-fixes.test.mjs` | 32 | segnalazioni dopo la Fase 4: il boss non esce dall'arena (senza limite il difetto si riproduce; con il limite nessun boss supera il cancello in 15 s, nemmeno caricando), munizioni di arco (12) e balestra (6), niente tiro caricato senza frecce, faretra (ricarica tutte le armi, resta a terra se non serve, una per livello prima dell'arena), tasto Q (arma con munizioni, una pozione alla volta, mai l'ultima arma, solo a terra, Q+1-4 e Q da solo), cancella dati (progressi e record, anche ricaricando e con archivio bloccato; conferma con "no" predefinito) |
 | `stamina-abilities.test.mjs` | 40 | Fase 5: configurazione (stamina e abilità per personaggio, tasto L, animazioni sincronizzate con i frame di ogni arma), stamina (costo della schivata, pausa e recupero, massimo, "stanco", attacco pesante sì e leggero no), onda d'urto (costo, ricarica, area davanti e dietro, un solo impatto, non in aria, non da accovacciati, niente accovacciata durante l'abilità), tiro in ritirata (balzo invulnerabile, freccia senza munizioni), carica furiosa (scatto con colpo, attraversa i nemici), scudo (alzare, girarsi senza muoversi, consumo, parata perfetta con stordimento, parata normale, colpo alle spalle, guardia rotta, abbassamento senza stamina, frecce fermate), HUD (barra, riquadro L, colori), collegamenti nel motore |
 | `progression.test.mjs` | 50 | Fase 6: configurazione (economia, bottega, costi crescenti dei potenziamenti, bonus, sblocchi a livelli esistenti), monete (spesa solo se bastano, ripristino, moneta raccolta), bottega (voci con e senza armi da vendere, arma scelta tra quelle trovate, cura, pozione e borsa piena, faretra, arma esaurita, monete insufficienti senza spesa, borsa senza posti), progressi (gemme salvate, potenziamenti e livello massimo, armi trovate, sblocchi e personaggio bloccato salvato, cancella dati, dati strani, salvataggi vecchi), giocatore con i potenziamenti, stati e schermate (bottega con uscita solo da PROSEGUI, potenziamenti, personaggio bloccato), collegamenti nel motore |
+| `elements.test.mjs` | 33 | Fase 7: configurazione (quattro elementi, power-up e oggetti con sprite, presenza nei livelli, resistenze valide per ogni nemico e boss), `StatusEffects` (veleno, debolezza, immunità, bruciatura, durata che riparte, gelo e resistenza, shock con il tempo senza stordimento, più effetti), nemici (danno nel tempo che non uccide, immunità, morto senza effetti, gelo a metà velocità, shock che interrompe un attacco), boss (shock come danno, resistenze, danno nel tempo che non uccide), giocatore (elementi dai power-up, con le proprietà dell'arma, nei colpi di spada e nelle frecce), collegamenti nel motore |
 | `static-rules.test.mjs` | 28 | strict, nessun `any`, tipi di ritorno espliciti, nomi, nessun audio né risorsa esterna, struttura del progetto, versioni e manuali aggiornati |
 
 ### 2.2 Test nel browser (`tests/browser/`, 174 controlli, Chromium)

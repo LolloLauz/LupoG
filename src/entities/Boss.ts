@@ -1,11 +1,16 @@
 import { BOSS_ATTACK_ANIMATIONS, createBossAnimations } from "../config/animationConfig";
 import { ENEMY_CONFIG } from "../config/enemyConfig";
 import { DEFAULT_DIFFICULTY, DIFFICULTY_CONFIG, GAME_CONFIG, PALETTE, type DifficultyId } from "../config/gameConfig";
+import { StatusEffects, type StatusTick } from "../combat/StatusEffects";
+import { ELEMENT_CONFIG } from "../config/elementConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
+import { renderStatusAuras, renderStatusPips } from "../rendering/StatusRenderer";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
 import type {
+  ElementId,
+  HitProperties,
   BossAttackDefinition,
   BossDefinition,
   BossPhaseDefinition,
@@ -65,6 +70,9 @@ export class Boss extends GameObject implements Damageable {
    * giocatore fuori dall'arena e restare chiuso fuori quando il cancello si chiude. null = nessun limite.
    */
   public arenaMinX: number | null = null;
+  /** Effetti di stato (Fase 7): come per i nemici, ma il boss non si stordisce (lo shock lo ferisce subito). */
+  private readonly statusEffects: StatusEffects;
+  private pendingStatusTicks: StatusTick[] = [];
 
   constructor(
     public readonly definition: BossDefinition,
@@ -86,6 +94,19 @@ export class Boss extends GameObject implements Damageable {
     // le animazioni si ricavano dalla definizione (attacchi compresi): funziona con qualsiasi boss
     this.animationPlayer = new AnimationPlayer(createBossAnimations(definition), "idle");
     this.nextAttack = firstAttack;
+    this.statusEffects = new StatusEffects(definition.elementModifiers);
+  }
+
+  /** Effetti di stato attivi (Fase 7). */
+  public get activeStatusElements(): ElementId[] {
+    return this.statusEffects.activeElements;
+  }
+
+  /** Danni nel tempo avvenuti dall'ultima chiamata (il motore mostra i numeri). */
+  public drainStatusTicks(): StatusTick[] {
+    const ticks = this.pendingStatusTicks;
+    this.pendingStatusTicks = [];
+    return ticks;
   }
 
   public get isAlive(): boolean {
@@ -166,7 +187,7 @@ export class Boss extends GameObject implements Damageable {
     return summons;
   }
 
-  public receiveHit(damage: number, _hitDirection: FacingDirection): void {
+  public receiveHit(damage: number, _hitDirection: FacingDirection, hit: HitProperties = {}): void {
     if (!this.isAlive) {
       return;
     }
@@ -174,7 +195,14 @@ export class Boss extends GameObject implements Damageable {
     if (this.baseState === "dormant") {
       this.wakeUp();
     }
-    this.currentHealth = Math.max(0, this.currentHealth - damage);
+    // elementi (Fase 7): lo shock non stordisce un boss, ma lo ferisce subito
+    let shockDamage = 0;
+    for (const element of hit.elements ?? []) {
+      if (this.statusEffects.apply(element).isApplied && element === "shock") {
+        shockDamage = Math.round(ELEMENT_CONFIG.shock.bossInstantDamage * this.statusEffects.getMultiplier("shock"));
+      }
+    }
+    this.currentHealth = Math.max(0, this.currentHealth - damage - shockDamage);
     this.hitFlashRemainingMs = this.definition.hitFlashMs;
     if (!this.isAlive) {
       this.deathElapsedMs = 0;
@@ -225,6 +253,18 @@ export class Boss extends GameObject implements Damageable {
   ): void {
     const deltaTimeMs = deltaTimeSeconds * 1000;
     this.hitFlashRemainingMs = Math.max(0, this.hitFlashRemainingMs - deltaTimeMs);
+    // effetti di stato: il danno nel tempo non uccide mai (lascia almeno 1 HP)
+    if (this.isAlive) {
+      for (const tick of this.statusEffects.update(deltaTimeMs)) {
+        const tickDamage = Math.min(tick.damage, this.currentHealth - 1);
+        if (tickDamage > 0) {
+          this.currentHealth -= tickDamage;
+          this.pendingStatusTicks.push({ element: tick.element, damage: tickDamage });
+        }
+      }
+    } else {
+      this.statusEffects.clear();
+    }
     this.cooldownRemainingMs = Math.max(0, this.cooldownRemainingMs - deltaTimeMs);
     this.stateElapsedMs += deltaTimeMs;
     if (!this.isAlive) {
@@ -259,6 +299,8 @@ export class Boss extends GameObject implements Damageable {
   }
 
   public render(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
+    const screenBounds = { x: this.positionX - cameraX, y: this.positionY - cameraY, width: this.width, height: this.height };
+    renderStatusAuras(renderer, this.statusEffects, screenBounds);
     spriteManager.drawSpriteAligned(
       renderer,
       this.animationPlayer.currentFrameId,
@@ -268,6 +310,7 @@ export class Boss extends GameObject implements Damageable {
       this.facingDirection === "left",
       this.hitFlashRemainingMs > 0 ? PALETTE.white : null
     );
+    renderStatusPips(renderer, this.statusEffects, screenBounds);
   }
 
   // -------------------------------------------------------------------------
@@ -319,7 +362,7 @@ export class Boss extends GameObject implements Damageable {
         break;
       case "active":
         if (attack.kind === "charge") {
-          this.velocityX = this.lockedDirection * attack.speed * phase.speedMultiplier;
+          this.velocityX = this.lockedDirection * attack.speed * phase.speedMultiplier * this.statusEffects.speedMultiplier;
         }
         if (this.stateElapsedMs >= attack.activeMs) {
           this.changeAttackPhase("recovery");
@@ -448,7 +491,7 @@ export class Boss extends GameObject implements Damageable {
   private approachIfFar(horizontalGap: number, directionToPlayer: 1 | -1, phase: BossPhaseDefinition): void {
     const meleeAttack = this.findMeleeAttack();
     if (meleeAttack !== null && horizontalGap > meleeAttack.range * 0.8) {
-      this.velocityX = directionToPlayer * this.definition.movementSpeed * phase.speedMultiplier;
+      this.velocityX = directionToPlayer * this.definition.movementSpeed * phase.speedMultiplier * this.statusEffects.speedMultiplier;
       this.changeBaseState("walk");
     } else {
       this.changeBaseState("idle");

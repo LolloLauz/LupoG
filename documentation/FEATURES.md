@@ -26,7 +26,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 902 controlli) | Implementata | |
+| Test unitari inclusi (`npm test`, 935 controlli) | Implementata | |
 | Test nel browser (`npm run test:browser`, 174 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
@@ -125,7 +125,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Effetti: scintille, particelle, tremolio, hit-stop, lampo bianco | Implementata | |
 | Combo personalizzabili dal giocatore | Non prevista | |
 | Magie | Pianificata | le abilità della Fase 5 coprono gli attacchi speciali |
-| Danni elementali | In sviluppo | 2.0: il Fuoco aggiunge danno a ogni colpo; mancano resistenze ed effetti sul bersaglio |
+| Elementi ed effetti di stato: bruciatura (Fuoco), veleno, gelo (rallenta), shock (stordisce; i boss subiscono danno); power-up Veleno, Gelo, Fulmine; effetti anche da proiettili e abilità | Implementata | Fase 7 del piano espansioni; il danno nel tempo non uccide mai; aloni e numeri colorati sui nemici |
+| Resistenze e debolezze agli elementi per nemico e boss (`elementModifiers`) | Implementata | Fase 7; immune = 0, resiste = 0,5, debole = 1,5-2 |
 
 ## Nemici e boss
 

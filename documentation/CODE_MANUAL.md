@@ -90,6 +90,7 @@ modificare qui, senza toccare la logica.
 | `powerUpConfig.ts` (2.0) | `POWER_UP_CONFIG`: Furia, Velocità, Scudo, Fuoco, Rigenerazione (nome, descrizione, tipo, effetti sulle statistiche, durata, requisiti, icona, colore dell'alone) |
 | `paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS`), `PALETTE_RAMPS` (rampe dallo scuro al chiaro), tipi `PaletteColor`, `PaletteRampName` |
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere e valori comuni a tutti i personaggi: salto, hitbox, tempi), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
+| `elementConfig.ts` (Fase 7) | `ELEMENT_CONFIG` (bruciatura, veleno, gelo, shock: nome, colore, durata, danno nel tempo, rallentamento, stordimento con il tempo senza stordimento, danno ai boss), `ELEMENT_ORDER` |
 | `progressionConfig.ts` (Fase 6) | `ECONOMY_CONFIG` (monete per nemico, moltiplicatore delle élite, monete per boss), `SHOP_OFFERS` e `SHOP_HEAL_AMOUNT` (bottega), `UPGRADE_CONFIG`, `UPGRADE_ORDER`, `UPGRADE_EFFECT_PER_LEVEL`, `computeUpgradeBonuses()`, `NO_UPGRADES`, `isUpgradeId()` (potenziamenti permanenti), `ALWAYS_DISCOVERED_WEAPONS` |
 | `abilityConfig.ts` (Fase 5) | `ABILITY_CONFIG` (onda d'urto, tiro in ritirata, carica furiosa: abilità d'attacco con il loro `AttackDefinition`; scudo: abilità di guardia con consumo al secondo, finestra della parata perfetta, costo per punto di danno, stordimento), `getAbilityAttacks()` (usata dalle animazioni) |
 | `characterConfig.ts` (Fase 4) | `CHARACTER_CONFIG` (cavaliere, ranger, berserker, paladino: nome, descrizione, tratto, suffisso degli sprite, arma iniziale, salute, velocità, moltiplicatori del danno inflitto e subito, schivata, `regeneration` facoltativa; Fase 5: `maxStamina`, `staminaRegenPerSecond`, `dodgeStaminaCost`, `abilityId`; Fase 6: `unlockLevel`, `unlockText`), `CHARACTER_ORDER`, `DEFAULT_CHARACTER_ID`, `isCharacterId()`. Il cavaliere legge salute, velocità e schivata da `PLAYER_CONFIG` |
@@ -250,8 +251,8 @@ regolano hit-stop, tremolio e polvere.
 |---|---|---|
 | `GameObject.ts` | `GameObject` (astratta) | `positionX`, `positionY`, `velocityX`, `velocityY`, `facingDirection`, `isOnGround`, `width`, `height`, `getBounds()` |
 | `Player.ts` | `Player` | il cavaliere |
-| `Enemy.ts` | `Enemy` | nemico normale guidato da una `EnemyDefinition` (anche a distanza e volante); `stun(ms)` (parata perfetta: attacco interrotto, nessun danno) |
-| `Boss.ts` | `Boss` | boss con IA propria, attacchi come dati e fasi; `arenaMinX` (impostato da `LevelManager.createBoss` oltre il cancello, `ARENA_GATE_WIDTH`): il boss non esce mai dall'arena |
+| `Enemy.ts` | `Enemy` | nemico normale guidato da una `EnemyDefinition` (anche a distanza e volante); `stun(ms)` (parata perfetta: attacco interrotto, nessun danno); Fase 7: effetti di stato (`StatusEffects` con `definition.elementModifiers`: gli elementi del colpo si applicano in `receiveHit`, il danno nel tempo in `updateTimers` senza mai uccidere, il gelo rallenta, lo shock chiama `stun`), `activeStatusElements`, `drainStatusTicks` |
+| `Boss.ts` | `Boss` | boss con IA propria, attacchi come dati e fasi; Fase 7: effetti di stato (`activeStatusElements`, `drainStatusTicks`; lo shock ferisce subito invece di stordire, il gelo rallenta camminata e carica); `arenaMinX` (impostato da `LevelManager.createBoss` oltre il cancello, `ARENA_GATE_WIDTH`): il boss non esce mai dall'arena |
 | `Projectile.ts` (2.0) | `Projectile` | proiettile nemico o del giocatore (`owner`): si muove, scade (`hasTimedOut`), si anima, ricorda i bersagli già colpiti (`targetsHit`); le regole di contatto sono in `ProjectileSystem` |
 | `AmmoDrop.ts` | `AmmoDrop`, `AMMO_DROP_SIZE` | munizione caduta a terra (coltello lanciato): cade con la gravità, si recupera passandoci sopra |
 | `Item.ts` | `Item` | oggetto raccoglibile |
@@ -269,6 +270,7 @@ regolano hit-stop, tremolio e polvere.
 | `heal(amount)` | cura fino al massimo |
 | `getActiveAttackHitbox()` | area d'urto se il colpo è attivo, altrimenti `null` |
 | `hasAlreadyHit(target)`, `registerHit(target)` | un bersaglio si colpisce una volta per attacco |
+| `getAttackElements()`, `getHitProperties(attack)` | Fase 7: elementi dei power-up attivi e proprietà del colpo (quelle dell'attacco più gli elementi) passate da `CombatSystem.processPlayerAttack` e messe nei proiettili |
 | `getDamageMultiplier()`, `getBonusDamage()` | moltiplicatore del danno (Furia × quello del personaggio) e danno aggiunto (Fuoco), da `modifiers` |
 | `stamina`, `maxStamina`, `ability`, `abilityCooldownFraction`, `isGuarding`, `lastGuardOutcome`, `drainTired()`, `drainStartedAbilityName()`, `drainAbilityImpact()`, `drainGuardEvents()` | Fase 5: la stamina si consuma con `spendStamina` (schivata: `dodgeStaminaCost`; attacco pesante: `PLAYER_CONFIG.heavyAttackStaminaCost`; abilità) e si recupera in `updateStamina` dopo `staminaRegenDelayMs`. L'abilità d'attacco (`tryStartAbility`) diventa l'attacco in corso: area d'urto, proiettile (`usesAmmo: false`) e scatto (`AttackDefinition.dash`: velocità, finestra, invulnerabilità; durante lo scatto `isDodging` è vero e il bordo di un abisso lo ferma). Lo scudo (`updateGuard`, stato `guard`) si tiene con L; `takeDamage` passa da `tryBlockWithShield` (parata perfetta, normale o guardia rotta, solo da davanti) e scrive `lastGuardOutcome`, che `CombatSystem.processEnemyAttacks` usa per stordire l'attaccante (`Enemy.stun`) e `ProjectileSystem` per fermare le frecce. Le abilità non hanno pose accovacciate: durante un'abilità non ci si accovaccia |
 | `setUpgrades(bonus)` | Fase 6: potenziamenti permanenti (`UpgradeBonuses`): salute e stamina massime in più, danno moltiplicato; salute e stamina tornano piene. Restano cambiando personaggio |
@@ -315,6 +317,7 @@ Le animazioni si ricavano dalla definizione (`createBossAnimations`). Il generat
 | `AttackDefinition.ts` | ri-esporta il tipo `AttackDefinition`; `getAttackWorldHitbox()` converte l'area d'urto in coordinate del mondo, specchiandola se si guarda a sinistra |
 | `ComboManager.ts` | sceglie l'attacco in base alla sequenza di input: sequenze miste (leggero e pesante) e ramificate (combo con lo stesso inizio devono usare gli stessi attacchi per quell'inizio), continuazione anche quando una combo è l'inizio di un'altra, `drainCompletedCombo()` (combo appena completata, con il suo `name`) |
 | `CombatSystem.ts` | applica i danni: (danno dell'attacco + `getBonusDamage()`) × `getDamageMultiplier()` |
+| `StatusEffects.ts` (Fase 7) | `StatusEffects`, `StatusTick`, `StatusApplication` | effetti di stato di un bersaglio: `apply(elemento)` (rispetta le resistenze; restituisce lo stordimento dello shock), `update(ms)` (colpi del danno nel tempo), `speedMultiplier` (gelo), `activeElements`, `clear()`. Disegno degli aloni in `rendering/StatusRenderer.ts` |
 | `PlayerModifiers.ts` (2.0) | power-up attivi del giocatore: `add` (o riparte la durata), `update` (toglie gli scaduti), `clear`, `has`, `getValue(stat)` = (base + bonus) × moltiplicatori; le statistiche base non cambiano mai |
 
 **`ComboManager`** – `getNextAttack(input)`: prova a **continuare** la combo in corso (la sequenza di input finora deve essere
@@ -400,7 +403,7 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 | File | Tipi |
 |---|---|
 | `GameTypes.ts` | `GameStateName`, `GameAction`, `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
-| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition` (`breaksGuard`, `crushesArmor`, `plunge`, `projectile`, `charge`), `ProjectileDefinition` (`isPiercing`, `recoveredAsAmmoOf`), `ProjectileLaunch` (`owner`, `speedMultiplier`, `hit`), `WeaponDefinition` (`ammo`), `HitProperties`, `ComboDefinition` (`name`), `WeaponDefinition` (`air`), `WeaponId`, `AttackInputAction`, `WeaponDefinition`, `CharacterId`, `CharacterDefinition` (Fase 4), `AbilityId`, `AbilityDefinition`, `GuardOutcome`, `AttackDefinition.dash` (Fase 5), `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
+| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition` (`breaksGuard`, `crushesArmor`, `plunge`, `projectile`, `charge`), `ProjectileDefinition` (`isPiercing`, `recoveredAsAmmoOf`), `ProjectileLaunch` (`owner`, `speedMultiplier`, `hit`), `WeaponDefinition` (`ammo`), `HitProperties`, `ComboDefinition` (`name`), `WeaponDefinition` (`air`), `WeaponId`, `AttackInputAction`, `WeaponDefinition`, `CharacterId`, `CharacterDefinition` (Fase 4), `ElementId`, `ElementModifiers`, `HitProperties.elements`, `PowerUpDefinition.element` (Fase 7), `AbilityId`, `AbilityDefinition`, `GuardOutcome`, `AttackDefinition.dash` (Fase 5), `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
 | `LevelTypes.ts` | `ThemeId` (6 ambientazioni), `TerrainTexture` (6 tessiture), `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition` (`elite`, `weaponDrop`), `ChestSpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` (`chests`) |
 
 ---
@@ -830,11 +833,11 @@ dalla vecchia zona di pattuglia; non cammina nel vuoto.
 
 Codice originale:
 ```ts
-  | "quiver";
+  | "powerShock";
 ```
 Codice aggiornato:
 ```ts
-  | "quiver"
+  | "powerShock"
   | "elixir";
 ```
 

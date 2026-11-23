@@ -157,6 +157,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "goblin", position: { x: 1680, y: 184 } },
     ],
     items: [
+      { type: "powerPoison", position: { x: 600, y: 192 } },
       { type: "quiver", position: { x: 1000, y: 192 } },
       { type: "scoreCoin", position: { x: 170, y: 156 } },
       { type: "healthPotion", position: { x: 500, y: 192 } },
@@ -203,6 +204,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "skeleton", position: { x: 1060, y: 176 }, elite: true, weaponDrop: "throwingKnives" },
     ],
     items: [
+      { type: "powerShock", position: { x: 300, y: 192 } },
       { type: "quiver", position: { x: 1150, y: 192 } },
       { type: "healthPotion", position: { x: 440, y: 192 } },
       { type: "scoreCoin", position: { x: 225, y: 120 } },
@@ -273,6 +275,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "bat", position: { x: 1660, y: 120 } },
     ],
     items: [
+      { type: "powerFrost", position: { x: 1350, y: 192 } },
       { type: "quiver", position: { x: 1580, y: 192 } },
       { type: "scoreCoin", position: { x: 166, y: 156 } },
       { type: "healthPotion", position: { x: 260, y: 192 } },
@@ -334,6 +337,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "goblin", position: { x: 1560, y: 184 }, elite: true, weaponDrop: "javelin" },
     ],
     items: [
+      { type: "powerShock", position: { x: 900, y: 192 } },
       { type: "quiver", position: { x: 1480, y: 192 } },
       { type: "healthPotion", position: { x: 100, y: 192 } },
       { type: "collectible", position: { x: 276, y: 116 } },
@@ -403,6 +407,8 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "wolf", position: { x: 1840, y: 188 } },
     ],
     items: [
+      { type: "powerFrost", position: { x: 1000, y: 192 } },
+      { type: "powerPoison", position: { x: 500, y: 192 } },
       { type: "quiver", position: { x: 1720, y: 192 } },
       { type: "healthPotion", position: { x: 120, y: 192 } },
       { type: "collectible", position: { x: 236, y: 120 } },

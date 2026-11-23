@@ -2,7 +2,7 @@
 
 Questo documento è un piano, non una specifica. Lo stato reale delle funzionalità resta in `FEATURES.md`.
 
-**Stato:** Fasi 0-6 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Le fasi 7 e 8 non sono iniziate.
+**Stato:** Fasi 0-7 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). La Fase 8 non è iniziata.
 
 ## Punto di partenza
 
@@ -138,7 +138,19 @@ Ispirata a Dead Cells: alcuni progressi restano tra una partita e l'altra. Il pr
 - **Potenziamenti permanenti** acquistati con le gemme.
 - **Sblocchi**: armi e classi si sbloccano completando obiettivi.
 
-## Fase 7 – Effetti di stato ed elementi
+## Fase 7 – Effetti di stato ed elementi – completata
+
+Fatto: quattro elementi (`ELEMENT_CONFIG`): **bruciatura** (Fuoco, 2 danni ogni 0,5 s per 2 s), **veleno** (3 al secondo per 4 s), **gelo**
+(metà velocità per 3 s), **shock** (stordisce 0,5 s, poi 2 s senza stordimento; ai boss, che non si stordiscono, 6 danni subito). Logica
+in `StatusEffects`, usata da `Enemy` e `Boss`; il danno nel tempo non uccide mai. Nuovi power-up Veleno, Gelo e Fulmine (`PowerUpDefinition.element`;
+il Fuoco aggiunge la bruciatura al danno in più) nei livelli 2-6. Gli elementi passano con il colpo (`HitProperties.elements`): spada e
+armi, proiettili, abilità. **Resistenze e debolezze** in `ENEMY_CONFIG` e nei boss (`elementModifiers`). Aloni e quadratini colorati sui nemici,
+numeri del danno nel tempo. 33 test in `elements.test.mjs`.
+
+Scelte: le resistenze valgono per gli effetti di stato, non per il danno in più del Fuoco (che è parte del colpo); il danno nel tempo lascia
+almeno 1 HP, così l'ultimo colpo (con punti, monete e oggetti lasciati) resta del giocatore.
+
+Piano originale:
 
 Il danno elementale è già "in sviluppo" (il Fuoco). Si può completare con:
 

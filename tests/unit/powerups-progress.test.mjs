@@ -92,8 +92,8 @@ export default async function (t, load) {
   items.loadItems([{ type: "powerFire", position: { x: 102, y: 190 } }]);
   items.collectItems(collector, score);
   t("raccogliere la Fiamma Eterna attiva il power-up del fuoco (e dà 25 punti)", collector.modifiers.has("fire") && score.currentScore === 25);
-  t("ogni oggetto power-up punta a un power-up esistente", Object.values(ITEM_CONFIG).filter((item) => item.powerUpId !== undefined).length === 5 && Object.values(ITEM_CONFIG).every((item) => item.powerUpId === undefined || POWER_UP_CONFIG[item.powerUpId] !== undefined));
-  t("i power-up hanno durata positiva, effetti e colore", Object.values(POWER_UP_CONFIG).every((p) => p.durationMs > 0 && p.effects.length > 0 && /^#[0-9a-f]{6}$/i.test(p.auraColor)));
+  t("ogni oggetto power-up punta a un power-up esistente", Object.values(ITEM_CONFIG).filter((item) => item.powerUpId !== undefined).length === 8 && Object.values(ITEM_CONFIG).every((item) => item.powerUpId === undefined || POWER_UP_CONFIG[item.powerUpId] !== undefined));
+  t("i power-up hanno durata positiva, un effetto (statistica o elemento, Fase 7) e colore", Object.values(POWER_UP_CONFIG).every((p) => p.durationMs > 0 && (p.effects.length > 0 || p.element !== undefined) && /^#[0-9a-f]{6}$/i.test(p.auraColor)));
 
   // ---------- difficoltà ----------
   t("le difficoltà sono in ordine facile, normale, difficile con vite 5 / 3 / 2", DIFFICULTY_ORDER.join(",") === "easy,normal,hard" && DIFFICULTY_ORDER.map((id) => DIFFICULTY_CONFIG[id].startingLives).join(",") === "5,3,2");

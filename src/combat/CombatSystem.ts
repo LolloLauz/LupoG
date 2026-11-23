@@ -40,7 +40,7 @@ export class CombatSystem {
         // danno = (danno dell'attacco + bonus del fuoco) x moltiplicatore della furia
         const damage = CombatSystem.calculateDamage(attack.damage + player.getBonusDamage(), player.getDamageMultiplier());
         player.registerHit(target);
-        target.receiveHit(damage, player.facingDirection, attack);
+        target.receiveHit(damage, player.facingDirection, player.getHitProperties(attack));
         hits.push({ target, damage });
       }
     }

@@ -14,7 +14,7 @@ import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import { CollisionSystem } from "../systems/CollisionSystem";
-import type { AbilityDefinition, AttackDefinition, CharacterDefinition, Damageable, GuardOutcome, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, WeaponDefinition } from "../types/EntityTypes";
+import type { AbilityDefinition, AttackDefinition, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -354,6 +354,18 @@ export class Player extends GameObject {
   /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
   public getDamageMultiplier(): number {
     return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.upgrades.damageMultiplier;
+  }
+
+  /** Elementi dei colpi (Fase 7): quelli dei power-up attivi (fuoco, veleno, gelo, fulmine), senza doppioni. */
+  public getAttackElements(): ElementId[] {
+    const elements = this.modifiers.activePowerUps.flatMap((powerUp) => (powerUp.definition.element === undefined ? [] : [powerUp.definition.element]));
+    return [...new Set(elements)];
+  }
+
+  /** Proprietà del colpo per il bersaglio: quelle dell'attacco (ascia, mazza) più gli elementi attivi. */
+  public getHitProperties(attack: AttackDefinition): HitProperties {
+    const elements = this.getAttackElements();
+    return { breaksGuard: attack.breaksGuard, crushesArmor: attack.crushesArmor, ...(elements.length > 0 ? { elements } : {}) };
   }
 
   /** Danno aggiunto a ogni colpo (power-up del fuoco). */
@@ -913,7 +925,7 @@ export class Player extends GameObject {
       direction: { x: direction, y: spec.aimY },
       damage: CombatSystem.calculateDamage(baseDamage + this.getBonusDamage(), this.getDamageMultiplier()),
       speedMultiplier,
-      hit: { breaksGuard: attack.breaksGuard, crushesArmor: attack.crushesArmor },
+      hit: this.getHitProperties(attack),
     });
     if (this.ammo !== null && spec.usesAmmo !== false) {
       this.ammo = Math.max(0, this.ammo - 1);

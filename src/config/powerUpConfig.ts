@@ -47,6 +47,8 @@ export const POWER_UP_CONFIG: Record<PowerUpId, PowerUpDefinition> = {
     durationMs: 12000,
     iconSpriteId: "itemFire",
     auraColor: PALETTE.orange,
+    // Fase 7: i colpi lasciano anche una bruciatura
+    element: "fire",
   },
   regeneration: {
     id: "regeneration",
@@ -57,5 +59,39 @@ export const POWER_UP_CONFIG: Record<PowerUpId, PowerUpDefinition> = {
     durationMs: 10000,
     iconSpriteId: "itemRegeneration",
     auraColor: PALETTE.lightGreen,
+  },
+  // Fase 7: power-up degli elementi (i colpi, anche dei proiettili e delle abilità, lasciano l'effetto di stato)
+  poison: {
+    id: "poison",
+    name: "VELENO",
+    description: "I colpi avvelenano",
+    type: "temporary",
+    effects: [],
+    durationMs: 15000,
+    iconSpriteId: "itemPoison",
+    auraColor: PALETTE.green,
+    element: "poison",
+  },
+  frost: {
+    id: "frost",
+    name: "GELO",
+    description: "I colpi rallentano",
+    type: "temporary",
+    effects: [],
+    durationMs: 15000,
+    iconSpriteId: "itemFrost",
+    auraColor: PALETTE.iceWhite,
+    element: "frost",
+  },
+  shock: {
+    id: "shock",
+    name: "FULMINE",
+    description: "I colpi stordiscono",
+    type: "temporary",
+    effects: [],
+    durationMs: 15000,
+    iconSpriteId: "itemShock",
+    auraColor: PALETTE.yellow,
+    element: "shock",
   },
 };

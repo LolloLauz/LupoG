@@ -14,6 +14,7 @@ import { registerEnemySprites } from "../rendering/sprites/enemySprites";
 import { registerItemSprites } from "../rendering/sprites/itemSprites";
 import { registerCharacterPreviews, registerKnightSprites } from "../rendering/sprites/knightSprites";
 import { CHARACTER_CONFIG, CHARACTER_ORDER } from "../config/characterConfig";
+import { ELEMENT_CONFIG } from "../config/elementConfig";
 import { ECONOMY_CONFIG, NO_UPGRADES, UPGRADE_CONFIG, UPGRADE_ORDER, computeUpgradeBonuses, type ShopOfferId } from "../config/progressionConfig";
 import { Shop, type PurchaseOutcome } from "../systems/Shop";
 import { registerUiSprites } from "../rendering/sprites/uiSprites";
@@ -485,6 +486,7 @@ export class GameEngine {
     this.updateArena();
     this.updateCombatAndEnemies(deltaTimeSeconds);
     this.showStaminaAndAbilityEffects();
+    this.showStatusDamage();
     this.itemManager.update(deltaTimeSeconds);
     this.collectItemsWithEffects();
     this.updatePlayerDamageEffects(healthBeforeUpdate);
@@ -921,6 +923,16 @@ export class GameEngine {
         this.effects.spawnHitSparks(shieldX, shieldY, this.player.facingDirection === "right" ? 1 : -1);
       } else {
         this.effects.addPopup("GUARDIA ROTTA", centerX, popupY, PALETTE.orange);
+      }
+    }
+  }
+
+  /** Fase 7: numeri del danno nel tempo (bruciatura, veleno) sopra nemici e boss, nel colore dell'elemento. */
+  private showStatusDamage(): void {
+    const sufferers: Array<Enemy | Boss> = this.boss === null ? this.enemies : [...this.enemies, this.boss];
+    for (const sufferer of sufferers) {
+      for (const tick of sufferer.drainStatusTicks()) {
+        this.effects.addPopup(`-${tick.damage}`, sufferer.positionX + sufferer.width / 2, sufferer.positionY - 4, ELEMENT_CONFIG[tick.element].color);
       }
     }
   }

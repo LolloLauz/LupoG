@@ -1,11 +1,13 @@
 import { DEFAULT_DIFFICULTY, DIFFICULTY_CONFIG, GAME_CONFIG, PALETTE, type DifficultyId } from "../config/gameConfig";
 import { ENEMY_AI_CONFIG, ENEMY_CONFIG } from "../config/enemyConfig";
 import { ENEMY_ANIMATIONS } from "../config/animationConfig";
+import { StatusEffects, type StatusTick } from "../combat/StatusEffects";
 import { AnimationPlayer } from "../rendering/AnimationManager";
+import { renderStatusAuras, renderStatusPips } from "../rendering/StatusRenderer";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { Damageable, EnemyDefinition, EnemyState, HitProperties, ProjectileLaunch, SummonRequest, WeaponId } from "../types/EntityTypes";
+import type { Damageable, ElementId, EnemyDefinition, EnemyState, HitProperties, ProjectileLaunch, SummonRequest, WeaponId } from "../types/EntityTypes";
 import type { FacingDirection, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -70,6 +72,9 @@ export class Enemy extends GameObject implements Damageable {
   private lastDamageTaken = 0;
   /** Tempo per la pulsazione dell'alone d'élite. */
   private eliteGlowElapsedMs = 0;
+  /** Effetti di stato (Fase 7): bruciatura, veleno, gelo, shock, con le resistenze del nemico. */
+  private readonly statusEffects: StatusEffects;
+  private pendingStatusTicks: StatusTick[] = [];
 
   constructor(
     public readonly definition: EnemyDefinition,
@@ -90,6 +95,31 @@ export class Enemy extends GameObject implements Damageable {
     this.spawnPositionX = startX;
     this.spawnPositionY = startY;
     this.animationPlayer = new AnimationPlayer(ENEMY_ANIMATIONS[definition.id], "idle");
+    this.statusEffects = new StatusEffects(definition.elementModifiers);
+  }
+
+  /** Effetti di stato attivi (Fase 7). */
+  public get activeStatusElements(): ElementId[] {
+    return this.statusEffects.activeElements;
+  }
+
+  /** Danni nel tempo avvenuti dall'ultima chiamata (il motore mostra i numeri). */
+  public drainStatusTicks(): StatusTick[] {
+    const ticks = this.pendingStatusTicks;
+    this.pendingStatusTicks = [];
+    return ticks;
+  }
+
+  /**
+   * Elementi del colpo: ognuno lascia il suo effetto (se il nemico non è immune). Restituisce lo stordimento dello shock
+   * da applicare dopo la reazione al colpo (0 = nessuno).
+   */
+  private applyHitElements(hit: HitProperties): number {
+    let stunMs = 0;
+    for (const element of hit.elements ?? []) {
+      stunMs = Math.max(stunMs, this.statusEffects.apply(element).stunMs);
+    }
+    return stunMs;
   }
 
   public get isAlive(): boolean {
@@ -268,6 +298,16 @@ export class Enemy extends GameObject implements Damageable {
     this.lastDamageTaken = effectiveDamage;
     this.currentHealth = Math.max(0, this.currentHealth - effectiveDamage);
     this.hitFlashRemainingMs = HIT_FLASH_MS;
+    const shockStunMs = this.isAlive ? this.applyHitElements(hit) : 0;
+    this.reactToHit(hitDirection, hit, isArmorCrushed);
+    // lo shock stordisce anche chi sta già attaccando (dopo la reazione normale al colpo, che non lo accorcia)
+    if (shockStunMs > 0 && this.isAlive) {
+      this.stun(shockStunMs);
+    }
+  }
+
+  /** Reazione a un colpo: stordimento e rinculo, a meno che l'attacco in corso sia già oltre la finestra di interruzione. */
+  private reactToHit(hitDirection: FacingDirection, hit: HitProperties, isArmorCrushed: boolean): void {
     // Un attacco già avviato (oltre la finestra di interruzione) prosegue: niente stordimento,
     // a meno che il colpo rompa la guardia o schiacci la corazza.
     const isUninterruptible =
@@ -332,7 +372,7 @@ export class Enemy extends GameObject implements Damageable {
     } else if (this.isAttackInProgress) {
       this.velocityX = this.getLungeVelocity(platforms);
     } else {
-      this.velocityX = this.desiredDirection * this.definition.movementSpeed * this.desiredSpeedMultiplier;
+      this.velocityX = this.desiredDirection * this.definition.movementSpeed * this.desiredSpeedMultiplier * this.statusEffects.speedMultiplier;
     }
     this.desiredDirection = 0;
     this.desiredSpeedMultiplier = 1;
@@ -357,6 +397,8 @@ export class Enemy extends GameObject implements Damageable {
       const pulse = Math.floor(this.eliteGlowElapsedMs / 200) % 2;
       renderer.fillGlow(screenX + this.width / 2, this.positionY + this.height / 2 - cameraY, Math.max(this.width, this.height) * 0.8 + pulse, PALETTE.goldLight, 2, 4);
     }
+    const screenBounds = { x: screenX, y: this.positionY - cameraY, width: this.width, height: this.height };
+    renderStatusAuras(renderer, this.statusEffects, screenBounds);
     spriteManager.drawSpriteAligned(
       renderer,
       this.animationPlayer.currentFrameId,
@@ -378,10 +420,23 @@ export class Enemy extends GameObject implements Damageable {
         PALETTE.red
       );
     }
+    renderStatusPips(renderer, this.statusEffects, screenBounds);
   }
 
   private updateTimers(deltaTimeMs: number): void {
     this.eliteGlowElapsedMs += deltaTimeMs;
+    // effetti di stato: il danno nel tempo non uccide mai (lascia almeno 1 HP); da morto spariscono
+    if (this.isAlive) {
+      for (const tick of this.statusEffects.update(deltaTimeMs)) {
+        const damage = Math.min(tick.damage, this.currentHealth - 1);
+        if (damage > 0) {
+          this.currentHealth -= damage;
+          this.pendingStatusTicks.push({ element: tick.element, damage });
+        }
+      }
+    } else {
+      this.statusEffects.clear();
+    }
     this.attackCooldownRemainingMs = Math.max(0, this.attackCooldownRemainingMs - deltaTimeMs);
     this.hitFlashRemainingMs = Math.max(0, this.hitFlashRemainingMs - deltaTimeMs);
     if (!this.isAlive) {
@@ -431,7 +486,10 @@ export class Enemy extends GameObject implements Damageable {
       const deltaX = this.flightTarget.x - this.centerX;
       const deltaY = this.flightTarget.y - this.centerY;
       const distance = Math.hypot(deltaX, deltaY);
-      const speed = Math.min(this.definition.movementSpeed * this.desiredSpeedMultiplier, distance / Math.max(deltaTimeSeconds, 0.001));
+      const speed = Math.min(
+        this.definition.movementSpeed * this.desiredSpeedMultiplier * this.statusEffects.speedMultiplier,
+        distance / Math.max(deltaTimeSeconds, 0.001)
+      );
       this.velocityX = distance > 0.5 ? (deltaX / distance) * speed : 0;
       this.velocityY = distance > 0.5 ? (deltaY / distance) * speed : 0;
       if (Math.abs(deltaX) > 2) {

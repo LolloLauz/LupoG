@@ -24,9 +24,14 @@ export const ENEMY_AI_CONFIG = {
  * Comportamenti: "patrol" pattuglia una zona, "chase" insegue il giocatore,
  * "guard" resta fermo e attacca chi entra nel raggio.
  */
+/*
+ * Resistenze agli elementi (Fase 7, elementModifiers): 0 = immune, < 1 resiste, > 1 debole. Le ossa non si avvelenano e
+ * bruciano bene; le melme non hanno sangue ma gelano; il metallo dei soldati conduce il fulmine; il golem di ghiaccio teme il fuoco.
+ */
 export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   skeleton: {
     id: "skeleton",
+    elementModifiers: { poison: 0, fire: 1.5 },
     name: "Scheletro Guerriero",
     maxHealth: 40,
     attackDamage: 10,
@@ -47,6 +52,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   goblin: {
     id: "goblin",
+    elementModifiers: { poison: 1.5 },
     name: "Goblin",
     maxHealth: 25,
     attackDamage: 8,
@@ -67,6 +73,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   soldier: {
     id: "soldier",
+    elementModifiers: { shock: 1.5, poison: 0.5 },
     name: "Soldato Nemico",
     maxHealth: 60,
     attackDamage: 15,
@@ -87,6 +94,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   skeletonArcher: {
     id: "skeletonArcher",
+    elementModifiers: { poison: 0, fire: 1.5 },
     name: "Arciere Scheletro",
     maxHealth: 30,
     attackDamage: 10,
@@ -109,6 +117,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   bat: {
     id: "bat",
+    elementModifiers: { shock: 1.5, frost: 1.5 },
     name: "Pipistrello",
     maxHealth: 15,
     attackDamage: 8,
@@ -131,6 +140,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   wolf: {
     id: "wolf",
+    elementModifiers: { fire: 1.5, frost: 0.5 },
     name: "Lupo",
     maxHealth: 30,
     attackDamage: 9,
@@ -153,6 +163,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   slime: {
     id: "slime",
+    elementModifiers: { poison: 0, frost: 1.5 },
     name: "Melma della Palude",
     maxHealth: 36,
     attackDamage: 8,
@@ -174,6 +185,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   slimeSmall: {
     id: "slimeSmall",
+    elementModifiers: { poison: 0, frost: 1.5 },
     name: "Melmina",
     maxHealth: 10,
     attackDamage: 5,
@@ -194,6 +206,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
   },
   iceGolem: {
     id: "iceGolem",
+    elementModifiers: { frost: 0, poison: 0, fire: 2, shock: 0.5 },
     name: "Golem di Ghiaccio",
     maxHealth: 70,
     attackDamage: 15,
@@ -227,6 +240,7 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
 export const BOSS_CONFIG: BossDefinition = {
   id: "blackKnight",
   name: "CAVALIERE NERO",
+  elementModifiers: { shock: 1.5, poison: 0.5 },
   weaponReward: "mace",
   maxHealth: 290,
   movementSpeed: 40,
@@ -258,6 +272,7 @@ export const BOSS_CONFIG: BossDefinition = {
 export const SWAMP_WITCH_CONFIG: BossDefinition = {
   id: "swampWitch",
   name: "STREGA DELLA PALUDE",
+  elementModifiers: { poison: 0, fire: 1.5 },
   weaponReward: "axe",
   maxHealth: 300,
   movementSpeed: 30,
@@ -285,6 +300,7 @@ export const SWAMP_WITCH_CONFIG: BossDefinition = {
 export const WOLF_KING_CONFIG: BossDefinition = {
   id: "wolfKing",
   name: "RE DEI LUPI",
+  elementModifiers: { fire: 1.5, frost: 0.5 },
   weaponReward: "spear",
   maxHealth: 300,
   movementSpeed: 55,
@@ -312,6 +328,7 @@ export const WOLF_KING_CONFIG: BossDefinition = {
 export const SHADOW_LORD_CONFIG: BossDefinition = {
   id: "shadowLord",
   name: "SIGNORE DELL'OMBRA",
+  elementModifiers: { fire: 0.5, poison: 0.5, frost: 0.5, shock: 0.5 },
   maxHealth: 340,
   movementSpeed: 42,
   activationRange: 230,

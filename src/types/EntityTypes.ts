@@ -30,7 +30,19 @@ export interface PlayerEnvironment {
 }
 
 /** Identificatori dei power-up (vedi powerUpConfig.ts). */
-export type PowerUpId = "berserk" | "speed" | "shield" | "fire" | "regeneration";
+export type PowerUpId = "berserk" | "speed" | "shield" | "fire" | "regeneration" | "poison" | "frost" | "shock";
+
+/**
+ * Elementi (Fase 7): un colpo con un elemento lascia un effetto di stato sul bersaglio.
+ * fuoco = bruciatura, veleno = danno nel tempo, gelo = rallenta, shock = stordisce per un attimo.
+ */
+export type ElementId = "fire" | "poison" | "frost" | "shock";
+
+/**
+ * Resistenze e debolezze di un nemico o di un boss: moltiplicatore per elemento (1 se omesso).
+ * 0 = immune (l'effetto non si applica); meno di 1 = resiste (effetto più debole o più breve); più di 1 = debole.
+ */
+export type ElementModifiers = Partial<Record<ElementId, number>>;
 
 /**
  * Statistiche del giocatore modificabili dai power-up. Il valore effettivo è
@@ -66,6 +78,8 @@ export interface PowerUpDefinition {
   iconSpriteId: string;
   /** Colore dell'alone attorno al cavaliere e della barra del tempo nell'HUD. */
   auraColor: string;
+  /** Elemento dato ai colpi del cavaliere finché il power-up è attivo (Fase 7). */
+  element?: ElementId;
 }
 
 /** Power-up attivo: la definizione e il tempo che resta (per l'HUD). */
@@ -173,6 +187,8 @@ export interface SummonRequest {
 export interface EnemyDefinition {
   id: EnemyTypeId;
   name: string;
+  /** Resistenze e debolezze agli elementi (Fase 7). */
+  elementModifiers?: ElementModifiers;
   maxHealth: number;
   attackDamage: number;
   movementSpeed: number;
@@ -260,7 +276,10 @@ export interface AttackDefinition {
 }
 
 /** Proprietà del colpo che il bersaglio deve conoscere (vedi Damageable.receiveHit). */
-export type HitProperties = Pick<AttackDefinition, "breaksGuard" | "crushesArmor">;
+export type HitProperties = Pick<AttackDefinition, "breaksGuard" | "crushesArmor"> & {
+  /** Elementi del colpo (Fase 7, dai power-up attivi): ognuno lascia il suo effetto di stato. */
+  elements?: ElementId[];
+};
 
 /** Sequenza statica di attacchi concatenati (anche mista: leggero e pesante). */
 export interface ComboDefinition {
@@ -487,6 +506,8 @@ export interface BossPhaseDefinition {
 export interface BossDefinition {
   id: string;
   name: string;
+  /** Resistenze e debolezze agli elementi (Fase 7). I boss non vengono storditi: lo shock li ferisce subito. */
+  elementModifiers?: ElementModifiers;
   /** Arma lasciata come trofeo: compare all'inizio del livello successivo. */
   weaponReward?: WeaponId;
   maxHealth: number;

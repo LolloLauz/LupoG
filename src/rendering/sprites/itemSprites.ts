@@ -89,7 +89,48 @@ const POWER_UP_COLORS: Record<string, string> = {
   g: PALETTE.green,
   G: PALETTE.lightGreen,
   d: PALETTE.darkGreen,
+  // elementi (Fase 7)
+  i: PALETTE.iceWhite,
+  C: PALETTE.cyan,
+  Y: PALETTE.yellow,
+  p: PALETTE.purple,
 };
+
+/** Fiala del Veleno: boccetta verde con il teschio-bolla. */
+const POISON_ROWS = [
+  "...kk...",
+  "..kssk..",
+  "...kk...",
+  "..kGGk..",
+  ".kGgGgk.",
+  "kgGwgGdk",
+  ".kgggdk.",
+  "..kkkk..",
+];
+
+/** Cristallo del Gelo: cristallo di ghiaccio a punte. */
+const FROST_ROWS = [
+  "...kk...",
+  "..kiCk..",
+  ".kiwiCk.",
+  "kiwiCLBk",
+  ".kiCLBk.",
+  "..kCBk..",
+  "...kNk..",
+  "....k...",
+];
+
+/** Runa del Fulmine: pietra con un fulmine giallo. */
+const SHOCK_ROWS = [
+  ".kkkkkk.",
+  "kSSSYYSk",
+  "kSSYYSsk",
+  "kSYYYYsk",
+  "kSsYYSsk",
+  "kSYYSssk",
+  "kSYSsssk",
+  ".kkkkkk.",
+];
 
 /** Runa della Furia: pietra con una runa rossa incandescente. */
 const BERSERK_ROWS = [
@@ -200,6 +241,9 @@ export function registerItemSprites(spriteManager: SpriteManager): void {
   spriteManager.registerSprite("itemShield", SHIELD_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemFire", FIRE_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemRegeneration", REGENERATION_ROWS, POWER_UP_COLORS);
+  spriteManager.registerSprite("itemPoison", POISON_ROWS, POWER_UP_COLORS);
+  spriteManager.registerSprite("itemFrost", FROST_ROWS, POWER_UP_COLORS);
+  spriteManager.registerSprite("itemShock", SHOCK_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemPotion", POTION_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemCoin", COIN_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemGem", GEM_ROWS, ITEM_COLORS);

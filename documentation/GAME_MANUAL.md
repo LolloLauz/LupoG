@@ -452,11 +452,46 @@ raccogliere di nuovo lo stesso ne fa ripartire il tempo. **Si perdono** cambiand
 | **Furia** | runa rossa su pietra | danno degli attacchi ×1,5 | 12 s |
 | **Velocità** | stivali alati | movimento ×1,4 | 12 s |
 | **Scudo** | scudo blu con croce d'oro | danni subiti dimezzati (almeno 1) | 15 s |
-| **Fuoco** | fiamma | +8 danni a ogni colpo; la spada diventa incandescente | 12 s |
+| **Fuoco** | fiamma | +8 danni a ogni colpo e **bruciatura**; la spada diventa incandescente | 12 s |
 | **Rigenerazione** | foglia verde | +4 HP al secondo | 10 s |
+| **Veleno** | fiala verde | i colpi **avvelenano** | 15 s |
+| **Gelo** | cristallo di ghiaccio | i colpi **rallentano** | 15 s |
+| **Fulmine** | runa con un fulmine | i colpi danno lo **shock** | 15 s |
 
 Si trovano lungo i livelli (alcuni su piattaforme in alto), **mai subito prima di un boss**: aiutano contro i nemici, il boss resta la prova finale.
 Furia e Fuoco si sommano: (15 + 8) × 1,5 = 35 danni con l'attacco leggero.
+
+### Elementi ed effetti di stato
+
+Con Fuoco, Veleno, Gelo o Fulmine attivi, ogni colpo (spada e altre armi, frecce e altri proiettili, abilità) lascia sul bersaglio un
+**effetto di stato**. Il nemico si circonda di un alone del colore dell'elemento e sopra la sua barra della salute compare un quadratino
+colorato; il danno nel tempo appare come numeri colorati. Con più power-up insieme i colpi lasciano tutti gli effetti.
+
+| Effetto | Elemento | Cosa fa | Durata |
+|---|---|---|---|
+| **Bruciatura** | Fuoco | 2 danni ogni 0,5 s | 2 s |
+| **Veleno** | Veleno | 3 danni al secondo | 4 s |
+| **Gelo** | Gelo | il nemico si muove a **metà velocità** (anche il boss) | 3 s |
+| **Shock** | Fulmine | **stordisce** per 0,5 s, anche chi sta già attaccando; poi per 2 s non si può stordire di nuovo. I boss non si stordiscono: lo shock li ferisce subito (6 danni) | – |
+
+- Il danno nel tempo **non uccide mai**: lascia almeno 1 HP, il colpo finale va dato.
+- Colpire di nuovo fa ripartire la durata.
+- **Resistenze e debolezze**: ogni nemico reagisce in modo diverso (tabella sotto). *Immune* = l'effetto non si applica;
+  *debole* = danno nel tempo, rallentamento o stordimento più forti (×1,5 o ×2); *resiste* = più deboli (×0,5).
+
+| Nemico | Debole a | Resiste a | Immune a |
+|---|---|---|---|
+| Scheletro, Arciere Scheletro | fuoco | – | veleno |
+| Goblin | veleno | – | – |
+| Soldato | fulmine | veleno | – |
+| Pipistrello | fulmine, gelo | – | – |
+| Lupo | fuoco | gelo | – |
+| Melma, Melmina | gelo | – | veleno |
+| Golem di Ghiaccio | fuoco (×2) | fulmine | gelo, veleno |
+| Cavaliere Nero | fulmine | veleno | – |
+| Strega della Palude | fuoco | – | veleno |
+| Re dei Lupi | fuoco | gelo | – |
+| Signore dell'Ombra | – | tutti | – |
 
 ### Difficoltà
 
