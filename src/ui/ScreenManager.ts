@@ -23,6 +23,10 @@ export type MenuCommand =
   | "confirmCharacter"
   | "showResetConfirm"
   | "resetAllData"
+  | "showUpgrades"
+  | "buyUpgrade"
+  | "buyShopOffer"
+  | "leaveShop"
   | "cycleDifficulty"
   | "startSelectedLevel"
   | "backToTitle"
@@ -49,6 +53,33 @@ export interface ScreenData {
   characterId: CharacterId;
   /** Tutti i livelli, con quelli già raggiunti sbloccati. */
   levels: LevelSummary[];
+  /** Fase 6: personaggi sbloccati, gemme da spendere, monete della partita, voci della bottega e dei potenziamenti. */
+  unlockedCharacterIds: CharacterId[];
+  gems: number;
+  coins: number;
+  shopOffers: ShopOfferView[];
+  upgrades: UpgradeView[];
+}
+
+/** Una voce della bottega come appare sullo schermo. */
+export interface ShopOfferView {
+  name: string;
+  description: string;
+  price: number;
+  isSoldOut: boolean;
+  iconSpriteId: string;
+  /** Lato dell'icona (16 le armi, 8 gli oggetti). */
+  iconSize: 8 | 16;
+}
+
+/** Un potenziamento permanente come appare sullo schermo. */
+export interface UpgradeView {
+  name: string;
+  description: string;
+  level: number;
+  maxLevel: number;
+  /** Costo in gemme del prossimo livello (null = al massimo). */
+  nextCost: number | null;
 }
 
 /** Colore rappresentativo di ogni ambientazione (riquadro nella selezione dei livelli). */
@@ -117,6 +148,7 @@ export class ScreenManager {
       { label: "NUOVA PARTITA", command: "newGame" },
       { label: (): string => `PERSONAGGIO: ${CHARACTER_CONFIG[this.latestData?.characterId ?? "knight"].name}`, command: "showCharacterSelect" },
       { label: "SCEGLI LIVELLO", command: "showLevelSelect" },
+      { label: (): string => `POTENZIAMENTI (GEMME ${this.latestData?.gems ?? 0})`, command: "showUpgrades" },
       { label: (): string => `DIFFICOLTÀ: ${this.latestData?.difficultyName ?? ""}`, command: "cycleDifficulty" },
       { label: "CONTROLLI", command: "showControls" },
       { label: "CANCELLA DATI", command: "showResetConfirm" },
@@ -149,6 +181,18 @@ export class ScreenManager {
   private notice: { text: string; remainingSeconds: number } | null = null;
   /** Personaggio evidenziato nella schermata di scelta (null = parte da quello salvato). */
   private selectedCharacterIndex: number | null = null;
+
+  /** Voce evidenziata nella bottega (l'ultima è "PROSEGUI") e nei potenziamenti (l'ultima è "INDIETRO"). */
+  private shopIndex = 0;
+  private upgradeIndex = 0;
+
+  public get selectedShopIndex(): number {
+    return this.shopIndex;
+  }
+
+  public get selectedUpgradeIndex(): number {
+    return this.upgradeIndex;
+  }
 
   /** Personaggio evidenziato nella schermata di scelta. */
   public get selectedCharacterId(): CharacterId {
@@ -183,6 +227,8 @@ export class ScreenManager {
     Object.values(this.menus).forEach((menu) => menu?.reset());
     this.selectedLevelIndex = 0;
     this.selectedCharacterIndex = null;
+    this.shopIndex = 0;
+    this.upgradeIndex = 0;
   }
 
   /** Legge l'input e restituisce l'eventuale comando scelto dal giocatore. */
@@ -200,7 +246,33 @@ export class ScreenManager {
     if (state === "confirmReset" && input.wasPressed("pause")) {
       return "backToTitle";
     }
+    if (state === "shop") {
+      // voci della bottega + "PROSEGUI" (si esce solo da lì: un Esc per sbaglio non fa partire il livello)
+      this.shopIndex = ScreenManager.moveCursor(input, this.shopIndex, data.shopOffers.length + 1);
+      if (input.wasPressed("confirm")) {
+        return this.shopIndex < data.shopOffers.length ? "buyShopOffer" : "leaveShop";
+      }
+      return null;
+    }
+    if (state === "upgrades") {
+      this.upgradeIndex = ScreenManager.moveCursor(input, this.upgradeIndex, data.upgrades.length + 1);
+      if (input.wasPressed("confirm")) {
+        return this.upgradeIndex < data.upgrades.length ? "buyUpgrade" : "backToTitle";
+      }
+      return input.wasPressed("pause") ? "backToTitle" : null;
+    }
     return this.menus[state]?.update(input) ?? null;
+  }
+
+  /** Cursore verticale circolare (W/S). */
+  private static moveCursor(input: InputManager, index: number, count: number): number {
+    if (input.wasPressed("menuUp")) {
+      return (index - 1 + count) % count;
+    }
+    if (input.wasPressed("menuDown")) {
+      return (index + 1) % count;
+    }
+    return index;
   }
 
   /** Scelta del personaggio: A/D (o W/S) cambia personaggio in modo circolare, Invio conferma, ESC annulla. */
@@ -215,6 +287,12 @@ export class ScreenManager {
     }
     this.selectedCharacterIndex = index;
     if (input.wasPressed("confirm")) {
+      // un personaggio bloccato non si sceglie (Fase 6)
+      const characterId = CHARACTER_ORDER[index] ?? "knight";
+      if (!data.unlockedCharacterIds.includes(characterId)) {
+        this.showNotice(`BLOCCATO: ${CHARACTER_CONFIG[characterId].unlockText}`, 2);
+        return null;
+      }
       return "confirmCharacter";
     }
     return input.wasPressed("pause") ? "backToTitle" : null;
@@ -260,6 +338,12 @@ export class ScreenManager {
       case "confirmReset":
         this.renderResetConfirm(renderer, data);
         break;
+      case "shop":
+        this.renderShop(renderer, data);
+        break;
+      case "upgrades":
+        this.renderUpgrades(renderer, data);
+        break;
       case "paused":
         this.renderPause(renderer);
         break;
@@ -290,11 +374,9 @@ export class ScreenManager {
     drawOrnateFrame(renderer, centerX - 92, 68, 184, 34);
     renderer.drawText("Medieval Action Arcade", centerX, 74, PALETTE.stonePale, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText(`RECORD ${String(data.bestScore).padStart(6, "0")}`, centerX, 87, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
-    drawOrnateFrame(renderer, centerX - 84, 106, 168, 76);
-    this.menus.title?.render(renderer, centerX, 112, 11);
-    if (this.notice !== null) {
-      renderer.drawText(this.notice.text, centerX, 190, PALETTE.lightGreen, { align: "center", shadowColor: PALETTE.black });
-    }
+    drawOrnateFrame(renderer, centerX - 84, 106, 168, 78);
+    this.menus.title?.render(renderer, centerX, 112, 10);
+    this.renderNotice(renderer, 190);
     renderer.drawText("W/S: scegli   INVIO: conferma", centerX, 222, PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
   }
 
@@ -348,11 +430,20 @@ export class ScreenManager {
     CHARACTER_ORDER.forEach((characterId, index) => {
       const columnCenterX = Math.round(columnWidth * index + columnWidth / 2);
       const isSelected = index === selectedIndex;
+      const isLocked = !data.unlockedCharacterIds.includes(characterId);
       if (isSelected) {
         drawOrnateFrame(renderer, columnCenterX - 34, 38, 68, 58);
       }
-      this.spriteManager.drawSprite(renderer, getCharacterPreviewFrameId(characterId, isSelected ? idleFrame : 1), columnCenterX - 12, 46, false);
-      const nameColor = isSelected ? PALETTE.white : PALETTE.gray;
+      const previewId = getCharacterPreviewFrameId(characterId, isSelected && !isLocked ? idleFrame : 1);
+      if (isLocked) {
+        // bloccato: solo la sagoma scura e un lucchetto
+        this.spriteManager.drawSpriteSilhouette(renderer, previewId, columnCenterX - 12, 46, false, PALETTE.slate);
+        renderer.strokeRect(columnCenterX - 3, 58, 6, 5, PALETTE.lightGray);
+        renderer.fillRect(columnCenterX - 4, 62, 8, 6, PALETTE.lightGray);
+      } else {
+        this.spriteManager.drawSprite(renderer, previewId, columnCenterX - 12, 46, false);
+      }
+      const nameColor = isLocked ? PALETTE.slate : isSelected ? PALETTE.white : PALETTE.gray;
       renderer.drawText(CHARACTER_CONFIG[characterId].name, columnCenterX, 82, nameColor, {
         align: "center",
         shadowColor: PALETTE.black,
@@ -379,8 +470,104 @@ export class ScreenManager {
     this.spriteManager.drawSprite(renderer, weapon.iconSpriteId, 196, 126, false);
     renderer.drawText(weapon.name.toUpperCase(), 222, 131, PALETTE.goldLight, { shadowColor: PALETTE.black });
     renderer.drawText(`${character.maxHealth} HP`, 222, 145, PALETTE.lightGray, { shadowColor: PALETTE.black });
-    renderer.drawText(character.trait, centerX, 184, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
+    if (data.unlockedCharacterIds.includes(character.id)) {
+      renderer.drawText(character.trait, centerX, 184, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
+    } else {
+      renderer.drawText(`BLOCCATO: ${character.unlockText}`, centerX, 184, PALETTE.orange, { align: "center", shadowColor: PALETTE.black });
+    }
+    this.renderNotice(renderer, 212);
     renderer.drawText("A/D: scegli   INVIO: conferma   ESC: indietro", centerX, 222, PALETTE.gray, { align: "center" });
+  }
+
+  /** Avviso temporaneo (acquisti, personaggio bloccato, dati cancellati), centrato. */
+  private renderNotice(renderer: Renderer, y: number): void {
+    if (this.notice !== null) {
+      renderer.drawText(this.notice.text, renderer.width / 2, y, PALETTE.lightGreen, { align: "center", shadowColor: PALETTE.black });
+    }
+  }
+
+  /** Riga di un elenco con cursore (bottega, potenziamenti): riquadro dorato sulla voce scelta. */
+  private drawListRow(renderer: Renderer, rowY: number, isSelected: boolean): void {
+    if (isSelected) {
+      drawOrnateFrame(renderer, 30, rowY - 3, renderer.width - 60, 22);
+    }
+  }
+
+  /**
+   * Bottega tra un livello e l'altro (Fase 6): monete in alto, le voci con icona, descrizione e prezzo
+   * (rosso se non bastano le monete), poi "PROSEGUI".
+   */
+  private renderShop(renderer: Renderer, data: ScreenData): void {
+    const centerX = renderer.width / 2;
+    renderer.fillVerticalGradient(0, 0, renderer.width, renderer.height, [PALETTE.wine, PALETTE.darkBlue, PALETTE.black]);
+    this.drawGradientTitle(renderer, "BOTTEGA", centerX, 10, 2, TITLE_GOLD_ROWS);
+    this.drawDivider(renderer, 32);
+    this.spriteManager.drawSprite(renderer, "itemCoin", centerX - 30, 40, false);
+    renderer.drawText(`MONETE ${data.coins}`, centerX - 18, 41, PALETTE.goldLight, { shadowColor: PALETTE.black });
+    data.shopOffers.forEach((offer, index) => {
+      const rowY = 58 + index * 26;
+      this.drawListRow(renderer, rowY, index === this.shopIndex);
+      const iconY = offer.iconSize === 16 ? rowY - 1 : rowY + 3;
+      this.spriteManager.drawSprite(renderer, offer.iconSpriteId, offer.iconSize === 16 ? 38 : 42, iconY, false);
+      const nameColor = offer.isSoldOut ? PALETTE.slate : PALETTE.white;
+      renderer.drawText(offer.name, 60, rowY, nameColor, { shadowColor: PALETTE.black });
+      renderer.drawText(offer.description, 60, rowY + 9, PALETTE.lightGray, { shadowColor: PALETTE.black });
+      if (offer.isSoldOut) {
+        renderer.drawText("ESAURITO", renderer.width - 38, rowY + 4, PALETTE.slate, { align: "right" });
+      } else {
+        const priceColor = offer.price <= data.coins ? PALETTE.goldLight : PALETTE.red;
+        renderer.drawText(String(offer.price), renderer.width - 50, rowY + 4, priceColor, { align: "right", shadowColor: PALETTE.black });
+        this.spriteManager.drawSprite(renderer, "itemCoin", renderer.width - 46, rowY + 3, false);
+      }
+    });
+    const continueY = 58 + data.shopOffers.length * 26 + 4;
+    const isContinueSelected = this.shopIndex === data.shopOffers.length;
+    this.drawListRow(renderer, continueY, isContinueSelected);
+    renderer.drawText("PROSEGUI", centerX, continueY + 4, isContinueSelected ? PALETTE.white : PALETTE.gray, {
+      align: "center",
+      shadowColor: PALETTE.black,
+      rowColors: isContinueSelected ? TITLE_GOLD_ROWS : undefined,
+    });
+    this.renderNotice(renderer, 206);
+    renderer.drawText("W/S: scegli   INVIO: compra o prosegui", centerX, 222, PALETTE.gray, { align: "center" });
+  }
+
+  /** Potenziamenti permanenti (Fase 6): gemme in alto, ogni potenziamento con le tacche dei livelli e il costo. */
+  private renderUpgrades(renderer: Renderer, data: ScreenData): void {
+    const centerX = renderer.width / 2;
+    renderer.fillVerticalGradient(0, 0, renderer.width, renderer.height, [PALETTE.deepNavy, PALETTE.violetDark, PALETTE.black]);
+    this.drawGradientTitle(renderer, "POTENZIAMENTI", centerX, 10, 2, TITLE_GOLD_ROWS);
+    this.drawDivider(renderer, 32);
+    this.spriteManager.drawSprite(renderer, "itemGem", centerX - 30, 40, false);
+    renderer.drawText(`GEMME ${data.gems}`, centerX - 18, 41, PALETTE.cyan, { shadowColor: PALETTE.black });
+    data.upgrades.forEach((upgrade, index) => {
+      const rowY = 58 + index * 26;
+      this.drawListRow(renderer, rowY, index === this.upgradeIndex);
+      renderer.drawText(upgrade.name, 40, rowY, PALETTE.white, { shadowColor: PALETTE.black });
+      renderer.drawText(upgrade.description, 40, rowY + 9, PALETTE.lightGray, { shadowColor: PALETTE.black });
+      for (let pip = 0; pip < upgrade.maxLevel; pip++) {
+        const pipX = 190 + pip * 10;
+        renderer.fillRect(pipX, rowY + 3, 8, 6, PALETTE.black);
+        renderer.fillRect(pipX + 1, rowY + 4, 6, 4, pip < upgrade.level ? PALETTE.cyan : PALETTE.slate);
+      }
+      if (upgrade.nextCost === null) {
+        renderer.drawText("MAX", renderer.width - 38, rowY + 4, PALETTE.lightGreen, { align: "right", shadowColor: PALETTE.black });
+      } else {
+        const costColor = upgrade.nextCost <= data.gems ? PALETTE.cyan : PALETTE.red;
+        renderer.drawText(String(upgrade.nextCost), renderer.width - 50, rowY + 4, costColor, { align: "right", shadowColor: PALETTE.black });
+        this.spriteManager.drawSprite(renderer, "itemGem", renderer.width - 46, rowY + 3, false);
+      }
+    });
+    const backY = 58 + data.upgrades.length * 26 + 4;
+    const isBackSelected = this.upgradeIndex === data.upgrades.length;
+    this.drawListRow(renderer, backY, isBackSelected);
+    renderer.drawText("INDIETRO", centerX, backY + 4, isBackSelected ? PALETTE.white : PALETTE.gray, {
+      align: "center",
+      shadowColor: PALETTE.black,
+      rowColors: isBackSelected ? TITLE_GOLD_ROWS : undefined,
+    });
+    this.renderNotice(renderer, 206);
+    renderer.drawText("W/S: scegli   INVIO: compra   ESC: indietro", centerX, 222, PALETTE.gray, { align: "center" });
   }
 
   /** Conferma prima di cancellare record e progressi: la voce predefinita è "no". */

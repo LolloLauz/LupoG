@@ -10,6 +10,8 @@ export interface ItemDefinition {
   healAmount: number;
   /** Punti bonus. */
   scoreBonus: number;
+  /** Monete (Fase 6) date raccogliendo l'oggetto: si spendono nella bottega tra un livello e l'altro. */
+  coins?: number;
   /** Se vero viene contato tra gli oggetti collezionabili del livello. */
   isCollectible: boolean;
   /** Power-up attivato raccogliendo l'oggetto (vedi powerUpConfig.ts). */
@@ -44,6 +46,7 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemCoin",
     healAmount: 0,
     scoreBonus: 50,
+    coins: 10,
     isCollectible: false,
   },
   collectible: {

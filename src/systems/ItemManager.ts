@@ -53,6 +53,9 @@ export class ItemManager {
       if (definition.scoreBonus > 0) {
         scoreManager.addScore(definition.scoreBonus);
       }
+      if (definition.coins !== undefined) {
+        scoreManager.addCoins(definition.coins);
+      }
       if (definition.isCollectible) {
         scoreManager.registerCollectible();
       }

@@ -322,6 +322,7 @@ d'aggancio elencati, volutamente minimi.
 | Boss con una silhouette nuova | già possibile (2.0) | `BOSS_SPRITE_SHAPES` (`knight`, `witch`, `sorcerer`, `beast`) | una forma nuova richiede una funzione che componga i frame in `bossSprites.ts` e la sua hitbox in `SHAPE_HITBOX` |
 | Nuove ambientazioni | già possibile (2.0: sei) | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer`, `TerrainRenderer` | un caso in `BackgroundRenderer.buildTheme` (livelli di parallasse) e i colori del terreno; una tessitura nuova richiede un caso in `TerrainRenderer` |
 | Personaggi alternativi | implementato (Fase 4 del piano espansioni: cavaliere, ranger, berserker, paladino) | `CharacterDefinition`, `CHARACTER_CONFIG`, `CHARACTER_VISUALS` (`knightSprites.ts`), `Player.setCharacter`, `ProgressManager.characterId`, schermata `characterSelect` | un personaggio nuovo: un id in `CharacterId`, una voce in `CHARACTER_CONFIG` e in `CHARACTER_ORDER`, una voce in `CHARACTER_VISUALS` (colori e, se serve, le 12 righe della testa). Un tratto che non è una statistica (es. la parata del paladino, Fase 5) richiede un campo in `CharacterDefinition` letto da `Player` |
+| Progressione: monete, bottega, potenziamenti permanenti, sblocchi | implementato (Fase 6 del piano espansioni) | `progressionConfig.ts`, `Shop`, `ScoreManager.coins`, `ProgressManager` (gemme, potenziamenti, armi trovate, `isCharacterUnlocked`), `Player.setUpgrades` | una voce nuova della bottega: un id in `ShopOfferId`, una voce in `SHOP_OFFERS` e il suo caso in `Shop.buy`/`findRefusal`; un potenziamento nuovo: una voce in `UPGRADE_CONFIG` e `UPGRADE_ORDER` e il suo effetto in `computeUpgradeBonuses` |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |
 | Selettore di difficoltà | implementato (2.0) | `DIFFICULTY_CONFIG`, menu del titolo, `ProgressManager` | - |
 | Audio | escluso dal progetto | eventi già individuabili in `GameEngine` (colpi, raccolte, morte) | un `AudioManager` chiamato da quei punti |
@@ -350,7 +351,7 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
 | `npm test` | 308 controlli unitari in Node (meno di 1 secondo) |
-| `npm run test:browser` | 172 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
+| `npm run test:browser` | 174 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |
 

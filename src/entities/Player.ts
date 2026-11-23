@@ -7,6 +7,7 @@ import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
 import { ABILITY_CONFIG } from "../config/abilityConfig";
 import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
+import { NO_UPGRADES, computeUpgradeBonuses, type UpgradeBonuses } from "../config/progressionConfig";
 import { PLAYER_CONFIG } from "../config/playerConfig";
 import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
@@ -51,6 +52,8 @@ export class Player extends GameObject {
   public readonly modifiers = new PlayerModifiers();
   /** Classe del personaggio (Fase 4): salute, velocità, danno, schivata, cura lenta e sprite. */
   private character: CharacterDefinition = CHARACTER_CONFIG[DEFAULT_CHARACTER_ID];
+  /** Potenziamenti permanenti (Fase 6): salute e stamina in più, danno moltiplicato. */
+  private upgrades: UpgradeBonuses = computeUpgradeBonuses(NO_UPGRADES);
   public currentHealth: number = this.character.maxHealth;
 
   // --- stamina e abilità (Fase 5) ---
@@ -128,9 +131,19 @@ export class Player extends GameObject {
     }
   }
 
-  /** Salute massima del personaggio. */
+  /** Salute massima del personaggio (più i potenziamenti). */
   public get maxHealth(): number {
-    return this.character.maxHealth;
+    return this.character.maxHealth + this.upgrades.maxHealth;
+  }
+
+  /**
+   * Potenziamenti permanenti (inizio partita): salute e stamina tornano al nuovo massimo.
+   * startingPotions riguarda la borsa: lo applica il motore.
+   */
+  public setUpgrades(upgrades: UpgradeBonuses): void {
+    this.upgrades = upgrades;
+    this.currentHealth = this.maxHealth;
+    this.staminaValue = this.maxStamina;
   }
 
   public get characterDefinition(): CharacterDefinition {
@@ -143,7 +156,7 @@ export class Player extends GameObject {
   }
 
   public get maxStamina(): number {
-    return this.character.maxStamina;
+    return this.character.maxStamina + this.upgrades.maxStamina;
   }
 
   /** Abilità speciale del personaggio (tasto L). */
@@ -193,7 +206,7 @@ export class Player extends GameObject {
   /** Cambia personaggio (inizio partita): la salute torna al massimo della nuova classe. */
   public setCharacter(character: CharacterDefinition): void {
     this.character = character;
-    this.currentHealth = character.maxHealth;
+    this.currentHealth = this.maxHealth;
     this.resetStaminaAndAbility();
     this.regenerationAccumulator = 0;
     this.msSinceLastHit = 0;
@@ -340,7 +353,7 @@ export class Player extends GameObject {
 
   /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
   public getDamageMultiplier(): number {
-    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier;
+    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.upgrades.damageMultiplier;
   }
 
   /** Danno aggiunto a ogni colpo (power-up del fuoco). */
@@ -946,11 +959,11 @@ export class Player extends GameObject {
       this.staminaRegenDelayRemainingMs = Math.max(0, this.staminaRegenDelayRemainingMs - deltaTimeMs);
       return;
     }
-    this.staminaValue = Math.min(this.character.maxStamina, this.staminaValue + (this.character.staminaRegenPerSecond * deltaTimeMs) / 1000);
+    this.staminaValue = Math.min(this.maxStamina, this.staminaValue + (this.character.staminaRegenPerSecond * deltaTimeMs) / 1000);
   }
 
   private resetStaminaAndAbility(): void {
-    this.staminaValue = this.character.maxStamina;
+    this.staminaValue = this.maxStamina;
     this.staminaRegenDelayRemainingMs = 0;
     this.abilityCooldownRemainingMs = 0;
     this.isGuardUp = false;

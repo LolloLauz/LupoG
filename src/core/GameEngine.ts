@@ -13,7 +13,9 @@ import { registerBossSprites } from "../rendering/sprites/bossSprites";
 import { registerEnemySprites } from "../rendering/sprites/enemySprites";
 import { registerItemSprites } from "../rendering/sprites/itemSprites";
 import { registerCharacterPreviews, registerKnightSprites } from "../rendering/sprites/knightSprites";
-import { CHARACTER_CONFIG } from "../config/characterConfig";
+import { CHARACTER_CONFIG, CHARACTER_ORDER } from "../config/characterConfig";
+import { ECONOMY_CONFIG, NO_UPGRADES, UPGRADE_CONFIG, UPGRADE_ORDER, computeUpgradeBonuses, type ShopOfferId } from "../config/progressionConfig";
+import { Shop, type PurchaseOutcome } from "../systems/Shop";
 import { registerUiSprites } from "../rendering/sprites/uiSprites";
 import { CollisionSystem } from "../systems/CollisionSystem";
 import { EnemyAISystem } from "../systems/EnemyAISystem";
@@ -121,6 +123,12 @@ export class GameEngine {
   /** Punteggio e gemme all'inizio del livello, per ripristinarli se si ricomincia. */
   private levelStartScore = 0;
   private levelStartCollectibles = 0;
+  /** Fase 6: monete a inizio livello (ricominciando tornano queste), bottega aperta tra un livello e l'altro. */
+  private levelStartCoins = 0;
+  private shop: Shop | null = null;
+  /** Gemme messe da parte e personaggi sbloccati completando il livello (righe del riquadro di fine livello). */
+  private gemsBankedThisLevel = 0;
+  private newlyUnlockedCharacterNames: string[] = [];
   /** Vero se l'ultima partita ha stabilito un nuovo record. */
   private isNewRecord = false;
   private framesPerSecond = 0;
@@ -248,6 +256,18 @@ export class GameEngine {
       case "backToTitle":
         this.gameState.change("title");
         break;
+      case "buyShopOffer":
+        this.buyFromShop(this.screens.selectedShopIndex);
+        break;
+      case "leaveShop":
+        this.leaveShop();
+        break;
+      case "showUpgrades":
+        this.gameState.change("upgrades");
+        break;
+      case "buyUpgrade":
+        this.buyUpgrade(this.screens.selectedUpgradeIndex);
+        break;
       case "resume":
         this.gameState.change("playing");
         break;
@@ -261,11 +281,13 @@ export class GameEngine {
    * (che entra nella borsa insieme alle armi già raccolte). Vale dalla prossima partita.
    */
   private chooseCharacter(characterId: CharacterId): void {
-    if (characterId === this.progressManager.characterId) {
+    // un personaggio bloccato non si sceglie (Fase 6)
+    if (characterId === this.progressManager.characterId || !this.progressManager.isCharacterUnlocked(characterId)) {
       return;
     }
     this.progressManager.setCharacter(characterId);
     const startingWeaponId = CHARACTER_CONFIG[characterId].startingWeaponId;
+    this.progressManager.discoverWeapon(startingWeaponId);
     this.progressManager.setBagWeapons([startingWeaponId, ...this.progressManager.bagWeaponIds], startingWeaponId);
     this.ensureCharacterSprites(characterId);
   }
@@ -280,9 +302,53 @@ export class GameEngine {
     this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
     this.levelStartInventory = this.inventory.snapshot();
     this.player.setCharacter(CHARACTER_CONFIG[this.progressManager.characterId]);
+    this.player.setUpgrades(computeUpgradeBonuses(NO_UPGRADES));
     this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
     this.weaponReward = null;
     this.isNewRecord = false;
+  }
+
+  /** Bottega (Fase 6): compra la voce scelta e aggiorna l'arma in mano; l'esito compare come avviso. */
+  private buyFromShop(offerIndex: number): void {
+    if (this.shop === null) {
+      return;
+    }
+    const outcome = this.shop.buy(offerIndex, { inventory: this.inventory, player: this.player, scoreManager: this.scoreManager });
+    if (outcome === "bought") {
+      this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+      this.saveBagWeapons();
+    }
+    const messages: Record<PurchaseOutcome, string> = {
+      bought: "COMPRATO!",
+      notEnoughCoins: "MONETE INSUFFICIENTI",
+      notNeeded: "NON SERVE",
+      bagFull: "BORSA PIENA",
+      soldOut: "ESAURITO",
+    };
+    this.screens.showNotice(messages[outcome], 1.5);
+  }
+
+  /** Si esce dalla bottega: comincia il livello successivo. */
+  private leaveShop(): void {
+    this.shop = null;
+    this.startLevel(this.currentLevelId + 1);
+    this.gameState.change("playing");
+  }
+
+  /** Potenziamento permanente comprato con le gemme (schermata dal titolo). */
+  private buyUpgrade(upgradeIndex: number): void {
+    const upgradeId = UPGRADE_ORDER[upgradeIndex];
+    if (upgradeId === undefined) {
+      return;
+    }
+    const cost = this.progressManager.getNextUpgradeCost(upgradeId);
+    if (cost === null) {
+      this.screens.showNotice("AL MASSIMO", 1.5);
+    } else if (this.progressManager.buyUpgrade(upgradeId)) {
+      this.screens.showNotice(`${UPGRADE_CONFIG[upgradeId].name} POTENZIATA!`, 1.5);
+    } else {
+      this.screens.showNotice("GEMME INSUFFICIENTI", 1.5);
+    }
   }
 
   /** Registra tutti gli sprite di un personaggio la prima volta che servono (sono molti: uno per arma e posa). */
@@ -302,10 +368,16 @@ export class GameEngine {
     this.livesManager.reset(DIFFICULTY_CONFIG[this.progressManager.difficulty].startingLives);
     this.isNewRecord = false;
     this.player.setCharacter(CHARACTER_CONFIG[this.progressManager.characterId]);
+    const upgrades = computeUpgradeBonuses(this.progressManager.upgradeLevels);
+    this.player.setUpgrades(upgrades);
     this.player.revive();
-    // a ogni nuova partita: le armi salvate nella borsa, nessuna pozione
+    // a ogni nuova partita: le armi salvate nella borsa e le pozioni del potenziamento "Scorta"
     this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
     this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+    for (let potion = 0; potion < upgrades.startingPotions; potion++) {
+      this.inventory.addPotion();
+    }
+    this.shop = null;
     this.weaponReward = null;
     this.startLevel(this.levelManager.hasLevel(levelId) ? levelId : FIRST_LEVEL_ID);
   }
@@ -329,6 +401,7 @@ export class GameEngine {
     this.levelStartScore = this.scoreManager.currentScore;
     this.levelStartInventory = this.inventory.snapshot();
     this.levelStartCollectibles = this.scoreManager.collectiblesFound;
+    this.levelStartCoins = this.scoreManager.coins;
     this.updateCamera();
   }
 
@@ -366,7 +439,7 @@ export class GameEngine {
   private restartCurrentLevel(): void {
     this.player.revive();
     // prima si ripristinano punteggio e gemme, poi si ricarica il livello (che ne memorizza i valori)
-    this.scoreManager.restore(this.levelStartScore, this.levelStartCollectibles);
+    this.scoreManager.restore(this.levelStartScore, this.levelStartCollectibles, this.levelStartCoins);
     // anche la borsa torna com'era a inizio livello (pozioni e armi raccolte nel livello si ritrovano a terra)
     this.inventory.restore(this.levelStartInventory);
     this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
@@ -561,6 +634,7 @@ export class GameEngine {
           this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward };
         }
         this.scoreManager.addScore(this.boss.scoreReward);
+        this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerBoss);
         this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.red, PALETTE.orange, PALETTE.yellow], 50);
         this.effects.addPopup(`+${this.boss.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
         this.effects.triggerShake(EFFECT_CONFIG.bossDeathShakePixels, EFFECT_CONFIG.bossDeathShakeMs);
@@ -570,6 +644,7 @@ export class GameEngine {
     const enemy = this.enemies.find((candidate) => candidate === target);
     if (enemy !== undefined && !enemy.isAlive) {
       this.scoreManager.addScore(enemy.scoreReward);
+      this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerEnemy * (enemy.isElite ? ECONOMY_CONFIG.eliteCoinMultiplier : 1));
       this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.lightGray, PALETTE.red], 14);
       this.effects.addPopup(`+${enemy.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
       this.effects.triggerShake(EFFECT_CONFIG.enemyDeathShakePixels, EFFECT_CONFIG.enemyDeathShakeMs);
@@ -681,6 +756,7 @@ export class GameEngine {
         return;
       }
       this.weaponPickups.take(pickup);
+      this.progressManager.discoverWeapon(pickup.weaponId); // trovata una volta: resta sbloccata (bottega)
       if (result.outcome === "refilled") {
         // stessa arma da lancio: le munizioni tornano piene (anche quelle in mano)
         if (this.inventory.equippedWeaponId === pickup.weaponId) {
@@ -916,16 +992,29 @@ export class GameEngine {
       this.levelPhase = "completed";
       this.bannerRemainingMs = GAME_CONFIG.levelBannerDurationMs;
       this.scoreManager.addScore(GAME_CONFIG.levelCompleteBonus);
-      if (this.levelManager.hasLevel(this.currentLevelId + 1)) {
+      const nextLevelId = this.currentLevelId + 1;
+      if (this.levelManager.hasLevel(nextLevelId)) {
         this.player.heal(GAME_CONFIG.levelCompleteHeal);
       }
+      // Fase 6: le gemme del livello si mettono da parte; raggiungere il livello successivo può sbloccare un personaggio
+      this.gemsBankedThisLevel = this.scoreManager.collectiblesFound - this.levelStartCollectibles;
+      this.progressManager.addGems(this.gemsBankedThisLevel);
+      const lockedBefore = CHARACTER_ORDER.filter((id) => !this.progressManager.isCharacterUnlocked(id));
+      if (this.levelManager.hasLevel(nextLevelId)) {
+        this.progressManager.unlockLevel(nextLevelId);
+      }
+      this.newlyUnlockedCharacterNames = lockedBefore
+        .filter((id) => this.progressManager.isCharacterUnlocked(id))
+        .map((id) => CHARACTER_CONFIG[id].name);
     }
   }
 
+  /** Dopo il riquadro di fine livello: la bottega (se c'è un livello successivo) oppure la vittoria. */
   private advanceToNextLevel(): void {
     const nextLevelId = this.currentLevelId + 1;
     if (this.levelManager.hasLevel(nextLevelId)) {
-      this.startLevel(nextLevelId);
+      this.shop = Shop.open(this.progressManager.discoveredWeaponIds, this.inventory);
+      this.gameState.change("shop");
     } else {
       this.finishRun("victory");
     }
@@ -969,6 +1058,7 @@ export class GameEngine {
       lives: this.livesManager.remainingLives,
       score: this.scoreManager.currentScore,
       collectibles: this.scoreManager.collectiblesFound,
+      coins: this.scoreManager.coins,
       levelNumber: this.currentLevelId,
       bag: this.inventory.bagSlots.map((slot, slotIndex) => {
         if (slot === null) {
@@ -1017,8 +1107,37 @@ export class GameEngine {
         isUnlocked: this.progressManager.isLevelUnlocked(level.id),
         bossName: level.hasBoss ? (BOSS_CATALOG[level.bossId ?? BOSS_CONFIG.id]?.name ?? null) : null,
       })),
+      unlockedCharacterIds: CHARACTER_ORDER.filter((id) => this.progressManager.isCharacterUnlocked(id)),
+      gems: this.progressManager.gems,
+      coins: this.scoreManager.coins,
+      shopOffers: (this.shop?.offers ?? []).map((offer) => {
+        const icon = GameEngine.SHOP_ICONS[offer.id];
+        return {
+          name: offer.name,
+          description: offer.description,
+          price: offer.price,
+          isSoldOut: offer.isSoldOut,
+          iconSpriteId: offer.weaponId !== null ? WEAPON_CONFIG[offer.weaponId].iconSpriteId : icon,
+          iconSize: offer.weaponId !== null ? 16 : 8,
+        };
+      }),
+      upgrades: UPGRADE_ORDER.map((upgradeId) => ({
+        name: UPGRADE_CONFIG[upgradeId].name,
+        description: UPGRADE_CONFIG[upgradeId].description,
+        level: this.progressManager.upgradeLevels[upgradeId],
+        maxLevel: UPGRADE_CONFIG[upgradeId].costs.length,
+        nextCost: this.progressManager.getNextUpgradeCost(upgradeId),
+      })),
     };
   }
+
+  /** Icona (8x8) di ogni voce della bottega; l'arma usa la propria icona. */
+  private static readonly SHOP_ICONS: Record<ShopOfferId, string> = {
+    potion: "itemPotion",
+    heal: "hudHeart",
+    ammo: "itemQuiver",
+    weapon: "itemCoin",
+  };
 
   private renderWorld(): void {
     // il tremolio sposta la vista del mondo (non l'HUD) di pochi pixel interi
@@ -1055,7 +1174,10 @@ export class GameEngine {
       return;
     }
     if (this.levelPhase === "completed") {
-      const lines = [`BONUS ${GAME_CONFIG.levelCompleteBonus}`, `GEMME ${this.scoreManager.collectiblesFound}`];
+      const lines = [`BONUS ${GAME_CONFIG.levelCompleteBonus}`, `GEMME +${this.gemsBankedThisLevel} (DA SPENDERE ${this.progressManager.gems})`];
+      for (const name of this.newlyUnlockedCharacterNames) {
+        lines.push(`SBLOCCATO: ${name}`);
+      }
       if (this.levelManager.hasLevel(this.currentLevelId + 1)) {
         lines.push(`SALUTE +${GAME_CONFIG.levelCompleteHeal}`);
       }

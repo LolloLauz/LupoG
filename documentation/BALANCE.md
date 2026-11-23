@@ -112,6 +112,13 @@ portata, lo scudo al posto della schivata):
 - **Scatti sul bordo**: con l'abilità, il Ranger del bot moriva sempre nel livello 1, perché il balzo all'indietro lo portava nell'abisso appena saltato.
   Lo stesso poteva succedere a una persona: ora gli scatti delle abilità si fermano sul bordo (come il rinculo).
 
+### Fase 6: bottega e potenziamenti
+
+Il bot di `tools/balance.mjs` **non usa la bottega né i potenziamenti**, quindi le misure qui sopra valgono per una partita senza acquisti.
+Entrambi rendono il gioco più facile: raccogliendo tutto e sconfiggendo tutti i nemici si guadagnano da 44 monete (livello 1) a circa 100 (livelli 3-6, con boss o élite);
+una pozione costa 40. Una partita completa dà 7 gemme; tutti i potenziamenti insieme ne costano 38. Prezzi e costi sono in `progressionConfig.ts`; vanno provati con persone, soprattutto
+perché il gioco sembrava già facile per il bot.
+
 ## Versione 2.0 con i power-up (2.0.0-alpha.5)
 
 Con i power-up nei livelli: partita completa vinta dal bot "medio" circa **75%** (era 73%), dal rusher circa 32% (invariato); boss da solo:

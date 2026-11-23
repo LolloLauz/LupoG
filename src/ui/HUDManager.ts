@@ -14,6 +14,8 @@ export interface HUDData {
   lives: number;
   score: number;
   collectibles: number;
+  /** Monete della partita (Fase 6), da spendere nella bottega. */
+  coins: number;
   levelNumber: number;
   /**
    * Posti della borsa, in ordine (null = vuoto): icona (16 px le armi, 8 px le pozioni), quantità
@@ -63,6 +65,9 @@ export class HUDManager {
       shadowColor: PALETTE.black,
       rowColors: [PALETTE.cream, PALETTE.yellow, PALETTE.yellow, PALETTE.goldLight, PALETTE.goldLight, PALETTE.gold, PALETTE.gold],
     });
+    // monete (Fase 6) a sinistra delle gemme
+    spriteManager.drawSprite(renderer, "itemCoin", renderer.width - 80, 13, false);
+    renderer.drawText(`x${data.coins}`, renderer.width - 42, 13, PALETTE.goldLight, { align: "right", shadowColor: PALETTE.black });
     spriteManager.drawSprite(renderer, "itemGem", renderer.width - 34, 13, false);
     renderer.drawText(`x${data.collectibles}`, renderer.width - 6, 13, PALETTE.cyan, { align: "right", shadowColor: PALETTE.black });
     this.renderPowerUps(renderer, spriteManager, data.powerUps, timeSeconds);

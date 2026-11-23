@@ -7,6 +7,8 @@ export type GameStateName =
   | "levelSelect"
   | "characterSelect"
   | "confirmReset"
+  | "upgrades"
+  | "shop"
   | "playing"
   | "paused"
   | "gameOver"

@@ -98,7 +98,7 @@ const settle=e=>{for(let i=0;i<10;i++)e.update(1/60,cs,P,1024);return e};
  const sm={drawSprite:(r,id,x,y)=>drawn.push({id,x,y}),drawSpriteAligned(){}};
  const texts=[];const renderer2=new Proxy({width:320,height:240},{get:(o,k)=>k in o?o[k]:k==='drawText'?(text,x,y)=>texts.push({text,x,y}):()=>{}});
  const bag=[{iconSpriteId:'weaponIconSword',iconSize:16,count:null,isEquipped:false},{iconSpriteId:'weaponIconAxe',iconSize:16,count:null,isEquipped:true},{iconSpriteId:'itemPotion',iconSize:8,count:2,isEquipped:false},null];
- new HUDManager().render(renderer2,sm,{health:100,maxHealth:100,stamina:100,maxStamina:100,ability:{cooldownFraction:0,isReady:true,isActive:false},lives:3,score:0,collectibles:0,levelNumber:1,bag,powerUps:[],boss:null},0);
+ new HUDManager().render(renderer2,sm,{health:100,maxHealth:100,stamina:100,maxStamina:100,ability:{cooldownFraction:0,isReady:true,isActive:false},lives:3,score:0,collectibles:0,coins:0,levelNumber:1,bag,powerUps:[],boss:null},0);
  const slotX=i=>HUDManager.getBagSlotX(i,4,320);
  t("l'HUD disegna le armi della borsa nei loro riquadri, sotto il pannello",drawn.some(d=>d.id==='weaponIconAxe'&&d.x===slotX(1)+2&&d.y===BAG_SLOT_GEOMETRY.y+2)&&BAG_SLOT_GEOMETRY.y>=24);
  t("l'HUD disegna la pozione con il loro numero",drawn.some(d=>d.id==='itemPotion')&&texts.some(x=>x.text==='2'&&x.x>slotX(2)));
@@ -123,5 +123,5 @@ const settle=e=>{for(let i=0;i<10;i++)e.update(1/60,cs,P,1024);return e};
  t("i forzieri chiusi sono bersagli degli attacchi",src.includes('...closedChests];')&&src.includes('target instanceof Chest'));
  t("con E sopra un'arma la si mette nella borsa e la si impugna (salvando i progressi)",/wasPressed\("pickUp"\)/.test(src)&&/inventory\.addWeapon\(pickup\.weaponId, pickup\.ammo\)[\s\S]{0,1600}this\.player\.equipWeapon\(WEAPON_CONFIG\[pickup\.weaponId\], this\.inventory\.equippedAmmo\);\s*this\.saveBagWeapons\(\)/.test(src));
  t("i nemici d'élite lasciano la loro arma morendo",/enemy\.weaponDrop !== null\)[\s\S]{0,80}this\.dropWeapon\(enemy\.weaponDrop/.test(src));
- t("il trofeo del boss vale per il livello successivo e si azzera a ogni nuova partita",src.includes('this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward }')&&/private startNewGame[\s\S]{0,700}?this\.weaponReward = null;\n    this\.startLevel/.test(src)&&src.includes('TROFEO: '));}
+ t("il trofeo del boss vale per il livello successivo e si azzera a ogni nuova partita",src.includes('this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward }')&&/private startNewGame[\s\S]{0,1400}?this\.weaponReward = null;\n    this\.startLevel/.test(src)&&src.includes('TROFEO: '));}
 }

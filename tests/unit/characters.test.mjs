@@ -204,6 +204,7 @@ export default async function (t, load) {
     const store = memory();
     const progress = new ProgressManager(store);
     t("progressi nuovi: cavaliere", progress.characterId === "knight");
+    progress.unlockLevel(6); // tutti i personaggi sbloccati (Fase 6)
     progress.setCharacter("paladin");
     t("il personaggio scelto si salva", new ProgressManager(store).characterId === "paladin");
     const old = memory();
@@ -219,7 +220,7 @@ export default async function (t, load) {
     t("titolo -> scelta del personaggio -> titolo; dalla scelta non si va direttamente in gioco", state.change("characterSelect") && !state.change("playing") && !state.change("levelSelect") && state.change("title"));
     t("A/D (e frecce) nei menu, solo nel contesto dei menu", CONTROLS_CONFIG.menuLeft.includes("KeyA") && CONTROLS_CONFIG.menuRight.includes("KeyD") && INPUT_CONTEXT_ACTIONS.menu.includes("menuLeft") && INPUT_CONTEXT_ACTIONS.menu.includes("menuRight") && !INPUT_CONTEXT_ACTIONS.gameplay.includes("menuLeft"));
     const screens = new ScreenManager(new FakeSpriteManager());
-    const data = { score: 0, bestScore: 0, collectibles: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "berserker", levels: [] };
+    const data = { score: 0, bestScore: 0, collectibles: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "berserker", levels: [], unlockedCharacterIds: ["knight", "ranger", "berserker", "paladin"], gems: 0, coins: 0, shopOffers: [], upgrades: [] };
     const press = (action) => screens.update("characterSelect", { wasPressed: (a) => a === action, isHeld: () => false, wasReleased: () => false }, data);
     press(null);
     t("la scelta parte dal personaggio salvato", screens.selectedCharacterId === "berserker");

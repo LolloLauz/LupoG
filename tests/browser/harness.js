@@ -69,7 +69,7 @@ function readCanvasColors() {
   return colors;
 }
 
-const VALID_STATES = ["title", "controls", "levelSelect", "characterSelect", "confirmReset", "playing", "paused", "gameOver", "victory"];
+const VALID_STATES = ["title", "controls", "levelSelect", "characterSelect", "confirmReset", "upgrades", "shop", "playing", "paused", "gameOver", "victory"];
 /** Le vite iniziali dipendono dalla difficoltà (facile ne ha di più). */
 const MAX_LIVES = Math.max(...Object.values(DIFFICULTY_CONFIG).map((difficulty) => difficulty.startingLives));
 
@@ -118,6 +118,15 @@ function createBot(skill, seed) {
     if (state === "title" || state === "gameOver") {
       if (frameCount % 20 === 0) tap("Enter");
       for (const code of ["KeyA", "KeyD"]) setKey(code, false);
+      return;
+    }
+    // bottega tra un livello e l'altro (Fase 6): W porta su "PROSEGUI" (l'ultima voce), Invio continua
+    if (state === "shop") {
+      for (const code of ["KeyA", "KeyD", "KeyW", "Space", "KeyJ", "KeyK"]) setKey(code, false);
+      if (frameCount % 20 === 0) {
+        tap("KeyW");
+        tap("Enter");
+      }
       return;
     }
     if (state !== "playing" || engine.levelPhase !== "playing") return;

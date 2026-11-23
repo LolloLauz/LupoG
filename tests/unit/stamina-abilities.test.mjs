@@ -207,7 +207,7 @@ export default async function (t, load) {
       fillVerticalGradient() {}, fillDitheredOverlay() {}, fillGlow() {},
     };
     const sm = { drawSprite() {} };
-    new HUDManager().render(renderer, sm, { health: 100, maxHealth: 100, stamina: 50, maxStamina: 100, ability: { cooldownFraction: 0.5, isReady: false, isActive: false }, lives: 3, score: 0, collectibles: 0, levelNumber: 1, bag: [], powerUps: [], boss: null }, 0);
+    new HUDManager().render(renderer, sm, { health: 100, maxHealth: 100, stamina: 50, maxStamina: 100, ability: { cooldownFraction: 0.5, isReady: false, isActive: false }, lives: 3, score: 0, collectibles: 0, coins: 0, levelNumber: 1, bag: [], powerUps: [], boss: null }, 0);
     const bar = STAMINA_BAR_GEOMETRY;
     const staminaFill = fills.find((f) => f.x === bar.x && f.y === bar.y && f.c === PALETTE.green);
     t("HUD: barra della stamina piena a metà", staminaFill !== undefined && staminaFill.w === bar.width / 2);

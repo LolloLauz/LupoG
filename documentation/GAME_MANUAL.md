@@ -89,9 +89,11 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 
 | Schermata | Cosa mostra |
 |---|---|
-| **Titolo** | logo, record, il personaggio scelto, menu *Nuova partita*, *Personaggio*, *Scegli livello*, *Difficoltà* (Invio la cambia: Facile → Normale → Difficile), *Controlli* e *Cancella dati* |
+| **Titolo** | logo, record, il personaggio scelto, menu *Nuova partita*, *Personaggio*, *Scegli livello*, *Potenziamenti* (con le gemme da spendere), *Difficoltà* (Invio la cambia: Facile → Normale → Difficile), *Controlli* e *Cancella dati* |
 | **Cancella dati** | chiede conferma (la voce già scelta è *No*): con *Sì* cancella record, livelli raggiunti, difficoltà, personaggio e armi salvate, e si riparte come alla prima partita (cavaliere con la spada) |
-| **Personaggio** | i quattro personaggi in fila e la scheda di quello evidenziato (statistiche in tacche da 1 a 5, arma iniziale, salute, tratto); A/D (o W/S) per scegliere, Invio per confermare, Esc per tornare senza cambiare |
+| **Potenziamenti** | i potenziamenti permanenti da comprare con le gemme (vedi sezione 11b) |
+| **Bottega** | tra un livello e l'altro: si comprano pozioni, cure, munizioni e armi con le monete (vedi sezione 11b) |
+| **Personaggio** | i quattro personaggi in fila (quelli non ancora sbloccati sono sagome con il lucchetto) e la scheda di quello evidenziato (statistiche in tacche da 1 a 5, arma iniziale, salute, tratto); A/D (o W/S) per scegliere, Invio per confermare, Esc per tornare senza cambiare |
 | **Scegli livello** | i sei livelli: quelli già raggiunti si possono giocare (partita nuova da quel livello), gli altri sono chiusi da un lucchetto; W/S per scegliere, Invio per giocare, Esc per tornare |
 | **Controlli** | l'elenco dei tasti |
 | **Gioco** | il livello con la barra in alto (HUD) |
@@ -433,7 +435,7 @@ Si raccolgono semplicemente toccandoli, tranne la **pozione**, che si prende con
 | Oggetto | Aspetto | Effetto |
 |---|---|---|
 | **Pozione** | boccetta rossa | si prende con **E** e va nella borsa; bevuta (tasto del suo posto) dà **+30 HP** (non oltre il massimo) |
-| **Moneta** | disco giallo | **+50 punti** |
+| **Moneta** | disco giallo | **+50 punti** e **10 monete** da spendere nella bottega |
 | **Gemma** | cristallo azzurro | **+200 punti** e conta come *gemma* (almeno 1 per livello, 2 nella torre) |
 | **Faretra** | astuccio di cuoio con due frecce | munizioni piene per tutte le armi della borsa che ne hanno (arco, balestra, coltelli, giavellotto); una per livello, prima dell'arena; se non serve resta a terra |
 
@@ -484,6 +486,47 @@ La difficoltà scelta e i livelli raggiunti vengono **ricordati dal browser** (c
 Il punteggio massimo teorico (tutto raccolto, tutti i nemici del livello sconfitti, senza contare quelli evocati dai boss) è
 **17100** punti: 5975 nei primi tre livelli e 11125 negli altri tre (power-up compresi, 25 punti l'uno). Anche i nemici evocati dai boss danno punti.
 Se perdi una vita, il punteggio torna al valore che avevi all'inizio di quel livello.
+
+## 11b. Monete, bottega, gemme e potenziamenti
+
+**Monete** (in alto a destra, accanto alle gemme). Valgono solo per la partita in corso e si spendono nella **bottega**:
+
+| Fonte | Monete |
+|---|---|
+| Moneta raccolta | 10 (oltre ai 50 punti) |
+| Nemico sconfitto | 2 (élite 6) |
+| Boss sconfitto | 50 |
+
+Se perdi una vita tornano quelle che avevi all'inizio del livello; ogni nuova partita parte da zero.
+
+**Bottega.** Dopo il riquadro di fine livello (tranne l'ultimo) si entra nella bottega. W/S per scegliere, Invio per comprare;
+per andare avanti si sceglie **PROSEGUI** (Esc non esce, così non si salta la bottega per sbaglio). Il prezzo è rosso se le monete non bastano.
+
+| Voce | Prezzo | Effetto |
+|---|---|---|
+| Pozione | 40 | una pozione nella borsa (se c'è posto) |
+| Cura | 25 | +40 HP subito (non a salute piena) |
+| Faretra | 20 | munizioni piene per tutte le armi della borsa (se ne mancano) |
+| Un'arma | 60 | una delle armi **già trovate almeno una volta** che non hai nella borsa, scelta a caso; serve un posto libero; si compra una volta sola |
+
+Un acquisto che non serve non toglie monete ("NON SERVE", "BORSA PIENA").
+
+**Gemme e potenziamenti permanenti.** Le gemme raccolte in un livello vengono **messe da parte quando lo completi** (il riquadro di
+fine livello mostra quante ne hai). Restano tra una partita e l'altra e si spendono dal titolo, in **POTENZIAMENTI**:
+
+| Potenziamento | Livelli | Costo in gemme | Effetto per livello |
+|---|---|---|---|
+| Vitalità | 3 | 2, 3, 4 | +10 salute massima |
+| Resistenza | 3 | 2, 3, 4 | +15 stamina massima |
+| Forza | 3 | 3, 4, 5 | +5% danno |
+| Scorta | 2 | 3, 5 | +1 pozione nella borsa a inizio partita |
+
+Valgono per tutti i personaggi, dalla partita successiva.
+
+**Sblocchi.** All'inizio si gioca solo il **Cavaliere**. Il **Ranger** si sblocca completando il livello 2, il **Berserker** sconfiggendo il
+Cavaliere Nero (livello 3), il **Paladino** sconfiggendo il Re dei Lupi (livello 5); nella scelta del personaggio quelli bloccati sono
+sagome con il lucchetto e l'obiettivo. Le **armi** trovate almeno una volta restano sbloccate e possono comparire nella bottega.
+*Cancella dati* azzera anche gemme, potenziamenti e sblocchi.
 
 **Record.** Il tuo miglior punteggio viene salvato **nel browser** (non su un server). Compare nella schermata del titolo, nel
 Game Over e nella vittoria, con la scritta lampeggiante **NUOVO RECORD!** quando lo batti. Il record appartiene al browser e alla

@@ -320,6 +320,7 @@ try {
     const palette = ${colorsArg}; const e = iron.engine; const result = { runs: [] };
     const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
     const openSelect = () => { iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step(); };
+    e.progressManager.unlockLevel(6); // tutti i personaggi sbloccati (Fase 6)
     openSelect();
     result.selectState = e.gameState.current; result.selectColors = colorsOk();
     for (const id of ["ranger", "berserker", "paladin", "knight"]) {
@@ -343,6 +344,29 @@ try {
   check("confermando si torna al titolo; ESC chiude la scelta", characterRuns.runs.every((r) => r.titleAfterConfirm === "title") && characterRuns.escState === "title");
   check("ogni personaggio scelto entra in gioco con la propria classe, salute piena e arma iniziale", characterRuns.runs.length === 4 && characterRuns.runs.every((r) => r.state === "playing" && r.character === r.id && r.weapon === expectedStart[r.id] && r.maxHealth > 0 && r.health === r.maxHealth), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.state, r.character, r.weapon, r.health])));
   check("ogni personaggio: gli sprite disegnati esistono (anche col fuoco) e il gioco usa solo colori della palette", characterRuns.runs.every((r) => r.hasFrame && r.colors), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.hasFrame, r.colors])));
+
+  // --- Fase 6: potenziamenti dal titolo, bottega tra un livello e l'altro
+  const progression = await evaluate(page, `(() => {
+    const palette = ${colorsArg}; const e = iron.engine; const result = {};
+    const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
+    for (let i = 0; i < 3; i++) { iron.tap("KeyS"); iron.step(); }
+    iron.tap("Enter"); iron.step(); iron.step();
+    result.upgradesState = e.gameState.current; result.upgradesColors = colorsOk();
+    iron.tap("Escape"); iron.step(); iron.step(); result.afterUpgrades = e.gameState.current;
+    iron.tap("Enter"); for (let i = 0; i < 5; i++) iron.step();
+    e.bannerRemainingMs = 0; e.scoreManager.addCoins(100);
+    e.levelPhase = "completed"; e.bannerRemainingMs = 1; iron.step(); iron.step();
+    result.shopState = e.gameState.current; result.shopColors = colorsOk();
+    const coinsBefore = e.scoreManager.coins;
+    iron.tap("Enter"); iron.step(); iron.step(); // compra la prima voce: pozione
+    result.bought = coinsBefore - e.scoreManager.coins; result.potions = e.inventory.potionCount;
+    iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
+    result.afterShop = e.gameState.current; result.level = e.currentLevelId;
+    iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
+    return result;
+  })()`);
+  check("potenziamenti: si aprono dal titolo (solo colori della palette) ed Esc torna al titolo", progression.upgradesState === "upgrades" && progression.upgradesColors === true && progression.afterUpgrades === "title", JSON.stringify(progression));
+  check("bottega: compare a fine livello (solo colori della palette), si compra una pozione, PROSEGUI porta al livello 2", progression.shopState === "shop" && progression.shopColors === true && progression.bought === 40 && progression.potions === 1 && progression.afterShop === "playing" && progression.level === 2, JSON.stringify(progression));
 
   // --- velocità coerente
   const speeds = await evaluate(page, `(() => {

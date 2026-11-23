@@ -2,7 +2,7 @@
 
 Questo documento è un piano, non una specifica. Lo stato reale delle funzionalità resta in `FEATURES.md`.
 
-**Stato:** Fasi 0, 1, 2, 3, 4 e 5 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Le fasi 6-8 non sono iniziate.
+**Stato:** Fasi 0-6 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Le fasi 7 e 8 non sono iniziate.
 
 ## Punto di partenza
 
@@ -117,7 +117,20 @@ Piano originale:
 - Abilità speciali per classe, con cooldown o costo in stamina. Esempi: onda d'urto, colpo di carica, scatto indietro con colpo di ritorno.
 - **Parata con lo scudo**: parare nel momento giusto dà un vantaggio; tenere lo scudo costa stamina.
 
-## Fase 6 – Progressione e meta-progressione
+## Fase 6 – Progressione e meta-progressione – completata
+
+Fatto: **monete** della partita (moneta raccolta 10, nemico 2, élite 6, boss 50; `ECONOMY_CONFIG`) mostrate nell'HUD; **bottega** tra
+un livello e l'altro (`Shop`, `SHOP_OFFERS`, stato `shop`): pozione 40, cura +40 HP 25, faretra 20, un'arma già trovata 60; si esce solo
+con PROSEGUI. **Gemme** messe da parte a fine livello (`ProgressManager.gems`) e **potenziamenti permanenti** dal titolo (`UPGRADE_CONFIG`,
+stato `upgrades`): Vitalità, Resistenza, Forza, Scorta. **Sblocchi**: Ranger, Berserker e Paladino raggiungendo i livelli 3, 4 e 6
+(`CharacterDefinition.unlockLevel`); armi trovate salvate (`discoveredWeaponIds`) e in vendita nella bottega. 50 test in
+`progression.test.mjs`. Da fare con persone: prezzi e costi (il bot di bilanciamento non usa la bottega né i potenziamenti).
+
+Scelte: i potenziamenti non usano `PowerUpDefinition.type = "permanent"` ma vanno direttamente al giocatore (`Player.setUpgrades`),
+perché devono cambiare anche salute e stamina massime. Le gemme si possono raccogliere di nuovo rigiocando un livello: è un modo
+(lento) di accumularle, come in Dead Cells.
+
+Piano originale:
 
 Ispirata a Dead Cells: alcuni progressi restano tra una partita e l'altra. Il progetto ha già il punto d'aggancio "potenziamenti permanenti" (`PowerUpDefinition.type = "permanent"`).
 

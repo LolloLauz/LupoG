@@ -115,6 +115,19 @@ export class Inventory {
     return this.equippedWeaponId;
   }
 
+  /** Vero se almeno un'arma della borsa non ha le munizioni piene. */
+  public get needsAmmo(): boolean {
+    return this.slots.some((slot) => {
+      const max = slot?.kind === "weapon" ? WEAPON_CONFIG[slot.weaponId].ammo?.max : undefined;
+      return slot?.kind === "weapon" && slot.ammo !== undefined && max !== undefined && slot.ammo < max;
+    });
+  }
+
+  /** Vero se c'è un posto vuoto. */
+  public get hasFreeSlot(): boolean {
+    return this.slots.includes(null);
+  }
+
   /** Faretra: munizioni piene per tutte le armi della borsa che ne hanno. false se erano già tutte piene. */
   public refillAllAmmo(): boolean {
     let hasRefilled = false;

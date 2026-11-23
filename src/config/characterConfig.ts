@@ -6,6 +6,7 @@ import { PLAYER_CONFIG } from "./playerConfig";
  * Il cavaliere legge i propri valori da PLAYER_CONFIG (equilibrato): cambiando PLAYER_CONFIG cambia lui.
  * Gli altri personaggi hanno valori propri. Salto, hitbox e tempi sono comuni (PLAYER_CONFIG).
  * Fase 5: stamina (massimo, recupero, costo della schivata) e abilità speciale (ABILITY_CONFIG).
+ * Fase 6: i personaggi si sbloccano raggiungendo un livello (unlockLevel); il cavaliere è sempre disponibile.
  */
 export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
   knight: {
@@ -26,6 +27,8 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     staminaRegenPerSecond: 30,
     dodgeStaminaCost: 25,
     abilityId: "shockwave",
+    unlockLevel: 1,
+    unlockText: "SEMPRE DISPONIBILE",
   },
   ranger: {
     id: "ranger",
@@ -45,6 +48,8 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     staminaRegenPerSecond: 40,
     dodgeStaminaCost: 20,
     abilityId: "backstepShot",
+    unlockLevel: 3,
+    unlockText: "COMPLETA IL LIVELLO 2",
   },
   berserker: {
     id: "berserker",
@@ -64,6 +69,8 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     staminaRegenPerSecond: 25,
     dodgeStaminaCost: 40,
     abilityId: "furiousCharge",
+    unlockLevel: 4,
+    unlockText: "SCONFIGGI IL CAVALIERE NERO",
   },
   paladin: {
     id: "paladin",
@@ -84,6 +91,8 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     staminaRegenPerSecond: 25,
     dodgeStaminaCost: 30,
     abilityId: "shieldGuard",
+    unlockLevel: 6,
+    unlockText: "SCONFIGGI IL RE DEI LUPI",
   },
 };
 

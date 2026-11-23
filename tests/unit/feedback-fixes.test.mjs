@@ -175,7 +175,7 @@ export default async function (t, load) {
     const state = new GameState();
     t("titolo -> conferma -> titolo; dalla conferma non si va in gioco", state.change("confirmReset") && !state.change("playing") && state.change("title"));
     const screens = new ScreenManager(new FakeSpriteManager());
-    const data = { score: 0, bestScore: 0, collectibles: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "knight", levels: [] };
+    const data = { score: 0, bestScore: 0, collectibles: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "knight", levels: [], unlockedCharacterIds: ["knight", "ranger", "berserker", "paladin"], gems: 0, coins: 0, shopOffers: [], upgrades: [] };
     const press = (stateName, action) => screens.update(stateName, { wasPressed: (a) => a === action, isHeld: () => false, wasReleased: () => false }, data);
     press("title", "menuUp");
     t("l'ultima voce del titolo è CANCELLA DATI e apre la conferma", press("title", "confirm") === "showResetConfirm");

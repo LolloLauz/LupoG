@@ -393,6 +393,12 @@ export interface CharacterDefinition {
   dodgeStaminaCost: number;
   /** Abilità speciale (tasto L). */
   abilityId: AbilityId;
+  /**
+   * Sblocco (Fase 6): il personaggio si sceglie solo dopo aver raggiunto questo livello (1 = subito disponibile).
+   * unlockText descrive l'obiettivo nella schermata di scelta.
+   */
+  unlockLevel: number;
+  unlockText: string;
 }
 
 /** Qualsiasi cosa possa essere colpita dagli attacchi (nemici, boss, bersagli di prova). */

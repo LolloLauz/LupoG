@@ -26,8 +26,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 853 controlli) | Implementata | |
-| Test nel browser (`npm run test:browser`, 172 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 4 del piano espansioni e le segnalazioni successive: 172/172 |
+| Test unitari inclusi (`npm test`, 902 controlli) | Implementata | |
+| Test nel browser (`npm run test:browser`, 174 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
 | Compatibilità con Firefox, Safari, Edge e browser mobili | Da implementare | non provata: verificato solo Chromium |
@@ -158,7 +158,9 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Pozione, moneta, gemma | Implementata | |
 | Nuovi oggetti tramite configurazione | Implementata | esempio 8 del manuale |
 | Power-up temporanei (Furia, Velocità, Scudo, Fuoco, Rigenerazione) | Implementata | 2.0 Fase 5; vedi `ARCHITECTURE.md` sez. 10 |
-| Potenziamenti permanenti | Pianificata | punto d'aggancio: `PowerUpDefinition.type = "permanent"` (2.0) |
+| Potenziamenti permanenti con le gemme (Vitalità, Resistenza, Forza, Scorta), schermata dal titolo; gemme messe da parte a fine livello | Implementata | Fase 6 del piano espansioni; `UPGRADE_CONFIG`; non usano `PowerUpDefinition.type = "permanent"` (i bonus vanno direttamente al giocatore) |
+| Monete (monete raccolte, nemici, boss) e bottega tra un livello e l'altro (pozione, cura, faretra, un'arma già trovata) | Implementata | Fase 6; `ECONOMY_CONFIG`, `SHOP_OFFERS`, `Shop`; il bot di bilanciamento non usa la bottega |
+| Sblocchi: Ranger, Berserker e Paladino raggiungendo i livelli 3, 4 e 6; armi trovate almeno una volta in vendita nella bottega | Implementata | Fase 6; salvati nei progressi |
 | Nuove ambientazioni | Implementata | Fase 4: sei ambientazioni |
 
 ## Interfaccia

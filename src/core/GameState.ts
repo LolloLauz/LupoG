@@ -2,12 +2,14 @@ import type { GameStateName } from "../types/GameTypes";
 
 /** Transizioni consentite tra gli stati del gioco. */
 const ALLOWED_TRANSITIONS: Record<GameStateName, GameStateName[]> = {
-  title: ["controls", "levelSelect", "characterSelect", "confirmReset", "playing"],
+  title: ["controls", "levelSelect", "characterSelect", "confirmReset", "upgrades", "playing"],
   controls: ["title"],
   levelSelect: ["title", "playing"],
   characterSelect: ["title"],
   confirmReset: ["title"],
-  playing: ["paused", "gameOver", "victory"],
+  upgrades: ["title"],
+  shop: ["playing"],
+  playing: ["paused", "gameOver", "victory", "shop"],
   paused: ["playing", "title"],
   gameOver: ["title", "playing"],
   victory: ["title"],

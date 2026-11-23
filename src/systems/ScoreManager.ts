@@ -1,7 +1,26 @@
-/** Punteggio e gemme della partita. Il record è gestito da HighScoreManager. */
+/** Punteggio, gemme e monete della partita. Il record è gestito da HighScoreManager. */
 export class ScoreManager {
   private score = 0;
   private collectibles = 0;
+  /** Monete (Fase 6): si spendono nella bottega tra un livello e l'altro. */
+  private coinCount = 0;
+
+  public get coins(): number {
+    return this.coinCount;
+  }
+
+  public addCoins(amount: number): void {
+    this.coinCount += Math.max(0, amount);
+  }
+
+  /** Spende monete; false (e nessuna spesa) se non bastano. */
+  public spendCoins(amount: number): boolean {
+    if (amount > this.coinCount) {
+      return false;
+    }
+    this.coinCount -= amount;
+    return true;
+  }
 
   public get currentScore(): number {
     return this.score;
@@ -20,13 +39,14 @@ export class ScoreManager {
     this.collectibles++;
   }
 
-  /** Ripristina i valori salvati (usato quando si ricomincia un livello dopo la morte). */
-  public restore(score: number, collectibles: number): void {
+  /** Ripristina i valori salvati (usato quando si ricomincia un livello dopo la morte). Senza coins le monete restano. */
+  public restore(score: number, collectibles: number, coins: number = this.coinCount): void {
     this.score = score;
     this.collectibles = collectibles;
+    this.coinCount = coins;
   }
 
   public reset(): void {
-    this.restore(0, 0);
+    this.restore(0, 0, 0);
   }
 }
