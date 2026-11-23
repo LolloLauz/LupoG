@@ -7,6 +7,7 @@
  *
  * Uso:   npm run balance            (report completo, circa 1 minuto)
  *        npm run balance -- --quick (meno ripetizioni, più veloce e meno preciso)
+ *        npm run balance -- --characters (solo le partite complete di ogni personaggio, Fase 4)
  *
  * IMPORTANTE: il bot è un giocatore semplice. "rusher" attacca sempre senza mai schivare;
  * "medio" prova a schivare in modo imperfetto. Non sostituisce una prova con persone reali:
@@ -21,6 +22,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputDirectory = mkdtempSync(join(tmpdir(), "iron-balance-"));
 const isQuick = process.argv.includes("--quick");
+const isCharactersOnly = process.argv.includes("--characters");
 const repetitions = isQuick ? 15 : 40;
 const runRepetitions = isQuick ? 20 : 60;
 
@@ -53,6 +55,7 @@ const { ENEMY_CONFIG, BOSS_CONFIG, BOSS_CATALOG } = await loadModule("config/ene
 const { GAME_CONFIG } = await loadModule("config/gameConfig");
 const { Inventory } = await loadModule("systems/Inventory");
 const { ITEM_CONFIG } = await loadModule("config/itemConfig");
+const { CHARACTER_CONFIG, CHARACTER_ORDER } = await loadModule("config/characterConfig");
 
 const collisionSystem = new CollisionSystem();
 const combatSystem = new CombatSystem();
@@ -80,7 +83,8 @@ function createRandom(seed) {
  * stopWhenClear: termina quando tutti i nemici (e il boss) sono sconfitti.
  */
 function playLevel(levelId, options = {}) {
-  const { dodgeSkill = 0, seed = 1, startHealth = 100, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
+  // character: le statistiche del personaggio (il bot usa sempre la spada, quindi misura solo quelle)
+  const { character = CHARACTER_CONFIG.knight, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
   const level = LEVEL_CONFIG.find((candidate) => candidate.id === levelId);
   const random = createRandom(seed);
   // come nel gioco: piattaforme (anche mobili e cancello dell'arena), pericoli, proiettili
@@ -89,7 +93,7 @@ function playLevel(levelId, options = {}) {
   const hazards = level.hazards ?? [];
   const projectileSystem = new ProjectileSystem();
   let platforms = levelManager.platforms;
-  const player = new Player(level.playerStart.x, level.playerStart.y);
+  const player = new Player(level.playerStart.x, level.playerStart.y, character);
   player.currentHealth = startHealth;
   // come nel gioco: nemici d'élite compresi
   const enemies = (enemyOverride ?? level.enemies).map(
@@ -250,24 +254,24 @@ function playLevel(levelId, options = {}) {
 }
 
 /** Partita completa: tutti i livelli di fila, salute che si porta dietro, vite limitate. */
-function playFullRun(dodgeSkill, seed) {
+function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight) {
   let lives = GAME_CONFIG.startingLives;
-  let health = 100;
+  let health = character.maxHealth;
   // pozioni nella borsa: passano da un livello all'altro; ricominciando un livello tornano a quelle di inizio livello
   let potions = 0;
   const deathsPerLevel = LEVEL_CONFIG.map(() => 0);
   for (const level of LEVEL_CONFIG) {
     for (;;) {
-      const result = playLevel(level.id, { dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions });
+      const result = playLevel(level.id, { character, dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions });
       if (result.outcome === "win") {
         potions = result.potions;
         const hasNextLevel = LEVEL_CONFIG.some((other) => other.id === level.id + 1);
-        health = Math.min(100, result.health + (hasNextLevel ? GAME_CONFIG.levelCompleteHeal : 0));
+        health = Math.min(character.maxHealth, result.health + (hasNextLevel ? GAME_CONFIG.levelCompleteHeal : 0));
         break;
       }
       deathsPerLevel[level.id - 1]++;
       lives--;
-      health = 100;
+      health = character.maxHealth;
       if (lives <= 0) return { won: false, livesLeft: 0, deathsPerLevel };
     }
   }
@@ -278,6 +282,7 @@ const average = (values) => (values.length === 0 ? NaN : values.reduce((a, b) =>
 const skills = [["rusher (non schiva)", 0], ["medio (schiva a volte)", 0.5]];
 const pad = (text, width) => String(text).padEnd(width);
 
+if (!isCharactersOnly) {
 console.log("=== DUELLI (un gruppo di nemici su terreno piano, giocatore a 100 HP) ===");
 const duels = {
   "scheletro": [{ type: "skeleton", position: { x: 150, y: 176 } }],
@@ -322,5 +327,17 @@ for (const [label, skill] of skills) {
   const won = runs.filter((r) => r.won);
   const deaths = LEVEL_CONFIG.map((_, index) => average(runs.map((r) => r.deathsPerLevel[index])).toFixed(2));
   console.log(`${pad(label, 24)} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie per livello ${deaths.join(" / ")}`);
+}
+}
+
+console.log(`\n=== PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, cura) ===`);
+for (const characterId of CHARACTER_ORDER) {
+  const character = CHARACTER_CONFIG[characterId];
+  for (const [label, skill] of skills) {
+    const runs = Array.from({ length: runRepetitions }, (_, i) => playFullRun(skill, i + 1, character));
+    const won = runs.filter((r) => r.won);
+    const totalDeaths = average(runs.map((r) => r.deathsPerLevel.reduce((a, b) => a + b, 0)));
+    console.log(`${pad(character.name, 10)} ${pad(label, 24)} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)}`);
+  }
 }
 console.log("\n(rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)");

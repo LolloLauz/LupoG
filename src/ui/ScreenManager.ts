@@ -1,9 +1,13 @@
+import { CHARACTER_CONFIG, CHARACTER_ORDER } from "../config/characterConfig";
 import { PALETTE, PALETTE_RAMPS } from "../config/gameConfig";
+import { WEAPON_CONFIG } from "../config/weaponConfig";
 import type { InputManager } from "../core/InputManager";
 import { BackgroundRenderer } from "../rendering/BackgroundRenderer";
 import { measureTextWidth } from "../rendering/BitmapFont";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
+import { getCharacterPreviewFrameId } from "../rendering/sprites/knightSprites";
+import type { CharacterDefinition, CharacterId } from "../types/EntityTypes";
 import type { GameStateName } from "../types/GameTypes";
 import type { ThemeId } from "../types/LevelTypes";
 import { MenuManager } from "./MenuManager";
@@ -15,6 +19,10 @@ export type MenuCommand =
   | "newGame"
   | "showControls"
   | "showLevelSelect"
+  | "showCharacterSelect"
+  | "confirmCharacter"
+  | "showResetConfirm"
+  | "resetAllData"
   | "cycleDifficulty"
   | "startSelectedLevel"
   | "backToTitle"
@@ -37,6 +45,8 @@ export interface ScreenData {
   isNewRecord: boolean;
   /** Nome della difficoltà scelta (mostrato nel menu del titolo). */
   difficultyName: string;
+  /** Personaggio scelto (menu del titolo e schermata di scelta). */
+  characterId: CharacterId;
   /** Tutti i livelli, con quelli già raggiunti sbloccati. */
   levels: LevelSummary[];
 }
@@ -53,9 +63,9 @@ const THEME_SWATCHES: Record<ThemeId, [string, string]> = {
 
 /** Riga della schermata dei controlli: tasti (come tasti disegnati) e descrizione. */
 /** Righe della tabella dei controlli: prima riga e passo (i tasti sono alti 14 px). */
-export const CONTROLS_TABLE = { firstRowY: 42, rowStep: 16 } as const;
+export const CONTROLS_TABLE = { firstRowY: 40, rowStep: 15 } as const;
 /** Righe di testo sotto la tabella dei controlli (combo, picchiata, salto). */
-export const CONTROLS_NOTES_Y = [190, 201, 212] as const;
+export const CONTROLS_NOTES_Y = [193, 204, 215] as const;
 
 export interface ControlsRow {
   keyGroups: string[][];
@@ -70,21 +80,51 @@ export const CONTROLS_ROWS: ControlsRow[] = [
   { keyGroups: [["K"]], description: "SCHIVATA" },
   { keyGroups: [["S"], ["↓"]], description: "ABBASSATI" },
   { keyGroups: [["E"]], description: "PRENDI ARMA O POZIONE" },
+  { keyGroups: [["Q"]], description: "LASCIA A TERRA (Q+1-4)" },
   { keyGroups: [["1", "2", "3", "4"]], description: "BORSA: USA IL POSTO" },
   { keyGroups: [["ESC"]], description: "PAUSA" },
 ];
 
+/** Valutazione da 1 a 5 di una statistica (schermata di scelta del personaggio). */
+export interface CharacterRating {
+  label: string;
+  value: number;
+}
+
+const clampRating = (value: number): number => Math.max(1, Math.min(5, Math.round(value)));
+
 /**
- * Schermate a tutto campo: titolo, controlli, selezione dei livelli, pausa, Game Over, vittoria.
+ * Statistiche di un personaggio in "tacche" da 1 a 5, calcolate dai suoi valori (il cavaliere sta nel mezzo):
+ * così cambiando CHARACTER_CONFIG la schermata di scelta si aggiorna da sola.
+ */
+export function getCharacterRatings(character: CharacterDefinition): CharacterRating[] {
+  return [
+    { label: "SALUTE", value: clampRating(character.maxHealth / 26) },
+    { label: "VELOCITÀ", value: clampRating((character.movementSpeed - 56) / 8) },
+    { label: "DANNO", value: clampRating(3 + (character.damageMultiplier - 1) * 6.7) },
+    { label: "DIFESA", value: clampRating(3 + (1 - character.damageTakenMultiplier) * 10) },
+    { label: "SCHIVATA", value: clampRating(5 - (character.dodgeCooldownMs - 450) / 300) },
+  ];
+}
+
+/**
+ * Schermate a tutto campo: titolo, controlli, selezione dei livelli e del personaggio, pausa, Game Over, vittoria.
  * I menu sono gestiti da MenuManager; qui c'è soprattutto il disegno.
  */
 export class ScreenManager {
   private readonly menus: Partial<Record<GameStateName, MenuManager<MenuCommand>>> = {
     title: new MenuManager<MenuCommand>([
       { label: "NUOVA PARTITA", command: "newGame" },
+      { label: (): string => `PERSONAGGIO: ${CHARACTER_CONFIG[this.latestData?.characterId ?? "knight"].name}`, command: "showCharacterSelect" },
       { label: "SCEGLI LIVELLO", command: "showLevelSelect" },
       { label: (): string => `DIFFICOLTÀ: ${this.latestData?.difficultyName ?? ""}`, command: "cycleDifficulty" },
       { label: "CONTROLLI", command: "showControls" },
+      { label: "CANCELLA DATI", command: "showResetConfirm" },
+    ]),
+    // la prima voce è "no": un Invio di troppo non cancella niente
+    confirmReset: new MenuManager<MenuCommand>([
+      { label: "NO, TORNA INDIETRO", command: "backToTitle" },
+      { label: "SÌ, CANCELLA TUTTO", command: "resetAllData" },
     ]),
     paused: new MenuManager<MenuCommand>([
       { label: "RIPRENDI", command: "resume" },
@@ -105,6 +145,15 @@ export class ScreenManager {
   private latestData: ScreenData | null = null;
   /** Livello evidenziato nella schermata di selezione. */
   private selectedLevelIndex = 0;
+  /** Avviso mostrato per qualche secondo sul titolo (es. "DATI CANCELLATI"). */
+  private notice: { text: string; remainingSeconds: number } | null = null;
+  /** Personaggio evidenziato nella schermata di scelta (null = parte da quello salvato). */
+  private selectedCharacterIndex: number | null = null;
+
+  /** Personaggio evidenziato nella schermata di scelta. */
+  public get selectedCharacterId(): CharacterId {
+    return CHARACTER_ORDER[this.selectedCharacterIndex ?? 0] ?? "knight";
+  }
 
   /** Id del livello scelto nella schermata di selezione. */
   public get selectedLevelId(): number {
@@ -116,12 +165,24 @@ export class ScreenManager {
   /** Fa avanzare le animazioni delle schermate (da chiamare a ogni frame). */
   public tick(deltaTimeSeconds: number): void {
     this.animationTimeSeconds += deltaTimeSeconds;
+    if (this.notice !== null) {
+      this.notice.remainingSeconds -= deltaTimeSeconds;
+      if (this.notice.remainingSeconds <= 0) {
+        this.notice = null;
+      }
+    }
+  }
+
+  /** Mostra un avviso sul titolo per qualche secondo. */
+  public showNotice(text: string, durationSeconds = 2.5): void {
+    this.notice = { text, remainingSeconds: durationSeconds };
   }
 
   /** Riporta il cursore alla prima voce (da chiamare a ogni cambio di stato). */
   public resetSelection(): void {
     Object.values(this.menus).forEach((menu) => menu?.reset());
     this.selectedLevelIndex = 0;
+    this.selectedCharacterIndex = null;
   }
 
   /** Legge l'input e restituisce l'eventuale comando scelto dal giocatore. */
@@ -133,7 +194,30 @@ export class ScreenManager {
     if (state === "levelSelect") {
       return this.updateLevelSelect(input, data);
     }
+    if (state === "characterSelect") {
+      return this.updateCharacterSelect(input, data);
+    }
+    if (state === "confirmReset" && input.wasPressed("pause")) {
+      return "backToTitle";
+    }
     return this.menus[state]?.update(input) ?? null;
+  }
+
+  /** Scelta del personaggio: A/D (o W/S) cambia personaggio in modo circolare, Invio conferma, ESC annulla. */
+  private updateCharacterSelect(input: InputManager, data: ScreenData): MenuCommand | null {
+    const count = CHARACTER_ORDER.length;
+    let index = this.selectedCharacterIndex ?? Math.max(0, CHARACTER_ORDER.indexOf(data.characterId));
+    if (input.wasPressed("menuLeft") || input.wasPressed("menuUp")) {
+      index = (index - 1 + count) % count;
+    }
+    if (input.wasPressed("menuRight") || input.wasPressed("menuDown")) {
+      index = (index + 1) % count;
+    }
+    this.selectedCharacterIndex = index;
+    if (input.wasPressed("confirm")) {
+      return "confirmCharacter";
+    }
+    return input.wasPressed("pause") ? "backToTitle" : null;
   }
 
   /** Selezione dei livelli: il cursore passa solo sui livelli sbloccati (in modo circolare). */
@@ -170,6 +254,12 @@ export class ScreenManager {
       case "levelSelect":
         this.renderLevelSelect(renderer, data);
         break;
+      case "characterSelect":
+        this.renderCharacterSelect(renderer, data);
+        break;
+      case "confirmReset":
+        this.renderResetConfirm(renderer, data);
+        break;
       case "paused":
         this.renderPause(renderer);
         break;
@@ -191,16 +281,20 @@ export class ScreenManager {
     this.backgroundRenderer.render(renderer, "castle", this.animationTimeSeconds * 14, this.animationTimeSeconds);
     const centerX = renderer.width / 2;
     this.drawFloor(renderer);
-    const knightFrame = Math.floor(this.animationTimeSeconds * 2) % 2 === 0 ? "knightIdle1" : "knightIdle2";
-    this.spriteManager.drawSprite(renderer, knightFrame, centerX - 12, 200 - 30, false);
+    // il personaggio scelto aspetta a sinistra del menu
+    const knightFrame = getCharacterPreviewFrameId(data.characterId, Math.floor(this.animationTimeSeconds * 2) % 2 === 0 ? 1 : 2);
+    this.spriteManager.drawSprite(renderer, knightFrame, centerX - 124, 200 - 30, false);
 
     this.drawLogo(renderer, centerX, 30);
     this.drawDivider(renderer, 62);
     drawOrnateFrame(renderer, centerX - 92, 68, 184, 34);
     renderer.drawText("Medieval Action Arcade", centerX, 74, PALETTE.stonePale, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText(`RECORD ${String(data.bestScore).padStart(6, "0")}`, centerX, 87, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
-    drawOrnateFrame(renderer, centerX - 84, 106, 168, 62);
-    this.menus.title?.render(renderer, centerX, 113, 13);
+    drawOrnateFrame(renderer, centerX - 84, 106, 168, 76);
+    this.menus.title?.render(renderer, centerX, 112, 11);
+    if (this.notice !== null) {
+      renderer.drawText(this.notice.text, centerX, 190, PALETTE.lightGreen, { align: "center", shadowColor: PALETTE.black });
+    }
     renderer.drawText("W/S: scegli   INVIO: conferma", centerX, 222, PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
   }
 
@@ -237,6 +331,69 @@ export class ScreenManager {
       }
     });
     renderer.drawText("W/S: scegli   INVIO: gioca   ESC: indietro", centerX, 220, PALETTE.gray, { align: "center" });
+  }
+
+  /**
+   * Scelta del personaggio: i quattro personaggi in fila (quello evidenziato si muove) e, sotto, la scheda
+   * di quello evidenziato: descrizione, statistiche in tacche, arma iniziale e tratto.
+   */
+  private renderCharacterSelect(renderer: Renderer, data: ScreenData): void {
+    const centerX = renderer.width / 2;
+    renderer.fillVerticalGradient(0, 0, renderer.width, renderer.height, [PALETTE.deepNavy, PALETTE.darkBlue, PALETTE.black]);
+    this.drawGradientTitle(renderer, "PERSONAGGIO", centerX, 10, 2, TITLE_GOLD_ROWS);
+    this.drawDivider(renderer, 32);
+    const selectedIndex = this.selectedCharacterIndex ?? Math.max(0, CHARACTER_ORDER.indexOf(data.characterId));
+    const idleFrame = Math.floor(this.animationTimeSeconds * 2) % 2 === 0 ? 1 : 2;
+    const columnWidth = renderer.width / CHARACTER_ORDER.length;
+    CHARACTER_ORDER.forEach((characterId, index) => {
+      const columnCenterX = Math.round(columnWidth * index + columnWidth / 2);
+      const isSelected = index === selectedIndex;
+      if (isSelected) {
+        drawOrnateFrame(renderer, columnCenterX - 34, 38, 68, 58);
+      }
+      this.spriteManager.drawSprite(renderer, getCharacterPreviewFrameId(characterId, isSelected ? idleFrame : 1), columnCenterX - 12, 46, false);
+      const nameColor = isSelected ? PALETTE.white : PALETTE.gray;
+      renderer.drawText(CHARACTER_CONFIG[characterId].name, columnCenterX, 82, nameColor, {
+        align: "center",
+        shadowColor: PALETTE.black,
+        rowColors: isSelected ? TITLE_GOLD_ROWS : undefined,
+      });
+    });
+
+    const character = CHARACTER_CONFIG[CHARACTER_ORDER[selectedIndex] ?? "knight"];
+    drawOrnateFrame(renderer, 24, 102, 272, 108);
+    renderer.drawText(character.description, centerX, 109, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+    getCharacterRatings(character).forEach((rating, rowIndex) => {
+      const rowY = 124 + rowIndex * 11;
+      renderer.drawText(rating.label, 44, rowY, PALETTE.lightGray, { shadowColor: PALETTE.black });
+      for (let pip = 0; pip < 5; pip++) {
+        const pipX = 120 + pip * 10;
+        renderer.fillRect(pipX, rowY, 8, 6, PALETTE.black);
+        renderer.fillRect(pipX + 1, rowY + 1, 6, 4, pip < rating.value ? PALETTE.goldLight : PALETTE.slate);
+        if (pip < rating.value) {
+          renderer.fillRect(pipX + 1, rowY + 1, 6, 1, PALETTE.yellow);
+        }
+      }
+    });
+    const weapon = WEAPON_CONFIG[character.startingWeaponId];
+    this.spriteManager.drawSprite(renderer, weapon.iconSpriteId, 196, 126, false);
+    renderer.drawText(weapon.name.toUpperCase(), 222, 131, PALETTE.goldLight, { shadowColor: PALETTE.black });
+    renderer.drawText(`${character.maxHealth} HP`, 222, 145, PALETTE.lightGray, { shadowColor: PALETTE.black });
+    renderer.drawText(character.trait, centerX, 184, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
+    renderer.drawText("A/D: scegli   INVIO: conferma   ESC: indietro", centerX, 222, PALETTE.gray, { align: "center" });
+  }
+
+  /** Conferma prima di cancellare record e progressi: la voce predefinita è "no". */
+  private renderResetConfirm(renderer: Renderer, data: ScreenData): void {
+    this.renderTitle(renderer, data);
+    renderer.drawDitherOverlay();
+    const centerX = renderer.width / 2;
+    drawOrnateFrame(renderer, centerX - 110, 60, 220, 120);
+    this.drawGradientTitle(renderer, "CANCELLA DATI", centerX, 70, 2, TITLE_GOLD_ROWS);
+    renderer.drawText("Record, livelli raggiunti, personaggio,", centerX, 98, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+    renderer.drawText("difficoltà e armi salvate.", centerX, 109, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+    renderer.drawText("Non si può annullare.", centerX, 122, PALETTE.orange, { align: "center", shadowColor: PALETTE.black });
+    this.menus.confirmReset?.render(renderer, centerX, 142, 14);
   }
 
   private renderControls(renderer: Renderer): void {

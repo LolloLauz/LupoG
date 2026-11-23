@@ -52,9 +52,10 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Schivata | **K** |
 | Accovacciarsi | **S** oppure **↓** (solo a terra: non ci si muove e non ci si rialza sotto un soffitto; si può attaccare restando accovacciati, con un colpo più basso) |
 | Prendere un'arma o una pozione | **E** stando sopra (va nella borsa, vedi "La borsa") |
+| Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa) |
 | Usare un posto della borsa | **1**, **2**, **3**, **4** (arma: la impugni; pozione: la bevi) |
 | Pausa / riprendi | **Esc** |
-| Menu: scegliere | **W** / **S** oppure **↑** / **↓** |
+| Menu: scegliere | **W** / **S** oppure **↑** / **↓** (scelta del personaggio: anche **A** / **D** oppure **←** / **→**) |
 | Menu: confermare | **Invio** |
 
 Durante la pausa e nei menu i comandi di gioco (salto, attacco...) sono bloccati. Se la finestra del browser perde il focus il gioco va
@@ -75,7 +76,8 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 
 - Hai **3 vite**. Se la salute arriva a 0 perdi una vita e **ricominci il livello** da capo (con nemici e oggetti ripristinati, e con
   il punteggio e le gemme che avevi all'inizio di quel livello). Finite le vite: **Game Over**.
-- La salute **non si rigenera**: si recupera con le **pozioni** e con la **cura di fine livello** (+30 HP, tranne dopo il boss).
+- La salute **non si rigenera** (tranne per il Paladino, vedi *Personaggi*): si recupera con le **pozioni** e con la **cura di fine livello**
+  (+30 HP, tranne dopo il boss).
 - La salute si porta da un livello all'altro. Quando ricominci un livello dopo una morte riparti con la salute piena.
 - Nei livelli 1 e 2 si finisce **raggiungendo la porta** in fondo. Nel livello 3 si finisce **sconfiggendo il boss**.
 - Cadere in un **abisso** costa **15 HP** e ti riporta all'ultimo punto sicuro (se muori cadendo, perdi una vita).
@@ -86,13 +88,33 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 
 | Schermata | Cosa mostra |
 |---|---|
-| **Titolo** | logo, record, menu *Nuova partita*, *Scegli livello*, *Difficoltà* (Invio la cambia: Facile → Normale → Difficile) e *Controlli* |
+| **Titolo** | logo, record, il personaggio scelto, menu *Nuova partita*, *Personaggio*, *Scegli livello*, *Difficoltà* (Invio la cambia: Facile → Normale → Difficile), *Controlli* e *Cancella dati* |
+| **Cancella dati** | chiede conferma (la voce già scelta è *No*): con *Sì* cancella record, livelli raggiunti, difficoltà, personaggio e armi salvate, e si riparte come alla prima partita (cavaliere con la spada) |
+| **Personaggio** | i quattro personaggi in fila e la scheda di quello evidenziato (statistiche in tacche da 1 a 5, arma iniziale, salute, tratto); A/D (o W/S) per scegliere, Invio per confermare, Esc per tornare senza cambiare |
 | **Scegli livello** | i sei livelli: quelli già raggiunti si possono giocare (partita nuova da quel livello), gli altri sono chiusi da un lucchetto; W/S per scegliere, Invio per giocare, Esc per tornare |
 | **Controlli** | l'elenco dei tasti |
 | **Gioco** | il livello con la barra in alto (HUD) |
 | **Pausa** | menu *Riprendi* e *Esci al titolo* (lo schermo si oscura con un retino di pixel) |
 | **Game Over** | punti, gemme, record; *Riprova* (nuova partita dal livello 1) o *Torna al titolo* |
 | **Vittoria** | storia conclusiva, punti, gemme, record |
+
+### Personaggi
+
+Il personaggio si sceglie dal titolo (*Personaggio*) e resta salvato. Tutti hanno gli stessi tasti, lo stesso salto e la stessa hitbox;
+cambiano salute, velocità, danno, difesa, schivata e arma iniziale.
+
+| Personaggio | Salute | Velocità | Danno | Danno subito | Schivata (attesa) | Arma iniziale | Tratto |
+|---|---|---|---|---|---|---|---|
+| **Cavaliere** | 100 | 80 | ×1 | ×1 | normale (0,7 s) | spada | equilibrato |
+| **Ranger** | 75 | 96 | ×1 | ×1 | più lunga, ogni 0,45 s | arco | colpisce da lontano, ma regge pochi colpi |
+| **Berserker** | 130 | 80 | ×1,3 | ×1 | corta, ogni 1,6 s | ascia | nessuna schivata "economica": va usata con cura |
+| **Paladino** | 110 | 72 | ×1 | ×0,75 | normale (0,8 s) | mazza | dopo 4 s senza colpi subiti si cura di 1 HP al secondo |
+
+- Scegliendo un personaggio diverso **impugni la sua arma iniziale**, che entra nella borsa; le armi già raccolte restano. Puoi sempre
+  cambiare arma: il personaggio non limita le armi, cambia solo le statistiche.
+- Velocità: la velocità dell'arma in mano si moltiplica con quella del personaggio (es. Paladino con l'ascia: 72 × 0,85).
+- I power-up si sommano ai tratti: la Furia moltiplica anche il danno del Berserker, lo Scudo anche la difesa del Paladino.
+- Nella **Fase 5** del piano arrivano la stamina, la parata con lo scudo e le abilità speciali di ogni personaggio.
 
 ### L'HUD (la barra in alto)
 
@@ -171,6 +193,21 @@ Oltre alla spada ci sono quattro armi corpo a corpo. Si usano con gli stessi tas
 
 I boss non vengono mai storditi: contro di loro ascia e mazza contano solo per il danno.
 
+**Armi a distanza.** Tirano proiettili invece di colpire davanti a te: colpiscono nemici, boss e forzieri, non si
+deviano con la spada e non hanno combo. Si usano anche in aria (lì non c'è la picchiata).
+
+| Arma | Spazio | J | Munizioni | Particolarità |
+|---|---|---|---|---|
+| **Arco** | tiro rapido, 8 danni | **tieni premuto per caricare**, rilascia per tirare: da 10 a **34 danni**, freccia fino a 1,6 volte più veloce (carica piena in 0,9 s, segnalata da un bagliore; dopo 2,5 s tira da solo) | **12** frecce | la freccia scende appena: mira dritto |
+| **Balestra** | dardo da **40 danni**, veloce e dritto | come Spazio | **6** dardi | **ricarica di 0,9 s** dopo ogni tiro |
+| **Coltelli** | lancio ad arco, 12 danni | lancio più basso (per i nemici piccoli) | **6** | il coltello cade dove colpisce o dove si ferma: **passandoci sopra lo recuperi** (+1); quelli caduti negli abissi si perdono |
+| **Giavellotto** | lancio potente ad arco, **50 danni**, **trafigge** tutti i nemici sulla sua strada | come Spazio | **3** | ogni giavellotto lanciato **si perde**; finiti i giavellotti l'arma esce dalla borsa e impugni l'arma successiva |
+
+Senza munizioni l'arma non tira ("SENZA MUNIZIONI"), nemmeno il tiro caricato dell'arco. Frecce e dardi non si recuperano: in ogni
+livello c'è una **faretra** che, toccandola, riempie le munizioni di **tutte** le armi della borsa (se sono già piene resta a terra
+per dopo). Anche raccogliendo di nuovo un'arma con munizioni che hai già le sue munizioni tornano piene. Nella borsa il numero sotto l'icona indica le munizioni (in rosso quando sono finite).
+I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno delle frecce).
+
 **Dove si trovano**
 
 - **Forzieri**: colpiscili con qualsiasi arma per aprirli; l'arma compare sopra il coperchio.
@@ -188,6 +225,11 @@ I boss non vengono mai storditi: contro di loro ascia e mazza contano solo per i
 | 5 | Mazza | forziere vicino al golem |
 | 6 | Lancia | trofeo del Re dei Lupi, all'inizio del livello |
 | 6 | Mazza | soldato d'élite |
+| 2 | Arco | forziere vicino alla partenza |
+| 3 | Coltelli | scheletro d'élite |
+| 4 | Balestra | forziere |
+| 5 | Giavellotto | goblin d'élite |
+| 6 | Giavellotto | forziere prima dell'arena |
 
 **Prendere e cambiare arma**: le armi vanno nella **borsa** (vedi sotto). Stando sopra un'arma compare la scritta "E PRENDI ...":
 premi **E** e la prendi; la impugni subito. Per cambiare arma premi il **numero** del suo posto nella borsa.
@@ -199,6 +241,9 @@ La borsa ha **4 posti**, mostrati sotto la barra in alto a destra, ognuno con il
 - **E** raccoglie l'arma o la pozione che stai toccando. Le **pozioni non curano più al tocco**: le conservi e le bevi quando vuoi.
 - **1-4** usano il posto: un'arma diventa quella in mano (cornice dorata); una pozione cura **30 HP** (a salute piena non viene sprecata).
 - Le pozioni stanno tutte in un posto, **al massimo 2**: conservarle per i boss aiuta molto, quindi la scorta è piccola.
+- **Q** lascia a terra l'**arma in mano** (impugni la prossima della borsa); tenendo **Q** e premendo **1-4** lasci il contenuto di quel posto
+  (un'arma, oppure **una** pozione). Solo stando a terra; l'ultima arma non si può lasciare. Un'arma lasciata tiene le sue munizioni e si
+  riprende con **E** dopo essersi allontanati un attimo; una pozione si riprende subito.
 - Un'arma che hai già non si prende due volte ("GIÀ NELLA BORSA").
 - **Borsa piena**: una nuova arma prende il posto di quella in mano, che resta a terra nello stesso punto (puoi riprenderla dopo
   esserti allontanato un attimo); una pozione in più non entra ("BORSA PIENA").
@@ -259,7 +304,8 @@ La schivata passa anche attraverso le frecce e le magie. La spada **devia** (dis
 
 ## 8. I boss
 
-Ogni boss aspetta in un'**arena** alla fine del suo livello: **quando ci entri un cancello si chiude alle tue spalle**. Nessun boss vacilla quando lo
+Ogni boss aspetta in un'**arena** alla fine del suo livello: **quando ci entri un cancello si chiude alle tue spalle**. Il boss non esce
+mai dall'arena: se si sveglia mentre sei ancora fuori, ti aspetta al cancello (e resta dentro quando il cancello si chiude). Nessun boss vacilla quando lo
 colpisci (lampeggia soltanto). Prima di ogni attacco c'è una **preparazione** ben visibile: è il momento di schivare o di allontanarsi. La barra in basso
 mostra la salute e una tacca per ogni cambio di fase.
 
@@ -357,6 +403,7 @@ Si raccolgono semplicemente toccandoli, tranne la **pozione**, che si prende con
 | **Pozione** | boccetta rossa | si prende con **E** e va nella borsa; bevuta (tasto del suo posto) dà **+30 HP** (non oltre il massimo) |
 | **Moneta** | disco giallo | **+50 punti** |
 | **Gemma** | cristallo azzurro | **+200 punti** e conta come *gemma* (almeno 1 per livello, 2 nella torre) |
+| **Faretra** | astuccio di cuoio con due frecce | munizioni piene per tutte le armi della borsa che ne hanno (arco, balestra, coltelli, giavellotto); una per livello, prima dell'arena; se non serve resta a terra |
 
 Quando raccogli un oggetto compare una scritta con il bonus (per esempio "+30 HP").
 

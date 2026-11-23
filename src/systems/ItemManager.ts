@@ -5,7 +5,7 @@ import { Item } from "../entities/Item";
 import type { Player } from "../entities/Player";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
-import type { ItemSpawnDefinition } from "../types/LevelTypes";
+import type { ItemSpawnDefinition, ItemTypeId } from "../types/LevelTypes";
 import { CollisionSystem } from "./CollisionSystem";
 import type { ScoreManager } from "./ScoreManager";
 
@@ -40,7 +40,10 @@ export class ItemManager {
     }
     const playerBounds = player.getBounds();
     const touched = this.items.filter(
-      (item) => item.definition.storedInBag !== true && CollisionSystem.intersects(playerBounds, item.getBounds())
+      (item) =>
+        item.definition.storedInBag !== true &&
+        item.definition.refillsAmmo !== true &&
+        CollisionSystem.intersects(playerBounds, item.getBounds())
     );
     for (const item of touched) {
       const definition = item.definition;
@@ -68,6 +71,22 @@ export class ItemManager {
     }
     const playerBounds = player.getBounds();
     return this.items.find((item) => item.definition.storedInBag === true && CollisionSystem.intersects(playerBounds, item.getBounds())) ?? null;
+  }
+
+  /** La faretra che il giocatore sta toccando, oppure null (la raccoglie il motore, se ricarica qualcosa). */
+  public findTouchedAmmoRefill(player: Player): Item | null {
+    if (player.isDead) {
+      return null;
+    }
+    const playerBounds = player.getBounds();
+    return this.items.find((item) => item.definition.refillsAmmo === true && CollisionSystem.intersects(playerBounds, item.getBounds())) ?? null;
+  }
+
+  /** Mette un oggetto a terra durante il gioco (es. una pozione lasciata con Q). */
+  public addItem(type: ItemTypeId, x: number, y: number): Item {
+    const item = new Item(type, x, y);
+    this.items.push(item);
+    return item;
   }
 
   /** Toglie un oggetto dal livello (raccolto nella borsa). */

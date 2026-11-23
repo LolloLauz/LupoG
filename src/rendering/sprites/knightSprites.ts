@@ -1,9 +1,10 @@
+import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../../config/characterConfig";
 import { PALETTE } from "../../config/gameConfig";
 import { WEAPON_CONFIG, WEAPON_ICON_SIZE } from "../../config/weaponConfig";
-import type { WeaponId } from "../../types/EntityTypes";
+import type { CharacterId, WeaponId } from "../../types/EntityTypes";
 import type { SpriteManager } from "../SpriteManager";
-import { drawAxe, drawMace, drawSpear, type WeaponDrawer } from "./weaponShapes";
-import { addOutline, createGrid, drawSlashArc, drawSword, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
+import { drawAxe, drawBow, drawCrossbow, drawMace, drawSpear, type WeaponDrawer } from "./weaponShapes";
+import { addOutline, createGrid, drawSlashArc, drawSword, remapSpriteKeys, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
 
 /**
  * Sprite del cavaliere in stile 16 bit (24x30 pixel, rivolto a destra).
@@ -181,6 +182,8 @@ interface WeaponVisual {
   attackPoses: Record<string, SwordPose>;
   /** Icona 16x16 (oggetto a terra e HUD): impugnatura e punta. */
   icon: { handX: number; handY: number; tipX: number; tipY: number };
+  /** Direzione dell'arma a riposo rispetto alla mano (se omessa: dritta verso l'alto, come la spada). */
+  restTip?: { offsetX: number; offsetY: number };
 }
 
 const drawKnightSword: WeaponDrawer = (grid, handX, handY, tipX, tipY) => drawSword(grid, handX, handY, tipX, tipY, SWORD_KEYS);
@@ -190,6 +193,8 @@ const drawKnightSword: WeaponDrawer = (grid, handX, handY, tipX, tipY) => drawSw
  * così l'elenco dei frame si scrive una volta sola e vale per tutte le armi.
  */
 let activeVisual: WeaponVisual | null = null;
+/** Parte superiore del personaggio che si sta componendo (testa propria + busto del cavaliere). */
+let activeBodyRows: string[] = BODY_ROWS;
 
 /** Disegna l'arma attiva dalla mano verso la punta della posa (accorciata o allungata). */
 function drawActiveWeapon(grid: PixelGrid, handX: number, handY: number, tipX: number, tipY: number, fixedLength = false): void {
@@ -202,6 +207,16 @@ function drawActiveWeapon(grid: PixelGrid, handX: number, handY: number, tipX: n
   visual.draw(grid, handX, handY, Math.round(handX + (tipX - handX) * scale), Math.round(handY + (tipY - handY) * scale));
 }
 
+/** L'arma a riposo: dritta verso l'alto, o nella direzione restTip dell'arma attiva (arco, balestra). */
+function drawRestingWeapon(grid: PixelGrid, handY: number): void {
+  const restTip = activeVisual?.restTip;
+  if (restTip === undefined) {
+    drawActiveWeapon(grid, HAND_X, handY, HAND_X + 1, handY - 16);
+  } else {
+    drawActiveWeapon(grid, HAND_X, handY, HAND_X + restTip.offsetX, handY + restTip.offsetY, true);
+  }
+}
+
 /**
  * Unisce parte superiore e gambe. bodyDrop = pixel di cui abbassare la parte superiore
  * (respiro, passo). withSword = arma a riposo in mano (la spada, o l'arma che si sta componendo).
@@ -209,9 +224,9 @@ function drawActiveWeapon(grid: PixelGrid, handX: number, handY: number, tipX: n
 function composeKnightFrame(legRows: string[], bodyDrop: number, withSword = true): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
   stampRows(grid, legRows, 0, BODY_ROWS.length);
-  stampRows(grid, BODY_ROWS, 0, bodyDrop);
+  stampRows(grid, activeBodyRows, 0, bodyDrop);
   if (withSword) {
-    drawActiveWeapon(grid, HAND_X, HAND_Y + bodyDrop, HAND_X + 1, 2 + bodyDrop);
+    drawRestingWeapon(grid, HAND_Y + bodyDrop);
   }
   return grid.map((row) => row.join(""));
 }
@@ -224,14 +239,14 @@ const CROUCH_BODY_DROP = KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length - BODY_ROWS.l
 
 function stampCrouchedBody(grid: PixelGrid, shiftX: number): void {
   stampRows(grid, KNIGHT_LEGS_CROUCH, shiftX, KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length);
-  stampRows(grid, BODY_ROWS.slice(0, BODY_ROWS.length - 3), shiftX, CROUCH_BODY_DROP);
+  stampRows(grid, activeBodyRows.slice(0, activeBodyRows.length - 3), shiftX, CROUCH_BODY_DROP);
 }
 
 /** Cavaliere accovacciato con la spada dritta davanti. */
 function composeCrouchFrame(): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
   stampCrouchedBody(grid, 0);
-  drawActiveWeapon(grid, HAND_X, HAND_Y + CROUCH_BODY_DROP, HAND_X + 1, 2 + CROUCH_BODY_DROP);
+  drawRestingWeapon(grid, HAND_Y + CROUCH_BODY_DROP);
   return grid.map((row) => row.join(""));
 }
 
@@ -264,7 +279,7 @@ function composeAttackFrame(pose: SwordPose, crouched = false): string[] {
 function composeHurtFrame(): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
   stampRows(grid, LEGS_FALL, 0, BODY_ROWS.length);
-  stampRows(grid, BODY_ROWS, -1, 1);
+  stampRows(grid, activeBodyRows, -1, 1);
   drawActiveWeapon(grid, HAND_X - 1, HAND_Y + 1, KNIGHT_WIDTH - 1, KNIGHT_HEIGHT - 3);
   for (const [x, y] of [[3, 2], [2, 4], [4, 1], [6, 0], [1, 7], [20, 3], [22, 5]] as const) {
     setPixel(grid, x, y, "y", true);
@@ -348,6 +363,14 @@ const SPEAR_POSES: Record<string, SwordPose> = {
   knightPlungeB: { tipX: 21, tipY: 29, frameWidth: SPEAR_FRAME_WIDTH, fixedLength: true },
 };
 
+/** Pose delle armi a distanza (Fase 2): mira e rinculo, lancio (braccio indietro e avanti). */
+const RANGED_POSES: Record<string, SwordPose> = {
+  knightAimA: { tipX: 32, tipY: 17 },
+  knightAimB: { tipX: 30, tipY: 16, bodyDrop: 1 },
+  knightThrowA: { tipX: 9, tipY: 4, bodyDrop: 1 },
+  knightThrowB: { tipX: 32, tipY: 11, arcs: [{ radius: 14, startDegrees: -100, endDegrees: -30 }] },
+};
+
 /** Aspetto di ogni arma. Il suffisso degli sprite è WEAPON_CONFIG[id].spriteSuffix. */
 const WEAPON_VISUALS: Record<WeaponId, WeaponVisual> = {
   sword: { lengthScale: 1, draw: drawKnightSword, attackPoses: ATTACK_POSES, icon: { handX: 3, handY: 12, tipX: 13, tipY: 2 } },
@@ -355,6 +378,10 @@ const WEAPON_VISUALS: Record<WeaponId, WeaponVisual> = {
   spear: { lengthScale: 1.25, draw: drawSpear, attackPoses: SPEAR_POSES, icon: { handX: 6, handY: 10, tipX: 14, tipY: 2 } },
   axe: { lengthScale: 0.85, draw: drawAxe, attackPoses: ATTACK_POSES, icon: { handX: 3, handY: 13, tipX: 10, tipY: 6 } },
   mace: { lengthScale: 0.8, draw: drawMace, attackPoses: ATTACK_POSES, icon: { handX: 3, handY: 13, tipX: 10, tipY: 6 } },
+  bow: { lengthScale: 1, draw: drawBow, attackPoses: RANGED_POSES, icon: { handX: 3, handY: 8, tipX: 13, tipY: 8 }, restTip: { offsetX: 12, offsetY: -1 } },
+  crossbow: { lengthScale: 1, draw: drawCrossbow, attackPoses: RANGED_POSES, icon: { handX: 2, handY: 10, tipX: 13, tipY: 6 } },
+  throwingKnives: { lengthScale: 0.45, draw: drawKnightSword, attackPoses: RANGED_POSES, icon: { handX: 5, handY: 11, tipX: 11, tipY: 5 } },
+  javelin: { lengthScale: 1.1, draw: drawSpear, attackPoses: RANGED_POSES, icon: { handX: 6, handY: 10, tipX: 14, tipY: 2 } },
 };
 
 /** Icona di un'arma: l'arma in diagonale con il contorno nero. */
@@ -367,21 +394,166 @@ function composeWeaponIcon(visual: WeaponVisual): string[] {
   return addOutline(padded.map((row) => row.join("")), "k");
 }
 
+/** Righe della testa (elmo o cappuccio) in cima a BODY_ROWS: un personaggio può sostituirle. */
+const HEAD_ROW_COUNT = 12;
+
 /**
- * Registra tutti gli sprite del cavaliere nello SpriteManager: una serie completa per ogni arma
- * (suffisso dell'arma, "" per la spada), ognuna anche nella versione con il fuoco, più le icone delle armi.
- * Id di un frame: frame + "Crouch" (attacco da accovacciati) + suffisso dell'arma + "Fire".
+ * Aspetto di un personaggio (Fase 4): stesso corpo del cavaliere, colori propri e, se serve, una testa propria.
+ * Le chiavi dei colori sono quelle del cavaliere (armatura d g s w, sopravveste m r o, scudo N B L) più quelle
+ * della testa.
  */
-export function registerKnightSprites(spriteManager: SpriteManager): void {
+interface CharacterVisual {
+  colors: Record<string, string>;
+  headRows?: string[];
+}
+
+/** Ranger: cappuccio e mantello verdi, cuoio al posto dell'armatura (f, F = volto; h, H, i = cappuccio). */
+const RANGER_HEAD_ROWS: string[] = [
+  "........................",
+  "..........kkkk..........",
+  "........kkhHHHkk........",
+  ".......khHHHHHHik.......",
+  "......khHHHHHHHHik......",
+  ".....khhHHHkkkkkHik.....",
+  ".....khhHHkfFFFFkHk.....",
+  "......khHkfFFFFkFkk.....",
+  "......khhkfFFFFFFFk.....",
+  ".......khkffFFFFFk......",
+  "........khkkffffk.......",
+  ".........khhhhhhk.......",
+];
+
+/** Berserker: elmo di ferro con le corna (x, X) e barba rossa (p, P). */
+const BERSERKER_HEAD_ROWS: string[] = [
+  "......kk......kk........",
+  ".....kxXk....kXxk.......",
+  ".....kxXk....kXxk.......",
+  "......kxXkkkkkXxk.......",
+  ".......kkwwsssskk.......",
+  "........kwwsssssgk......",
+  "........kwssssssggk.....",
+  "........kssssskkkkk.....",
+  "........kgsssskFkFk.....",
+  "........kgsssPPPPPpk....",
+  "........kdgsPPPPPPpk....",
+  ".........kdgkPPPPpk.....",
+]
+
+const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
+  knight: { colors: {} },
+  ranger: {
+    colors: {
+      d: PALETTE.earth,
+      g: PALETTE.wood,
+      s: PALETTE.woodLight,
+      w: PALETTE.sand,
+      m: PALETTE.pine,
+      r: PALETTE.darkGreen,
+      o: PALETTE.green,
+      N: PALETTE.deepForest,
+      B: PALETTE.pine,
+      L: PALETTE.darkGreen,
+      h: PALETTE.pine,
+      H: PALETTE.darkGreen,
+      i: PALETTE.green,
+      f: PALETTE.skinDark,
+      F: PALETTE.skin,
+    },
+    headRows: RANGER_HEAD_ROWS,
+  },
+  berserker: {
+    colors: {
+      d: PALETTE.stoneShadow,
+      g: PALETTE.stone,
+      s: PALETTE.stoneLight,
+      w: PALETTE.stonePale,
+      m: PALETTE.earth,
+      r: PALETTE.wood,
+      o: PALETTE.woodLight,
+      N: PALETTE.emberDark,
+      B: PALETTE.ember,
+      L: PALETTE.flame,
+      x: PALETTE.cream,
+      X: PALETTE.stonePale,
+      F: PALETTE.skin,
+      p: PALETTE.ember,
+      P: PALETTE.flame,
+    },
+    headRows: BERSERKER_HEAD_ROWS,
+  },
+  paladin: {
+    // armatura d'oro, sopravveste blu, scudo d'argento, pennacchio bianco (u, x, X)
+    colors: {
+      d: PALETTE.bronze,
+      g: PALETTE.gold,
+      s: PALETTE.goldLight,
+      w: PALETTE.yellow,
+      m: PALETTE.navy,
+      r: PALETTE.blue,
+      o: PALETTE.lightBlue,
+      N: PALETTE.gray,
+      B: PALETTE.lightGray,
+      L: PALETTE.white,
+      u: PALETTE.lightGray,
+      x: PALETTE.white,
+      X: PALETTE.iceWhite,
+    },
+    headRows: remapSpriteKeys(BODY_ROWS.slice(0, HEAD_ROW_COUNT), { m: "u", r: "x", o: "X" }),
+  },
+};
+
+/** Parte superiore di un personaggio: la sua testa (se ne ha una) sopra il busto del cavaliere. */
+function characterBodyRows(visual: CharacterVisual): string[] {
+  return visual.headRows === undefined ? BODY_ROWS : [...visual.headRows, ...BODY_ROWS.slice(HEAD_ROW_COUNT)];
+}
+
+/** Frame (1 o 2) dell'attesa di un personaggio con la sua arma iniziale: anteprima nei menu. */
+export function getCharacterPreviewFrameId(characterId: CharacterId, frame: 1 | 2): string {
+  const character = CHARACTER_CONFIG[characterId];
+  return `knightIdle${frame}${WEAPON_CONFIG[character.startingWeaponId].spriteSuffix}${character.spriteSuffix}`;
+}
+
+/**
+ * Registra solo i due frame d'attesa di ogni personaggio (con la sua arma iniziale), per i menu:
+ * la serie completa si registra quando si gioca con quel personaggio (registerKnightSprites).
+ */
+export function registerCharacterPreviews(spriteManager: SpriteManager): void {
+  for (const [characterId, characterVisual] of Object.entries(CHARACTER_VISUALS) as Array<[CharacterId, CharacterVisual]>) {
+    const weaponId = CHARACTER_CONFIG[characterId].startingWeaponId;
+    const colors = { ...KNIGHT_COLORS, ...characterVisual.colors };
+    activeVisual = WEAPON_VISUALS[weaponId];
+    activeBodyRows = characterBodyRows(characterVisual);
+    const frames = [composeKnightFrame(LEGS_STAND, 0), composeKnightFrame(LEGS_STAND, 1)];
+    activeVisual = null;
+    activeBodyRows = BODY_ROWS;
+    frames.forEach((pixelRows, index) => {
+      spriteManager.registerSprite(getCharacterPreviewFrameId(characterId, index === 0 ? 1 : 2), pixelRows, colors, KNIGHT_ANCHOR_X);
+    });
+  }
+}
+
+/**
+ * Registra tutti gli sprite di un personaggio (il cavaliere se omesso) nello SpriteManager: una serie completa
+ * per ogni arma, ognuna anche nella versione con il fuoco, più le icone delle armi.
+ * Id di un frame: frame + "Crouch" (attacco da accovacciati) + suffisso dell'arma ("" per la spada)
+ * + suffisso del personaggio ("" per il cavaliere) + "Fire".
+ */
+export function registerKnightSprites(spriteManager: SpriteManager, characterId: CharacterId = DEFAULT_CHARACTER_ID): void {
+  const character = CHARACTER_CONFIG[characterId];
+  const characterVisual = CHARACTER_VISUALS[characterId];
+  const colors = { ...KNIGHT_COLORS, ...characterVisual.colors };
+  const fireColors = { ...colors, b: KNIGHT_FIRE_COLORS.b!, v: KNIGHT_FIRE_COLORS.v!, a: KNIGHT_FIRE_COLORS.a!, c: KNIGHT_FIRE_COLORS.c! };
   for (const [weaponId, visual] of Object.entries(WEAPON_VISUALS) as Array<[WeaponId, WeaponVisual]>) {
     const weapon = WEAPON_CONFIG[weaponId];
     activeVisual = visual;
+    activeBodyRows = characterBodyRows(characterVisual);
     const frames = composeKnightFrames(visual.attackPoses);
     activeVisual = null;
+    activeBodyRows = BODY_ROWS;
     for (const [spriteId, pixelRows] of Object.entries(frames)) {
-      const weaponSpriteId = `${spriteId}${weapon.spriteSuffix}`;
-      spriteManager.registerSprite(weaponSpriteId, pixelRows, KNIGHT_COLORS, KNIGHT_ANCHOR_X);
-      spriteManager.registerSprite(`${weaponSpriteId}${KNIGHT_FIRE_SUFFIX}`, pixelRows, KNIGHT_FIRE_COLORS, KNIGHT_ANCHOR_X);
+      const weaponSpriteId = `${spriteId}${weapon.spriteSuffix}${character.spriteSuffix}`;
+      spriteManager.registerSprite(weaponSpriteId, pixelRows, colors, KNIGHT_ANCHOR_X);
+      spriteManager.registerSprite(`${weaponSpriteId}${KNIGHT_FIRE_SUFFIX}`, pixelRows, fireColors, KNIGHT_ANCHOR_X);
     }
     spriteManager.registerSprite(weapon.iconSpriteId, composeWeaponIcon(visual), KNIGHT_COLORS);
   }

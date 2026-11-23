@@ -10,6 +10,9 @@ import type { Renderer } from "../rendering/Renderer";
 import type { GameObject } from "../entities/GameObject";
 import type { HazardDefinition, LevelDefinition, MovingPlatformDefinition, PlatformDefinition } from "../types/LevelTypes";
 
+/** Larghezza (px) del cancello che chiude l'arena del boss. */
+export const ARENA_GATE_WIDTH = 16;
+
 /** Una piattaforma mobile: la definizione (posizione di partenza) e la piattaforma che si muove davvero. */
 interface MovingPlatformState {
   definition: MovingPlatformDefinition;
@@ -70,7 +73,7 @@ export class LevelManager {
       return;
     }
     this.isArenaLocked = true;
-    this.activePlatforms = [...this.activePlatforms, { x: arenaStartX, y: 0, width: 16, height: 200 }];
+    this.activePlatforms = [...this.activePlatforms, { x: arenaStartX, y: 0, width: ARENA_GATE_WIDTH, height: 200 }];
   }
 
   public get level(): LevelDefinition {
@@ -129,7 +132,11 @@ export class LevelManager {
     if (definition === undefined) {
       throw new Error(`Boss non presente in BOSS_CATALOG: ${bossId}`);
     }
-    return new Boss(definition, spawn.x, spawn.y, Math.random, difficulty);
+    const boss = new Boss(definition, spawn.x, spawn.y, Math.random, difficulty);
+    // il boss resta oltre il cancello dell'arena: non può uscirne inseguendo il giocatore
+    const arenaStartX = this.level.bossArenaStartX;
+    boss.arenaMinX = arenaStartX === undefined ? null : arenaStartX + ARENA_GATE_WIDTH;
+    return boss;
   }
 
   /** Crea i nemici del livello corrente secondo le posizioni di generazione. */

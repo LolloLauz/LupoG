@@ -1,15 +1,18 @@
+import { DEFAULT_CHARACTER_ID, isCharacterId } from "../config/characterConfig";
 import { DEFAULT_DIFFICULTY, DIFFICULTY_CONFIG, type DifficultyId } from "../config/gameConfig";
 import { INVENTORY_CONFIG } from "../config/inventoryConfig";
 import { DEFAULT_WEAPON_ID, isWeaponId } from "../config/weaponConfig";
-import type { WeaponId } from "../types/EntityTypes";
+import type { CharacterId, WeaponId } from "../types/EntityTypes";
 import type { StorageLike } from "./HighScoreManager";
 
 const STORAGE_KEY = "ironAndShadow.progress";
 
-/** Dati salvati: livello più avanzato raggiunto, difficoltà scelta, armi nella borsa e arma in mano. */
+/** Dati salvati: livello più avanzato raggiunto, difficoltà e personaggio scelti, armi nella borsa e arma in mano. */
 interface StoredProgress {
   unlockedLevelId: number;
   difficulty: DifficultyId;
+  /** Personaggio scelto (Fase 4). */
+  characterId: CharacterId;
   equippedWeaponId: WeaponId;
   /** Armi nella borsa (senza doppioni, l'arma in mano compresa). Le pozioni non si salvano. */
   bagWeaponIds: WeaponId[];
@@ -17,10 +20,10 @@ interface StoredProgress {
 
 /**
  * Progressi e impostazioni salvati nel browser (localStorage), come il record:
- * il livello più avanzato raggiunto (per la selezione dei livelli), la difficoltà scelta, le armi nella borsa e
- * quella in mano.
+ * il livello più avanzato raggiunto (per la selezione dei livelli), la difficoltà e il personaggio scelti,
+ * le armi nella borsa e quella in mano.
  * Se l'archivio non c'è, è bloccato o contiene dati non validi, si riparte dal livello 1 a
- * difficoltà normale con la spada: il gioco funziona comunque.
+ * difficoltà normale, con il cavaliere e la spada: il gioco funziona comunque.
  */
 export class ProgressManager {
   private progress: StoredProgress;
@@ -36,6 +39,17 @@ export class ProgressManager {
 
   public get difficulty(): DifficultyId {
     return this.progress.difficulty;
+  }
+
+  public get characterId(): CharacterId {
+    return this.progress.characterId;
+  }
+
+  public setCharacter(characterId: CharacterId): void {
+    if (characterId !== this.progress.characterId) {
+      this.progress = { ...this.progress, characterId };
+      this.save();
+    }
   }
 
   public get equippedWeaponId(): WeaponId {
@@ -85,8 +99,18 @@ export class ProgressManager {
     this.save();
   }
 
+  /** Cancella tutti i progressi: livello 1, difficoltà normale, cavaliere, la sola spada (tasto "Cancella dati"). */
+  public reset(): void {
+    this.progress = ProgressManager.createDefaultProgress();
+    this.save();
+  }
+
+  private static createDefaultProgress(): StoredProgress {
+    return { unlockedLevelId: 1, difficulty: DEFAULT_DIFFICULTY, characterId: DEFAULT_CHARACTER_ID, equippedWeaponId: DEFAULT_WEAPON_ID, bagWeaponIds: [DEFAULT_WEAPON_ID] };
+  }
+
   private load(): StoredProgress {
-    const fallback: StoredProgress = { unlockedLevelId: 1, difficulty: DEFAULT_DIFFICULTY, equippedWeaponId: DEFAULT_WEAPON_ID, bagWeaponIds: [DEFAULT_WEAPON_ID] };
+    const fallback = ProgressManager.createDefaultProgress();
     try {
       const storedText = this.storage?.getItem(STORAGE_KEY) ?? null;
       if (storedText === null) {
@@ -104,7 +128,9 @@ export class ProgressManager {
       const equippedWeaponId = isWeaponId(record.equippedWeaponId) ? record.equippedWeaponId : DEFAULT_WEAPON_ID;
       // armi della borsa: solo id validi; un salvataggio senza borsa (2.0.0, Fase 1) ha solo l'arma in mano
       const storedBag = Array.isArray(record.bagWeaponIds) ? record.bagWeaponIds.filter(isWeaponId) : [];
-      return { unlockedLevelId: levelId, difficulty, equippedWeaponId, bagWeaponIds: ProgressManager.normalizeBag(storedBag, equippedWeaponId) };
+      // un personaggio sconosciuto (o un salvataggio di prima della Fase 4) torna al cavaliere
+      const characterId = isCharacterId(record.characterId) ? record.characterId : DEFAULT_CHARACTER_ID;
+      return { unlockedLevelId: levelId, difficulty, characterId, equippedWeaponId, bagWeaponIds: ProgressManager.normalizeBag(storedBag, equippedWeaponId) };
     } catch {
       return fallback;
     }

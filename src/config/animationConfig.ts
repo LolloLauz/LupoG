@@ -17,6 +17,10 @@ const SLASH_DOWN_FRAMES = ["knightAttack1A", "knightAttack1B", "knightAttack1C"]
 const SLASH_UP_FRAMES = ["knightAttack2A", "knightAttack2B", "knightAttack2C"];
 const FINISHER_FRAMES = ["knightAttack3A", "knightAttack3B", "knightAttack3C", "knightAttack3D"];
 const HEAVY_FRAMES = ["knightHeavyA", "knightHeavyB", "knightHeavyC", "knightHeavyD"];
+/** Armi a distanza: mira e rinculo (arco, balestra), braccio indietro e avanti (lanci). */
+const AIM_FRAMES = ["knightAimA", "knightAimB"];
+const THROW_FRAMES = ["knightThrowA", "knightThrowB"];
+
 /**
  * Colpo in picchiata: l'arma si alza per un attimo (1 frame su 15, circa 67 ms), poi punta in basso
  * per tutta la discesa (la durata dell'attacco è quella massima: di solito si tocca terra prima).
@@ -94,6 +98,14 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
     spearPlunge: PLUNGE_FRAMES,
     axePlunge: PLUNGE_FRAMES,
     macePlunge: PLUNGE_FRAMES,
+    // Fase 2: armi a distanza (mira e rinculo, lancio da dietro la testa)
+    bowShot: AIM_FRAMES,
+    bowCharge: ["knightAimA"],
+    bowChargedShot: ["knightAimB"],
+    crossbowShot: AIM_FRAMES,
+    knifeThrow: THROW_FRAMES,
+    knifeThrowLow: THROW_FRAMES,
+    javelinThrow: THROW_FRAMES,
   }),
 };
 

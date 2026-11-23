@@ -11,10 +11,11 @@ export interface HUDData {
   collectibles: number;
   levelNumber: number;
   /**
-   * Posti della borsa, in ordine (null = vuoto): icona, numero di pozioni (0 per le armi) e se è
-   * l'arma in mano. Disegnati sotto il pannello, a destra, con il tasto numerico di ognuno.
+   * Posti della borsa, in ordine (null = vuoto): icona (16 px le armi, 8 px le pozioni), quantità
+   * (pozioni o munizioni; null per le armi senza munizioni) e se è l'arma in mano. Disegnati sotto il
+   * pannello, a destra, con il tasto numerico di ognuno.
    */
-  bag: Array<{ iconSpriteId: string; count: number; isEquipped: boolean } | null>;
+  bag: Array<{ iconSpriteId: string; iconSize: 8 | 16; count: number | null; isEquipped: boolean } | null>;
   /** Power-up attivi: icona, colore e frazione di tempo che resta (1 = appena preso). */
   powerUps: Array<{ iconSpriteId: string; color: string; remainingFraction: number }>;
   boss: {
@@ -144,12 +145,13 @@ export class HUDManager {
       renderer.fillRect(slotX + 1, geometry.y + 1, geometry.size - 2, geometry.size - 2, PALETTE.black);
       renderer.strokeRect(slotX, geometry.y, geometry.size, geometry.size, slot?.isEquipped === true ? PALETTE.goldLight : PALETTE.gray);
       if (slot !== null) {
-        const isPotion = slot.count > 0;
-        // icone delle armi 16x16, pozione 8x8 (centrata)
-        const iconOffset = isPotion ? 6 : 2;
+        // icone centrate nel riquadro (armi 16x16, pozione 8x8)
+        const iconOffset = (geometry.size - slot.iconSize) / 2;
         spriteManager.drawSprite(renderer, slot.iconSpriteId, slotX + iconOffset, geometry.y + iconOffset, false);
-        if (isPotion) {
-          renderer.drawText(String(slot.count), slotX + geometry.size - 2, geometry.y + geometry.size - 8, PALETTE.white, { align: "right", shadowColor: PALETTE.black });
+        if (slot.count !== null) {
+          // munizioni finite in rosso
+          const countColor = slot.count === 0 ? PALETTE.red : PALETTE.white;
+          renderer.drawText(String(slot.count), slotX + geometry.size - 2, geometry.y + geometry.size - 8, countColor, { align: "right", shadowColor: PALETTE.black });
         }
       }
       renderer.drawText(String(slotIndex + 1), slotX + 2, geometry.y + 2, slot?.isEquipped === true ? PALETTE.goldLight : PALETTE.stonePale, { shadowColor: PALETTE.black });

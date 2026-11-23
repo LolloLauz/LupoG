@@ -31,7 +31,8 @@ export type ItemTypeId =
   | "powerSpeed"
   | "powerShield"
   | "powerFire"
-  | "powerRegeneration";
+  | "powerRegeneration"
+  | "quiver";
 
 /**
  * Piattaforma del livello. Se oneWay è true si può attraversare dal basso

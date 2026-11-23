@@ -102,6 +102,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "soldier", position: { x: 1420, y: 176 } },
     ],
     items: [
+      { type: "quiver", position: { x: 620, y: 192 } },
       { type: "healthPotion", position: { x: 440, y: 192 } },
       { type: "scoreCoin", position: { x: 235, y: 120 } },
       { type: "collectible", position: { x: 728, y: 120 } },
@@ -156,6 +157,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "goblin", position: { x: 1680, y: 184 } },
     ],
     items: [
+      { type: "quiver", position: { x: 1000, y: 192 } },
       { type: "scoreCoin", position: { x: 170, y: 156 } },
       { type: "healthPotion", position: { x: 500, y: 192 } },
       { type: "scoreCoin", position: { x: 780, y: 116 } },
@@ -167,6 +169,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
     ],
     completion: { kind: "reachExit", exitX: 1750 },
     hasBoss: false,
+    chests: [{ position: { x: 110, y: 188 }, weaponId: "bow" }],
   },
   {
     id: 3,
@@ -197,9 +200,10 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "skeleton", position: { x: 700, y: 176 } },
       { type: "soldier", position: { x: 820, y: 176 } },
       { type: "goblin", position: { x: 1040, y: 184 } },
-      { type: "skeleton", position: { x: 1060, y: 176 } },
+      { type: "skeleton", position: { x: 1060, y: 176 }, elite: true, weaponDrop: "throwingKnives" },
     ],
     items: [
+      { type: "quiver", position: { x: 1150, y: 192 } },
       { type: "healthPotion", position: { x: 440, y: 192 } },
       { type: "scoreCoin", position: { x: 225, y: 120 } },
       { type: "scoreCoin", position: { x: 580, y: 120 } },
@@ -269,6 +273,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "bat", position: { x: 1660, y: 120 } },
     ],
     items: [
+      { type: "quiver", position: { x: 1580, y: 192 } },
       { type: "scoreCoin", position: { x: 166, y: 156 } },
       { type: "healthPotion", position: { x: 260, y: 192 } },
       { type: "scoreCoin", position: { x: 512, y: 120 } },
@@ -279,6 +284,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "powerFire", position: { x: 452, y: 156 } },
       { type: "powerRegeneration", position: { x: 1100, y: 192 } },
     ],
+    chests: [{ position: { x: 1020, y: 188 }, weaponId: "crossbow" }],
     completion: { kind: "defeatBoss" },
     hasBoss: true,
     bossId: "swampWitch",
@@ -325,9 +331,10 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "bat", position: { x: 1200, y: 100 } },
       { type: "skeletonArcher", position: { x: 1260, y: 176 } },
       { type: "wolf", position: { x: 1360, y: 188 } },
-      { type: "goblin", position: { x: 1560, y: 184 } },
+      { type: "goblin", position: { x: 1560, y: 184 }, elite: true, weaponDrop: "javelin" },
     ],
     items: [
+      { type: "quiver", position: { x: 1480, y: 192 } },
       { type: "healthPotion", position: { x: 100, y: 192 } },
       { type: "collectible", position: { x: 276, y: 116 } },
       { type: "scoreCoin", position: { x: 796, y: 156 } },
@@ -396,6 +403,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "wolf", position: { x: 1840, y: 188 } },
     ],
     items: [
+      { type: "quiver", position: { x: 1720, y: 192 } },
       { type: "healthPotion", position: { x: 120, y: 192 } },
       { type: "collectible", position: { x: 236, y: 120 } },
       { type: "scoreCoin", position: { x: 912, y: 156 } },
@@ -407,6 +415,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "powerShield", position: { x: 1380, y: 152 } },
       { type: "powerBerserk", position: { x: 1260, y: 192 } },
     ],
+    chests: [{ position: { x: 1660, y: 188 }, weaponId: "javelin" }],
     completion: { kind: "defeatBoss" },
     hasBoss: true,
     bossId: "shadowLord",

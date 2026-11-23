@@ -68,6 +68,43 @@ const MACE_ATTACKS: Record<string, AttackDefinition> = {
   macePlunge: { id: "macePlunge", damage: 30, ...PLUNGE_TIMING, hitbox: PLUNGE_HITBOX, animation: "macePlunge", plunge: PLUNGE, crushesArmor: true },
 };
 
+// --- armi a distanza (Fase 2): gli attacchi lanciano un proiettile e non hanno area d'urto ---
+/** Area d'urto nulla: le armi a distanza feriscono solo con i proiettili. */
+const NO_HITBOX = { x: 0, y: 0, width: 0, height: 0 } as const;
+
+/** Arco: Spazio = tiro rapido; J tenuto premuto = tiro caricato (danno e velocità secondo la carica). Frecce infinite. */
+const BOW_ATTACKS: Record<string, AttackDefinition> = {
+  bowShot: { id: "bowShot", damage: 8, durationMs: 300, hitStartMs: 0, hitEndMs: 0, cooldownMs: 150, hitbox: NO_HITBOX, animation: "bowShot", projectile: { projectileId: "playerArrow", launchAtMs: 150, originX: 20, originY: 9, aimY: 0 } },
+  bowCharge: {
+    id: "bowCharge",
+    damage: 10,
+    durationMs: 2500,
+    hitStartMs: 0,
+    hitEndMs: 0,
+    cooldownMs: 0,
+    hitbox: NO_HITBOX,
+    animation: "bowCharge",
+    charge: { maxChargeMs: 900, releaseAttackId: "bowChargedShot", minDamage: 10, maxDamage: 34, minSpeedMultiplier: 1, maxSpeedMultiplier: 1.6 },
+  },
+  bowChargedShot: { id: "bowChargedShot", damage: 10, durationMs: 260, hitStartMs: 0, hitEndMs: 0, cooldownMs: 250, hitbox: NO_HITBOX, animation: "bowChargedShot", projectile: { projectileId: "playerArrow", launchAtMs: 0, originX: 20, originY: 9, aimY: 0 } },
+};
+
+/** Balestra: un dardo pesante e veloce, poi una ricarica lunga (il tempo di recupero). */
+const CROSSBOW_ATTACKS: Record<string, AttackDefinition> = {
+  crossbowShot: { id: "crossbowShot", damage: 40, durationMs: 320, hitStartMs: 0, hitEndMs: 0, cooldownMs: 900, hitbox: NO_HITBOX, animation: "crossbowShot", projectile: { projectileId: "crossbowBolt", launchAtMs: 80, originX: 22, originY: 10, aimY: 0 } },
+};
+
+/** Coltelli da lancio: tiri rapidi ad arco; J li lancia più in basso. Si recuperano da terra. */
+const KNIFE_ATTACKS: Record<string, AttackDefinition> = {
+  knifeThrow: { id: "knifeThrow", damage: 12, durationMs: 220, hitStartMs: 0, hitEndMs: 0, cooldownMs: 80, hitbox: NO_HITBOX, animation: "knifeThrow", projectile: { projectileId: "throwingKnife", launchAtMs: 110, originX: 16, originY: 6, aimY: -0.12 } },
+  knifeThrowLow: { id: "knifeThrowLow", damage: 12, durationMs: 220, hitStartMs: 0, hitEndMs: 0, cooldownMs: 80, hitbox: NO_HITBOX, animation: "knifeThrowLow", projectile: { projectileId: "throwingKnife", launchAtMs: 110, originX: 16, originY: 12, aimY: 0.12 } },
+};
+
+/** Giavellotto: un lancio potente ad arco che trafigge più nemici; ogni giavellotto lanciato si perde. */
+const JAVELIN_ATTACKS: Record<string, AttackDefinition> = {
+  javelinThrow: { id: "javelinThrow", damage: 50, durationMs: 450, hitStartMs: 0, hitEndMs: 0, cooldownMs: 400, hitbox: NO_HITBOX, animation: "javelinThrow", projectile: { projectileId: "javelin", launchAtMs: 220, originX: 18, originY: 4, aimY: -0.2 } },
+};
+
 /**
  * Attacchi in aria (Fase 3): Spazio fa una combo di due colpi (i primi due leggeri dell'arma),
  * J il colpo in picchiata.
@@ -199,6 +236,52 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: { attack: "maceSwing1", heavyAttack: "maceHeavy" },
     air: airSet("MAZZA", "maceSwing1", "maceSwing2", "macePlunge"),
     movementSpeedMultiplier: 0.9,
+  },
+  // armi a distanza (Fase 2): niente combo, in aria si tira come a terra
+  bow: {
+    id: "bow",
+    name: "Arco",
+    spriteSuffix: "Bow",
+    iconSpriteId: "weaponIconBow",
+    attacks: BOW_ATTACKS,
+    combos: [],
+    defaultAttackByInput: { attack: "bowShot", heavyAttack: "bowCharge" },
+    movementSpeedMultiplier: 1,
+    // frecce e dardi non si recuperano: si ricaricano con la faretra (oggetto dei livelli) o riprendendo l'arma
+    ammo: { max: 12, isLostWhenEmpty: false },
+  },
+  crossbow: {
+    id: "crossbow",
+    name: "Balestra",
+    spriteSuffix: "Crossbow",
+    iconSpriteId: "weaponIconCrossbow",
+    attacks: CROSSBOW_ATTACKS,
+    combos: [],
+    defaultAttackByInput: { attack: "crossbowShot", heavyAttack: "crossbowShot" },
+    movementSpeedMultiplier: 0.9,
+    ammo: { max: 6, isLostWhenEmpty: false },
+  },
+  throwingKnives: {
+    id: "throwingKnives",
+    name: "Coltelli",
+    spriteSuffix: "Knives",
+    iconSpriteId: "weaponIconKnives",
+    attacks: KNIFE_ATTACKS,
+    combos: [],
+    defaultAttackByInput: { attack: "knifeThrow", heavyAttack: "knifeThrowLow" },
+    movementSpeedMultiplier: 1.1,
+    ammo: { max: 6, isLostWhenEmpty: false },
+  },
+  javelin: {
+    id: "javelin",
+    name: "Giavellotto",
+    spriteSuffix: "Javelin",
+    iconSpriteId: "weaponIconJavelin",
+    attacks: JAVELIN_ATTACKS,
+    combos: [],
+    defaultAttackByInput: { attack: "javelinThrow", heavyAttack: "javelinThrow" },
+    movementSpeedMultiplier: 0.95,
+    ammo: { max: 3, isLostWhenEmpty: true },
   },
 };
 

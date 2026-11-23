@@ -1,7 +1,7 @@
 import type { ProjectileDefinition, ProjectileTypeId } from "../types/EntityTypes";
 
 /**
- * Catalogo dei proiettili. Il danno lo decide chi lancia (nemico o boss); qui ci sono
+ * Catalogo dei proiettili. Il danno lo decide chi lancia (nemico, boss o giocatore); qui ci sono
  * velocità, traiettoria, durata, dimensioni e aspetto. Gli sprite sono in projectileSprites.ts.
  * Per aggiungerne uno: nuovo id in ProjectileTypeId (EntityTypes.ts), voce qui e sprite.
  */
@@ -38,5 +38,52 @@ export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> =
     isDeflectable: false,
     frameIds: ["projectileFire1", "projectileFire2"],
     frameDurationMs: 80,
+  },
+  // --- proiettili del giocatore (Fase 2: armi a distanza) ---
+  playerArrow: {
+    id: "playerArrow",
+    name: "Freccia",
+    speed: 220,
+    gravityScale: 0.12,
+    lifetimeMs: 1600,
+    hitbox: { width: 10, height: 3 },
+    isDeflectable: false,
+    frameIds: ["projectilePlayerArrow"],
+    frameDurationMs: 100,
+  },
+  crossbowBolt: {
+    id: "crossbowBolt",
+    name: "Dardo di balestra",
+    speed: 300,
+    gravityScale: 0,
+    lifetimeMs: 1200,
+    hitbox: { width: 10, height: 4 },
+    isDeflectable: false,
+    frameIds: ["projectileCrossbowBolt"],
+    frameDurationMs: 100,
+  },
+  throwingKnife: {
+    id: "throwingKnife",
+    name: "Coltello",
+    speed: 230,
+    gravityScale: 0.25,
+    lifetimeMs: 1400,
+    hitbox: { width: 6, height: 6 },
+    isDeflectable: false,
+    frameIds: ["projectileKnife1", "projectileKnife2", "projectileKnife3", "projectileKnife4"],
+    frameDurationMs: 50,
+    recoveredAsAmmoOf: "throwingKnives",
+  },
+  javelin: {
+    id: "javelin",
+    name: "Giavellotto",
+    speed: 210,
+    gravityScale: 0.35,
+    lifetimeMs: 2000,
+    hitbox: { width: 16, height: 4 },
+    isDeflectable: false,
+    frameIds: ["projectileJavelin"],
+    frameDurationMs: 100,
+    isPiercing: true,
   },
 };

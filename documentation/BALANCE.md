@@ -63,6 +63,30 @@ prima le pozioni prese a salute piena andavano sprecate e ora si conservano per 
 (`maxPotionsPerSlot`, `maxPotionSlots`): con 1 pozione il bot medio torna vicino alla 2.0. Il rusher (che non schiva) beneficia
 più del medio delle pozioni conservate. **Il bot non usa le armi nuove**, e le statistiche delle armi non sono state provate da persone.
 
+**Fase 2 (due nemici d'élite in più, livelli 3 e 5).** Con lo scheletro d'élite del livello 3 e il goblin d'élite del livello 5 (che lasciano
+coltelli e giavellotto) il bot medio scende da 88% a **82%**; il rusher resta al 100%. Misurato dopo la Fase 4 togliendo e rimettendo
+le due élite (nella Fase 2 la misura non era stata rifatta). Resta sopra la 2.0 (circa 75%); non è stato cambiato niente.
+
+### Personaggi (Fase 4)
+
+`npm run balance -- --characters`: partite complete (60 ripetizioni) con le statistiche di ogni personaggio. **Il bot usa sempre la spada**,
+quindi misura salute, velocità, danno, difesa, schivata e cura, non l'arma iniziale (il Ranger, nel gioco, combatte da lontano con l'arco).
+
+| Personaggio | bot medio | rusher | morti medie (medio) |
+|---|---|---|---|
+| Cavaliere | 82% | 100% | 1,18 |
+| Ranger | 87% | 65% | 1,02 |
+| Berserker | 93% | 100% | 0,68 |
+| Paladino | 93% | 100% | 0,77 |
+
+- **Paladino**: con danno subito ×0,85 vinceva solo il 65% (bot medio, misura rapida): moriva quasi sempre contro il boss finale, perché a
+  72 px/s resta più a lungo sotto i suoi attacchi e la cura lenta non parte mai durante il combattimento. Con ×0,75 torna in linea con gli altri e
+  resta il più lento. Con 76 px/s e ×0,85 il risultato era 85%.
+- **Ranger**: con 75 HP chi non schiva (rusher) perde spesso, soprattutto nel livello 3; chi schiva va meglio del cavaliere (schivata più
+  lunga e più frequente). È il comportamento voluto: fragile, ma agile.
+- **Berserker**: più salute e più danno compensano la schivata rara. Il bot medio schiva poco, quindi la penalità pesa meno che per una persona.
+- Sono misure di un bot, da confermare giocando.
+
 ## Versione 2.0 con i power-up (2.0.0-alpha.5)
 
 Con i power-up nei livelli: partita completa vinta dal bot "medio" circa **75%** (era 73%), dal rusher circa 32% (invariato); boss da solo:

@@ -19,6 +19,11 @@ export interface ItemDefinition {
    * con il tasto numerico del suo posto (vedi Inventory). healAmount vale quando lo si beve.
    */
   storedInBag?: boolean;
+  /**
+   * Faretra: toccandola tornano piene le munizioni di tutte le armi della borsa che ne hanno (arco, balestra,
+   * coltelli, giavellotto). Se non c'è niente da ricaricare resta a terra.
+   */
+  refillsAmmo?: boolean;
 }
 
 export const ITEM_SIZE = 8;
@@ -93,5 +98,14 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     scoreBonus: 25,
     isCollectible: false,
     powerUpId: "regeneration",
+  },
+  quiver: {
+    id: "quiver",
+    name: "Faretra",
+    spriteId: "itemQuiver",
+    healAmount: 0,
+    scoreBonus: 0,
+    isCollectible: false,
+    refillsAmmo: true,
   },
 };

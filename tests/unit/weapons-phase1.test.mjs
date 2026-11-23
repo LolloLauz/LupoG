@@ -22,8 +22,8 @@ const reach=a=>a.hitbox.x+a.hitbox.width;
 const lights=w=>Object.values(w.attacks).filter(a=>a.id!==w.defaultAttackByInput.heavyAttack);
 
 // --- le armi
-t("cinque armi: spada, pugnale, lancia, ascia, mazza",['sword','dagger','spear','axe','mace'].every(id=>W[id]?.id===id)&&Object.keys(W).length===5);
-t("ogni arma ha un suffisso di sprite diverso (la spada nessuno) e un'icona",new Set(Object.values(W).map(w=>w.spriteSuffix)).size===5&&W.sword.spriteSuffix===''&&Object.values(W).every(w=>w.iconSpriteId.startsWith('weaponIcon')));
+t("cinque armi corpo a corpo: spada, pugnale, lancia, ascia, mazza",['sword','dagger','spear','axe','mace'].every(id=>W[id]?.id===id));
+t("ogni arma ha un suffisso di sprite diverso (la spada nessuno) e un'icona",new Set(Object.values(W).map(w=>w.spriteSuffix)).size===Object.keys(W).length&&W.sword.spriteSuffix===''&&Object.values(W).every(w=>w.iconSpriteId.startsWith('weaponIcon')));
 t("pugnale: i colpi leggeri sono più rapidi e più deboli del primo colpo di spada",[W.dagger.attacks.daggerStab1,W.dagger.attacks.daggerStab2].every(a=>a.durationMs<sw.swordLight1.durationMs&&a.damage<sw.swordLight1.damage));
 t("pugnale: combo di quattro colpi e passo più svelto",W.dagger.combos[0].inputSequence.length===4&&W.dagger.movementSpeedMultiplier>1);
 t("lancia: gli affondi arrivano più lontano di qualsiasi colpo di spada",['spearThrust1','spearThrust2'].every(id=>Object.values(sw).every(s=>reach(W.spear.attacks[id])>reach(s))));
@@ -89,7 +89,7 @@ const settle=e=>{for(let i=0;i<10;i++)e.update(1/60,cs,P,1024);return e};
  const thrust=sm.sprites.get('knightSpearThrustBSpear');const lastCol=Math.max(...thrust.rows.map(r=>r.replace(/\.+$/,'').length-1));
  t("l'affondo della lancia si vede lontano quanto colpisce",thrust.width===58&&lastCol-7>=reach(W.spear.attacks.spearThrust1),`ultima colonna ${lastCol}`);
  const idle=id=>sm.sprites.get(id).rows.join('');
- t("con armi diverse il cavaliere a riposo è disegnato diverso",new Set(Object.values(W).map(w=>idle('knightIdle1'+w.spriteSuffix))).size===5);
+ t("con armi diverse il cavaliere a riposo è disegnato diverso",new Set(Object.values(W).map(w=>idle('knightIdle1'+w.spriteSuffix))).size===Object.keys(W).length);
  const p=new Player(100,176);p.equipWeapon(W.mace);
  t("il giocatore disegna i frame dell'arma in mano",p.getRenderedFrameId()==='knightIdle1Mace'&&sm.sprites.has(p.getRenderedFrameId()));}
 
@@ -97,7 +97,7 @@ const settle=e=>{for(let i=0;i<10;i++)e.update(1/60,cs,P,1024);return e};
 {const drawn=[];const renderer=new Proxy({width:320,height:240},{get:(o,k)=>k in o?o[k]:()=>{}});
  const sm={drawSprite:(r,id,x,y)=>drawn.push({id,x,y}),drawSpriteAligned(){}};
  const texts=[];const renderer2=new Proxy({width:320,height:240},{get:(o,k)=>k in o?o[k]:k==='drawText'?(text,x,y)=>texts.push({text,x,y}):()=>{}});
- const bag=[{iconSpriteId:'weaponIconSword',count:0,isEquipped:false},{iconSpriteId:'weaponIconAxe',count:0,isEquipped:true},{iconSpriteId:'itemPotion',count:2,isEquipped:false},null];
+ const bag=[{iconSpriteId:'weaponIconSword',iconSize:16,count:null,isEquipped:false},{iconSpriteId:'weaponIconAxe',iconSize:16,count:null,isEquipped:true},{iconSpriteId:'itemPotion',iconSize:8,count:2,isEquipped:false},null];
  new HUDManager().render(renderer2,sm,{health:100,maxHealth:100,lives:3,score:0,collectibles:0,levelNumber:1,bag,powerUps:[],boss:null},0);
  const slotX=i=>HUDManager.getBagSlotX(i,4,320);
  t("l'HUD disegna le armi della borsa nei loro riquadri, sotto il pannello",drawn.some(d=>d.id==='weaponIconAxe'&&d.x===slotX(1)+2&&d.y===BAG_SLOT_GEOMETRY.y+2)&&BAG_SLOT_GEOMETRY.y>=24);
@@ -120,8 +120,8 @@ const settle=e=>{for(let i=0;i<10;i++)e.update(1/60,cs,P,1024);return e};
 
 // --- motore
 {const src=readFileSync(join(projectRoot,'src/core/GameEngine.ts'),'utf8');
- t("i forzieri chiusi sono bersagli degli attacchi",src.includes('...closedChests];')&&src.includes('hit.target instanceof Chest'));
- t("con E sopra un'arma la si mette nella borsa e la si impugna (salvando i progressi)",/wasPressed\("pickUp"\)/.test(src)&&/inventory\.addWeapon\(pickup\.weaponId\)[\s\S]{0,700}this\.player\.equipWeapon\(WEAPON_CONFIG\[pickup\.weaponId\]\);\s*this\.saveBagWeapons\(\)/.test(src));
+ t("i forzieri chiusi sono bersagli degli attacchi",src.includes('...closedChests];')&&src.includes('target instanceof Chest'));
+ t("con E sopra un'arma la si mette nella borsa e la si impugna (salvando i progressi)",/wasPressed\("pickUp"\)/.test(src)&&/inventory\.addWeapon\(pickup\.weaponId, pickup\.ammo\)[\s\S]{0,1600}this\.player\.equipWeapon\(WEAPON_CONFIG\[pickup\.weaponId\], this\.inventory\.equippedAmmo\);\s*this\.saveBagWeapons\(\)/.test(src));
  t("i nemici d'élite lasciano la loro arma morendo",/enemy\.weaponDrop !== null\)[\s\S]{0,80}this\.dropWeapon\(enemy\.weaponDrop/.test(src));
  t("il trofeo del boss vale per il livello successivo e si azzera a ogni nuova partita",src.includes('this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward }')&&/private startNewGame[\s\S]{0,700}?this\.weaponReward = null;\n    this\.startLevel/.test(src)&&src.includes('TROFEO: '));}
 }

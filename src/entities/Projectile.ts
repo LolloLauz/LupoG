@@ -1,14 +1,19 @@
 import { GAME_CONFIG } from "../config/gameConfig";
-import type { ProjectileDefinition, ProjectileLaunch } from "../types/EntityTypes";
+import type { Damageable, HitProperties, ProjectileDefinition, ProjectileLaunch } from "../types/EntityTypes";
 import { GameObject } from "./GameObject";
 
 /**
- * Proiettile nemico (freccia, dardo magico, palla di fuoco). Si muove in linea retta (o ad arco se
- * gravityScale > 0) finché non colpisce il giocatore, un muro, esce dalla mappa o scade.
- * Le regole di contatto sono in ProjectileSystem.
+ * Proiettile (freccia, dardo, palla di fuoco; del giocatore: freccia, dardo di balestra, coltello,
+ * giavellotto). Si muove in linea retta (o ad arco se gravityScale > 0) finché non colpisce, tocca un
+ * muro, esce dalla mappa o scade. Le regole di contatto sono in ProjectileSystem.
  */
 export class Projectile extends GameObject {
   public readonly damage: number;
+  /** Chi l'ha lanciato: decide chi può ferire. */
+  public readonly owner: "enemy" | "player";
+  public readonly hit: HitProperties;
+  /** Bersagli già colpiti (un proiettile che trafigge colpisce ognuno una volta sola). */
+  public readonly targetsHit = new Set<Damageable>();
   private elapsedMs = 0;
   private isFinished = false;
 
@@ -22,10 +27,13 @@ export class Projectile extends GameObject {
     const length = Math.hypot(launch.direction.x, launch.direction.y);
     const directionX = length > 0 ? launch.direction.x / length : 1;
     const directionY = length > 0 ? launch.direction.y / length : 0;
-    this.velocityX = directionX * definition.speed;
-    this.velocityY = directionY * definition.speed;
+    const speed = definition.speed * (launch.speedMultiplier ?? 1);
+    this.velocityX = directionX * speed;
+    this.velocityY = directionY * speed;
     this.facingDirection = directionX < 0 ? "left" : "right";
     this.damage = launch.damage;
+    this.owner = launch.owner ?? "enemy";
+    this.hit = launch.hit ?? {};
   }
 
   public get centerX(): number {
@@ -38,7 +46,12 @@ export class Projectile extends GameObject {
 
   /** Vero quando il proiettile va tolto (colpito, scaduto, contro un muro). */
   public get isExpired(): boolean {
-    return this.isFinished || this.elapsedMs >= this.definition.lifetimeMs;
+    return this.isFinished || this.hasTimedOut;
+  }
+
+  /** Vero se ha finito la sua durata in volo (anche se non è ancora stato tolto). */
+  public get hasTimedOut(): boolean {
+    return this.elapsedMs >= this.definition.lifetimeMs;
   }
 
   /** Id dello sprite da mostrare adesso (animazione a ciclo). */

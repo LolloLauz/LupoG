@@ -12,6 +12,9 @@ const {WEAPON_CONFIG}=await load('config/weaponConfig');const {ATTACK_DEFINITION
 const {GAME_CONFIG}=await load('config/gameConfig');
 const {Player}=await load('entities/Player');const {CollisionSystem}=await load('systems/CollisionSystem');const {CombatSystem}=await load('combat/CombatSystem');
 const W=WEAPON_CONFIG;
+// le regole di combo miste e attacchi in aria valgono per le armi corpo a corpo (quelle a distanza tirano e basta)
+const isRanged=w=>Object.values(w.attacks).some(a=>a.projectile||a.charge);
+const MELEE=Object.values(W).filter(w=>!isRanged(w));
 
 // --- ComboManager
 const atk=id=>({id,damage:1,durationMs:100,hitStartMs:0,hitEndMs:50,cooldownMs:0,hitbox:{x:0,y:0,width:1,height:1},animation:id});
@@ -33,8 +36,8 @@ t("un tasto che non continua nessuna combo fa ripartire la sequenza",run(['attac
  t("reset annulla anche la combo completata non ancora mostrata",m.drainCompletedCombo()===null);}
 
 // --- dati delle combo di ogni arma (a terra e in aria)
-const sets=Object.values(W).flatMap(w=>[[`${w.id} a terra`,w,w.combos,w.defaultAttackByInput],[`${w.id} in aria`,w,w.air?.combos??[],w.air?.defaultAttackByInput]]);
-t("ogni arma ha la sua categoria di attacchi in aria",Object.values(W).every(w=>w.air!==undefined));
+const sets=Object.values(W).flatMap(w=>[[`${w.id} a terra`,w,w.combos,w.defaultAttackByInput],...(w.air?[[`${w.id} in aria`,w,w.air.combos,w.air.defaultAttackByInput]]:[])]);
+t("ogni arma corpo a corpo ha la sua categoria di attacchi in aria (quelle a distanza tirano come a terra)",MELEE.length===5&&MELEE.every(w=>w.air!==undefined)&&Object.values(W).filter(isRanged).every(w=>w.air===undefined));
 const bad=[];
 for(const [label,w,cs,def] of sets){
  for(const c of cs){if(c.inputSequence.length!==c.attackIds.length||!c.attackIds.every(id=>w.attacks[id]))bad.push(`${label}/${c.id}: attacchi`);}
@@ -44,9 +47,9 @@ for(const [label,w,cs,def] of sets){
 t("combo coerenti: attacchi dell'arma, e combo con lo stesso inizio usano gli stessi attacchi",bad.length===0,bad.slice(0,3).join('; '));
 const unreachable=sets.flatMap(([label,w,cs])=>cs.flatMap(c=>c.attackIds.slice(0,-1).filter(id=>w.attacks[id].cooldownMs>=c.comboWindowMs).map(id=>`${label}/${c.id}: ${id}`)));
 t("ogni combo si può davvero eseguire: il recupero di un colpo è più breve della finestra per il successivo",unreachable.length===0,unreachable.join('; '));
-t("ogni arma ha almeno una combo mista (leggero e pesante) con un nome",Object.values(W).every(w=>w.combos.some(c=>c.inputSequence.includes('attack')&&c.inputSequence.includes('heavyAttack')&&c.name)));
+t("ogni arma corpo a corpo ha almeno una combo mista (leggero e pesante) con un nome",MELEE.every(w=>w.combos.some(c=>c.inputSequence.includes('attack')&&c.inputSequence.includes('heavyAttack')&&c.name)));
 t("tutte le combo di terra e in aria hanno un nome",sets.every(([,,cs])=>cs.every(c=>typeof c.name==='string'&&c.name.length>0)));
-t("la picchiata è l'attacco pesante in aria di ogni arma e non si usa a terra",Object.values(W).every(w=>w.attacks[w.air.defaultAttackByInput.heavyAttack].plunge!==undefined&&!w.combos.some(c=>c.attackIds.some(id=>w.attacks[id].plunge))&&!w.attacks[w.defaultAttackByInput.heavyAttack].plunge&&!w.air.combos.some(c=>c.attackIds.some(id=>w.attacks[id].plunge))));
+t("la picchiata è l'attacco pesante in aria di ogni arma corpo a corpo e non si usa a terra",MELEE.every(w=>w.attacks[w.air.defaultAttackByInput.heavyAttack].plunge!==undefined&&!w.combos.some(c=>c.attackIds.some(id=>w.attacks[id].plunge))&&!w.attacks[w.defaultAttackByInput.heavyAttack].plunge&&!w.air.combos.some(c=>c.attackIds.some(id=>w.attacks[id].plunge))));
 t("la picchiata dell'ascia rompe la guardia e quella della mazza schiaccia le corazze",W.axe.attacks.axePlunge.breaksGuard===true&&W.mace.attacks.macePlunge.crushesArmor===true);
 t("la picchiata scende più piano della velocità massima di caduta (non viene tagliata)",Object.values(W).every(w=>Object.values(w.attacks).every(a=>!a.plunge||a.plunge.fallSpeed<GAME_CONFIG.maxFallSpeed)));
 t("il terremoto della mazza colpisce anche dietro (area che parte prima del corpo)",W.mace.attacks.maceQuake.hitbox.x<0&&W.mace.attacks.maceQuake.hitbox.x+W.mace.attacks.maceQuake.hitbox.width>20);

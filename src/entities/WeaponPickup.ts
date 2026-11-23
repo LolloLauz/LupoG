@@ -16,7 +16,9 @@ export class WeaponPickup extends GameObject {
     public readonly weaponId: WeaponId,
     centerX: number,
     bottomY: number,
-    public isArmed = true
+    public isArmed = true,
+    /** Munizioni (armi da lancio lasciate a terra); null = piene. */
+    public readonly ammo: number | null = null
   ) {
     super(Math.round(centerX - WEAPON_ICON_SIZE / 2), Math.round(bottomY - WEAPON_ICON_SIZE), WEAPON_ICON_SIZE, WEAPON_ICON_SIZE);
     this.bobPhase = centerX * 0.05;

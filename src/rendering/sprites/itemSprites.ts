@@ -38,6 +38,18 @@ const POTION_ROWS = [
   "..kkkkk.",
 ];
 
+/** Faretra: astuccio di cuoio con fascia d'oro e due frecce. */
+const QUIVER_ROWS = [
+  ".w..w...",
+  ".cw.cw..",
+  "..kkkk..",
+  "..kebk..",
+  "..kebk..",
+  "..kyyk..",
+  "..kebk..",
+  "..kkkk..",
+];
+
 const COIN_ROWS = [
   "..kkkk..",
   ".kvyyyk.",
@@ -191,4 +203,5 @@ export function registerItemSprites(spriteManager: SpriteManager): void {
   spriteManager.registerSprite("itemPotion", POTION_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemCoin", COIN_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemGem", GEM_ROWS, ITEM_COLORS);
+  spriteManager.registerSprite("itemQuiver", QUIVER_ROWS, ITEM_COLORS);
 }

@@ -101,7 +101,7 @@ export type EnemyTypeId =
   | "iceGolem";
 
 /** Identificatori dei tipi di proiettile (vedi projectileConfig.ts). */
-export type ProjectileTypeId = "arrow" | "magicBolt" | "fireball";
+export type ProjectileTypeId = "arrow" | "magicBolt" | "fireball" | "playerArrow" | "crossbowBolt" | "throwingKnife" | "javelin";
 
 /** Attacco a distanza di un nemico: alla fine della preparazione lancia un proiettile invece di colpire davanti a sé. */
 export interface RangedAttackDefinition {
@@ -139,11 +139,21 @@ export interface ProjectileDefinition {
   /** Frame dell'animazione (id degli sprite) e durata di ciascuno. */
   frameIds: string[];
   frameDurationMs: number;
+  /** Proiettili del giocatore (Fase 2): trafigge i bersagli invece di fermarsi al primo. */
+  isPiercing?: boolean;
+  /** Proiettili del giocatore: a fine corsa resta a terra e si recupera (munizione di quest'arma). */
+  recoveredAsAmmoOf?: WeaponId;
 }
 
 /** Richiesta di lancio di un proiettile (da un nemico o da un boss al motore). */
 export interface ProjectileLaunch {
   projectileId: ProjectileTypeId;
+  /** Chi lo lancia: i proiettili nemici feriscono il giocatore, quelli del giocatore nemici, boss e forzieri. Se omesso: "enemy". */
+  owner?: "enemy" | "player";
+  /** Moltiplicatore della velocità di PROJECTILE_CONFIG (es. freccia caricata). Se omesso: 1. */
+  speedMultiplier?: number;
+  /** Proprietà del colpo per i bersagli (ascia/mazza: non usate dalle armi a distanza, ma possibili). */
+  hit?: HitProperties;
   /** Centro del proiettile alla partenza (coordinate del mondo). */
   origin: Vector2;
   /** Direzione (vettore di lunghezza 1). */
@@ -223,6 +233,16 @@ export interface AttackDefinition {
   plunge?: { fallSpeed: number; bounceSpeed: number };
   /** Schiaccia le corazze (mazza): danno pieno contro i nemici corazzati, che restano storditi. */
   crushesArmor?: boolean;
+  /**
+   * Armi a distanza (Fase 2): a launchAtMs dall'inizio dell'attacco parte un proiettile da (originX, originY),
+   * relativi al cavaliere che guarda a destra, nella direzione (avanti, aimY). L'attacco non ha area d'urto.
+   */
+  projectile?: { projectileId: ProjectileTypeId; launchAtMs: number; originX: number; originY: number; aimY: number };
+  /**
+   * Carica (arco): finché si tiene premuto il tasto il cavaliere tende l'arco (fino a maxChargeMs; dopo durationMs
+   * tira da solo); rilasciando parte releaseAttackId, con danno e velocità tra il minimo e il massimo secondo la carica.
+   */
+  charge?: { maxChargeMs: number; releaseAttackId: string; minDamage: number; maxDamage: number; minSpeedMultiplier: number; maxSpeedMultiplier: number };
 }
 
 /** Proprietà del colpo che il bersaglio deve conoscere (vedi Damageable.receiveHit). */
@@ -241,8 +261,8 @@ export interface ComboDefinition {
   comboWindowMs: number;
 }
 
-/** Armi del giocatore (Fase 1 del piano espansioni: armi corpo a corpo). */
-export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace";
+/** Armi del giocatore: corpo a corpo (Fase 1) e a distanza (Fase 2). */
+export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace" | "bow" | "crossbow" | "throwingKnives" | "javelin";
 
 /** Input che fanno partire un attacco. */
 export type AttackInputAction = "attack" | "heavyAttack";
@@ -272,6 +292,46 @@ export interface WeaponDefinition {
   air?: { combos: ComboDefinition[]; defaultAttackByInput: Record<AttackInputAction, string> };
   /** Moltiplicatore della velocità di camminata con quest'arma in mano (1 = normale). */
   movementSpeedMultiplier: number;
+  /** Munizioni (coltelli, giavellotti): senza, l'arma non attacca. Se omesso: munizioni infinite. */
+  ammo?: {
+    max: number;
+    /** Vero se, finite le munizioni, l'arma sparisce dalla borsa (giavellotto: ogni colpo si perde). */
+    isLostWhenEmpty: boolean;
+  };
+}
+
+/** Personaggi giocabili (Fase 4). */
+export type CharacterId = "knight" | "ranger" | "berserker" | "paladin";
+
+/**
+ * Un personaggio: le statistiche che cambiano da una classe all'altra, l'arma con cui inizia e l'aspetto.
+ * Ciò che è comune a tutti (salto, hitbox, tempi di danno e di attacco) resta in PLAYER_CONFIG.
+ */
+export interface CharacterDefinition {
+  id: CharacterId;
+  /** Nome mostrato al giocatore (es. "CAVALIERE"). */
+  name: string;
+  /** Descrizione breve (schermata di scelta). */
+  description: string;
+  /** Tratto particolare, in poche parole (schermata di scelta). */
+  trait: string;
+  /** Suffisso degli sprite del personaggio ("" per il cavaliere, vedi knightSprites.ts). */
+  spriteSuffix: string;
+  /** Arma impugnata a ogni nuova partita (resta nella borsa insieme alle armi salvate). */
+  startingWeaponId: WeaponId;
+  maxHealth: number;
+  /** Velocità di camminata (pixel/secondo), prima dei moltiplicatori di arma, ambiente e power-up. */
+  movementSpeed: number;
+  /** Moltiplicatore del danno inflitto (1 = cavaliere). */
+  damageMultiplier: number;
+  /** Moltiplicatore del danno subito (1 = cavaliere; lo scudo del paladino lo riduce). */
+  damageTakenMultiplier: number;
+  dodgeDurationMs: number;
+  /** Attesa (ms) dopo una schivata prima della successiva. */
+  dodgeCooldownMs: number;
+  dodgeSpeed: number;
+  /** Cura lenta: HP al secondo dopo delayAfterHitMs senza subire colpi. Se omessa, nessuna cura. */
+  regeneration?: { healthPerSecond: number; delayAfterHitMs: number };
 }
 
 /** Qualsiasi cosa possa essere colpita dagli attacchi (nemici, boss, bersagli di prova). */

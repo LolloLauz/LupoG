@@ -89,3 +89,49 @@ export const drawMace: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
     setPixel(grid, tipX + offsetX, tipY + offsetY, "g", true);
   }
 };
+
+/** Mezza lunghezza (px) dell'arco, da un'estremità al centro. */
+const BOW_HALF_LENGTH = 6;
+
+/**
+ * Arco: hand → tip è la direzione di mira. L'arco (legno) sta poco davanti alla mano, di traverso, con il
+ * centro più avanti delle punte; la corda (chiara) va dalle punte alla mano.
+ */
+export const drawBow: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
+  const direction = getDirection(handX, handY, tipX, tipY);
+  const side = { x: -direction.unitY, y: direction.unitX };
+  const centerX = handX + direction.unitX * 4;
+  const centerY = handY + direction.unitY * 4;
+  const endpoints: Array<{ x: number; y: number }> = [];
+  for (let along = -BOW_HALF_LENGTH; along <= BOW_HALF_LENGTH; along++) {
+    // le punte restano 3 px indietro rispetto al centro (curva dell'arco)
+    const bendBack = Math.round((3 * along * along) / (BOW_HALF_LENGTH * BOW_HALF_LENGTH));
+    const x = Math.round(centerX + side.x * along - direction.unitX * bendBack);
+    const y = Math.round(centerY + side.y * along - direction.unitY * bendBack);
+    const isTip = Math.abs(along) === BOW_HALF_LENGTH;
+    setPixel(grid, x, y, along === 0 ? "e" : isTip ? "e" : "l", true);
+    if (isTip) {
+      endpoints.push({ x, y });
+    }
+  }
+  for (const endpoint of endpoints) {
+    for (const point of linePoints(endpoint.x, endpoint.y, handX, handY)) {
+      setPixel(grid, point.x, point.y, "s", false);
+    }
+  }
+};
+
+/** Balestra: calcio di legno lungo la mira e un piccolo arco di metallo di traverso sulla punta. */
+export const drawCrossbow: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
+  const direction = getDirection(handX, handY, tipX, tipY);
+  const side = { x: -direction.unitY, y: direction.unitX };
+  const frontX = Math.round(handX + direction.unitX * 9);
+  const frontY = Math.round(handY + direction.unitY * 9);
+  drawShaft(grid, handX, handY, frontX, frontY);
+  for (let along = -4; along <= 4; along++) {
+    const bendBack = Math.abs(along) >= 3 ? 1 : 0;
+    const key = Math.abs(along) === 4 ? "v" : "b";
+    setPixel(grid, Math.round(frontX + side.x * along - direction.unitX * bendBack), Math.round(frontY + side.y * along - direction.unitY * bendBack), key, true);
+  }
+  setPixel(grid, Math.round(frontX + direction.unitX), Math.round(frontY + direction.unitY), "v", true);
+};

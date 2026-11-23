@@ -37,6 +37,16 @@ export class HighScoreManager {
     return true;
   }
 
+  /** Cancella il record (tasto "Cancella dati" del titolo). */
+  public reset(): void {
+    this.bestScoreValue = 0;
+    try {
+      this.storage?.setItem(STORAGE_KEY, "0");
+    } catch {
+      // archivio non scrivibile: il record è comunque azzerato in memoria
+    }
+  }
+
   private loadStoredScore(): number {
     try {
       const storedValue = this.storage?.getItem(STORAGE_KEY) ?? null;

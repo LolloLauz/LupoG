@@ -300,8 +300,8 @@ try {
     const palette = ${colorsArg}; const e = iron.engine; const result = {};
     const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
     for (let i = 0; i < 5; i++) iron.step(); result.title = colorsOk();
-    // "Controlli" è l'ultima delle quattro voci: W dalla prima voce ci arriva girando il menu
-    iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.step(); result.controlsState = e.gameState.current; result.controls = colorsOk();
+    // "Controlli" è la penultima voce (l'ultima è "Cancella dati"): W due volte dalla prima voce, girando il menu
+    iron.tap("KeyW"); iron.step(); iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.step(); result.controlsState = e.gameState.current; result.controls = colorsOk();
     iron.tap("Enter"); iron.step(); iron.step(); result.backToTitle = e.gameState.current;
     iron.tap("Enter"); for (let i = 0; i < 20; i++) iron.step(); result.playing = e.gameState.current; result.game = colorsOk();
     iron.tap("Escape"); iron.step(); iron.step(); result.pausedState = e.gameState.current; result.pause = colorsOk();
@@ -311,9 +311,38 @@ try {
     e.gameState.change("title"); iron.step();
     return result;
   })()`);
-  check("tastiera: W (menu circolare) + Invio sul titolo apre i controlli, Invio torna al titolo", screenStates.controlsState === "controls" && screenStates.backToTitle === "title");
+  check("tastiera: W W (menu circolare) + Invio sul titolo apre i controlli, Invio torna al titolo", screenStates.controlsState === "controls" && screenStates.backToTitle === "title");
   check("Invio avvia la partita; Esc mette in pausa e Esc riprende", screenStates.playing === "playing" && screenStates.pausedState === "paused" && screenStates.resumed === "playing");
   check("palette: titolo, controlli, gioco, pausa, Game Over, vittoria usano solo i colori della palette", ["title", "controls", "game", "pause", "gameOver", "victory"].every((k) => screenStates[k] === true), Object.entries(screenStates).filter(([, v]) => v === false).map(([k]) => k).join(","));
+
+  // --- scelta del personaggio (Fase 4): si apre dal titolo, si conferma, la partita usa classe, arma e sprite scelti
+  const characterRuns = await evaluate(page, `(() => {
+    const palette = ${colorsArg}; const e = iron.engine; const result = { runs: [] };
+    const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
+    const openSelect = () => { iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step(); };
+    openSelect();
+    result.selectState = e.gameState.current; result.selectColors = colorsOk();
+    for (const id of ["ranger", "berserker", "paladin", "knight"]) {
+      let guard = 0;
+      while (e.screens.selectedCharacterId !== id && guard++ < 8) { iron.tap("KeyD"); iron.step(); }
+      iron.tap("Enter"); iron.step(); iron.step();
+      const titleAfterConfirm = e.gameState.current;
+      iron.tap("Enter"); for (let i = 0; i < 40; i++) iron.step();
+      const frameId = e.player.getRenderedFrameId();
+      result.runs.push({ id, titleAfterConfirm, state: e.gameState.current, character: e.player.characterDefinition.id, weapon: e.player.equippedWeapon.id, health: e.player.currentHealth, maxHealth: e.player.maxHealth, hasFrame: e.spriteManager.sprites.has(frameId) && e.spriteManager.sprites.has(frameId + "Fire"), colors: colorsOk() });
+      iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
+      openSelect();
+    }
+    iron.tap("Escape"); iron.step(); iron.step(); result.escState = e.gameState.current;
+    // il resto delle prove parte come un giocatore nuovo: cavaliere con la sola spada
+    e.progressManager.setCharacter("knight"); e.progressManager.setBagWeapons(["sword"], "sword");
+    return result;
+  })()`);
+  const expectedStart = { ranger: "bow", berserker: "axe", paladin: "mace", knight: "sword" };
+  check("la seconda voce del titolo apre la scelta del personaggio, che usa solo colori della palette", characterRuns.selectState === "characterSelect" && characterRuns.selectColors === true, characterRuns.selectState);
+  check("confermando si torna al titolo; ESC chiude la scelta", characterRuns.runs.every((r) => r.titleAfterConfirm === "title") && characterRuns.escState === "title");
+  check("ogni personaggio scelto entra in gioco con la propria classe, salute piena e arma iniziale", characterRuns.runs.length === 4 && characterRuns.runs.every((r) => r.state === "playing" && r.character === r.id && r.weapon === expectedStart[r.id] && r.maxHealth > 0 && r.health === r.maxHealth), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.state, r.character, r.weapon, r.health])));
+  check("ogni personaggio: gli sprite disegnati esistono (anche col fuoco) e il gioco usa solo colori della palette", characterRuns.runs.every((r) => r.hasFrame && r.colors), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.hasFrame, r.colors])));
 
   // --- velocità coerente
   const speeds = await evaluate(page, `(() => {
@@ -391,6 +420,30 @@ try {
     const afterReload = await evaluate(page, "iron.engine.highScoreManager.bestScore");
     check("dopo aver ricaricato la pagina il record è ancora lì", afterReload === best, `${afterReload} / ${best}`);
   }
+
+  // --- cancella dati: conferma con "no" predefinito, poi tutto torna come alla prima partita (anche ricaricando)
+  const resetFlow = await evaluate(page, `(() => {
+    const palette = ${colorsArg}; const e = iron.engine; const result = {};
+    const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
+    e.progressManager.unlockLevel(4); e.progressManager.setCharacter("berserker");
+    result.scoreBefore = e.highScoreManager.bestScore;
+    iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
+    result.confirmState = e.gameState.current; result.confirmColors = colorsOk();
+    iron.tap("Enter"); iron.step(); iron.step();
+    result.afterNo = e.gameState.current; result.scoreAfterNo = e.highScoreManager.bestScore;
+    iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
+    result.afterYes = e.gameState.current;
+    result.scoreAfterYes = e.highScoreManager.bestScore;
+    result.progress = [e.progressManager.unlockedLevelId, e.progressManager.characterId, e.progressManager.bagWeaponIds.join()].join("/");
+    result.player = [e.player.characterDefinition.id, e.player.equippedWeapon.id].join("/");
+    return result;
+  })()`);
+  check("cancella dati: si apre una conferma (solo colori della palette) e Invio sul \"no\" predefinito non cancella", resetFlow.confirmState === "confirmReset" && resetFlow.confirmColors === true && resetFlow.afterNo === "title" && resetFlow.scoreAfterNo === resetFlow.scoreBefore, JSON.stringify(resetFlow));
+  check("cancella dati: con \"sì\" record, livelli, personaggio e armi tornano come alla prima partita", resetFlow.afterYes === "title" && resetFlow.scoreAfterYes === 0 && resetFlow.progress === "1/knight/sword" && resetFlow.player === "knight/sword", JSON.stringify(resetFlow));
+  await page.reload();
+  await page.waitForTimeout(300);
+  const afterResetReload = await evaluate(page, `[iron.engine.highScoreManager.bestScore, iron.engine.progressManager.unlockedLevelId, iron.engine.progressManager.characterId].join("/")`);
+  check("cancella dati: anche dopo aver ricaricato la pagina", afterResetReload === "0/1/knight", afterResetReload);
 
   // --- tasti a caso con passi di tempo diversi
   const fuzzFrames = isQuick ? 15000 : 60000;

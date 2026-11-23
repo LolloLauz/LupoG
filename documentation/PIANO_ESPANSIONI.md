@@ -2,7 +2,7 @@
 
 Questo documento è un piano, non una specifica. Lo stato reale delle funzionalità resta in `FEATURES.md`.
 
-**Stato:** Fasi 0, 1 e 3 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Le altre fasi non sono iniziate.
+**Stato:** Fasi 0, 1, 2, 3 e 4 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Le fasi 5-8 non sono iniziate.
 
 ## Punto di partenza
 
@@ -45,7 +45,11 @@ Fonte: le armi si ottengono da forzieri, nemici d'élite e boss. Il giocatore ne
 
 Su richiesta: una borsa di 4 posti con armi e pozioni. Si raccoglie con **E**, si sceglie con **1-4** (arma = la si impugna, pozione = la si beve). I power-up restano automatici. Le pozioni non curano più al tocco; al massimo 2, perché conservarle rende il gioco molto più facile (vedi `BALANCE.md`). La borsa è il punto d'aggancio naturale per munizioni e oggetti da lancio (Fase 2) e per gli acquisti del negozio (Fase 6).
 
-## Fase 2 – Armi a distanza
+## Fase 2 – Armi a distanza – completata
+
+Fatto: arco (Spazio tiro rapido, J tenuto premuto = tiro caricato: danno 10-34 e velocità ×1-1,6), balestra (dardo da 40, ricarica di 0,9 s), coltelli da lancio (6, cadono a terra e si recuperano passandoci sopra), giavellotto (3, 50 danni, trafigge, ogni lancio si perde; finiti, l'arma esce dalla borsa). I proiettili hanno un proprietario (`ProjectileLaunch.owner`): quelli del giocatore colpiscono nemici, boss e forzieri. Le munizioni stanno nella borsa (`BagSlot.ammo`), si vedono nell'HUD e si ricaricano riprendendo la stessa arma. Fonti: forzieri (livelli 2, 4, 6) e nemici d'élite (livelli 3, 5). 44 test in `weapons-phase2.test.mjs`.
+
+Piano originale:
 
 - **Arco**: frecce con carica (tenere premuto J) e danno che dipende dalla carica.
 - **Balestra**: lenta, colpo pesante, ricarica.
@@ -65,7 +69,18 @@ Piano originale:
 - Combo di **salto** e **aereo** (attacco in discesa) come categoria separata.
 - Il buffer di 200 ms già presente aiuta a rendere le sequenze leggibili.
 
-## Fase 4 – Personaggi con classi
+## Fase 4 – Personaggi con classi – completata
+
+Fatto: `CharacterDefinition` e `CHARACTER_CONFIG` (`characterConfig.ts`) con salute, velocità, danno inflitto e subito, schivata, cura lenta,
+arma iniziale e suffisso degli sprite; `PLAYER_CONFIG` resta per ciò che è comune (salto, hitbox, tempi) e per i valori del cavaliere.
+Voce *Personaggio* nel menu del titolo e schermata di scelta (statistiche in tacche, arma iniziale, tratto), personaggio salvato nei progressi.
+Valori: Ranger 75 HP, 96 px/s, arco, schivata ogni 0,45 s; Berserker 130 HP, danno ×1,3, ascia, schivata corta ogni 1,6 s; Paladino
+110 HP, 72 px/s, danno subito ×0,75, mazza, 1 HP/s dopo 4 s senza colpi (con ×0,85 moriva spesso contro il boss finale, vedi
+`BALANCE.md`). Grafica: un personaggio non si ridisegna da zero, ma ricolora il cavaliere e cambia la testa (cappuccio del Ranger, elmo con
+le corna e barba del Berserker, armatura d'oro e pennacchio bianco del Paladino). 58 test in `characters.test.mjs`. La parata dello scudo
+e le abilità speciali restano per la Fase 5. Da fare con persone: provare i personaggi (il bot di bilanciamento usa solo la spada).
+
+Piano originale:
 
 Un `CharacterDefinition` sostituisce `PLAYER_CONFIG` e gli sprite del giocatore. Il menu del titolo permette di scegliere.
 
@@ -75,6 +90,14 @@ Un `CharacterDefinition` sostituisce `PLAYER_CONFIG` e gli sprite del giocatore.
 - **Paladino**: scudo che para, guarigione leggera.
 
 Il punto critico è la grafica: ogni personaggio richiede sprite a 16 bit. Conviene farne uno alla volta.
+
+## Segnalazioni dopo la Fase 4 – completate
+
+- **Boss chiuso fuori dall'arena**: il boss si svegliava con il giocatore ancora fuori e poteva inseguirlo oltre il cancello. Ora non esce mai dall'arena.
+- **Munizioni anche per arco (12) e balestra (6)**: con frecce e dardi infiniti il gioco era troppo facile. Si ricaricano con la **faretra**
+  (una per livello) o riprendendo la stessa arma.
+- **Tasto Q**: lascia a terra l'arma in mano; Q + 1-4 lascia un posto della borsa (anche una pozione).
+- **Cancella dati** nel menu del titolo, con conferma.
 
 ## Fase 5 – Risorsa e abilità speciali
 
@@ -131,8 +154,8 @@ Le armi e le combo danno il maggior salto di varietà con meno lavoro grafico. L
 
 ## Decisioni aperte
 
-- **Stamina** (Fase 5): sì o no?
-- **Primo passo**: armi corpo a corpo (Fase 1) o a distanza (Fase 2)? La Fase 0 è comunque necessaria.
+- **Stamina** (Fase 5): **decisa: sì**.
+- **Primo passo**: deciso (Fase 0, poi 1, 3, 2).
 - **Controlli**: rimappatura e controller restano esclusi o entrano nel piano?
 
 ## Regole di aggiornamento

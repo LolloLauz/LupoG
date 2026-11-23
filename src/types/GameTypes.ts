@@ -5,6 +5,8 @@ export type GameStateName =
   | "title"
   | "controls"
   | "levelSelect"
+  | "characterSelect"
+  | "confirmReset"
   | "playing"
   | "paused"
   | "gameOver"
@@ -20,6 +22,7 @@ export type GameAction =
   | "dodge"
   | "crouch"
   | "pickUp"
+  | "dropItem"
   | "bagSlot1"
   | "bagSlot2"
   | "bagSlot3"
@@ -27,7 +30,9 @@ export type GameAction =
   | "pause"
   | "confirm"
   | "menuUp"
-  | "menuDown";
+  | "menuDown"
+  | "menuLeft"
+  | "menuRight";
 
 /** Contesto di input: decide quali azioni vengono accettate. */
 export type InputContext = "gameplay" | "menu";

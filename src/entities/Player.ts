@@ -1,16 +1,18 @@
 import { getAttackWorldHitbox } from "../combat/AttackDefinition";
+import { CombatSystem } from "../combat/CombatSystem";
 import { ComboManager } from "../combat/ComboManager";
 import { PlayerModifiers } from "../combat/PlayerModifiers";
 import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
-import { GAME_CONFIG } from "../config/gameConfig";
+import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
+import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
 import { PLAYER_CONFIG } from "../config/playerConfig";
 import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import { CollisionSystem } from "../systems/CollisionSystem";
-import type { AttackDefinition, Damageable, PlayerEnvironment, PlayerState, PowerUpDefinition, WeaponDefinition } from "../types/EntityTypes";
+import type { AttackDefinition, CharacterDefinition, Damageable, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -33,15 +35,19 @@ export const NORMAL_PLAYER_ENVIRONMENT: PlayerEnvironment = {
   canSwim: false,
 };
 
-/** Il cavaliere controllato dal giocatore. */
+/**
+ * Il personaggio controllato dal giocatore (il cavaliere, o un'altra classe: vedi setCharacter).
+ * Le statistiche che cambiano da una classe all'altra vengono da CharacterDefinition, il resto da PLAYER_CONFIG.
+ */
 export class Player extends GameObject {
   public currentState: PlayerState = "idle";
   /** Ambiente in cui si trova (acqua, ghiaccio...): lo imposta il motore prima di ogni aggiornamento. */
   public environment: PlayerEnvironment = NORMAL_PLAYER_ENVIRONMENT;
   /** Power-up attivi: le statistiche effettive si calcolano da qui, PLAYER_CONFIG resta invariato. */
   public readonly modifiers = new PlayerModifiers();
-  public currentHealth: number = PLAYER_CONFIG.maxHealth;
-  public readonly maxHealth: number = PLAYER_CONFIG.maxHealth;
+  /** Classe del personaggio (Fase 4): salute, velocità, danno, schivata, cura lenta e sprite. */
+  private character: CharacterDefinition = CHARACTER_CONFIG[DEFAULT_CHARACTER_ID];
+  public currentHealth: number = this.character.maxHealth;
 
   private readonly animationPlayer = new AnimationPlayer(PLAYER_ANIMATIONS, "idle");
   /** Arma in mano: decide attacchi e combo (vedi equipWeapon). */
@@ -55,6 +61,19 @@ export class Player extends GameObject {
   private completedComboName: string | null = null;
   /** Vero per un frame dopo che un colpo in picchiata ha toccato terra (polvere, tremolio). */
   private hasPendingPlungeLanding = false;
+
+  // --- armi a distanza (Fase 2) ---
+  /** Munizioni dell'arma in mano (null = infinite). */
+  private ammo: number | null = null;
+  /** Il proiettile dell'attacco in corso è già partito. */
+  private hasLaunchedCurrentAttack = false;
+  /** Tasto che sta caricando l'arco (rilasciandolo si tira), oppure null. */
+  private chargeInput: AttackInput | null = null;
+  /** Carica del tiro in corso (frazione 0-1 e parametri), dopo il rilascio. */
+  private releasedCharge: { fraction: number; charge: NonNullable<AttackDefinition["charge"]> } | null = null;
+  private pendingLaunches: ProjectileLaunch[] = [];
+  /** Vero dopo un tentativo di attacco senza munizioni (il motore mostra un avviso). */
+  private hasPendingOutOfAmmo = false;
 
   // --- attacco ---
   private currentAttack: AttackDefinition | null = null;
@@ -77,12 +96,34 @@ export class Player extends GameObject {
   private lastDeltaTimeSeconds = 0;
   /** Salute rigenerata non ancora applicata (frazioni di HP). */
   private regenerationAccumulator = 0;
+  /** Tempo (ms) dall'ultimo danno subito: la cura lenta del personaggio parte dopo un po'. */
+  private msSinceLastHit = 0;
   /** Tempo per la pulsazione degli aloni dei power-up. */
   private auraElapsedMs = 0;
   private deathElapsedMs = 0;
 
-  constructor(startX: number, startY: number) {
+  constructor(startX: number, startY: number, character?: CharacterDefinition) {
     super(startX, startY, PLAYER_CONFIG.hitboxWidth, PLAYER_CONFIG.hitboxHeight);
+    if (character !== undefined) {
+      this.setCharacter(character);
+    }
+  }
+
+  /** Salute massima del personaggio. */
+  public get maxHealth(): number {
+    return this.character.maxHealth;
+  }
+
+  public get characterDefinition(): CharacterDefinition {
+    return this.character;
+  }
+
+  /** Cambia personaggio (inizio partita): la salute torna al massimo della nuova classe. */
+  public setCharacter(character: CharacterDefinition): void {
+    this.character = character;
+    this.currentHealth = character.maxHealth;
+    this.regenerationAccumulator = 0;
+    this.msSinceLastHit = 0;
   }
 
   /** Nome dell'animazione in corso (utile per debug e test). */
@@ -123,16 +164,58 @@ export class Player extends GameObject {
     return this.weapon;
   }
 
-  /** Cambia arma (di solito una voce di WEAPON_CONFIG): l'attacco in corso e la combo vengono annullati. */
-  public equipWeapon(weapon: WeaponDefinition): void {
-    if (this.weapon === weapon) {
-      return;
+  /**
+   * Cambia arma (di solito una voce di WEAPON_CONFIG): l'attacco in corso e la combo vengono annullati.
+   * ammo = munizioni di quell'arma (solo per le armi con munizioni; se omesso: piene).
+   */
+  public equipWeapon(weapon: WeaponDefinition, ammo: number | null = null): void {
+    if (this.weapon !== weapon) {
+      const wasAttacking = this.currentAttack !== null;
+      this.cancelAttack();
+      this.weapon = weapon;
+      this.groundComboManager = Player.createComboManager(weapon, "ground");
+      this.airComboManager = Player.createComboManager(weapon, "air");
+      this.comboManager = this.groundComboManager;
+      // l'animazione dell'attacco annullato non deve restare: la nuova arma potrebbe non averne i frame
+      // (es. un fendente di spada con l'arco in mano)
+      if (wasAttacking && !this.isDead && this.hurtRemainingMs <= 0) {
+        this.updateState();
+        this.animationPlayer.play(this.getAnimationName());
+      }
     }
-    this.cancelAttack();
-    this.weapon = weapon;
-    this.groundComboManager = Player.createComboManager(weapon, "ground");
-    this.airComboManager = Player.createComboManager(weapon, "air");
-    this.comboManager = this.groundComboManager;
+    this.ammo = weapon.ammo === undefined ? null : Math.max(0, Math.min(weapon.ammo.max, ammo ?? weapon.ammo.max));
+  }
+
+  /** Munizioni dell'arma in mano (null = infinite). */
+  public get currentAmmo(): number | null {
+    return this.ammo;
+  }
+
+  /** Imposta le munizioni dell'arma in mano (es. coltello recuperato). Ignorato per le armi senza munizioni. */
+  public setAmmo(ammo: number): void {
+    if (this.weapon.ammo !== undefined) {
+      this.ammo = Math.max(0, Math.min(this.weapon.ammo.max, ammo));
+    }
+  }
+
+  /** Carica dell'arco in corso (0-1), oppure null se non si sta caricando. */
+  public get chargeFraction(): number | null {
+    const charge = this.currentAttack?.charge;
+    return charge === undefined ? null : Math.min(1, this.attackElapsedMs / charge.maxChargeMs);
+  }
+
+  /** Proiettili lanciati dal cavaliere da far comparire (una volta sola). */
+  public drainProjectileLaunches(): ProjectileLaunch[] {
+    const launches = this.pendingLaunches;
+    this.pendingLaunches = [];
+    return launches;
+  }
+
+  /** Vero una volta sola dopo un tentativo di attacco senza munizioni. */
+  public drainOutOfAmmo(): boolean {
+    const isOut = this.hasPendingOutOfAmmo;
+    this.hasPendingOutOfAmmo = false;
+    return isOut;
   }
 
   /** Nome della combo appena completata (una volta sola), oppure null. */
@@ -169,7 +252,7 @@ export class Player extends GameObject {
 
   /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
   public getDamageMultiplier(): number {
-    return this.modifiers.getValue("damageMultiplier");
+    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier;
   }
 
   /** Danno aggiunto a ogni colpo (power-up del fuoco). */
@@ -201,6 +284,7 @@ export class Player extends GameObject {
     }
     this.currentHealth = Math.max(0, this.currentHealth - damage);
     this.invulnerabilityRemainingMs = PLAYER_CONFIG.invulnerabilityDurationMs;
+    this.msSinceLastHit = 0;
     if (this.isDead) {
       this.deathElapsedMs = 0;
       this.animationPlayer.restart("dead");
@@ -227,6 +311,7 @@ export class Player extends GameObject {
   public revive(): void {
     this.modifiers.clear();
     this.regenerationAccumulator = 0;
+    this.msSinceLastHit = 0;
     this.currentHealth = this.maxHealth;
     this.deathElapsedMs = 0;
     this.invulnerabilityRemainingMs = 0;
@@ -241,8 +326,10 @@ export class Player extends GameObject {
     if (this.isDead || this.isInvulnerable) {
       return false;
     }
-    // lo scudo riduce il danno, ma un colpo toglie sempre almeno 1 HP
-    const reducedDamage = Math.max(1, Math.round(damage * this.modifiers.getValue("damageTakenMultiplier")));
+    // lo scudo (power-up e paladino) riduce il danno, ma un colpo toglie sempre almeno 1 HP
+    const takenMultiplier = this.modifiers.getValue("damageTakenMultiplier") * this.character.damageTakenMultiplier;
+    const reducedDamage = Math.max(1, Math.round(damage * takenMultiplier));
+    this.msSinceLastHit = 0;
     this.currentHealth = Math.max(0, this.currentHealth - reducedDamage);
     this.cancelAttack();
     this.invulnerabilityRemainingMs = PLAYER_CONFIG.invulnerabilityDurationMs;
@@ -266,6 +353,9 @@ export class Player extends GameObject {
     const attack = this.currentAttack;
     if (attack === null || this.attackElapsedMs < attack.hitStartMs || this.attackElapsedMs > attack.hitEndMs) {
       return null;
+    }
+    if (attack.projectile !== undefined || attack.charge !== undefined) {
+      return null; // le armi a distanza feriscono solo con i proiettili
     }
     return getAttackWorldHitbox(attack, this.getBounds(), this.facingDirection);
   }
@@ -351,6 +441,12 @@ export class Player extends GameObject {
       PLAYER_CONFIG.hitboxWidth,
       this.facingDirection === "left"
     );
+    // arco a piena carica: un bagliore che pulsa davanti alla mano
+    if (this.chargeFraction === 1) {
+      const handX = this.facingDirection === "right" ? this.positionX + this.width + 4 : this.positionX - 4;
+      const pulse = Math.floor(this.attackElapsedMs / 120) % 2;
+      renderer.fillGlow(handX - cameraX, this.positionY + 10 - cameraY, 6 + pulse, PALETTE.white, 2, 6);
+    }
   }
 
   /**
@@ -410,12 +506,15 @@ export class Player extends GameObject {
       this.dodgeRemainingMs = Math.max(0, this.dodgeRemainingMs - deltaTimeMs);
       if (this.dodgeRemainingMs === 0) {
         this.velocityX = 0;
-        this.dodgeCooldownRemainingMs = PLAYER_CONFIG.dodgeCooldownMs;
+        this.dodgeCooldownRemainingMs = this.character.dodgeCooldownMs;
       }
     }
     if (this.currentAttack !== null) {
       this.attackElapsedMs += deltaTimeMs;
-      if (this.attackElapsedMs >= this.currentAttack.durationMs) {
+      this.launchProjectileIfDue();
+      if (this.currentAttack.charge !== undefined && this.attackElapsedMs >= this.currentAttack.durationMs) {
+        this.releaseCharge(); // tenuto troppo a lungo: l'arco tira da solo
+      } else if (this.attackElapsedMs >= this.currentAttack.durationMs) {
         this.attackCooldownRemainingMs = this.currentAttack.cooldownMs;
         this.currentAttack = null;
         this.targetsHitByCurrentAttack.clear();
@@ -462,6 +561,10 @@ export class Player extends GameObject {
 
     if (input.wasPressed("dodge") && this.canStartDodge()) {
       this.startDodge();
+    }
+    // arco: rilasciando il tasto parte il tiro caricato
+    if (this.currentAttack?.charge !== undefined && this.chargeInput !== null && !input.isHeld(this.chargeInput)) {
+      this.releaseCharge();
     }
     if (input.wasPressed("attack")) {
       this.bufferAttack("attack");
@@ -534,6 +637,15 @@ export class Player extends GameObject {
       this.comboManager = manager;
     }
     const attack = manager.getNextAttack(attackInput);
+    // senza munizioni l'arma non tira e non comincia nemmeno a caricare (arco)
+    if ((attack.projectile !== undefined || attack.charge !== undefined) && this.ammo !== null && this.ammo <= 0) {
+      manager.reset();
+      this.hasPendingOutOfAmmo = true; // senza munizioni l'arma non attacca
+      return;
+    }
+    this.hasLaunchedCurrentAttack = false;
+    this.releasedCharge = null;
+    this.chargeInput = attack.charge !== undefined && (attackInput === "attack" || attackInput === "heavyAttack") ? attackInput : null;
     const completedCombo = manager.drainCompletedCombo();
     if (completedCombo?.name !== undefined) {
       this.completedComboName = completedCombo.name;
@@ -552,6 +664,67 @@ export class Player extends GameObject {
     this.targetsHitByCurrentAttack.clear();
     this.groundComboManager.reset();
     this.airComboManager.reset();
+    this.chargeInput = null;
+    this.releasedCharge = null;
+  }
+
+  /** Fine della carica dell'arco: parte l'attacco di rilascio, con la carica raggiunta. */
+  private releaseCharge(): void {
+    const charge = this.currentAttack?.charge;
+    if (charge === undefined) {
+      return;
+    }
+    const release = this.weapon.attacks[charge.releaseAttackId];
+    const fraction = Math.min(1, this.attackElapsedMs / charge.maxChargeMs);
+    this.chargeInput = null;
+    if (release === undefined) {
+      this.cancelAttack();
+      return;
+    }
+    this.currentAttack = release;
+    this.attackElapsedMs = 0;
+    this.hasLaunchedCurrentAttack = false;
+    this.releasedCharge = { fraction, charge };
+    this.targetsHitByCurrentAttack.clear();
+    this.animationPlayer.restart(release.animation);
+  }
+
+  /**
+   * Arma a distanza: al momento giusto dell'attacco parte il proiettile, dalla mano, nella direzione in cui
+   * guarda il cavaliere. Il danno segue la carica (arco) e i power-up (come per la spada); consuma una munizione.
+   */
+  private launchProjectileIfDue(): void {
+    const attack = this.currentAttack;
+    const spec = attack?.projectile;
+    if (attack === null || spec === undefined || this.hasLaunchedCurrentAttack || this.attackElapsedMs < spec.launchAtMs) {
+      return;
+    }
+    this.hasLaunchedCurrentAttack = true;
+    let baseDamage = attack.damage;
+    let speedMultiplier = 1;
+    const released = this.releasedCharge;
+    if (released !== null) {
+      const { fraction, charge } = released;
+      baseDamage = charge.minDamage + (charge.maxDamage - charge.minDamage) * fraction;
+      speedMultiplier = charge.minSpeedMultiplier + (charge.maxSpeedMultiplier - charge.minSpeedMultiplier) * fraction;
+    }
+    const direction = this.facingDirection === "right" ? 1 : -1;
+    const bounds = this.getBounds();
+    this.pendingLaunches.push({
+      projectileId: spec.projectileId,
+      owner: "player",
+      origin: {
+        x: direction > 0 ? bounds.x + spec.originX : bounds.x + bounds.width - spec.originX,
+        y: bounds.y + spec.originY,
+      },
+      direction: { x: direction, y: spec.aimY },
+      damage: CombatSystem.calculateDamage(baseDamage + this.getBonusDamage(), this.getDamageMultiplier()),
+      speedMultiplier,
+      hit: { breaksGuard: attack.breaksGuard, crushesArmor: attack.crushesArmor },
+    });
+    if (this.ammo !== null) {
+      this.ammo = Math.max(0, this.ammo - 1);
+    }
   }
 
   /** Il colpo in picchiata tocca terra: finisce, con il suo tempo di recupero. */
@@ -574,8 +747,8 @@ export class Player extends GameObject {
   }
 
   private startDodge(): void {
-    this.dodgeRemainingMs = PLAYER_CONFIG.dodgeDurationMs;
-    this.velocityX = (this.facingDirection === "right" ? 1 : -1) * PLAYER_CONFIG.dodgeSpeed;
+    this.dodgeRemainingMs = this.character.dodgeDurationMs;
+    this.velocityX = (this.facingDirection === "right" ? 1 : -1) * this.character.dodgeSpeed;
     this.bufferedAttackInput = null;
     this.animationPlayer.restart("dodge");
   }
@@ -593,7 +766,7 @@ export class Player extends GameObject {
     this.approachHorizontalVelocity(
       crouchFactor *
         direction *
-        PLAYER_CONFIG.movementSpeed *
+        this.character.movementSpeed *
         this.weapon.movementSpeedMultiplier *
         this.environment.speedMultiplier *
         this.modifiers.getValue("movementSpeedMultiplier")
@@ -620,9 +793,16 @@ export class Player extends GameObject {
     }
   }
 
-  /** Rigenerazione (power-up): accumula frazioni di HP e cura a punti interi. */
+  /**
+   * Rigenerazione (power-up, e cura lenta del personaggio dopo un po' senza colpi subiti):
+   * accumula frazioni di HP e cura a punti interi.
+   */
   private applyRegeneration(deltaTimeMs: number): void {
-    const healthPerSecond = this.modifiers.getValue("healthRegenPerSecond");
+    this.msSinceLastHit += deltaTimeMs;
+    const characterRegeneration = this.character.regeneration;
+    const characterHealthPerSecond =
+      characterRegeneration !== undefined && this.msSinceLastHit >= characterRegeneration.delayAfterHitMs ? characterRegeneration.healthPerSecond : 0;
+    const healthPerSecond = this.modifiers.getValue("healthRegenPerSecond") + characterHealthPerSecond;
     if (healthPerSecond <= 0 || this.isDead) {
       this.regenerationAccumulator = 0;
       return;
@@ -675,7 +855,8 @@ export class Player extends GameObject {
   }
 
   /**
-   * Frame da disegnare: quello dell'animazione con il suffisso dell'arma in mano ("" per la spada);
+   * Frame da disegnare: quello dell'animazione con il suffisso dell'arma in mano ("" per la spada) e quello del
+   * personaggio ("" per il cavaliere);
    * durante un attacco da accovacciati, la variante bassa dello sprite.
    * Si guarda l'animazione in corso, non lo stato: un colpo subito cambia subito l'animazione
    * (danno), mentre lo stato si aggiorna solo al frame successivo.
@@ -685,7 +866,7 @@ export class Player extends GameObject {
     const isCrouchedAttackFrame =
       this.isCrouching && this.currentAttack !== null && this.animationPlayer.animationName === this.currentAttack.animation;
     const crouchSuffix = isCrouchedAttackFrame ? KNIGHT_CROUCH_SUFFIX : "";
-    return `${frameId}${crouchSuffix}${this.weapon.spriteSuffix}`;
+    return `${frameId}${crouchSuffix}${this.weapon.spriteSuffix}${this.character.spriteSuffix}`;
   }
 
   /** Gestore delle combo dell'arma per terra o aria (senza combo aeree, in aria valgono quelle di terra). */

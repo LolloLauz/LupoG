@@ -86,20 +86,24 @@ modificare qui, senza toccare la logica.
 | File | Contenuto |
 |---|---|
 | `gameConfig.ts` | `GAME_CONFIG` (risoluzione, gravità, vite, bonus, cura, danno da caduta...), `DIFFICULTY_CONFIG` (nome, moltiplicatori di salute e danno di nemici e boss, vite iniziali) e `DIFFICULTY_ORDER`; riesporta `PALETTE` e `PALETTE_RAMPS` |
-| `weaponConfig.ts` | `WEAPON_CONFIG` (5 armi: `sword`, che riusa `ATTACK_DEFINITIONS`, `COMBO_DEFINITIONS` e `DEFAULT_ATTACK_BY_INPUT`; `dagger`, `spear`, `axe`, `mace` con i propri attacchi, combo, suffisso degli sprite, icona e velocità; l'id di ogni attacco è anche il nome della sua animazione; ogni arma ha una combo mista con nome e una categoria `air` con la combo in volo e il colpo in picchiata), `WEAPON_ICON_SIZE`, `DEFAULT_WEAPON_ID`, `getAllWeaponAttacks()` (usata dalle animazioni), `isWeaponId()` (valida i progressi) |
+| `weaponConfig.ts` | `WEAPON_CONFIG` (5 armi: `sword`, che riusa `ATTACK_DEFINITIONS`, `COMBO_DEFINITIONS` e `DEFAULT_ATTACK_BY_INPUT`; `dagger`, `spear`, `axe`, `mace` con i propri attacchi, combo, suffisso degli sprite, icona e velocità; l'id di ogni attacco è anche il nome della sua animazione; ogni arma corpo a corpo ha una combo mista con nome e una categoria `air` con la combo in volo e il colpo in picchiata; le armi a distanza `bow`, `crossbow`, `throwingKnives`, `javelin` hanno attacchi con `projectile`/`charge` e, coltelli e giavellotto, `ammo`), `WEAPON_ICON_SIZE`, `DEFAULT_WEAPON_ID`, `getAllWeaponAttacks()` (usata dalle animazioni), `isWeaponId()` (valida i progressi) |
 | `powerUpConfig.ts` (2.0) | `POWER_UP_CONFIG`: Furia, Velocità, Scudo, Fuoco, Rigenerazione (nome, descrizione, tipo, effetti sulle statistiche, durata, requisiti, icona, colore dell'alone) |
 | `paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS`), `PALETTE_RAMPS` (rampe dallo scuro al chiaro), tipi `PaletteColor`, `PaletteRampName` |
-| `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
+| `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere e valori comuni a tutti i personaggi: salto, hitbox, tempi), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
+| `characterConfig.ts` (Fase 4) | `CHARACTER_CONFIG` (cavaliere, ranger, berserker, paladino: nome, descrizione, tratto, suffisso degli sprite, arma iniziale, salute, velocità, moltiplicatori del danno inflitto e subito, schivata, `regeneration` facoltativa), `CHARACTER_ORDER`, `DEFAULT_CHARACTER_ID`, `isCharacterId()`. Il cavaliere legge salute, velocità e schivata da `PLAYER_CONFIG` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG` (anche `armorCrushStunMs` e i moltiplicatori dei nemici d'élite), `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss; `weaponReward` = trofeo) |
 | `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco (velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) |
 | `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
-| `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili; quelli con `powerUpId` attivano un power-up), `ITEM_SIZE` |
+| `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili; quelli con `powerUpId` attivano un power-up, `storedInBag` = pozione da borsa, `refillsAmmo` = faretra), `ITEM_SIZE` |
 | `levelConfig.ts` | `LEVEL_CONFIG` (i 6 livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
-| `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti; anche `pickUp` = E e `bagSlot1`-`bagSlot4` = 1-4), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
+| `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti; anche `pickUp` = E, `dropItem` = Q, `bagSlot1`-`bagSlot4` = 1-4 e, nei menu, `menuLeft`/`menuRight` = A/D e frecce), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
 | `inventoryConfig.ts` | `INVENTORY_CONFIG` (`slotCount` 4, `maxPotionsPerSlot` 2, `maxPotionSlots` 1), `BAG_SLOT_ACTIONS` (tasto di ogni posto) |
 | `animationConfig.ts` | `PLAYER_ANIMATIONS`, `ENEMY_ANIMATIONS`, `BOSS_ANIMATIONS` |
 
 #### `PLAYER_CONFIG`
+
+Salute, velocità e schivata qui sotto sono quelle del **cavaliere**; gli altri personaggi hanno i propri valori in `CHARACTER_CONFIG`
+(vedi la tabella dei personaggi in `GAME_MANUAL.md`). Il resto vale per tutti.
 
 | Chiave | Valore | Significato |
 |---|---|---|
@@ -202,8 +206,8 @@ carica è prima del fendente: con lo stesso numero casuale si ottiene lo stesso 
 | `InputManager.ts` | `InputManager` | tastiera centralizzata (vedi sotto) |
 | `GameEngine.ts` | `GameEngine` | coordina tutto: stati, livelli, combattimento, effetti, disegno |
 
-**`GameState`** – stati: `title`, `controls`, `levelSelect`, `playing`, `paused`, `gameOver`, `victory`. Transizioni valide:
-`title→controls/levelSelect/playing`, `controls→title`, `levelSelect→title/playing`, `playing→paused/gameOver/victory`,
+**`GameState`** – stati: `title`, `controls`, `levelSelect`, `characterSelect`, `confirmReset`, `playing`, `paused`, `gameOver`, `victory`. Transizioni valide:
+`title→controls/levelSelect/characterSelect/confirmReset/playing`, `controls→title`, `levelSelect→title/playing`, `characterSelect→title`, `confirmReset→title`, `playing→paused/gameOver/victory`,
 `paused→playing/title`, `gameOver→title/playing`, `victory→title`.
 
 **`InputManager`** – traduce i tasti (`KeyboardEvent.code`) in azioni (`GameAction`) secondo
@@ -228,7 +232,11 @@ Alla perdita del focus rilascia tutti i tasti. Implementa l'interfaccia `InputSo
 
 Funzioni principali: `start()`, `update()` (un frame di logica), `render()`, `startNewGame()`, `startLevel()`,
 `updatePlaying()`, `updateCombatAndEnemies()`, `handlePlayerDeath()`, `finishRun()`, `checkLevelCompletion()`,
-`advanceToNextLevel()`, `getHUDData()`, `getScreenData()`. Le costanti `EFFECT_CONFIG` (in cima al file)
+`advanceToNextLevel()`, `getHUDData()`, `getScreenData()`, `chooseCharacter()` (Fase 4: salva il personaggio e, se è
+cambiato, mette in mano e nella borsa la sua arma iniziale), `ensureCharacterSprites()` (registra la serie di sprite di un
+personaggio la prima volta che serve), `resetAllData()` ("Cancella dati": `ProgressManager.reset`, `HighScoreManager.reset`, borsa e
+personaggio iniziali), `dropFromBag()` (tasto Q: Q tenuto + 1-4 lascia quel posto, Q da solo, al rilascio, l'arma in mano; solo a terra),
+`refillAmmoFromQuiver()` (faretra: raccolta solo se `Inventory.refillAllAmmo` ricarica qualcosa). Le costanti `EFFECT_CONFIG` (in cima al file)
 regolano hit-stop, tremolio e polvere.
 
 ### 3.3 `src/entities/` – gli oggetti di gioco
@@ -238,11 +246,12 @@ regolano hit-stop, tremolio e polvere.
 | `GameObject.ts` | `GameObject` (astratta) | `positionX`, `positionY`, `velocityX`, `velocityY`, `facingDirection`, `isOnGround`, `width`, `height`, `getBounds()` |
 | `Player.ts` | `Player` | il cavaliere |
 | `Enemy.ts` | `Enemy` | nemico normale guidato da una `EnemyDefinition` (anche a distanza e volante) |
-| `Boss.ts` | `Boss` | boss con IA propria, attacchi come dati e fasi |
-| `Projectile.ts` (2.0) | `Projectile` | proiettile nemico: si muove, scade, si anima (le regole di contatto sono in `ProjectileSystem`) |
+| `Boss.ts` | `Boss` | boss con IA propria, attacchi come dati e fasi; `arenaMinX` (impostato da `LevelManager.createBoss` oltre il cancello, `ARENA_GATE_WIDTH`): il boss non esce mai dall'arena |
+| `Projectile.ts` (2.0) | `Projectile` | proiettile nemico o del giocatore (`owner`): si muove, scade (`hasTimedOut`), si anima, ricorda i bersagli già colpiti (`targetsHit`); le regole di contatto sono in `ProjectileSystem` |
+| `AmmoDrop.ts` | `AmmoDrop`, `AMMO_DROP_SIZE` | munizione caduta a terra (coltello lanciato): cade con la gravità, si recupera passandoci sopra |
 | `Item.ts` | `Item` | oggetto raccoglibile |
 | `Chest.ts` | `Chest`, `CHEST_SIZE` | forziere 16×12 con un'arma: `Damageable`, si apre al primo colpo; `drainOpenedWeapon()` restituisce l'arma una volta sola |
-| `WeaponPickup.ts` | `WeaponPickup` | arma a terra 16×16 (`weaponId`, `isArmed`: un'arma appena lasciata dal giocatore non è prendibile finché lui non se ne allontana) |
+| `WeaponPickup.ts` | `WeaponPickup` | arma a terra 16×16 (`weaponId`, `isArmed`: un'arma appena lasciata dal giocatore non è prendibile finché lui non se ne allontana; `ammo`: munizioni di un'arma da lancio lasciata a terra) |
 
 **`Player`** – `currentState` (`PlayerState`: `idle`, `walk`, `jump`, `fall`, `attack`, `hurt`, `dodge`, `crouch`, `dead`;
 `run` è previsto dal tipo ma non usato), `currentHealth`, `maxHealth`. Funzioni:
@@ -255,12 +264,14 @@ regolano hit-stop, tremolio e polvere.
 | `heal(amount)` | cura fino al massimo |
 | `getActiveAttackHitbox()` | area d'urto se il colpo è attivo, altrimenti `null` |
 | `hasAlreadyHit(target)`, `registerHit(target)` | un bersaglio si colpisce una volta per attacco |
-| `getDamageMultiplier()`, `getBonusDamage()` | moltiplicatore del danno (Furia) e danno aggiunto (Fuoco), da `modifiers` |
+| `getDamageMultiplier()`, `getBonusDamage()` | moltiplicatore del danno (Furia × quello del personaggio) e danno aggiunto (Fuoco), da `modifiers` |
+| `characterDefinition`, `setCharacter(definizione)`, `maxHealth` | Fase 4: classe del personaggio (`CharacterDefinition`, terzo parametro facoltativo del costruttore; senza, il cavaliere). Ne vengono salute massima, velocità, danno inflitto e subito, schivata, cura lenta (dopo `delayAfterHitMs` senza colpi subiti, anche ambientali) e suffisso degli sprite. `setCharacter` riporta la salute al massimo; il motore la chiama a ogni nuova partita |
 | `modifiers`, `applyPowerUp(definizione)` | power-up attivi (`PlayerModifiers`); la velocità usa `movementSpeedMultiplier`, `takeDamage` usa `damageTakenMultiplier` (Scudo, almeno 1 danno), la rigenerazione cura a punti interi; `revive` li toglie tutti |
 | `respawnAt(position)`, `revive()` | ripartenza e rianimazione |
+| `currentAmmo`, `setAmmo(n)`, `chargeFraction`, `drainProjectileLaunches()`, `drainOutOfAmmo()` | Fase 2: munizioni dell'arma in mano (`equipWeapon(definizione, ammo)`), carica dell'arco, proiettili da lanciare (il motore li passa a `ProjectileSystem` e tiene la borsa al passo con le munizioni in `updateRangedWeapon`), avviso di munizioni finite. Gli attacchi con `projectile` lanciano a `launchAtMs`, quelli con `charge` si caricano finché si tiene il tasto e poi passano all'attacco di rilascio. Il danno dei proiettili usa i power-up come la spada |
 | `bounceOffTarget()`, `drainCompletedComboName()`, `drainPlungeLanding()` | Fase 3: il colpo in picchiata (`AttackDefinition.plunge`) rimbalza quando colpisce (il motore la chiama dopo `processPlayerAttack`) e finisce toccando terra; nome della combo completata da mostrare. Il cavaliere ha due `ComboManager`, a terra e in aria (`WeaponDefinition.air`): passando dall'uno all'altro la combo riparte |
-| `equippedWeapon`, `equipWeapon(definizione)` | arma in mano (`WeaponDefinition`): attacchi, combo, attacco predefinito per input e velocità di camminata; cambiarla annulla attacco e combo. Il motore dà l'arma salvata in `ProgressManager` all'avvio e a ogni nuova partita |
-| `getRenderedFrameId()` | frame da disegnare: durante un attacco da accovacciati la variante `Crouch` (guarda l'animazione in corso, non lo stato) |
+| `equippedWeapon`, `equipWeapon(definizione)` | arma in mano (`WeaponDefinition`): attacchi, combo, attacco predefinito per input e velocità di camminata; cambiarla annulla attacco e combo e, a metà attacco, anche l'animazione (la nuova arma potrebbe non averne i frame). Il motore dà l'arma salvata in `ProgressManager` all'avvio e a ogni nuova partita |
+| `getRenderedFrameId()` | frame da disegnare: frame dell'animazione + `Crouch` (attacco da accovacciati; guarda l'animazione in corso, non lo stato) + suffisso dell'arma + suffisso del personaggio |
 | `isInvulnerable`, `isDodging`, `isCrouching`, `isDead`, `isReadyToRespawn`, `activeAttack` | stato letto dal motore (`isDodging`: si attraversano i nemici) |
 
 L'ordine dentro `update`: timer → (morto / stordito / input) → gravità → `moveAndCollide` → stato → animazione.
@@ -313,16 +324,16 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 |---|---|---|
 | `CollisionSystem.ts` | `CollisionSystem` | `intersects(a, b)`, `applyGravityAndMove(object, dt, gravity, maxFallSpeed, platforms, mapWidth)` (gravità con **velocità media** del frame: la traiettoria del salto è esatta a qualsiasi FPS) e `moveAndCollide(object, dt, platforms, mapWidth)`: muove prima su X poi su Y, risolve le collisioni, impone i limiti della mappa, imposta `isOnGround`; piattaforme sospese (`oneWay`) attraversabili dal basso; `separateHorizontally(mover, obstacle, platforms, mapWidth)`: corpi solidi, spinge `mover` fuori dal lato del suo centro (o sposta l'ostacolo se `mover` è contro un muro). La usa `GameEngine.separatePlayerFromBodies()` per giocatore contro nemici a terra e boss, tranne durante la schivata (`Player.isDodging`) |
 | `EnemyAISystem.ts` | `EnemyAISystem` | decide cosa fa ogni nemico (pattuglia, insegue, guardia, tira a distanza, vola e picchia, attacca); i nemici a terra evitano abissi, muri, spuntoni e acqua |
-| `LevelManager.ts` | `LevelManager` | `loadLevel`, `loadLevelDefinition` (livelli fuori da `LEVEL_CONFIG`, per test e prove), `hasLevel`, `createEnemies`, `createBoss`, `lockArena`, `hazards`, `updateMovingPlatforms(ms, chi)` (muove le piattaforme mobili e trasporta chi ci sta sopra), `render` (sfondo, terreno, porta, cancello, pericoli), `renderForeground` (acqua davanti alle entità) |
-| `ProjectileSystem.ts` (2.0) | `ProjectileSystem` | `spawn`, `update` (restituisce gli eventi: colpito il giocatore, deviato dalla spada, schianto), `render`, `clear`. Il proiettile passa attraverso il giocatore invulnerabile (schivata) |
+| `LevelManager.ts` | `LevelManager` | `loadLevel`, `loadLevelDefinition` (livelli fuori da `LEVEL_CONFIG`, per test e prove), `hasLevel`, `createEnemies`, `createBoss` (con `arenaMinX`), `lockArena`, `hazards`, `updateMovingPlatforms(ms, chi)` (muove le piattaforme mobili e trasporta chi ci sta sopra), `render` (sfondo, terreno, porta, cancello, pericoli), `renderForeground` (acqua davanti alle entità) |
+| `ProjectileSystem.ts` (2.0) | `ProjectileSystem` | `spawn`, `update(dt, player, platforms, mapWidth, mapHeight, targets)` (restituisce gli eventi: colpito il giocatore, deviato dalla spada, schianto; per i proiettili del giocatore `hitTarget` e `dropAmmo`), `render`, `clear`. Il proiettile nemico passa attraverso il giocatore invulnerabile (schivata). Quelli del giocatore (Fase 2) colpiscono `targets` (nemici, boss, forzieri chiusi), si fermano al primo o trafiggono (`isPiercing`), e se recuperabili (`recoveredAsAmmoOf`) a fine corsa diventano munizioni a terra |
 | `HazardSystem.ts` (2.0) | `HazardSystem` | `computePlayerEnvironment` (acqua o ghiaccio: modificatori del movimento), `applyContactDamage` (spuntoni) |
-| `ItemManager.ts` | `ItemManager` | `loadItems`, `collectItems(player, scoreManager)` (applica gli effetti; salta gli oggetti da borsa, `ItemDefinition.storedInBag`), `findReachableBagItem(player)`, `removeItem(item)`, `render(..., player)` (suggerimento "E PRENDI ..." sopra la pozione toccata) |
+| `ItemManager.ts` | `ItemManager` | `loadItems`, `collectItems(player, scoreManager)` (applica gli effetti; salta gli oggetti da borsa, `ItemDefinition.storedInBag`), `findReachableBagItem(player)`, `findTouchedAmmoRefill(player)` (faretra, salta da `collectItems`: la raccoglie il motore), `addItem(tipo, x, y)` (pozione lasciata con Q), `removeItem(item)`, `render(..., player)` (suggerimento "E PRENDI ..." sopra la pozione toccata) |
 | `WeaponPickupManager.ts` | `WeaponPickupManager` | armi a terra: `spawn(weaponId, centerX, bottomY, isArmed)`, `update(dt, player)` (rende prendibili le armi lasciate quando il giocatore se ne allontana), `findReachablePickup(player)`, `take(pickup)`, `render` (con il suggerimento "E PRENDI ...") |
-| `Inventory.ts` | `Inventory`, `BagSlot`, `InventorySnapshot`, `WeaponAddResult`, `SlotSelection` | la borsa, solo logica: `bagSlots`, `equippedSlotIndex`, `equippedWeaponId`, `weaponIds`, `potionCount`, `reset(weaponIds, equipped)`, `addWeapon(id)` (posto libero, altrimenti al posto dell'arma in mano: `droppedWeaponId`; `duplicate` se c'è già), `addPotion()`/`canAddPotion()` (un gruppo, limiti di `INVENTORY_CONFIG`), `selectSlot(i)`, `consumePotion(i)`, `snapshot()`/`restore()`. Il motore (`updatePickupsAndBag`, `pickUpWithE`, `useBagSlot`) applica gli effetti, salva le armi con `ProgressManager.setBagWeapons` e ripristina la borsa di inizio livello quando si ricomincia |
+| `Inventory.ts` | `Inventory`, `BagSlot`, `InventorySnapshot`, `WeaponAddResult`, `SlotSelection` | la borsa, solo logica: `bagSlots`, `equippedSlotIndex`, `equippedWeaponId`, `weaponIds`, `potionCount`, `reset(weaponIds, equipped)`, `addWeapon(id, ammo)` (posto libero, altrimenti al posto dell'arma in mano: `droppedWeaponId`, `droppedAmmo`; `duplicate` se c'è già, `refilled` se è un'arma con munizioni non piene), munizioni (`equippedAmmo`, `setEquippedAmmo`, `addAmmo`), `removeWeapon(id)` (giavellotti finiti; senza armi torna la spada), `dropSlot(i)` (tasto Q: l'arma con le munizioni o una pozione; mai l'ultima arma), `refillAllAmmo()` (faretra), `addPotion()`/`canAddPotion()` (un gruppo, limiti di `INVENTORY_CONFIG`), `selectSlot(i)`, `consumePotion(i)`, `snapshot()`/`restore()`. Il motore (`updatePickupsAndBag`, `pickUpWithE`, `useBagSlot`) applica gli effetti, salva le armi con `ProgressManager.setBagWeapons` e ripristina la borsa di inizio livello quando si ricomincia |
 | `ScoreManager.ts` | `ScoreManager` | `currentScore`, `collectiblesFound`, `addScore`, `registerCollectible`, `restore`, `reset` |
 | `LivesManager.ts` | `LivesManager` | `remainingLives`, `hasLivesLeft`, `loseLife`, `addLife`, `reset` |
-| `HighScoreManager.ts` | `HighScoreManager` | record nel browser (`localStorage`), tollerante agli errori; `bestScore`, `submitScore` |
-| `ProgressManager.ts` (2.0) | `ProgressManager` | livello più avanzato raggiunto, difficoltà scelta e arma in mano, salvati nel browser (JSON nella chiave `ironAndShadow.progress`); tollerante a dati assenti, corrotti o archivio bloccato; `unlockedLevelId`, `isLevelUnlocked`, `unlockLevel` (non torna indietro), `difficulty`, `setDifficulty`, `equippedWeaponId`, `setEquippedWeapon`, `bagWeaponIds`, `setBagWeapons(weaponIds, equipped)` (armi della borsa senza doppioni, l'arma in mano sempre presente, al massimo 4; un salvataggio senza borsa dà la sola arma in mano, uno senza arma la spada; le pozioni non si salvano) |
+| `HighScoreManager.ts` | `HighScoreManager` | record nel browser (`localStorage`), tollerante agli errori; `bestScore`, `submitScore`, `reset` |
+| `ProgressManager.ts` (2.0) | `ProgressManager` | livello più avanzato raggiunto, difficoltà e personaggio scelti (`characterId`, `setCharacter`; un salvataggio senza personaggio dà il cavaliere) e arma in mano, salvati nel browser (JSON nella chiave `ironAndShadow.progress`); tollerante a dati assenti, corrotti o archivio bloccato; `unlockedLevelId`, `isLevelUnlocked`, `unlockLevel` (non torna indietro), `reset()` (cancella tutto), `difficulty`, `setDifficulty`, `equippedWeaponId`, `setEquippedWeapon`, `bagWeaponIds`, `setBagWeapons(weaponIds, equipped)` (armi della borsa senza doppioni, l'arma in mano sempre presente, al massimo 4; un salvataggio senza borsa dà la sola arma in mano, uno senza arma la spada; le pozioni non si salvano) |
 
 ### 3.6 `src/rendering/`
 
@@ -339,8 +350,8 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`, `swamp`, `ice`, `tower`: 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia, lucciole, aurora, neve, fulmini, vetrate, bracieri) |
 | `TerrainRenderer.ts` | `TerrainRenderer` | terreno e piattaforme con la tessitura dell'ambientazione (`THEME_STYLES`: erba, pietra, mattoni, fango, neve, pietra runica), piattaforme mobili, pericoli (spuntoni, ghiaccio, acqua in due tempi), porta d'uscita, cancello dell'arena |
 | `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe, `addOutline` (contorno automatico), `remapSpriteKeys` (varianti) |
-| `sprites/knightSprites.ts` | `registerKnightSprites`, `KNIGHT_ANCHOR_X`, `KNIGHT_FIRE_SUFFIX`, `KNIGHT_CROUCH_SUFFIX` | cavaliere 24×30 (attacchi 44×30, lancia 58×30): parte superiore + gambe + arma; ancora alla colonna 7. `registerKnightSprites` compone **una serie completa di frame per ogni arma** (`WEAPON_VISUALS`: lunghezza rispetto alla spada, funzione di disegno, pose d'attacco, icona): le funzioni `compose*` disegnano l'arma attiva, quindi un frame aggiunto all'elenco vale per tutte le armi. Id di uno sprite: frame + `Crouch` (attacco da accovacciati) + suffisso dell'arma + `Fire`. Registra anche le icone 16×16 delle armi. `Player.getRenderedFrameId()` sceglie il frame |
-| `sprites/weaponShapes.ts` | `drawSpear`, `drawAxe`, `drawMace`, `WeaponDrawer` | forme delle armi della Fase 1 dalla mano alla punta (metallo con le chiavi della lama: il fuoco le ricolora) |
+| `sprites/knightSprites.ts` | `registerKnightSprites`, `registerCharacterPreviews`, `getCharacterPreviewFrameId`, `KNIGHT_ANCHOR_X`, `KNIGHT_FIRE_SUFFIX`, `KNIGHT_CROUCH_SUFFIX` | cavaliere 24×30 (attacchi 44×30, lancia 58×30): parte superiore + gambe + arma; ancora alla colonna 7. `registerKnightSprites(spriteManager, personaggio)` compone **una serie completa di frame per ogni arma** (`WEAPON_VISUALS`: lunghezza rispetto alla spada, funzione di disegno, pose d'attacco, icona): le funzioni `compose*` disegnano l'arma e il busto attivi, quindi un frame aggiunto all'elenco vale per tutte le armi e tutti i personaggi. **Personaggi** (Fase 4, `CHARACTER_VISUALS`): stesso corpo del cavaliere, colori propri (stesse chiavi: armatura `d g s w`, sopravveste `m r o`, scudo `N B L`) e, se serve, le 12 righe della testa (`RANGER_HEAD_ROWS`, `BERSERKER_HEAD_ROWS`; il paladino ricolora il pennacchio). Id di uno sprite: frame + `Crouch` (attacco da accovacciati) + suffisso dell'arma + suffisso del personaggio + `Fire`. Una serie è di circa 600 sprite: il motore registra quella di un personaggio quando serve (`GameEngine.ensureCharacterSprites`) e, all'avvio, solo i due frame d'attesa di ognuno per i menu (`registerCharacterPreviews`). Registra anche le icone 16×16 delle armi. `Player.getRenderedFrameId()` sceglie il frame |
+| `sprites/weaponShapes.ts` | `drawSpear`, `drawAxe`, `drawMace`, `drawBow`, `drawCrossbow`, `WeaponDrawer` | forme delle armi della Fase 1 dalla mano alla punta (metallo con le chiavi della lama: il fuoco le ricolora) |
 | `sprites/enemySprites.ts` | `registerEnemySprites` | umanoidi da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma spada o arco, mano, ancora): scheletro, arciere, goblin, soldato, golem; pipistrello disegnato a metà e specchiato; lupo e melme con le forme procedurali di `creatureTools.ts` |
 | `sprites/creatureTools.ts` (2.0) | `composeWolf`, `composeBlob`, `fillShadedEllipse` | creature non umanoidi composte da ellissi ombreggiate e rettangoli, con contorno automatico: lo stesso codice disegna il lupo (scala 1) e il Re dei Lupi (scala 2) |
 | `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES`, `BOSS_SPRITE_SHAPES` | quattro forme (`BOSS_SPRITE_SHAPES`, se manca: `knight`): **knight** cavaliere corazzato 36×41 (Cavaliere Nero), **witch** strega con veste e bastone, **sorcerer** stregone incappucciato con corona e spada d'ombra (36×44), **beast** lupo gigante 60×42 (hitbox 40×24). La forma impone la hitbox; i colori di ogni boss sono in `BOSS_SPRITE_STYLES` con le chiavi della sua forma |
@@ -374,14 +385,14 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 |---|---|---|
 | `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, livello, punteggio dorato, gemme), borsa sotto il pannello a destra (`BAG_SLOT_GEOMETRY`, `getBagSlotX`: riquadri numerati, arma in mano con la cornice dorata, numero di pozioni), power-up attivi con la barra del tempo, barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
 | `MenuManager.ts` | `MenuManager<TCommand>` | menu verticale: `update(input)` restituisce il comando confermato, `render(...)` (voce scelta in bianco-oro con frecce); l'etichetta di una voce può essere una funzione (testo che cambia) |
-| `ScreenManager.ts` | `ScreenManager` | schermate titolo (con la difficoltà nel menu), controlli, **selezione dei livelli** (cursore solo sui livelli sbloccati, `selectedLevelId`), pausa, Game Over, vittoria; usa un `MenuManager` per ciascuna; riceve dal motore `ScreenData` (anche `difficultyName` e `levels`) |
+| `ScreenManager.ts` | `ScreenManager`, `getCharacterRatings` | schermate titolo (con personaggio e difficoltà nel menu), controlli, **selezione dei livelli** (cursore solo sui livelli sbloccati, `selectedLevelId`), **scelta del personaggio** (Fase 4: A/D o W/S circolari, parte dal personaggio salvato, `selectedCharacterId`; comandi `showCharacterSelect`, `confirmCharacter`; **conferma di "Cancella dati"** (`confirmReset`, voce predefinita "no", comandi `showResetConfirm`, `resetAllData`; `showNotice` mostra "DATI CANCELLATI" sul titolo); le tacche da 1 a 5 vengono da `getCharacterRatings`, calcolate dai valori di `CHARACTER_CONFIG`), pausa, Game Over, vittoria; usa un `MenuManager` per ciascuna; riceve dal motore `ScreenData` (anche `difficultyName`, `characterId` e `levels`) |
 
 ### 3.8 `src/types/`
 
 | File | Tipi |
 |---|---|
 | `GameTypes.ts` | `GameStateName`, `GameAction`, `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
-| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition` (`breaksGuard`, `crushesArmor`, `plunge`), `HitProperties`, `ComboDefinition` (`name`), `WeaponDefinition` (`air`), `WeaponId`, `AttackInputAction`, `WeaponDefinition`, `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
+| `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition` (`breaksGuard`, `crushesArmor`, `plunge`, `projectile`, `charge`), `ProjectileDefinition` (`isPiercing`, `recoveredAsAmmoOf`), `ProjectileLaunch` (`owner`, `speedMultiplier`, `hit`), `WeaponDefinition` (`ammo`), `HitProperties`, `ComboDefinition` (`name`), `WeaponDefinition` (`air`), `WeaponId`, `AttackInputAction`, `WeaponDefinition`, `CharacterId`, `CharacterDefinition` (Fase 4), `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
 | `LevelTypes.ts` | `ThemeId` (6 ambientazioni), `TerrainTexture` (6 tessiture), `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition` (`elite`, `weaponDrop`), `ChestSpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` (`chests`) |
 
 ---
@@ -475,8 +486,8 @@ export const PLAYER_CONFIG = {
   maxHealth: 150,
 ```
 
-**Spiegazione.** `Player` legge `maxHealth` da `PLAYER_CONFIG` sia per la salute massima sia per quella iniziale
-(`currentHealth`). La barra dell'HUD ha sempre 10 segmenti e si adatta da sola alla salute massima. Pozioni (+30)
+**Spiegazione.** Il cavaliere (`CHARACTER_CONFIG.knight`) legge `maxHealth` da `PLAYER_CONFIG`, e `Player` lo usa sia per la
+salute massima sia per quella iniziale (`currentHealth`). Gli altri personaggi hanno la propria salute in `characterConfig.ts`. La barra dell'HUD ha sempre 10 segmenti e si adatta da sola alla salute massima. Pozioni (+30)
 e cura di fine livello (+30) valgono invece lo stesso numero di punti: ora pesano di meno in percentuale.
 
 **Risultato atteso:** il cavaliere parte con 150 HP, la barra è piena con 10 segmenti, ogni segmento ne vale 15.
@@ -501,7 +512,8 @@ Codice aggiornato:
   movementSpeed: 100,
 ```
 
-**Spiegazione.** `Player.applyHorizontalInput` imposta `velocityX = direzione × movementSpeed`. Il movimento usa il
+**Spiegazione.** `Player.applyHorizontalInput` imposta `velocityX = direzione × movementSpeed` (del personaggio: il cavaliere la
+legge da `PLAYER_CONFIG`; poi moltiplicata per arma, ambiente e power-up). Il movimento usa il
 delta time, quindi 100 px/s restano 100 px/s a qualsiasi frequenza di aggiornamento. Con più velocità si salta più
 lontano: gli abissi (≤ 36 px) restano superabili.
 
@@ -810,27 +822,27 @@ dalla vecchia zona di pattuglia; non cammina nel vuoto.
 
 Codice originale:
 ```ts
-  | "powerRegeneration";
+  | "quiver";
 ```
 Codice aggiornato:
 ```ts
-  | "powerRegeneration"
+  | "quiver"
   | "elixir";
 ```
 
 #### Passo 2 – `src/config/itemConfig.ts`
 
-**Cerca:** `ITEM_CONFIG`, in fondo alla voce `powerRegeneration` (l'ultima).
+**Cerca:** `ITEM_CONFIG`, in fondo alla voce `quiver` (la faretra, l'ultima).
 
 Codice originale:
 ```ts
-    powerUpId: "regeneration",
+    refillsAmmo: true,
   },
 };
 ```
 Codice aggiornato:
 ```ts
-    powerUpId: "regeneration",
+    refillsAmmo: true,
   },
   elixir: {
     id: "elixir",

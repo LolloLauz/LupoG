@@ -60,6 +60,11 @@ export class Boss extends GameObject implements Damageable {
   private lockedDirection: 1 | -1 = -1;
   private pendingLaunches: ProjectileLaunch[] = [];
   private pendingSummons: SummonRequest[] = [];
+  /**
+   * Bordo sinistro dell'arena (oltre il cancello): il boss non va mai più a sinistra, così non può inseguire il
+   * giocatore fuori dall'arena e restare chiuso fuori quando il cancello si chiude. null = nessun limite.
+   */
+  public arenaMinX: number | null = null;
 
   constructor(
     public readonly definition: BossDefinition,
@@ -237,6 +242,11 @@ export class Boss extends GameObject implements Damageable {
       platforms,
       mapWidth
     );
+    // il boss resta nella sua arena (anche durante la carica, che si ferma come contro un muro)
+    if (this.arenaMinX !== null && this.positionX < this.arenaMinX) {
+      this.positionX = this.arenaMinX;
+      this.velocityX = Math.max(0, this.velocityX);
+    }
     // la carica finisce se sbatte contro un muro o il bordo della mappa
     if (this.currentAttack?.kind === "charge" && this.attackPhase === "active") {
       const expectedMovement = Math.abs(this.velocityX * deltaTimeSeconds);

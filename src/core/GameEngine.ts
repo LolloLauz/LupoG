@@ -12,7 +12,8 @@ import { SpriteManager } from "../rendering/SpriteManager";
 import { registerBossSprites } from "../rendering/sprites/bossSprites";
 import { registerEnemySprites } from "../rendering/sprites/enemySprites";
 import { registerItemSprites } from "../rendering/sprites/itemSprites";
-import { registerKnightSprites } from "../rendering/sprites/knightSprites";
+import { registerCharacterPreviews, registerKnightSprites } from "../rendering/sprites/knightSprites";
+import { CHARACTER_CONFIG } from "../config/characterConfig";
 import { registerUiSprites } from "../rendering/sprites/uiSprites";
 import { CollisionSystem } from "../systems/CollisionSystem";
 import { EnemyAISystem } from "../systems/EnemyAISystem";
@@ -31,8 +32,8 @@ import { ScoreManager } from "../systems/ScoreManager";
 import { Inventory, type InventorySnapshot } from "../systems/Inventory";
 import { WeaponPickupManager } from "../systems/WeaponPickupManager";
 import { BAG_SLOT_ACTIONS } from "../config/inventoryConfig";
-import { ITEM_CONFIG } from "../config/itemConfig";
-import type { WeaponId } from "../types/EntityTypes";
+import { ITEM_CONFIG, ITEM_SIZE } from "../config/itemConfig";
+import type { CharacterId, Damageable, WeaponId } from "../types/EntityTypes";
 import type { Vector2 } from "../types/GameTypes";
 import { HUDManager, type HUDData } from "../ui/HUDManager";
 import { ScreenManager, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
@@ -123,10 +124,16 @@ export class GameEngine {
   /** Vero se l'ultima partita ha stabilito un nuovo record. */
   private isNewRecord = false;
   private framesPerSecond = 0;
+  /** Personaggi di cui sono già registrati tutti gli sprite (si registrano quando servono, vedi ensureCharacterSprites). */
+  private readonly registeredCharacters = new Set<CharacterId>();
+  /** Vero se, tenendo Q, si è già lasciato un posto con 1-4 (allora il rilascio di Q non lascia l'arma in mano). */
+  private hasDroppedWithSlotKey = false;
 
   constructor(canvas: HTMLCanvasElement) {
     this.renderer = new Renderer(canvas);
-    registerKnightSprites(this.spriteManager);
+    this.ensureCharacterSprites("knight");
+    this.ensureCharacterSprites(this.progressManager.characterId);
+    registerCharacterPreviews(this.spriteManager);
     registerEnemySprites(this.spriteManager);
     registerBossSprites(this.spriteManager);
     registerItemSprites(this.spriteManager);
@@ -135,9 +142,9 @@ export class GameEngine {
     this.screens = new ScreenManager(this.spriteManager);
     this.levelManager.loadLevel(FIRST_LEVEL_ID);
     const playerStart = this.levelManager.level.playerStart;
-    this.player = new Player(playerStart.x, playerStart.y);
+    this.player = new Player(playerStart.x, playerStart.y, CHARACTER_CONFIG[this.progressManager.characterId]);
     this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId]);
+    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
     this.lastSafePosition = { ...playerStart };
     this.populateLevel();
     this.loop = new GameLoop(
@@ -212,6 +219,21 @@ export class GameEngine {
       case "showLevelSelect":
         this.gameState.change("levelSelect");
         break;
+      case "showCharacterSelect":
+        this.gameState.change("characterSelect");
+        break;
+      case "confirmCharacter":
+        this.chooseCharacter(this.screens.selectedCharacterId);
+        this.gameState.change("title");
+        break;
+      case "showResetConfirm":
+        this.gameState.change("confirmReset");
+        break;
+      case "resetAllData":
+        this.resetAllData();
+        this.gameState.change("title");
+        this.screens.showNotice("DATI CANCELLATI");
+        break;
       case "cycleDifficulty": {
         const currentIndex = DIFFICULTY_ORDER.indexOf(this.progressManager.difficulty);
         this.progressManager.setDifficulty(DIFFICULTY_ORDER[(currentIndex + 1) % DIFFICULTY_ORDER.length]!);
@@ -233,6 +255,43 @@ export class GameEngine {
   }
 
   /**
+   * Personaggio scelto nella schermata di scelta: si salva e, se è cambiato, impugna la sua arma iniziale
+   * (che entra nella borsa insieme alle armi già raccolte). Vale dalla prossima partita.
+   */
+  private chooseCharacter(characterId: CharacterId): void {
+    if (characterId === this.progressManager.characterId) {
+      return;
+    }
+    this.progressManager.setCharacter(characterId);
+    const startingWeaponId = CHARACTER_CONFIG[characterId].startingWeaponId;
+    this.progressManager.setBagWeapons([startingWeaponId, ...this.progressManager.bagWeaponIds], startingWeaponId);
+    this.ensureCharacterSprites(characterId);
+  }
+
+  /**
+   * "Cancella dati" dal titolo: record, livelli raggiunti, difficoltà, personaggio e armi salvate tornano come
+   * alla prima partita (cavaliere con la sola spada).
+   */
+  private resetAllData(): void {
+    this.progressManager.reset();
+    this.highScoreManager.reset();
+    this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
+    this.levelStartInventory = this.inventory.snapshot();
+    this.player.setCharacter(CHARACTER_CONFIG[this.progressManager.characterId]);
+    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+    this.weaponReward = null;
+    this.isNewRecord = false;
+  }
+
+  /** Registra tutti gli sprite di un personaggio la prima volta che servono (sono molti: uno per arma e posa). */
+  private ensureCharacterSprites(characterId: CharacterId): void {
+    if (!this.registeredCharacters.has(characterId)) {
+      registerKnightSprites(this.spriteManager, characterId);
+      this.registeredCharacters.add(characterId);
+    }
+  }
+
+  /**
    * Nuova partita (dal primo livello o da un livello scelto tra quelli sbloccati): salute piena,
    * vite della difficoltà scelta, punteggio azzerato.
    */
@@ -240,10 +299,11 @@ export class GameEngine {
     this.scoreManager.reset();
     this.livesManager.reset(DIFFICULTY_CONFIG[this.progressManager.difficulty].startingLives);
     this.isNewRecord = false;
+    this.player.setCharacter(CHARACTER_CONFIG[this.progressManager.characterId]);
     this.player.revive();
     // a ogni nuova partita: le armi salvate nella borsa, nessuna pozione
     this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId]);
+    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
     this.weaponReward = null;
     this.startLevel(this.levelManager.hasLevel(levelId) ? levelId : FIRST_LEVEL_ID);
   }
@@ -307,7 +367,7 @@ export class GameEngine {
     this.scoreManager.restore(this.levelStartScore, this.levelStartCollectibles);
     // anche la borsa torna com'era a inizio livello (pozioni e armi raccolte nel livello si ritrovano a terra)
     this.inventory.restore(this.levelStartInventory);
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId]);
+    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
     this.saveBagWeapons();
     this.startLevel(this.currentLevelId);
   }
@@ -342,6 +402,7 @@ export class GameEngine {
       level.width
     );
     this.hazardSystem.applyContactDamage(this.player, this.levelManager.hazards);
+    this.updateRangedWeapon();
     this.updatePickupsAndBag(deltaTimeSeconds);
     this.updateMovementEffects(wasOnGround, fallingSpeed, wasDodging);
     this.showComboAndPlungeEffects();
@@ -415,42 +476,7 @@ export class GameEngine {
       this.player.bounceOffTarget();
     }
     for (const hit of hits) {
-      const targetBounds = hit.target.getBounds();
-      const centerX = targetBounds.x + targetBounds.width / 2;
-      const centerY = targetBounds.y + targetBounds.height / 2;
-      const isHeavyHit = hit.damage >= EFFECT_CONFIG.heavyHitDamage;
-      this.effects.spawnHitSparks(centerX, centerY, this.player.facingDirection === "right" ? 1 : -1);
-      this.effects.triggerHitStop(isHeavyHit ? EFFECT_CONFIG.heavyHitStopMs : EFFECT_CONFIG.lightHitStopMs);
-      if (isHeavyHit) {
-        this.effects.triggerShake(1, 100);
-      }
-      if (hit.target instanceof Chest) {
-        this.openChest(hit.target);
-        continue;
-      }
-      if (hit.target === this.boss && this.boss !== null) {
-        if (!this.boss.isAlive) {
-          const reward = this.boss.definition.weaponReward;
-          if (reward !== undefined && this.levelManager.hasLevel(this.currentLevelId + 1)) {
-            this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward };
-          }
-          this.scoreManager.addScore(this.boss.scoreReward);
-          this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.red, PALETTE.orange, PALETTE.yellow], 50);
-          this.effects.addPopup(`+${this.boss.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
-          this.effects.triggerShake(EFFECT_CONFIG.bossDeathShakePixels, EFFECT_CONFIG.bossDeathShakeMs);
-        }
-        continue;
-      }
-      const enemy = this.enemies.find((candidate) => candidate === hit.target);
-      if (enemy !== undefined && !enemy.isAlive) {
-        this.scoreManager.addScore(enemy.scoreReward);
-        this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.lightGray, PALETTE.red], 14);
-        this.effects.addPopup(`+${enemy.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
-        this.effects.triggerShake(EFFECT_CONFIG.enemyDeathShakePixels, EFFECT_CONFIG.enemyDeathShakeMs);
-        if (enemy.weaponDrop !== null) {
-          this.dropWeapon(enemy.weaponDrop, centerX, targetBounds.y + targetBounds.height);
-        }
-      }
+      this.handlePlayerHit(hit.target, hit.damage, this.player.facingDirection === "right" ? 1 : -1);
     }
 
     this.enemyAISystem.update(this.enemies, this.player, platforms, this.levelManager.hazards, this.levelElapsedSeconds * 1000);
@@ -481,7 +507,9 @@ export class GameEngine {
       }
     }
     const level = this.levelManager.level;
-    const projectileEvents = this.projectileSystem.update(deltaTimeSeconds, this.player, platforms, level.width, level.height);
+    // i proiettili del giocatore colpiscono nemici, boss e forzieri ancora chiusi
+    const projectileTargets = [...this.enemies, ...(this.boss === null ? [] : [this.boss]), ...this.chests.filter((chest) => chest.isAlive)];
+    const projectileEvents = this.projectileSystem.update(deltaTimeSeconds, this.player, platforms, level.width, level.height, projectileTargets);
     this.showProjectileEffects(projectileEvents);
     this.enemies = this.enemies.filter((enemy) => !enemy.isRemovable);
   }
@@ -502,6 +530,49 @@ export class GameEngine {
     }
     for (const body of bodies) {
       this.collisionSystem.separateHorizontally(this.player, body, platforms, mapWidth);
+    }
+  }
+
+  /**
+   * Un colpo del giocatore (spada o proiettile) è andato a segno: scintille, hit-stop, e se il bersaglio
+   * muore punti, esplosione e armi lasciate; un forziere si apre.
+   */
+  private handlePlayerHit(target: Damageable, damage: number, directionX: 1 | -1): void {
+    const targetBounds = target.getBounds();
+    const centerX = targetBounds.x + targetBounds.width / 2;
+    const centerY = targetBounds.y + targetBounds.height / 2;
+    const isHeavyHit = damage >= EFFECT_CONFIG.heavyHitDamage;
+    this.effects.spawnHitSparks(centerX, centerY, directionX);
+    this.effects.triggerHitStop(isHeavyHit ? EFFECT_CONFIG.heavyHitStopMs : EFFECT_CONFIG.lightHitStopMs);
+    if (isHeavyHit) {
+      this.effects.triggerShake(1, 100);
+    }
+    if (target instanceof Chest) {
+      this.openChest(target);
+      return;
+    }
+    if (target === this.boss && this.boss !== null) {
+      if (!this.boss.isAlive) {
+        const reward = this.boss.definition.weaponReward;
+        if (reward !== undefined && this.levelManager.hasLevel(this.currentLevelId + 1)) {
+          this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward };
+        }
+        this.scoreManager.addScore(this.boss.scoreReward);
+        this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.red, PALETTE.orange, PALETTE.yellow], 50);
+        this.effects.addPopup(`+${this.boss.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
+        this.effects.triggerShake(EFFECT_CONFIG.bossDeathShakePixels, EFFECT_CONFIG.bossDeathShakeMs);
+      }
+      return;
+    }
+    const enemy = this.enemies.find((candidate) => candidate === target);
+    if (enemy !== undefined && !enemy.isAlive) {
+      this.scoreManager.addScore(enemy.scoreReward);
+      this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.lightGray, PALETTE.red], 14);
+      this.effects.addPopup(`+${enemy.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
+      this.effects.triggerShake(EFFECT_CONFIG.enemyDeathShakePixels, EFFECT_CONFIG.enemyDeathShakeMs);
+      if (enemy.weaponDrop !== null) {
+        this.dropWeapon(enemy.weaponDrop, centerX, targetBounds.y + targetBounds.height);
+      }
     }
   }
 
@@ -526,34 +597,101 @@ export class GameEngine {
    */
   private updatePickupsAndBag(deltaTimeSeconds: number): void {
     this.weaponPickups.update(deltaTimeSeconds, this.player);
+    const level = this.levelManager.level;
+    this.weaponPickups.updateAmmoDrops(deltaTimeSeconds, this.collisionSystem, this.levelManager.platforms, level.width, level.height);
     if (this.player.isDead) {
       return;
     }
+    this.recoverAmmoDrops();
+    this.refillAmmoFromQuiver();
     if (this.input.wasPressed("pickUp")) {
       this.pickUpWithE();
     }
+    // Q tenuto + 1-4 lascia a terra quel posto; Q da solo (al rilascio) lascia l'arma in mano
+    const isDropHeld = this.input.isHeld("dropItem");
+    if (this.input.wasPressed("dropItem")) {
+      this.hasDroppedWithSlotKey = false;
+    }
     BAG_SLOT_ACTIONS.forEach((action, slotIndex) => {
       if (this.input.wasPressed(action)) {
-        this.useBagSlot(slotIndex);
+        if (isDropHeld) {
+          this.hasDroppedWithSlotKey = true;
+          this.dropFromBag(slotIndex);
+        } else {
+          this.useBagSlot(slotIndex);
+        }
       }
     });
+    if (this.input.wasReleased("dropItem") && !this.hasDroppedWithSlotKey) {
+      this.dropFromBag(this.inventory.equippedSlotIndex);
+    }
+  }
+
+  /**
+   * Lascia a terra il contenuto di un posto della borsa (tasto Q): l'arma con le sue munizioni (si può riprendere
+   * con E dopo essersi allontanati) o una pozione. Solo stando a terra; l'ultima arma non si lascia.
+   */
+  private dropFromBag(slotIndex: number): void {
+    const centerX = this.player.positionX + this.player.width / 2;
+    const feetY = this.player.positionY + this.player.height;
+    const popupY = this.player.positionY - 6;
+    if (!this.player.isOnGround) {
+      this.effects.addPopup("SOLO A TERRA", centerX, popupY, PALETTE.lightGray);
+      return;
+    }
+    const drop = this.inventory.dropSlot(slotIndex);
+    if (drop.kind === "weapon") {
+      this.weaponPickups.spawn(drop.weaponId, centerX, feetY, false, drop.ammo);
+      this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+      this.saveBagWeapons();
+      this.effects.addPopup(`${WEAPON_CONFIG[drop.weaponId].name.toUpperCase()} A TERRA`, centerX, popupY, PALETTE.lightGray);
+    } else if (drop.kind === "potion") {
+      this.itemManager.addItem("healthPotion", Math.round(centerX - ITEM_SIZE / 2), feetY - ITEM_SIZE);
+      this.effects.addPopup("POZIONE A TERRA", centerX, popupY, PALETTE.lightGray);
+    } else if (drop.kind === "lastWeapon") {
+      this.effects.addPopup("È L'ULTIMA ARMA", centerX, popupY, PALETTE.lightGray);
+    }
+  }
+
+  /** Faretra toccata: munizioni piene per tutte le armi della borsa che ne hanno (se non serve, resta a terra). */
+  private refillAmmoFromQuiver(): void {
+    const quiver = this.itemManager.findTouchedAmmoRefill(this.player);
+    if (quiver === null || !this.inventory.refillAllAmmo()) {
+      return;
+    }
+    this.itemManager.removeItem(quiver);
+    if (this.inventory.equippedAmmo !== null) {
+      this.player.setAmmo(this.inventory.equippedAmmo);
+    }
+    const centerX = quiver.positionX + quiver.width / 2;
+    this.effects.spawnSparkle(centerX, quiver.positionY + 4);
+    this.effects.addPopup("MUNIZIONI PIENE", centerX, quiver.positionY - 4, PALETTE.goldLight);
   }
 
   private pickUpWithE(): void {
     const pickup = this.weaponPickups.findReachablePickup(this.player);
     if (pickup !== null) {
       const centerX = pickup.positionX + pickup.width / 2;
-      const result = this.inventory.addWeapon(pickup.weaponId);
+      const result = this.inventory.addWeapon(pickup.weaponId, pickup.ammo);
       if (result.outcome === "duplicate") {
         this.effects.addPopup("GIÀ NELLA BORSA", centerX, pickup.positionY - 4, PALETTE.lightGray);
         return;
       }
       this.weaponPickups.take(pickup);
-      if (result.droppedWeaponId !== null) {
-        // borsa piena: l'arma che si aveva in mano resta a terra al posto di quella presa
-        this.weaponPickups.spawn(result.droppedWeaponId, centerX, pickup.positionY + pickup.height, false);
+      if (result.outcome === "refilled") {
+        // stessa arma da lancio: le munizioni tornano piene (anche quelle in mano)
+        if (this.inventory.equippedWeaponId === pickup.weaponId) {
+          this.player.setAmmo(this.inventory.equippedAmmo ?? 0);
+        }
+        this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
+        this.effects.addPopup("MUNIZIONI PIENE", centerX, pickup.positionY - 4, PALETTE.goldLight);
+        return;
       }
-      this.player.equipWeapon(WEAPON_CONFIG[pickup.weaponId]);
+      if (result.droppedWeaponId !== null) {
+        // borsa piena: l'arma che si aveva in mano resta a terra al posto di quella presa (con le sue munizioni)
+        this.weaponPickups.spawn(result.droppedWeaponId, centerX, pickup.positionY + pickup.height, false, result.droppedAmmo ?? null);
+      }
+      this.player.equipWeapon(WEAPON_CONFIG[pickup.weaponId], this.inventory.equippedAmmo);
       this.saveBagWeapons();
       this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
       this.effects.addPopup(WEAPON_CONFIG[pickup.weaponId].name.toUpperCase(), centerX, pickup.positionY - 4, PALETTE.goldLight);
@@ -573,12 +711,50 @@ export class GameEngine {
     this.effects.addPopup(item.definition.name.toUpperCase(), centerX, item.positionY - 4, PALETTE.lightGreen);
   }
 
+  /** Coltelli a terra: passandoci sopra tornano nella borsa (se l'arma c'è e non è piena). */
+  private recoverAmmoDrops(): void {
+    for (const drop of this.weaponPickups.findTouchedAmmoDrops(this.player)) {
+      if (!this.inventory.addAmmo(drop.weaponId, 1)) {
+        continue;
+      }
+      this.weaponPickups.removeAmmoDrop(drop);
+      if (this.inventory.equippedWeaponId === drop.weaponId) {
+        this.player.setAmmo(this.inventory.equippedAmmo ?? 0);
+      }
+      this.effects.addPopup("+1", drop.positionX + drop.width / 2, drop.positionY - 4, PALETTE.lightGray);
+    }
+  }
+
+  /**
+   * Armi a distanza: i proiettili del cavaliere entrano in gioco, le munizioni della borsa seguono quelle
+   * in mano, e finiti i giavellotti (che si perdono) l'arma esce dalla borsa a fine lancio.
+   */
+  private updateRangedWeapon(): void {
+    this.player.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
+    const centerX = this.player.positionX + this.player.width / 2;
+    if (this.player.drainOutOfAmmo()) {
+      this.effects.addPopup("SENZA MUNIZIONI", centerX, this.player.positionY - 6, PALETTE.lightGray);
+    }
+    const ammo = this.player.currentAmmo;
+    if (ammo === null) {
+      return;
+    }
+    this.inventory.setEquippedAmmo(ammo);
+    const weapon = this.player.equippedWeapon;
+    if (ammo === 0 && weapon.ammo?.isLostWhenEmpty === true && this.player.activeAttack === null) {
+      const nextWeaponId = this.inventory.removeWeapon(weapon.id);
+      this.player.equipWeapon(WEAPON_CONFIG[nextWeaponId], this.inventory.equippedAmmo);
+      this.saveBagWeapons();
+      this.effects.addPopup(`${weapon.name.toUpperCase()} FINITO`, centerX, this.player.positionY - 6, PALETTE.lightGray);
+    }
+  }
+
   /** Tasto numerico: impugna l'arma del posto o beve una pozione (non a salute piena). */
   private useBagSlot(slotIndex: number): void {
     const selection = this.inventory.selectSlot(slotIndex);
     const centerX = this.player.positionX + this.player.width / 2;
     if (selection.kind === "equip") {
-      this.player.equipWeapon(WEAPON_CONFIG[selection.weaponId]);
+      this.player.equipWeapon(WEAPON_CONFIG[selection.weaponId], this.inventory.equippedAmmo);
       this.saveBagWeapons();
     } else if (selection.kind === "potion") {
       if (this.player.currentHealth >= this.player.maxHealth) {
@@ -601,6 +777,14 @@ export class GameEngine {
   /** Scintille quando un proiettile viene deviato dalla spada o si schianta. */
   private showProjectileEffects(events: ProjectileEvent[]): void {
     for (const event of events) {
+      if (event.kind === "hitTarget") {
+        this.handlePlayerHit(event.target, event.damage, event.directionX);
+        continue;
+      }
+      if (event.kind === "dropAmmo") {
+        this.weaponPickups.spawnAmmoDrop(event.weaponId, event.spriteId, event.x, event.y);
+        continue;
+      }
       if (event.kind === "deflected") {
         this.effects.spawnHitSparks(event.x, event.y, this.player.facingDirection === "right" ? 1 : -1);
         this.effects.triggerHitStop(EFFECT_CONFIG.lightHitStopMs);
@@ -744,8 +928,13 @@ export class GameEngine {
           return null;
         }
         return slot.kind === "weapon"
-          ? { iconSpriteId: WEAPON_CONFIG[slot.weaponId].iconSpriteId, count: 0, isEquipped: slotIndex === this.inventory.equippedSlotIndex }
-          : { iconSpriteId: ITEM_CONFIG.healthPotion.spriteId, count: slot.count, isEquipped: false };
+          ? {
+              iconSpriteId: WEAPON_CONFIG[slot.weaponId].iconSpriteId,
+              iconSize: 16,
+              count: slot.ammo ?? null,
+              isEquipped: slotIndex === this.inventory.equippedSlotIndex,
+            }
+          : { iconSpriteId: ITEM_CONFIG.healthPotion.spriteId, iconSize: 8, count: slot.count, isEquipped: false };
       }),
       powerUps: this.player.modifiers.activePowerUps.map((powerUp) => ({
         iconSpriteId: powerUp.definition.iconSpriteId,
@@ -773,6 +962,7 @@ export class GameEngine {
       collectibles: this.scoreManager.collectiblesFound,
       isNewRecord: this.isNewRecord,
       difficultyName: DIFFICULTY_CONFIG[this.progressManager.difficulty].name,
+      characterId: this.progressManager.characterId,
       levels: LEVEL_CONFIG.map((level) => ({
         id: level.id,
         name: level.name,

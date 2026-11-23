@@ -10,10 +10,10 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 678 controlli in 20 file, eseguiti in Node | `npm install` | meno di 1 secondo |
-| `npm run test:browser` | **test nel browser**: 165 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
+| `npm test` | **test unitari**: 813 controlli in 23 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm run test:browser` | **test nel browser**: 172 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
-| `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure) | `npm install` | circa 1 minuto |
+| `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure); `-- --characters` misura solo i personaggi | `npm install` | circa 1 minuto |
 | `npm run build` | controllo dei tipi + versione distribuibile in `dist/` | `npm install` | pochi secondi |
 
 I test unitari e `verify-docs` non richiedono nulla oltre a `npm install`. I **test nel browser** usano Playwright, che **non è una dipendenza del progetto**
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 678 controlli)
+### 2.1 Test unitari (`tests/unit/`, 813 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -56,9 +56,12 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `weapons-phase1.test.mjs` | 45 | armi corpo a corpo: statistiche relative (pugnale rapido, lancia lunga, ascia lenta e forte), solo l'ascia rompe la guardia e solo la mazza schiaccia le corazze (effetti su soldato, golem, scheletro), nemici d'élite, forzieri, armi a terra e scambio (l'arma vecchia resta a terra e non si riprende subito), tutti i frame del cavaliere per ogni arma, icone, HUD, ogni arma presente nei livelli, forzieri e trofei su terreno sicuro, collegamenti nel motore |
 | `inventory.test.mjs` | 28 | borsa: tasti E e 1-4 (solo in gioco), tabella dei controlli che non tocca le scritte, posti, armi (posto libero, doppioni, borsa piena con l'arma in mano lasciata a terra), pozioni (limite, bere, posto che si libera), copia e ripristino, salvataggio delle armi (assente, vecchio, non valido), pozioni non automatiche e power-up automatici, collegamenti nel motore |
 | `combos-phase3.test.mjs` | 31 | combo: ramificazione, nome all'ultimo colpo, combo che continua una più corta, finestra scaduta; dati di ogni arma (attacchi propri, stesso inizio = stessi attacchi, ogni combo eseguibile: recupero più breve della finestra, combo mista con nome, picchiata solo in aria); il cavaliere (combo miste di spada, pugnale e ascia, categorie terra/aria separate, picchiata: discesa, area sotto i piedi, atterraggio con recupero, rimbalzo e nuova picchiata); scritte dentro lo schermo; collegamenti nel motore |
+| `weapons-phase2.test.mjs` | 45 | armi a distanza: configurazione (proiettili del giocatore e loro sprite, niente area d'urto, carica dell'arco, munizioni), tiri dell'arco (direzione, carica minima, metà, piena, tiro automatico), coltelli finiti e avviso, giavellotto, power-up sui tiri; proiettili del giocatore (colpiscono i nemici e non il giocatore, trafiggere, coltello contro muro e nemico che cade a terra, perso fuori mappa, non deviabili); munizioni nella borsa (ricarica, recupero, giavellotti finiti, borsa piena); coltelli a terra; presenza nei livelli; collegamenti nel motore; cambio d'arma a metà attacco (il frame disegnato esiste per la nuova arma, a terra e in aria) |
+| `characters.test.mjs` | 58 | personaggi (Fase 4): configurazione (il cavaliere legge `PLAYER_CONFIG`, ranger, berserker e paladino come da piano), salute e cambio di personaggio, velocità con e senza arma, danno inflitto e subito (anche con Furia e Scudo, almeno 1 HP), cura lenta del paladino (attesa dopo i colpi, anche ambientali; non oltre il massimo), schivata (distanza e attesa), percorribilità di ogni livello per ogni personaggio con l'arma più lenta, sprite (ogni frame di ogni arma, colori della palette, anteprime, varianti accovacciate), salvataggio (assente, vecchio, non valido), schermata di scelta (parte dal salvato, A/D circolari, Invio, Esc, voce del titolo), tacche delle statistiche |
+| `feedback-fixes.test.mjs` | 32 | segnalazioni dopo la Fase 4: il boss non esce dall'arena (senza limite il difetto si riproduce; con il limite nessun boss supera il cancello in 15 s, nemmeno caricando), munizioni di arco (12) e balestra (6), niente tiro caricato senza frecce, faretra (ricarica tutte le armi, resta a terra se non serve, una per livello prima dell'arena), tasto Q (arma con munizioni, una pozione alla volta, mai l'ultima arma, solo a terra, Q+1-4 e Q da solo), cancella dati (progressi e record, anche ricaricando e con archivio bloccato; conferma con "no" predefinito) |
 | `static-rules.test.mjs` | 28 | strict, nessun `any`, tipi di ritorno espliciti, nomi, nessun audio né risorsa esterna, struttura del progetto, versioni e manuali aggiornati |
 
-### 2.2 Test nel browser (`tests/browser/`, 165 controlli, Chromium)
+### 2.2 Test nel browser (`tests/browser/`, 172 controlli, Chromium)
 
 > **Stato nella 2.0.0.** La suite è stata **rieseguita con Playwright** (Chromium headless, macOS): **165 controlli, 0 falliti**, dopo due correzioni:
 > - un controllo cercava i "Controlli" come seconda voce del menu, che ora ne ha quattro (si usa W, il menu è circolare);
@@ -72,7 +75,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 |---|---|
 | **1. Build reale con `file://`** | la build riesce; nessun errore in console; tutte le richieste sono file locali di `dist/` (nessuna rete); nessuna richiesta fallita; canvas 320×240; solo colori della palette; tastiera vera (Invio, Esc, D, Spazio, K); la pausa congela l'immagine e blocca i comandi di gioco; 1500 pressioni di tasti a caso senza errori; **nessun uso dell'audio** (AudioContext, Audio, play) |
 | **2. Dimensioni dello schermo** | 17 combinazioni di finestra e scala di sistema (da 320×240 a 3840×2160, 100%-300%, verticale e orizzontale): scala intera in pixel fisici, canvas centrato, `image-rendering: pixelated`, nessuna sfumatura all'interno, pixel di gioco quadrati; ridimensionamento durante il gioco |
-| **3. Motore reale** | schermate e flusso con tastiera (titolo, controlli, pausa, riprendi); palette di ogni schermata; velocità identica a 30, 60, 120 e 144 passi al secondo; tre morti → Game Over → "Riprova"; rendering dei tre livelli; **un giocatore automatico che usa solo eventi di tastiera completa tutto il gioco fino alla vittoria** (con la spada; raccoglie le pozioni con E e ne beve una quando ha perso almeno 30 HP; se serve un altro salto rilascia e ripreme il tasto, e a contatto con un nemico si gira verso di lui prima di attaccare); regole sempre valide (posizioni finite e dentro la mappa, salute, vite, punteggio, camera); prestazioni; record salvato e ancora presente dopo il ricaricamento; **120.000 frame di tasti a caso** con teletrasporti e passi da 7 a 50 ms |
+| **3. Motore reale** | schermate e flusso con tastiera (titolo, controlli, pausa, riprendi); palette di ogni schermata; **scelta del personaggio** (si apre dal titolo, Invio conferma ed Esc chiude; ognuno dei quattro entra in gioco con classe, salute piena, arma iniziale e sprite esistenti, solo colori della palette); **cancella dati** (conferma con "no" predefinito, poi record, livelli, personaggio e armi come alla prima partita, anche dopo aver ricaricato); velocità identica a 30, 60, 120 e 144 passi al secondo; tre morti → Game Over → "Riprova"; rendering dei tre livelli; **un giocatore automatico che usa solo eventi di tastiera completa tutto il gioco fino alla vittoria** (con la spada; raccoglie le pozioni con E e ne beve una quando ha perso almeno 30 HP; se serve un altro salto rilascia e ripreme il tasto, e a contatto con un nemico si gira verso di lui prima di attaccare); regole sempre valide (posizioni finite e dentro la mappa, salute, vite, punteggio, camera); prestazioni; record salvato e ancora presente dopo il ricaricamento; **120.000 frame di tasti a caso** con teletrasporti e passi da 7 a 50 ms |
 | **4. Velocità sotto carico** | con il loop reale e un carico artificiale fino a 55 ms per frame, la distanza percorsa resta uguale al tempo reale finché si resta sopra i 22 FPS |
 
 ---
