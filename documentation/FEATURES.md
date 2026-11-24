@@ -26,7 +26,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 935 controlli) | Implementata | |
+| Test unitari inclusi (`npm test`, 955 controlli) | Implementata | |
 | Test nel browser (`npm run test:browser`, 174 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
@@ -80,6 +80,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Livelli 4-6 con pericoli, piattaforme mobili e boss; vittoria dopo il livello 6 | Implementata | Fase 4 |
 | Nuovi nemici: Lupo (balzo), Melma (si divide), Golem di ghiaccio (corazzato); Arciere e Pipistrello nei livelli | Implementata | Fase 4 |
 | Nuovi boss: Strega della Palude, Re dei Lupi (forma di belva), Signore dell'Ombra (finale a tre fasi) | Implementata | Fase 4 |
+| Livello 6 "Lande Desolate" (tramonto, altopiani, ossa, polvere al vento) con il **Signore delle Lande** (accette a ventaglio, carica, predoni, fendente); la Torre dell'Ombra diventa il livello 7 | Implementata | Fase 8 del piano espansioni; non provato da persone |
+| Nuovi nemici: **Predone** (lancia accette, indietreggia), **Scorpione Gigante** (corazzato, scatto con il pungiglione), **Avvoltoio** (volante, picchiata veloce) | Implementata | Fase 8 del piano espansioni; tutti nel livello 6 |
 | Power-up temporanei: Furia, Velocità, Scudo, Fuoco (spada incandescente), Rigenerazione; alone e tempo nell'HUD | Implementata | Fase 5; `POWER_UP_CONFIG`, `PlayerModifiers`, statistiche base mai modificate |
 | Selezione dei livelli già raggiunti (salvati nel browser) | Implementata | Fase 5; `ProgressManager`, stato `levelSelect` |
 
@@ -142,7 +144,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Boss: Cavaliere Nero (290 HP) con fendente, carica, due fasi | Implementata | |
 | Barra della salute del boss con tacche di fase | Implementata | |
 | Struttura a fasi multiple e catalogo di boss | Implementata | esempio 10 del manuale (tre fasi) |
-| Boss aggiuntivi nel gioco | Implementata | Fase 4: quattro boss |
+| Boss aggiuntivi nel gioco | Implementata | Fase 4 della 2.0: quattro boss; Fase 8 del piano espansioni: Signore delle Lande |
 | Attacchi nuovi per un boss | Implementata | 2.0 Fase 3: 4 tipi di attacco configurabili; un tipo nuovo richiede di estendere `Boss.ts` |
 
 ## Livelli e oggetti
@@ -162,7 +164,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Potenziamenti permanenti con le gemme (Vitalità, Resistenza, Forza, Scorta), schermata dal titolo; gemme messe da parte a fine livello | Implementata | Fase 6 del piano espansioni; `UPGRADE_CONFIG`; non usano `PowerUpDefinition.type = "permanent"` (i bonus vanno direttamente al giocatore) |
 | Monete (monete raccolte, nemici, boss) e bottega tra un livello e l'altro (pozione, cura, faretra, un'arma già trovata) | Implementata | Fase 6; `ECONOMY_CONFIG`, `SHOP_OFFERS`, `Shop`; il bot di bilanciamento non usa la bottega |
 | Sblocchi: Ranger, Berserker e Paladino raggiungendo i livelli 3, 4 e 6; armi trovate almeno una volta in vendita nella bottega | Implementata | Fase 6; salvati nei progressi |
-| Nuove ambientazioni | Implementata | Fase 4: sei ambientazioni |
+| Nuove ambientazioni | Implementata | Fase 4 della 2.0: sei ambientazioni; Fase 8 del piano espansioni: Lande Desolate |
 
 ## Interfaccia
 

@@ -132,7 +132,7 @@ export default async function (t, load) {
     const before = boss.currentHealth;
     boss.receiveHit(10, "right", { elements: ["shock"] });
     t("boss: lo shock non stordisce ma ferisce subito (Cavaliere Nero debole: 9 in più)", before - boss.currentHealth === 10 + 9, String(before - boss.currentHealth));
-    const lord = new Boss(BOSS_CATALOG[LEVEL_CONFIG.find((l) => l.id === 6).bossId], 400, 160, () => 0.5);
+    const lord = new Boss(BOSS_CATALOG.shadowLord, 400, 160, () => 0.5);
     lord.receiveHit(1, "right", { elements: ["poison", "frost"] });
     t("il Signore dell'Ombra resiste a tutto, ma non è immune", lord.activeStatusElements.join() === "poison,frost");
     const player = new Player(100, 176);

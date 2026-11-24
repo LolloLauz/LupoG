@@ -268,5 +268,16 @@ export default async function (t, load) {
     levelManager.loadLevel(level.id);
     return levelManager.createEnemies().length === level.enemies.length && (levelManager.createBoss() !== null) === level.hasBoss;
   }));
+  {
+    // oggetti e forzieri non dentro i blocchi solidi (nella Fase 8 erano emersi due oggetti invisibili, nei livelli 2 e 3)
+    const overlaps = (a, b) => a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
+    const hidden = [];
+    for (const level of LEVEL_CONFIG) {
+      const blocks = level.platforms.filter((p) => !p.oneWay && p.y < 200);
+      for (const item of level.items) if (blocks.some((b) => overlaps({ x: item.position.x, y: item.position.y, width: 8, height: 8 }, b))) hidden.push(`${level.id}:${item.type}@${item.position.x}`);
+      for (const chest of level.chests ?? []) if (blocks.some((b) => overlaps({ x: chest.position.x, y: chest.position.y, width: 16, height: 12 }, b))) hidden.push(`${level.id}:forziere@${chest.position.x}`);
+    }
+    t("nessun oggetto o forziere dentro un blocco solido", hidden.length === 0, hidden.join(" "));
+  }
   t("ogni livello contiene almeno una pozione o ne ha una a disposizione, e una gemma", LEVEL_CONFIG.every((level) => level.items.some((i) => i.type === "collectible")));
 }

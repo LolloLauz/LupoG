@@ -23,8 +23,8 @@ corrotti servono un misterioso **Cavaliere Nero**.
 
 Tu sei il **Cavaliere di Ferro**: armato solo della tua spada, attraversi il regno per sconfiggere il Cavaliere Nero.
 Ma il Cavaliere Nero era solo un luogotenente: il vero nemico è il **Signore dell'Ombra**, che attende in cima alla sua torre.
-Per raggiungerlo dovrai attraversare la Palude Maledetta della **Strega**, i Picchi Ghiacciati del **Re dei Lupi** e infine la
-**Torre dell'Ombra**. La storia è tutta qui: nessun dialogo ti rallenta, l'azione viene prima di tutto.
+Per raggiungerlo dovrai attraversare la Palude Maledetta della **Strega**, i Picchi Ghiacciati del **Re dei Lupi**, le Lande Desolate
+del **Signore delle Lande**, capo dei predoni, e infine la **Torre dell'Ombra**. La storia è tutta qui: nessun dialogo ti rallenta, l'azione viene prima di tutto.
 
 ## 3. Ambientazione
 
@@ -35,6 +35,7 @@ Un mondo medievale fantastico, visto di lato (scorrimento orizzontale), con tre 
 | **Foresta Oscura** | notte con la luna piena e le stelle che brillano, montagne innevate, foschia, colline e tre file di pini; prato e terra con sassi, ponticelli di legno |
 | **Castello Medievale** | cielo stellato, castelli lontani con le finestre accese, mura merlate con l'edera, colonne con stendardi rossi e corona d'oro; pavimento di pietra |
 | **Dungeon Sotterraneo** | mura di mattoni con muschio e crepe, celle con sbarre, torce che illuminano il muro, catene, foschia viola; pavimento di mattoni viola |
+| **Lande Desolate** (livello 6) | tramonto rosso con il sole basso e nuvole lunghe, altopiani dalla cima piatta, alberi secchi, costole e sassi, polvere portata dal vento; terra secca con l'erba bruciata, sporgenze di roccia chiara |
 
 I personaggi sono più grandi e dettagliati della versione 1.0 (grafica a 16 bit), ma le **hitbox sono le stesse**: pennacchio, corna, mantelli
 e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul pennacchio.
@@ -94,7 +95,7 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 | **Potenziamenti** | i potenziamenti permanenti da comprare con le gemme (vedi sezione 11b) |
 | **Bottega** | tra un livello e l'altro: si comprano pozioni, cure, munizioni e armi con le monete (vedi sezione 11b) |
 | **Personaggio** | i quattro personaggi in fila (quelli non ancora sbloccati sono sagome con il lucchetto) e la scheda di quello evidenziato (statistiche in tacche da 1 a 5, arma iniziale, salute, tratto); A/D (o W/S) per scegliere, Invio per confermare, Esc per tornare senza cambiare |
-| **Scegli livello** | i sei livelli: quelli già raggiunti si possono giocare (partita nuova da quel livello), gli altri sono chiusi da un lucchetto; W/S per scegliere, Invio per giocare, Esc per tornare |
+| **Scegli livello** | i sette livelli: quelli già raggiunti si possono giocare (partita nuova da quel livello), gli altri sono chiusi da un lucchetto; W/S per scegliere, Invio per giocare, Esc per tornare |
 | **Controlli** | l'elenco dei tasti |
 | **Gioco** | il livello con la barra in alto (HUD) |
 | **Pausa** | menu *Riprendi* e *Esci al titolo* (lo schermo si oscura con un retino di pixel) |
@@ -307,6 +308,9 @@ I nemici a terra non camminano nel vuoto, attraverso i muri, sugli spuntoni o ne
 | **Lupo** | 30 | 9 | molto veloce (70) | **Insegue**; a 34 px si acquatta e **balza** in avanti (non oltre il bordo di un abisso) | 100 |
 | **Melma della Palude** | 36 | 8 | lentissima (18) | **Pattuglia**; quando muore **si divide in due melmine** (10 HP, veloci) | 60 (+25 per melmina) |
 | **Golem di Ghiaccio** | 70 | 15 | lentissima (16) | **Pattuglia**; è **corazzato**: l'attacco leggero gli fa metà danno, quello **pesante (J)** il danno pieno; non vacilla e non arretra | 250 |
+| **Predone** | 30 | 9 (accetta) | lenta (45) | **Lancia accette** rotanti fino a 110 px (si possono respingere con la spada); se ti avvicini troppo **indietreggia** | 130 |
+| **Scorpione Gigante** | 45 | 10 | lenta (40) | **Insegue**; a 30 px alza la coda e **scatta** con il pungiglione; il carapace è **corazzato** (attacchi deboli a metà, quelli da 25 in su pieni) | 140 |
+| **Avvoltoio** | 24 | 8 | media (55) | **Vola** più in alto del pipistrello e si getta **in picchiata** più veloce | 120 |
 
 Dettagli utili per sconfiggerli:
 
@@ -320,6 +324,9 @@ Dettagli utili per sconfiggerli:
 | Lupo | 0,35 s (si acquatta) | sì, durante l'acquattamento |
 | Melma | 0,5 s | sì |
 | Golem | 0,8 s (alza la mazza) | no |
+| Predone | 0,5 s (porta l'accetta dietro la spalla) | **sì**: colpito in quel momento non lancia |
+| Scorpione | 0,45 s (alza la coda) | sì, ma solo nei primi 0,2 s |
+| Avvoltoio | 0,45 s (ali spalancate, occhi accesi) | sì, durante la sospensione |
 
 Quando colpisci un nemico, **lampeggia di bianco**. Se è stordito dal colpo (scheletro) o sta per attaccare, ricordati che
 la **schivata** è lo strumento più sicuro: scatta durante la preparazione del suo colpo e passa attraverso l'attacco.
@@ -395,7 +402,21 @@ Un lupo enorme: 300 HP, due fasi. Vale 1400 punti.
 
 Consiglio: il balzo si schiva come la carica del Cavaliere Nero; quando ulula colpiscilo prima che arrivi il branco.
 
-### Il Signore dell'Ombra (livello 6, boss finale)
+### Il Signore delle Lande (livello 6)
+
+Il capo dei predoni, in armatura arrugginita con le corna d'osso: 320 HP, due fasi (sotto il 50% è più veloce e attacca più spesso).
+Vale 1800 punti; lascia come trofeo la **balestra**. Debole al gelo, resiste al fuoco.
+
+| Attacco | Quando | Danno | Come riconoscerlo |
+|---|---|---|---|
+| **Accette** | quando sei ad almeno 50 px | 11 per accetta | porta indietro il braccio per 0,65 s, poi lancia **tre accette a ventaglio** (la spada le respinge) |
+| **Carica** | quando sei ad almeno 70 px | 18 | si abbassa per 0,65 s, poi carica; dopo resta fermo 0,65 s |
+| **Predoni** | se non ce ne sono già 2 | - | alza la spada per 0,9 s e chiama **un predone** |
+| **Fendente** | quando sei vicino | 20 | alza lo spadone per 0,55 s, poi colpisce davanti a sé |
+
+Consiglio: stare vicino evita le accette; la carica si schiva come quella del Cavaliere Nero.
+
+### Il Signore dell'Ombra (livello 7, boss finale)
 
 340 HP, **tre fasi** (sotto il 66% evoca pipistrelli, sotto il 33% è più veloce e aggressivo). Vale 2500 punti.
 
@@ -417,10 +438,11 @@ Consiglio: il balzo si schiva come la carica del Cavaliere Nero; quando ulula co
 | **3 – Dungeon Sotterraneo** | dungeon | 1536 px | 4 scheletri, 2 goblin, 1 soldato + **Cavaliere Nero** | sconfiggere il boss |
 | **4 – Palude Maledetta** | palude | 2048 px | 3 melme, 3 pipistrelli, 2 arcieri, 1 goblin, 1 scheletro + **Strega della Palude** | sconfiggere il boss |
 | **5 – Picchi Ghiacciati** | montagna innevata | 2048 px | 3 lupi, 2 pipistrelli, 1 golem, 1 arciere, 1 goblin + **Re dei Lupi** | sconfiggere il boss |
-| **6 – Torre dell'Ombra** | torre | 2304 px | 2 soldati, 2 arcieri, 2 pipistrelli, 1 golem, 1 melma, 1 scheletro, 1 lupo + **Signore dell'Ombra** | sconfiggere il boss |
+| **6 – Lande Desolate** | lande al tramonto | 2048 px | 2 predoni, 3 scorpioni, 1 avvoltoio, 1 goblin d'élite, 1 lupo + **Signore delle Lande** | sconfiggere il boss |
+| **7 – Torre dell'Ombra** | torre | 2304 px | 2 soldati, 2 arcieri, 2 pipistrelli, 1 golem, 1 melma, 1 scheletro, 1 lupo + **Signore dell'Ombra** | sconfiggere il boss |
 
 Ogni livello ha **abissi**, **piattaforme sospese** (si attraversano dal basso e ci si sale sopra), blocchi di pietra e oggetti da raccogliere.
-I livelli 4-6 hanno anche **pericoli** (vasche d'acqua, ghiaccio, spuntoni) e **piattaforme mobili**. La telecamera segue il cavaliere.
+I livelli 4-7 hanno anche **pericoli** (vasche d'acqua, ghiaccio, spuntoni) e **piattaforme mobili**. La telecamera segue il cavaliere.
 Dopo il Signore dell'Ombra compare la schermata di vittoria.
 
 A inizio livello compare il nome; a fine livello un riquadro mostra bonus, gemme, salute recuperata e l'eventuale trofeo del boss.

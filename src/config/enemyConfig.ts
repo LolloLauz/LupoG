@@ -204,6 +204,79 @@ export const ENEMY_CONFIG: Record<EnemyTypeId, EnemyDefinition> = {
     scoreReward: 25,
     hitbox: { x: 0, y: 0, width: 10, height: 7 },
   },
+  // --- Fase 8: Lande Desolate ---
+  raider: {
+    id: "raider",
+    elementModifiers: { poison: 1.5, fire: 0.5 },
+    name: "Predone",
+    maxHealth: 30,
+    attackDamage: 9,
+    movementSpeed: 45,
+    detectionRange: 150,
+    attackRange: 110,
+    attackCooldownMs: 2100,
+    // carica il lancio dietro la spalla: colpirlo in quel momento annulla il tiro
+    attackWindupMs: 500,
+    attackActiveMs: 100,
+    attackRecoveryMs: 400,
+    hurtDurationMs: 300,
+    knockbackSpeed: 70,
+    attackInterruptWindowMs: 500,
+    patrolDistance: 0,
+    behavior: "ranged",
+    scoreReward: 130,
+    hitbox: { x: 0, y: 0, width: 12, height: 24 },
+    // lancia accette rotanti; se ti avvicini troppo indietreggia
+    ranged: { projectileId: "hatchet", launchOffsetY: 9, retreatDistance: 30 },
+  },
+  scorpion: {
+    id: "scorpion",
+    elementModifiers: { poison: 0, frost: 1.5 },
+    name: "Scorpione Gigante",
+    maxHealth: 45,
+    attackDamage: 10,
+    movementSpeed: 40,
+    detectionRange: 120,
+    // a questa distanza alza la coda e scatta in avanti con il pungiglione
+    attackRange: 30,
+    attackCooldownMs: 1500,
+    attackWindupMs: 450,
+    attackActiveMs: 250,
+    attackRecoveryMs: 450,
+    hurtDurationMs: 250,
+    knockbackSpeed: 50,
+    attackInterruptWindowMs: 200,
+    patrolDistance: 0,
+    behavior: "chase",
+    scoreReward: 140,
+    hitbox: { x: 0, y: 0, width: 20, height: 12 },
+    lunge: { speed: 120 },
+    // corazza (carapace): gli attacchi deboli fanno metà danno, la mazza la spezza
+    armor: { damageMultiplier: 0.5, breakDamage: 25 },
+  },
+  vulture: {
+    id: "vulture",
+    elementModifiers: { fire: 1.5, shock: 1.5 },
+    name: "Avvoltoio",
+    maxHealth: 24,
+    attackDamage: 8,
+    movementSpeed: 55,
+    detectionRange: 140,
+    attackRange: 80,
+    attackCooldownMs: 2000,
+    attackWindupMs: 450,
+    attackActiveMs: 550,
+    attackRecoveryMs: 500,
+    hurtDurationMs: 250,
+    knockbackSpeed: 80,
+    attackInterruptWindowMs: 450,
+    patrolDistance: 40,
+    behavior: "flyer",
+    scoreReward: 120,
+    hitbox: { x: 0, y: 0, width: 14, height: 12 },
+    // vola più alto del pipistrello e si getta in picchiata più veloce
+    flight: { hoverHeight: 34, diveSpeed: 160, bobAmplitude: 3, bobPeriodMs: 1300 },
+  },
   iceGolem: {
     id: "iceGolem",
     elementModifiers: { frost: 0, poison: 0, fire: 2, shock: 0.5 },
@@ -322,7 +395,7 @@ export const WOLF_KING_CONFIG: BossDefinition = {
 };
 
 /**
- * Signore dell'Ombra (livello 6, boss finale): tre fasi. Spada d'ombra, scatto, ventaglio di palle di
+ * Signore dell'Ombra (livello 7, boss finale): tre fasi. Spada d'ombra, scatto, ventaglio di palle di
  * fuoco (non si deviano: vanno schivate) e, dalla seconda fase, pipistrelli evocati.
  */
 export const SHADOW_LORD_CONFIG: BossDefinition = {
@@ -350,9 +423,39 @@ export const SHADOW_LORD_CONFIG: BossDefinition = {
   ],
 };
 
+/**
+ * Signore delle Lande (livello 6, Fase 8): capo dei predoni. Lancia accette a ventaglio, carica, chiama i predoni
+ * e colpisce con lo spadone; nella seconda fase è più rapido e lancia più spesso.
+ */
+export const LANDS_LORD_CONFIG: BossDefinition = {
+  id: "landsLord",
+  name: "SIGNORE DELLE LANDE",
+  elementModifiers: { frost: 1.5, fire: 0.5 },
+  weaponReward: "crossbow",
+  maxHealth: 320,
+  movementSpeed: 45,
+  activationRange: 220,
+  attacks: [
+    { id: "axes", kind: "projectile", damage: 11, projectileId: "hatchet", count: 3, spreadDegrees: 30, launchOffset: { x: 28, y: 8 }, minDistance: 50, windupMs: 650, activeMs: 200, recoveryMs: 500 },
+    { id: "charge", kind: "charge", damage: 18, speed: 200, minDistance: 70, windupMs: 650, activeMs: 550, recoveryMs: 650 },
+    { id: "raiders", kind: "summon", enemyType: "raider", count: 1, maxAlive: 2, spawnDistance: 36, windupMs: 900, activeMs: 200, recoveryMs: 500 },
+    { id: "cleave", kind: "melee", damage: 20, range: 32, windupMs: 550, activeMs: 200, recoveryMs: 450 },
+  ],
+  attackCooldownMs: 1400,
+  hitFlashMs: 100,
+  deathDurationMs: 1500,
+  scoreReward: 1800,
+  hitbox: { x: 0, y: 0, width: 24, height: 40 },
+  phases: [
+    { healthPercentThreshold: 100, speedMultiplier: 1, cooldownMultiplier: 1, attackWeights: { axes: 0.3, charge: 0.25, raiders: 0.1, cleave: 0.35 } },
+    { healthPercentThreshold: 50, speedMultiplier: 1.25, cooldownMultiplier: 0.8, attackWeights: { axes: 0.4, charge: 0.25, raiders: 0.1, cleave: 0.25 } },
+  ],
+};
+
 export const BOSS_CATALOG: Record<string, BossDefinition> = {
   [BOSS_CONFIG.id]: BOSS_CONFIG,
   [SWAMP_WITCH_CONFIG.id]: SWAMP_WITCH_CONFIG,
   [WOLF_KING_CONFIG.id]: WOLF_KING_CONFIG,
+  [LANDS_LORD_CONFIG.id]: LANDS_LORD_CONFIG,
   [SHADOW_LORD_CONFIG.id]: SHADOW_LORD_CONFIG,
 };

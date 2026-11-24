@@ -313,6 +313,9 @@ const duels = {
   "arciere": [{ type: "skeletonArcher", position: { x: 200, y: 176 } }],
   "pipistrello": [{ type: "bat", position: { x: 150, y: 120 } }],
   "golem": [{ type: "iceGolem", position: { x: 150, y: 172 } }],
+  "predone": [{ type: "raider", position: { x: 200, y: 176 } }],
+  "scorpione": [{ type: "scorpion", position: { x: 150, y: 188 } }],
+  "avvoltoio": [{ type: "vulture", position: { x: 150, y: 110 } }],
 };
 for (const [name, enemyOverride] of Object.entries(duels)) {
   const [label, skill] = skills[0];

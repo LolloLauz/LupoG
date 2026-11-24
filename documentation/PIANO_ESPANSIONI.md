@@ -2,7 +2,8 @@
 
 Questo documento è un piano, non una specifica. Lo stato reale delle funzionalità resta in `FEATURES.md`.
 
-**Stato:** Fasi 0-7 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). La Fase 8 non è iniziata.
+**Stato:** Fasi 0-7 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Fase 8: completati i contenuti; modalità e controlli
+rimandati su richiesta.
 
 ## Punto di partenza
 
@@ -157,7 +158,21 @@ Il danno elementale è già "in sviluppo" (il Fuoco). Si può completare con:
 - Stati sui nemici: **veleno**, **gelo** (rallenta), **shock** (blocca i movimenti brevemente).
 - Resistenze e debolezze per nemico, leggibili da `ENEMY_CONFIG`.
 
-## Fase 8 – Contenuti e modalità
+## Fase 8 – Contenuti e modalità – contenuti completati
+
+Fatto (scelta: 2-3 nemici e un livello "bosco o lande desolate" con il suo boss; modalità e controlli per ora no):
+- **Livello 6 "Lande Desolate"** (ambientazione nuova `wasteland`: tramonto, sole basso, altopiani, alberi secchi, ossa, polvere al vento; terreno di
+  terra secca), messo prima della Torre, che diventa il livello 7: il Signore dell'Ombra resta il boss finale.
+- **Signore delle Lande** (`LANDS_LORD_CONFIG`, forma "knight" ricolorata): accette a ventaglio, carica, chiama i predoni, fendente; trofeo la balestra.
+- **Tre nemici**: Predone (a distanza, accette che la spada respinge, proiettile `hatchet`), Scorpione Gigante (corazzato, scatto; forma
+  procedurale `composeScorpion`), Avvoltoio (volante, picchiata più veloce).
+- Bilanciamento con il bot: il livello costava molta più salute degli altri; sono stati ammorbiditi predone, scorpione e avvoltoio e tolti un predone e un
+  avvoltoio (vedi `BALANCE.md`).
+- Emersi e corretti: due oggetti nascosti dentro blocchi di pietra (livelli 2 e 3, nuovo test) e il balzo del Ranger che finiva sugli spuntoni.
+
+Non fatto (rimandato): modalità roguelike, sfide con modificatori, rimappatura dei tasti e controller.
+
+Piano originale:
 
 - Nuovi nemici, boss e livelli (sono già dati: si fanno con le skill del progetto).
 - **Modalità roguelike**: stanze generate in sequenza, con ricompense scelte a caso.
@@ -193,7 +208,7 @@ Le armi e le combo danno il maggior salto di varietà con meno lavoro grafico. L
 
 - **Stamina** (Fase 5): **decisa: sì**.
 - **Primo passo**: deciso (Fase 0, poi 1, 3, 2).
-- **Controlli**: rimappatura e controller restano esclusi o entrano nel piano?
+- **Controlli**: rimappatura e controller per ora no (decisione della Fase 8).
 
 ## Regole di aggiornamento
 

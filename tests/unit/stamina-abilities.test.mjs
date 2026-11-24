@@ -129,6 +129,17 @@ export default async function (t, load) {
     t("tiro in ritirata: una freccia in avanti da 20, senza consumare frecce", launches.length === 1 && launches[0].direction.x === 1 && launches[0].damage === 20 && p.currentAmmo === ammo);
   }
 
+  {
+    // Fase 8: il balzo all'indietro si ferma prima degli spuntoni (il bot del bilanciamento ci finiva sopra)
+    const p = grounded("ranger", 300);
+    const { HazardSystem } = await load("systems/HazardSystem");
+    const spikes = [{ kind: "spikes", x: 240, y: 192, width: 24, height: 8 }];
+    p.environment = new HazardSystem().computePlayerEnvironment(p, spikes);
+    step(p, [], ["ability"]);
+    for (let i = 0; i < 30; i++) { p.environment = new HazardSystem().computePlayerEnvironment(p, spikes); step(p); }
+    t("tiro in ritirata: il balzo si ferma prima degli spuntoni", p.positionX >= 264 && p.positionX < 300 && p.currentHealth === p.maxHealth, p.positionX.toFixed(1));
+  }
+
   // --- carica furiosa (berserker) ---
   {
     const p = grounded("berserker");

@@ -62,6 +62,18 @@ export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> =
     frameIds: ["projectileCrossbowBolt"],
     frameDurationMs: 100,
   },
+  // Fase 8: accetta lanciata dai predoni e dal Signore delle Lande; la spada può respingerla
+  hatchet: {
+    id: "hatchet",
+    name: "Accetta",
+    speed: 150,
+    gravityScale: 0,
+    lifetimeMs: 1800,
+    hitbox: { width: 8, height: 6 },
+    isDeflectable: true,
+    frameIds: ["projectileHatchet1", "projectileHatchet2", "projectileHatchet3", "projectileHatchet4"],
+    frameDurationMs: 70,
+  },
   throwingKnife: {
     id: "throwingKnife",
     name: "Coltello",

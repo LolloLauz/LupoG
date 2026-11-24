@@ -368,8 +368,8 @@ export default async function (t, load) {
     const { BOSS_CATALOG } = await load("config/enemyConfig");
     const bossSprites = await load("rendering/sprites/bossSprites");
     const { FakeSpriteManager } = await import("../helpers.mjs");
-    t("6 livelli: dopo il dungeon (3) vengono palude, picchi ghiacciati e torre", LEVEL_CONFIG.length === 6 && ["swamp", "ice", "tower"].every((theme, i) => LEVEL_CONFIG[3 + i].theme === theme));
-    t("ogni livello nuovo ha un boss diverso e usa i nuovi elementi (pericoli, piattaforme mobili, nemici nuovi)", LEVEL_CONFIG.slice(3).every((level) => level.hasBoss && level.hazards?.length > 0 && level.movingPlatforms?.length > 0 && level.enemies.some((e) => ["skeletonArcher", "bat", "wolf", "slime", "iceGolem"].includes(e.type))) && new Set(LEVEL_CONFIG.slice(3).map((l) => l.bossId)).size === 3);
+    t("7 livelli: dopo il dungeon (3) vengono palude, picchi ghiacciati, lande desolate (Fase 8) e torre", LEVEL_CONFIG.length === 7 && ["swamp", "ice", "wasteland", "tower"].every((theme, i) => LEVEL_CONFIG[3 + i].theme === theme));
+    t("ogni livello nuovo ha un boss diverso e usa i nuovi elementi (pericoli, piattaforme mobili, nemici nuovi)", LEVEL_CONFIG.slice(3).every((level) => level.hasBoss && level.hazards?.length > 0 && level.movingPlatforms?.length > 0 && level.enemies.some((e) => ["skeletonArcher", "bat", "wolf", "slime", "iceGolem"].includes(e.type))) && new Set(LEVEL_CONFIG.slice(3).map((l) => l.bossId)).size === 4);
     t("il boss finale (Signore dell'Ombra) ha tre fasi e usa tutti e quattro i tipi di attacco", BOSS_CATALOG.shadowLord.phases.length === 3 && new Set(BOSS_CATALOG.shadowLord.attacks.map((a) => a.kind)).size === 4);
     const fake = new FakeSpriteManager();
     bossSprites.registerBossSprites(fake);

@@ -1,4 +1,4 @@
-import { addOutline, createGrid, setPixel, type PixelGrid } from "./spriteTools";
+import { addOutline, createGrid, linePoints, setPixel, type PixelGrid } from "./spriteTools";
 
 /**
  * Costruttori procedurali per le creature non umanoidi (lupi, melme): invece di scrivere ogni riga
@@ -205,4 +205,75 @@ export function composeBlob(width: number, height: number, pose: BlobPose): stri
     setPixel(grid, width - 2, 1, "w", true);
   }
   return addOutline(grid.map((row) => row.join("")), "k");
+}
+
+/** Pose dello scorpione (Fase 8). */
+export type ScorpionPose = "stand" | "breath" | "walk1" | "walk2" | "walk3" | "raise" | "strike" | "recover" | "hurt" | "lying";
+
+/** Lato dello sprite dello scorpione: 30x16, rivolto a destra (le chele sporgono davanti all'hitbox). */
+export const SCORPION_SPRITE = { width: 30, height: 16 } as const;
+
+/**
+ * Scorpione rivolto a destra: addome basso e largo, testa con le chele davanti, otto zampe sotto e la coda a
+ * segmenti che sale dalla schiena e si piega in avanti con il pungiglione (chiave r, punta w).
+ * Nella preparazione la coda si tira indietro, nel colpo scatta in avanti sopra la testa.
+ */
+export function composeScorpion(pose: ScorpionPose): string[] {
+  const { width, height } = SCORPION_SPRITE;
+  const grid = createGrid(width, height);
+  const bodyY = pose === "breath" ? 11.5 : 11;
+  // zampe: quattro per lato, la camminata alterna le punte
+  const legPhase = pose === "walk1" ? 1 : pose === "walk3" ? -1 : 0;
+  for (let legIndex = 0; legIndex < 4; legIndex++) {
+    const rootX = 8 + legIndex * 4;
+    const swing = legIndex % 2 === 0 ? legPhase : -legPhase;
+    for (const point of linePoints(rootX, 13, rootX - 2 + swing, 15)) {
+      setPixel(grid, point.x, point.y, "d", true);
+    }
+  }
+  fillShadedEllipse(grid, 12, bodyY, 8, 3);
+  fillShadedEllipse(grid, 21, bodyY, 3.5, 2.5);
+  // chele: braccio e pinza, una alta e una bassa
+  const clawReach = pose === "strike" ? 1 : 0;
+  for (const point of linePoints(23, 10, 25 + clawReach, 8)) {
+    setPixel(grid, point.x, point.y, "m", true);
+  }
+  fillShadedEllipse(grid, 27 + clawReach, 8, 2, 1.5);
+  setPixel(grid, 29, 8, ".", true);
+  fillShadedEllipse(grid, 26 + clawReach, 13, 1.8, 1.2);
+  setPixel(grid, 22, Math.round(bodyY) - 1, "e", true);
+  // coda: segmenti dalla schiena al pungiglione, secondo la posa
+  const tailPaths: Record<ScorpionPose, Array<[number, number]>> = {
+    stand: [[5, 9], [3, 7], [3, 5], [4, 3], [6, 2], [8, 2], [10, 3]],
+    breath: [[5, 9], [3, 7], [3, 5], [4, 3], [6, 2], [8, 2], [10, 3]],
+    walk1: [[5, 9], [3, 7], [3, 5], [4, 3], [6, 2], [8, 2], [10, 3]],
+    walk2: [[5, 9], [3, 7], [3, 5], [4, 3], [6, 2], [8, 3], [10, 4]],
+    walk3: [[5, 9], [3, 7], [3, 5], [4, 3], [6, 2], [8, 2], [10, 3]],
+    raise: [[5, 9], [3, 7], [2, 5], [2, 3], [4, 2], [6, 2], [8, 3]],
+    strike: [[5, 9], [5, 6], [8, 4], [11, 3], [15, 3], [19, 4], [22, 5]],
+    recover: [[5, 9], [3, 7], [4, 5], [6, 3], [9, 3], [12, 3], [14, 4]],
+    hurt: [[5, 9], [3, 7], [3, 5], [4, 3], [6, 2], [8, 2], [10, 3]],
+    lying: [[5, 9], [3, 7], [3, 5], [4, 3], [6, 2], [8, 2], [10, 3]],
+  };
+  const tail = tailPaths[pose];
+  for (const [index, [x, y]] of tail.entries()) {
+    fillShadedEllipse(grid, x, y, index === 0 ? 1.9 : 1.6, 1.6);
+  }
+  const [tipX, tipY] = tail[tail.length - 1]!;
+  setPixel(grid, tipX + 1, tipY + 1, "r", true);
+  setPixel(grid, tipX + 2, tipY + 2, "w", true);
+  if (pose === "hurt") {
+    setPixel(grid, 0, 0, "w", true);
+    setPixel(grid, width - 3, 2, "w", true);
+  }
+  let rows = addOutline(grid.map((row) => row.join("")), "k");
+  if (pose === "hurt") {
+    rows = rows.map((row) => row.slice(1) + ".");
+  }
+  if (pose === "lying") {
+    // a pancia in su, appoggiato a terra: l'immagine capovolta e schiacciata (una riga su due) in basso
+    const flipped = [...rows].reverse().filter((_, rowIndex) => rowIndex % 2 === 0);
+    rows = [...Array<string>(height - flipped.length).fill(".".repeat(width)), ...flipped];
+  }
+  return rows;
 }

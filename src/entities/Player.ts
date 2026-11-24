@@ -557,6 +557,10 @@ export class Player extends GameObject {
     if (isPushedOrDashing && this.velocityX !== 0 && !this.hasGroundInDirectionOfMovement(platforms)) {
       this.velocityX = 0;
     }
+    // ...e uno scatto si ferma anche prima degli spuntoni
+    if (this.activeDash !== null && this.velocityX !== 0 && this.isDashHeadingIntoStopZone()) {
+      this.velocityX = 0;
+    }
 
     collisionSystem.applyGravityAndMove(
       this,
@@ -795,6 +799,13 @@ export class Player extends GameObject {
    * altrimenti, premendo a raffica, il cavaliere continuerebbe ad attaccare anche dopo
    * aver smesso di premere.
    */
+  /** Vero se poco più avanti, nella direzione dello scatto, c'è una zona in cui fermarsi (spuntoni). */
+  private isDashHeadingIntoStopZone(): boolean {
+    const zones = this.environment.dashStopZones ?? [];
+    const probe = { x: this.positionX + Math.sign(this.velocityX) * 3, y: this.positionY, width: this.width, height: this.height };
+    return zones.some((zone) => CollisionSystem.intersects(probe, zone));
+  }
+
   /** Vero se subito oltre il bordo del corpo, nella direzione del movimento, c'è terreno poco più in basso. */
   private hasGroundInDirectionOfMovement(platforms: PlatformDefinition[]): boolean {
     const probeX = this.velocityX > 0 ? this.positionX + this.width + 2 : this.positionX - 2;

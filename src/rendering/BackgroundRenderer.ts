@@ -84,6 +84,8 @@ export class BackgroundRenderer {
         return this.buildSwamp(screenWidth);
       case "ice":
         return this.buildIce(screenWidth);
+      case "wasteland":
+        return this.buildWasteland(screenWidth);
       case "tower":
         return this.buildTower(screenWidth);
     }
@@ -666,6 +668,104 @@ export class BackgroundRenderer {
           const x = (((startX - Math.round(cameraX * parallax) + Math.round(Math.sin(timeSeconds + flakeIndex) * 6)) % screenWidth) + screenWidth) % screenWidth;
           const y = Math.round(startY + timeSeconds * speed) % (GROUND_Y + 40);
           renderer.fillRect(x, y, isNear ? 2 : 1, isNear ? 2 : 1, isNear ? PALETTE.white : PALETTE.iceWhite);
+        }
+      },
+    };
+  }
+
+  // ===========================================================================
+  // Lande Desolate (Fase 8): tramonto rosso, sole basso, altopiani piatti, alberi secchi, ossa, polvere al vento
+  // ===========================================================================
+
+  private buildWasteland(screenWidth: number): BackgroundStep[] {
+    return [
+      this.createLayer(0, (painter) => {
+        painter.fillVerticalGradient(0, 0, LAYER_PERIOD, GROUND_Y, [PALETTE.wine, PALETTE.purple, PALETTE.red, PALETTE.orange, PALETTE.sand]);
+        this.paintPit(painter, [PALETTE.earthDark, PALETTE.black]);
+      }),
+      {
+        kind: "live",
+        draw: (renderer, cameraX, timeSeconds): void => {
+          // sole basso e gonfio, attraversato da nuvole lunghe che scorrono piano
+          const sunX = 220 - Math.round(cameraX * 0.02);
+          renderer.fillGlow(sunX, 118, 40, PALETTE.yellow, 3, 4);
+          renderer.fillCircle(sunX, 118, 20, PALETTE.yellow);
+          renderer.fillCircle(sunX - 4, 114, 14, PALETTE.cream);
+          for (let band = 0; band < 3; band++) {
+            const bandX = Math.round((band * 140 - timeSeconds * (4 + band) - cameraX * 0.03) % (renderer.width + 120)) - 60;
+            renderer.fillRect(bandX, 104 + band * 9, 90 - band * 14, 2, band === 1 ? PALETTE.wine : PALETTE.purple);
+          }
+        },
+      },
+      this.createLayer(0.08, (painter) => this.paintMesas(painter, 96, 6, PALETTE.wine, PALETTE.purple)),
+      this.createLayer(0.2, (painter) => this.paintMesas(painter, 60, 13, PALETTE.earthDark, PALETTE.earth)),
+      this.createLayer(0.35, (painter) => this.paintRollingHills(painter, 168, 6, PALETTE.earth)),
+      this.createLayer(0.5, (painter) => this.paintDeadTrees(painter, 150, 41, PALETTE.earthDark, 46, 30)),
+      this.createLayer(0.75, (painter) => this.paintBones(painter)),
+      this.createDust(screenWidth),
+    ];
+  }
+
+  /** Altopiani dalla cima piatta (mesa): pareti ripide, bordo superiore illuminato, a gruppi ripetibili. */
+  private paintMesas(painter: PixelPainter, height: number, seed: number, fill: string, light: string): void {
+    for (let mesaIndex = 0; mesaIndex < 4; mesaIndex++) {
+      const randomValue = hashNumber(mesaIndex + seed * 31);
+      const width = 70 + (randomValue % 60);
+      const mesaHeight = Math.round(height * (0.7 + (randomValue % 30) / 100));
+      const left = mesaIndex * 160 + (randomValue % 40);
+      for (const wrapOffset of [-LAYER_PERIOD, 0, LAYER_PERIOD]) {
+        const x = left + wrapOffset;
+        const top = GROUND_Y - mesaHeight;
+        // pareti leggermente inclinate: il corpo si allarga verso il basso
+        for (let rowOffset = 0; rowOffset < mesaHeight; rowOffset++) {
+          const spread = Math.round(rowOffset * 0.25);
+          painter.fillRect(x - spread, top + rowOffset, width + spread * 2, 1, fill);
+        }
+        painter.fillRect(x, top, width, 2, light);
+        // strati di roccia
+        for (let layer = 1; layer < 4; layer++) {
+          const layerY = top + Math.round((mesaHeight * layer) / 4);
+          painter.fillDitheredOverlay(x - Math.round((layerY - top) * 0.25), layerY, width + Math.round((layerY - top) * 0.5), 2, light, 4);
+        }
+      }
+    }
+  }
+
+  /** Ossa e rocce in primo piano: teschi bovini, costole e sassi sul terreno. */
+  private paintBones(painter: PixelPainter): void {
+    for (let index = 0; index < 5; index++) {
+      const randomValue = hashNumber(index + 1234);
+      const baseX = index * 128 + (randomValue % 70);
+      for (const wrapOffset of [-LAYER_PERIOD, 0, LAYER_PERIOD]) {
+        const x = baseX + wrapOffset;
+        if (index % 2 === 0) {
+          // costole che spuntano dal terreno
+          for (let rib = 0; rib < 4; rib++) {
+            const ribX = x + rib * 7;
+            for (let step = 0; step < 14 - rib * 2; step++) {
+              painter.fillRect(ribX + Math.round(step * 0.35), GROUND_Y - step, 2, 1, PALETTE.stoneLight);
+            }
+          }
+        } else {
+          // sasso con il lato illuminato
+          painter.fillCircle(x, GROUND_Y - 3, 8, PALETTE.earthDark);
+          painter.fillCircle(x - 2, GROUND_Y - 5, 5, PALETTE.earth);
+        }
+      }
+    }
+  }
+
+  /** Polvere portata dal vento: un velo che scorre e granelli che volano bassi. */
+  private createDust(screenWidth: number): LiveStep {
+    return {
+      kind: "live",
+      draw: (renderer, cameraX, timeSeconds): void => {
+        renderer.fillDitheredOverlay(0, 184, renderer.width, 16, PALETTE.sand, 2);
+        for (let grainIndex = 0; grainIndex < 30; grainIndex++) {
+          const startX = hashNumber(grainIndex + 1500) % screenWidth;
+          const y = 150 + (hashNumber(grainIndex + 1600) % 48) + Math.round(Math.sin(timeSeconds * 2 + grainIndex) * 2);
+          const x = (((startX - Math.round(timeSeconds * 60) - Math.round(cameraX * 0.9)) % screenWidth) + screenWidth) % screenWidth;
+          renderer.fillRect(x, y, grainIndex % 3 === 0 ? 2 : 1, 1, grainIndex % 2 === 0 ? PALETTE.sand : PALETTE.woodLight);
         }
       },
     };

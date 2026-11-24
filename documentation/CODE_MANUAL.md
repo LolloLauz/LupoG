@@ -94,11 +94,11 @@ modificare qui, senza toccare la logica.
 | `progressionConfig.ts` (Fase 6) | `ECONOMY_CONFIG` (monete per nemico, moltiplicatore delle élite, monete per boss), `SHOP_OFFERS` e `SHOP_HEAL_AMOUNT` (bottega), `UPGRADE_CONFIG`, `UPGRADE_ORDER`, `UPGRADE_EFFECT_PER_LEVEL`, `computeUpgradeBonuses()`, `NO_UPGRADES`, `isUpgradeId()` (potenziamenti permanenti), `ALWAYS_DISCOVERED_WEAPONS` |
 | `abilityConfig.ts` (Fase 5) | `ABILITY_CONFIG` (onda d'urto, tiro in ritirata, carica furiosa: abilità d'attacco con il loro `AttackDefinition`; scudo: abilità di guardia con consumo al secondo, finestra della parata perfetta, costo per punto di danno, stordimento), `getAbilityAttacks()` (usata dalle animazioni) |
 | `characterConfig.ts` (Fase 4) | `CHARACTER_CONFIG` (cavaliere, ranger, berserker, paladino: nome, descrizione, tratto, suffisso degli sprite, arma iniziale, salute, velocità, moltiplicatori del danno inflitto e subito, schivata, `regeneration` facoltativa; Fase 5: `maxStamina`, `staminaRegenPerSecond`, `dodgeStaminaCost`, `abilityId`; Fase 6: `unlockLevel`, `unlockText`), `CHARACTER_ORDER`, `DEFAULT_CHARACTER_ID`, `isCharacterId()`. Il cavaliere legge salute, velocità e schivata da `PLAYER_CONFIG` |
-| `enemyConfig.ts` | `ENEMY_AI_CONFIG` (anche `armorCrushStunMs` e i moltiplicatori dei nemici d'élite), `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss; `weaponReward` = trofeo) |
-| `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco (velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) |
+| `enemyConfig.ts` | `ENEMY_AI_CONFIG` (anche `armorCrushStunMs` e i moltiplicatori dei nemici d'élite), `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss; `weaponReward` = trofeo) Fase 8: `raider` (Predone, a distanza con le accette), `scorpion` (corazzato, scatto), `vulture` (volante), `LANDS_LORD_CONFIG` (Signore delle Lande). |
+| `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco (velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) Fase 8: `hatchet` (accetta di predoni e Signore delle Lande, respinta dalla spada). |
 | `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili; quelli con `powerUpId` attivano un power-up, `storedInBag` = pozione da borsa, `refillsAmmo` = faretra, `coins` = monete), `ITEM_SIZE` |
-| `levelConfig.ts` | `LEVEL_CONFIG` (i 6 livelli), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
+| `levelConfig.ts` | `LEVEL_CONFIG` (i 7 livelli; il 6 sono le Lande Desolate della Fase 8), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
 | `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti; anche `pickUp` = E, `dropItem` = Q, `ability` = L, `bagSlot1`-`bagSlot4` = 1-4 e, nei menu, `menuLeft`/`menuRight` = A/D e frecce), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
 | `inventoryConfig.ts` | `INVENTORY_CONFIG` (`slotCount` 4, `maxPotionsPerSlot` 2, `maxPotionSlots` 1), `BAG_SLOT_ACTIONS` (tasto di ogni posto) |
 | `animationConfig.ts` | `PLAYER_ANIMATIONS`, `ENEMY_ANIMATIONS`, `BOSS_ANIMATIONS` |
@@ -336,7 +336,7 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `EnemyAISystem.ts` | `EnemyAISystem` | decide cosa fa ogni nemico (pattuglia, insegue, guardia, tira a distanza, vola e picchia, attacca); i nemici a terra evitano abissi, muri, spuntoni e acqua |
 | `LevelManager.ts` | `LevelManager` | `loadLevel`, `loadLevelDefinition` (livelli fuori da `LEVEL_CONFIG`, per test e prove), `hasLevel`, `createEnemies`, `createBoss` (con `arenaMinX`), `lockArena`, `hazards`, `updateMovingPlatforms(ms, chi)` (muove le piattaforme mobili e trasporta chi ci sta sopra), `render` (sfondo, terreno, porta, cancello, pericoli), `renderForeground` (acqua davanti alle entità) |
 | `ProjectileSystem.ts` (2.0) | `ProjectileSystem` | `spawn`, `update(dt, player, platforms, mapWidth, mapHeight, targets)` (restituisce gli eventi: colpito il giocatore, deviato dalla spada, schianto; per i proiettili del giocatore `hitTarget` e `dropAmmo`), `render`, `clear`. Il proiettile nemico passa attraverso il giocatore invulnerabile (schivata). Quelli del giocatore (Fase 2) colpiscono `targets` (nemici, boss, forzieri chiusi), si fermano al primo o trafiggono (`isPiercing`), e se recuperabili (`recoveredAsAmmoOf`) a fine corsa diventano munizioni a terra |
-| `HazardSystem.ts` (2.0) | `HazardSystem` | `computePlayerEnvironment` (acqua o ghiaccio: modificatori del movimento), `applyContactDamage` (spuntoni) |
+| `HazardSystem.ts` (2.0) | `HazardSystem` | `computePlayerEnvironment` (acqua o ghiaccio: modificatori del movimento), `applyContactDamage` (spuntoni) Fase 8: l'ambiente porta anche gli spuntoni come `dashStopZones`, dove gli scatti delle abilità si fermano. |
 | `ItemManager.ts` | `ItemManager` | `loadItems`, `collectItems(player, scoreManager)` (applica gli effetti; salta gli oggetti da borsa, `ItemDefinition.storedInBag`), `findReachableBagItem(player)`, `findTouchedAmmoRefill(player)` (faretra, salta da `collectItems`: la raccoglie il motore), `addItem(tipo, x, y)` (pozione lasciata con Q), `removeItem(item)`, `render(..., player)` (suggerimento "E PRENDI ..." sopra la pozione toccata) |
 | `WeaponPickupManager.ts` | `WeaponPickupManager` | armi a terra: `spawn(weaponId, centerX, bottomY, isArmed)`, `update(dt, player)` (rende prendibili le armi lasciate quando il giocatore se ne allontana), `findReachablePickup(player)`, `take(pickup)`, `render` (con il suggerimento "E PRENDI ...") |
 | `Inventory.ts` | `Inventory`, `BagSlot`, `InventorySnapshot`, `WeaponAddResult`, `SlotSelection` | la borsa, solo logica: `bagSlots`, `equippedSlotIndex`, `equippedWeaponId`, `weaponIds`, `potionCount`, `reset(weaponIds, equipped)`, `addWeapon(id, ammo)` (posto libero, altrimenti al posto dell'arma in mano: `droppedWeaponId`, `droppedAmmo`; `duplicate` se c'è già, `refilled` se è un'arma con munizioni non piene), munizioni (`equippedAmmo`, `setEquippedAmmo`, `addAmmo`), `removeWeapon(id)` (giavellotti finiti; senza armi torna la spada), `dropSlot(i)` (tasto Q: l'arma con le munizioni o una pozione; mai l'ultima arma), `refillAllAmmo()` (faretra), `addPotion()`/`canAddPotion()` (un gruppo, limiti di `INVENTORY_CONFIG`), `selectSlot(i)`, `consumePotion(i)`, `snapshot()`/`restore()`. Il motore (`updatePickupsAndBag`, `pickUpWithE`, `useBagSlot`) applica gli effetti, salva le armi con `ProgressManager.setBagWeapons` e ripristina la borsa di inizio livello quando si ricomincia |
@@ -358,13 +358,13 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `SpriteManager.ts` | `SpriteManager` | `registerSprite(id, righe, colori, anchorX)`, `drawSprite(...)`, `drawSpriteAligned(...)` (allinea lo sprite all'hitbox con l'ancora, anche specchiato), `drawSpriteSilhouette(..., colore)`, `getSpriteSize`, `getSpriteAnchorX`; crea le versioni specchiate e, alla prima richiesta, le sagome a tinta unita |
 | `AnimationManager.ts` | `AnimationPlayer`, `AnimationDefinition` | riproduce un'animazione: `play`, `restart`, `update`, `currentFrameId`; durata per frame (`frameDurationsMs`) opzionale |
 | `EffectsManager.ts` | `EffectsManager` | particelle, scritte, tremolio, hit-stop |
-| `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`, `swamp`, `ice`, `tower`: 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia, lucciole, aurora, neve, fulmini, vetrate, bracieri) |
+| `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`, `swamp`, `ice`, `wasteland` (Fase 8: tramonto, `paintMesas`, `paintBones`, `createDust`), `tower`: 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia, lucciole, aurora, neve, fulmini, vetrate, bracieri) |
 | `TerrainRenderer.ts` | `TerrainRenderer` | terreno e piattaforme con la tessitura dell'ambientazione (`THEME_STYLES`: erba, pietra, mattoni, fango, neve, pietra runica), piattaforme mobili, pericoli (spuntoni, ghiaccio, acqua in due tempi), porta d'uscita, cancello dell'arena |
 | `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe, `addOutline` (contorno automatico), `remapSpriteKeys` (varianti) |
 | `sprites/knightSprites.ts` | `registerKnightSprites`, `registerCharacterPreviews`, `getCharacterPreviewFrameId`, `KNIGHT_ANCHOR_X`, `KNIGHT_FIRE_SUFFIX`, `KNIGHT_CROUCH_SUFFIX` | cavaliere 24×30 (attacchi 44×30, lancia 58×30): parte superiore + gambe + arma; ancora alla colonna 7. `registerKnightSprites(spriteManager, personaggio)` compone **una serie completa di frame per ogni arma** (`WEAPON_VISUALS`: lunghezza rispetto alla spada, funzione di disegno, pose d'attacco, icona): le funzioni `compose*` disegnano l'arma e il busto attivi, quindi un frame aggiunto all'elenco vale per tutte le armi e tutti i personaggi. **Personaggi** (Fase 4, `CHARACTER_VISUALS`): stesso corpo del cavaliere, colori propri (stesse chiavi: armatura `d g s w`, sopravveste `m r o`, scudo `N B L`) e, se serve, le 12 righe della testa (`RANGER_HEAD_ROWS`, `BERSERKER_HEAD_ROWS`; il paladino ricolora il pennacchio). Pose delle abilità (`ABILITY_POSES`: arma alzata, colpo a terra, affondo) comuni a tutte le armi. Id di uno sprite: frame + `Crouch` (attacco da accovacciati) + suffisso dell'arma + suffisso del personaggio + `Fire`. Una serie è di circa 600 sprite: il motore registra quella di un personaggio quando serve (`GameEngine.ensureCharacterSprites`) e, all'avvio, solo i due frame d'attesa di ognuno per i menu (`registerCharacterPreviews`). Registra anche le icone 16×16 delle armi. `Player.getRenderedFrameId()` sceglie il frame |
 | `sprites/weaponShapes.ts` | `drawSpear`, `drawAxe`, `drawMace`, `drawBow`, `drawCrossbow`, `WeaponDrawer` | forme delle armi della Fase 1 dalla mano alla punta (metallo con le chiavi della lama: il fuoco le ricolora) |
-| `sprites/enemySprites.ts` | `registerEnemySprites` | umanoidi da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma spada o arco, mano, ancora): scheletro, arciere, goblin, soldato, golem; pipistrello disegnato a metà e specchiato; lupo e melme con le forme procedurali di `creatureTools.ts` |
-| `sprites/creatureTools.ts` (2.0) | `composeWolf`, `composeBlob`, `fillShadedEllipse` | creature non umanoidi composte da ellissi ombreggiate e rettangoli, con contorno automatico: lo stesso codice disegna il lupo (scala 1) e il Re dei Lupi (scala 2) |
+| `sprites/enemySprites.ts` | `registerEnemySprites` | umanoidi da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma spada o arco, mano, ancora): scheletro, arciere, goblin, soldato, golem; pipistrello disegnato a metà e specchiato; lupo e melme con le forme procedurali di `creatureTools.ts` Fase 8: `weapon: "thrown"` (accetta del predone: attacco corto, l'arma vola via), avvoltoio (ali del pipistrello e corpo proprio, `composeVultureHalf`), scorpione (`composeScorpion`). |
+| `sprites/creatureTools.ts` (2.0) | `composeWolf`, `composeBlob`, `composeScorpion` (Fase 8), `fillShadedEllipse` | creature non umanoidi composte da ellissi ombreggiate e rettangoli, con contorno automatico: lo stesso codice disegna il lupo (scala 1) e il Re dei Lupi (scala 2) |
 | `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES`, `BOSS_SPRITE_SHAPES` | quattro forme (`BOSS_SPRITE_SHAPES`, se manca: `knight`): **knight** cavaliere corazzato 36×41 (Cavaliere Nero), **witch** strega con veste e bastone, **sorcerer** stregone incappucciato con corona e spada d'ombra (36×44), **beast** lupo gigante 60×42 (hitbox 40×24). La forma impone la hitbox; i colori di ogni boss sono in `BOSS_SPRITE_STYLES` con le chiavi della sua forma |
 | `sprites/projectileSprites.ts` | `registerProjectileSprites` | freccia, dardo magico (2 frame), palla di fuoco (2 frame) |
 | `sprites/itemSprites.ts`, `uiSprites.ts` | funzioni | oggetti 8×8 ombreggiati, forziere chiuso e aperto (`chestClosed`, `chestOpen`, 16×12); icone dell'HUD (`hudLife`, `hudHeart`, `hudSkull`) |
@@ -632,11 +632,11 @@ Servono 6 passi: tipo, statistiche, animazioni, sprite (2 punti) e posizione nel
 
 Codice originale:
 ```ts
-  | "iceGolem";
+  | "vulture";
 ```
 Codice aggiornato:
 ```ts
-  | "iceGolem"
+  | "vulture"
   | "brute";
 ```
 
@@ -683,12 +683,12 @@ Codice aggiornato:
 
 Codice originale:
 ```ts
-  iceGolem: createEnemyAnimations("iceGolem"),
+  vulture: createEnemyAnimations("vulture"),
 };
 ```
 Codice aggiornato:
 ```ts
-  iceGolem: createEnemyAnimations("iceGolem"),
+  vulture: createEnemyAnimations("vulture"),
   brute: createEnemyAnimations("brute"),
 };
 ```
@@ -713,7 +713,7 @@ import type { EnemyTypeId } from "../../types/EntityTypes";
 
 Codice originale:
 ```ts
-  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "iceGolem";
+  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "iceGolem" | "raider";
 ```
 Codice aggiornato:
 ```ts
@@ -722,21 +722,19 @@ Codice aggiornato:
 
 #### Passo 6 – `src/rendering/sprites/enemySprites.ts` (lo sprite)
 
-**Cerca:** `SPECS`, in fondo alla voce `soldier`.
+**Cerca:** `SPECS`, in fondo alla voce `raider` (l'ultima).
 
 Codice originale:
 ```ts
-    bladeKeys: { grip: "y", blade: "w", edge: "w", guard: "y" },
-    handX: 17,
-    handY: 15,
+    weapon: "thrown",
+    restingTip: { dx: 2, dy: -6 },
   },
 ];
 ```
 Codice aggiornato:
 ```ts
-    bladeKeys: { grip: "y", blade: "w", edge: "w", guard: "y" },
-    handX: 17,
-    handY: 15,
+    weapon: "thrown",
+    restingTip: { dx: 2, dy: -6 },
   },
   {
     idPrefix: "brute",
@@ -915,8 +913,8 @@ funziona da solo perché `healAmount > 0`.
 ### Esempio 9 – Aggiungere un nuovo livello
 
 **Obiettivo:** inserire un nuovo livello ("Rovine Antiche", ambientazione castello) **prima** del dungeon del Cavaliere Nero,
-che diventa il livello 4. Poiché gli `id` devono restare consecutivi, i livelli successivi (palude, picchi, torre) vanno rinumerati
-(passi 2-4).
+che diventa il livello 4. Poiché gli `id` devono restare consecutivi, i livelli successivi (palude, picchi, lande, torre) vanno
+rinumerati (passi 2-5).
 
 #### Passo 1 – `src/config/levelConfig.ts`
 
@@ -1003,16 +1001,31 @@ Codice aggiornato:
 
 #### Passo 4 – `src/config/levelConfig.ts`
 
-**Cerca:** l'inizio della Torre dell'Ombra.
+**Cerca:** l'inizio delle Lande Desolate.
 
 Codice originale:
 ```ts
     id: 6,
-    name: "Torre dell'Ombra",
+    name: "Lande Desolate",
 ```
 Codice aggiornato:
 ```ts
     id: 7,
+    name: "Lande Desolate",
+```
+
+#### Passo 5 – `src/config/levelConfig.ts`
+
+**Cerca:** l'inizio della Torre dell'Ombra.
+
+Codice originale:
+```ts
+    id: 7,
+    name: "Torre dell'Ombra",
+```
+Codice aggiornato:
+```ts
+    id: 8,
     name: "Torre dell'Ombra",
 ```
 
@@ -1020,12 +1033,13 @@ Codice aggiornato:
 gli `id` sono consecutivi da 1 (il motore passa a `id + 1` e dopo l'ultimo mostra la vittoria); gli abissi non più larghi di
 circa 36 px; le piattaforme non più di circa 44 px sopra una superficie da cui salire; i nemici e gli oggetti poggiano su una
 superficie (nemico: `y = superficie − altezza hitbox`; oggetto: `y = superficie − 8`); l'uscita (`exitX`) sta su un tratto di terreno.
-Le ambientazioni disponibili sono `forest`, `castle`, `dungeon`, `swamp`, `ice`, `tower`. Il dungeon (ora livello 4) mantiene
-boss, arena e posizioni invariate. Si può anche aggiungere un livello in fondo all'elenco (id 7) senza rinumerare: diventerebbe
+Le ambientazioni disponibili sono `forest`, `castle`, `dungeon`, `swamp`, `ice`, `wasteland`, `tower`. Il dungeon (ora livello 4)
+mantiene boss, arena e posizioni invariate. Si può anche aggiungere un livello in fondo all'elenco (id 8) senza rinumerare: diventerebbe
 l'ultimo, giocato dopo il Signore dell'Ombra.
 
 **Risultato atteso:** dopo il Castello Medievale compare "LIVELLO 3 – ROVINE ANTICHE"; raggiunta la porta in fondo si
-passa al Dungeon (ora livello 4) con il Cavaliere Nero, poi a Palude (5), Picchi (6) e Torre (7); vinto il Signore dell'Ombra, la vittoria.
+passa al Dungeon (ora livello 4) con il Cavaliere Nero, poi a Palude (5), Picchi (6), Lande (7) e Torre (8); vinto il Signore dell'Ombra,
+la vittoria.
 
 ### Esempio 10 – Aggiungere un boss
 
@@ -1041,6 +1055,7 @@ export const BOSS_CATALOG: Record<string, BossDefinition> = {
   [BOSS_CONFIG.id]: BOSS_CONFIG,
   [SWAMP_WITCH_CONFIG.id]: SWAMP_WITCH_CONFIG,
   [WOLF_KING_CONFIG.id]: WOLF_KING_CONFIG,
+  [LANDS_LORD_CONFIG.id]: LANDS_LORD_CONFIG,
   [SHADOW_LORD_CONFIG.id]: SHADOW_LORD_CONFIG,
 };
 ```
@@ -1072,6 +1087,7 @@ export const BOSS_CATALOG: Record<string, BossDefinition> = {
   [BOSS_CONFIG.id]: BOSS_CONFIG,
   [SWAMP_WITCH_CONFIG.id]: SWAMP_WITCH_CONFIG,
   [WOLF_KING_CONFIG.id]: WOLF_KING_CONFIG,
+  [LANDS_LORD_CONFIG.id]: LANDS_LORD_CONFIG,
   [SHADOW_LORD_CONFIG.id]: SHADOW_LORD_CONFIG,
   [SKELETON_KING_CONFIG.id]: SKELETON_KING_CONFIG,
 };

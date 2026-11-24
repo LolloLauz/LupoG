@@ -46,6 +46,14 @@ export const THEME_STYLES: Record<ThemeId, ThemeStyle> = {
     ledgeColors: [PALETTE.iceWhite, PALETTE.cyan, PALETTE.lightBlue],
     detailColors: [PALETTE.lightBlue, PALETTE.cyan],
   },
+  // Fase 8: terra secca e crepata, erba bruciata dal sole, sporgenze di roccia chiara e ossa
+  wasteland: {
+    terrainTexture: "grassAndEarth",
+    surfaceColors: [PALETTE.sand, PALETTE.woodLight, PALETTE.wood],
+    fillColors: [PALETTE.wood, PALETTE.earth, PALETTE.earthDark, PALETTE.black],
+    ledgeColors: [PALETTE.stonePale, PALETTE.stoneLight, PALETTE.stone],
+    detailColors: [PALETTE.woodLight, PALETTE.sand],
+  },
   tower: {
     terrainTexture: "runeStone",
     surfaceColors: [PALETTE.lilac, PALETTE.amethyst, PALETTE.violet],
@@ -158,7 +166,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
     ],
     items: [
       { type: "powerPoison", position: { x: 600, y: 192 } },
-      { type: "quiver", position: { x: 1000, y: 192 } },
+      { type: "quiver", position: { x: 1110, y: 192 } },
       { type: "scoreCoin", position: { x: 170, y: 156 } },
       { type: "healthPotion", position: { x: 500, y: 192 } },
       { type: "scoreCoin", position: { x: 780, y: 116 } },
@@ -204,7 +212,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "skeleton", position: { x: 1060, y: 176 }, elite: true, weaponDrop: "throwingKnives" },
     ],
     items: [
-      { type: "powerShock", position: { x: 300, y: 192 } },
+      { type: "powerShock", position: { x: 360, y: 192 } },
       { type: "quiver", position: { x: 1150, y: 192 } },
       { type: "healthPotion", position: { x: 440, y: 192 } },
       { type: "scoreCoin", position: { x: 225, y: 120 } },
@@ -358,7 +366,68 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
     bossArenaStartX: 1660,
   },
   {
+    // Fase 8: le lande bruciate ai piedi della Torre, terra dei predoni
     id: 6,
+    name: "Lande Desolate",
+    theme: "wasteland",
+    width: 2048,
+    height: 240,
+    playerStart: { x: 24, y: 176 },
+    platforms: [
+      // terreno con quattro abissi (x 420-452, 860-892, 1240-1272, 1560-1592)
+      { x: 0, y: 200, width: 420, height: 40 },
+      { x: 452, y: 200, width: 408, height: 40 },
+      { x: 892, y: 200, width: 348, height: 40 },
+      { x: 1272, y: 200, width: 288, height: 40 },
+      { x: 1592, y: 200, width: 456, height: 40 },
+      // sporgenze di roccia
+      { x: 170, y: 164, width: 48, height: 8, oneWay: true },
+      { x: 240, y: 128, width: 48, height: 8, oneWay: true },
+      { x: 560, y: 162, width: 56, height: 8, oneWay: true },
+      { x: 980, y: 164, width: 56, height: 8, oneWay: true },
+      { x: 1060, y: 128, width: 48, height: 8, oneWay: true },
+      { x: 1350, y: 162, width: 48, height: 8, oneWay: true },
+      // massi
+      { x: 720, y: 176, width: 24, height: 24 },
+      { x: 1460, y: 176, width: 28, height: 24 },
+    ],
+    // lastra di roccia sospesa che passa sopra gli spuntoni
+    movingPlatforms: [{ x: 1150, y: 150, width: 40, height: 8, travelX: 70, travelY: 0, periodMs: 3800 }],
+    hazards: [
+      { kind: "spikes", x: 640, y: 192, width: 24, height: 8 },
+      { kind: "spikes", x: 1180, y: 192, width: 30, height: 8 },
+    ],
+    enemies: [
+      { type: "raider", position: { x: 320, y: 176 } },
+      { type: "scorpion", position: { x: 520, y: 188 } },
+      { type: "vulture", position: { x: 680, y: 110 } },
+      { type: "goblin", position: { x: 800, y: 184 }, elite: true, weaponDrop: "dagger" },
+      { type: "scorpion", position: { x: 960, y: 188 } },
+      { type: "wolf", position: { x: 1120, y: 188 } },
+      { type: "raider", position: { x: 1400, y: 176 } },
+      { type: "scorpion", position: { x: 1520, y: 188 } },
+    ],
+    items: [
+      { type: "quiver", position: { x: 1640, y: 192 } },
+      { type: "healthPotion", position: { x: 470, y: 192 } },
+      { type: "scoreCoin", position: { x: 186, y: 156 } },
+      { type: "collectible", position: { x: 256, y: 120 } },
+      { type: "scoreCoin", position: { x: 580, y: 154 } },
+      { type: "powerFrost", position: { x: 1000, y: 156 } },
+      { type: "scoreCoin", position: { x: 1076, y: 120 } },
+      { type: "healthPotion", position: { x: 1300, y: 192 } },
+      { type: "scoreCoin", position: { x: 1366, y: 154 } },
+      { type: "healthPotion", position: { x: 1610, y: 192 } },
+    ],
+    chests: [{ position: { x: 140, y: 188 }, weaponId: "throwingKnives" }],
+    completion: { kind: "defeatBoss" },
+    hasBoss: true,
+    bossId: "landsLord",
+    bossSpawn: { x: 1900, y: 160 },
+    bossArenaStartX: 1700,
+  },
+  {
+    id: 7,
     name: "Torre dell'Ombra",
     theme: "tower",
     width: 2304,
@@ -407,7 +476,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "wolf", position: { x: 1840, y: 188 } },
     ],
     items: [
-      { type: "powerFrost", position: { x: 1000, y: 192 } },
+      { type: "powerFrost", position: { x: 1150, y: 192 } },
       { type: "powerPoison", position: { x: 500, y: 192 } },
       { type: "quiver", position: { x: 1720, y: 192 } },
       { type: "healthPotion", position: { x: 120, y: 192 } },

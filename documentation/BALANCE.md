@@ -112,6 +112,25 @@ portata, lo scudo al posto della schivata):
 - **Scatti sul bordo**: con l'abilità, il Ranger del bot moriva sempre nel livello 1, perché il balzo all'indietro lo portava nell'abisso appena saltato.
   Lo stesso poteva succedere a una persona: ora gli scatti delle abilità si fermano sul bordo (come il rinculo).
 
+### Fase 8: Lande Desolate (livello 6) e nuovi nemici
+
+Duelli (bot che non schiva): Predone 27 HP persi (l'arciere 20), Scorpione 10, Avvoltoio 0 (nei duelli il bot non lo raggiunge; nel livello
+colpisce mentre si cammina). Signore delle Lande da solo: vittorie 100% / 100%, HP persi 51 / 22.
+
+Con la prima versione il livello 6 era molto più duro degli altri: vittorie 7% (rusher) / 20% (medio), 190 / 150 HP persi. Misurando gruppo per
+gruppo, predoni, scorpioni e avvoltoi pesavano tutti (circa +25-45 HP ciascuno). Correzioni: predone 35 → 30 HP, danno 11 → 9, attesa 1,6 → 2,1 s,
+portata 120 → 110, accetta più bassa; avvoltoio 28 → 24 HP, danno 10 → 8, attesa 1,6 → 2 s, picchiata 175 → 160; scorpione danno 12 → 10; nel
+livello un predone in meno (al suo posto un goblin, che è l'élite) e un avvoltoio in meno. Risultato (40 ripetizioni):
+
+| Livello | rusher: vittorie / HP persi | medio: vittorie / HP persi |
+|---|---|---|
+| 5 – Picchi Ghiacciati | 100% / 108 | 100% / 67 |
+| 6 – Lande Desolate | 100% / 132 | 98% / 118 |
+| 7 – Torre dell'Ombra | 100% / 115 | 98% / 93 |
+
+Partite complete (7 livelli): 100% per entrambi i bot. Con sette livelli invece di sei il **Ranger che non schiva** (75 HP, con la spada) scende al
+25-30% (era 65%); quello che schiva resta al 100%. Il balzo all'indietro del Ranger ora si ferma anche prima degli spuntoni: il bot ci finiva sopra.
+
 ### Fase 6: bottega e potenziamenti
 
 Il bot di `tools/balance.mjs` **non usa la bottega né i potenziamenti**, quindi le misure qui sopra valgono per una partita senza acquisti.

@@ -89,6 +89,7 @@ const THEME_SWATCHES: Record<ThemeId, [string, string]> = {
   dungeon: [PALETTE.amethyst, PALETTE.violetDark],
   swamp: [PALETTE.olive, PALETTE.bogDark],
   ice: [PALETTE.iceWhite, PALETTE.blue],
+  wasteland: [PALETTE.sand, PALETTE.ember],
   tower: [PALETTE.lilac, PALETTE.violet],
 };
 

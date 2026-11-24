@@ -58,6 +58,19 @@ export const BOSS_SPRITE_STYLES: Record<string, Record<string, string>> = {
     n: PALETTE.earthDark,
     r: PALETTE.wine,
   },
+  // Signore delle Lande (Fase 8): armatura arrugginita, corna d'osso, occhi gialli, mantello rosso scuro sbrindellato
+  landsLord: {
+    k: PALETTE.black,
+    n: PALETTE.earthDark,
+    d: PALETTE.earth,
+    s: PALETTE.woodLight,
+    w: PALETTE.cream,
+    r: PALETTE.flame,
+    e: PALETTE.yellow,
+    y: PALETTE.sand,
+    c: PALETTE.emberDark,
+    p: PALETTE.ember,
+  },
   shadowLord: {
     k: PALETTE.black,
     h: PALETTE.violetDark,
@@ -89,6 +102,7 @@ export const BOSS_SPRITE_SHAPES: Record<string, BossSpriteShape> = {
   blackKnight: "knight",
   swampWitch: "witch",
   wolfKing: "beast",
+  landsLord: "knight",
   shadowLord: "sorcerer",
 };
 

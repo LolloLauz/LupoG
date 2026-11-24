@@ -2,7 +2,7 @@ import type { EnemyTypeId, WeaponId } from "./EntityTypes";
 import type { Rectangle, Vector2 } from "./GameTypes";
 
 /** Ambientazioni disponibili. */
-export type ThemeId = "forest" | "castle" | "dungeon" | "swamp" | "ice" | "tower";
+export type ThemeId = "forest" | "castle" | "dungeon" | "swamp" | "ice" | "wasteland" | "tower";
 
 /** Tessiture del terreno disponibili (disegnate da TerrainRenderer). */
 export type TerrainTexture = "grassAndEarth" | "stoneTiles" | "dungeonBricks" | "swampMud" | "snowAndRock" | "runeStone";

@@ -1,7 +1,7 @@
 import { PALETTE } from "../../config/gameConfig";
 import { ENEMY_CONFIG } from "../../config/enemyConfig";
 import type { SpriteManager } from "../SpriteManager";
-import { composeBlob, composeWolf, type BlobPose, type WolfPose } from "./creatureTools";
+import { composeBlob, composeScorpion, composeWolf, type BlobPose, type ScorpionPose, type WolfPose } from "./creatureTools";
 import { createGrid, drawSlashArc, drawSword, linePoints, mirrorRows, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
 
 /**
@@ -23,7 +23,7 @@ interface LegPoses {
 }
 
 interface HumanoidSpec {
-  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "iceGolem";
+  idPrefix: "skeleton" | "goblin" | "soldier" | "skeletonArcher" | "iceGolem" | "raider";
   bodyRows: string[];
   colors: Record<string, string>;
   bladeKeys: BladeKeys;
@@ -36,8 +36,11 @@ interface HumanoidSpec {
   anchorX?: number;
   /** Punta della spada a riposo (relativa alla mano). */
   restingTip?: { dx: number; dy: number };
-  /** Arma: spada (predefinita) o arco (per chi tira frecce: niente spada, arco teso nella preparazione). */
-  weapon?: "sword" | "bow";
+  /**
+   * Arma: spada (predefinita), arco (per chi tira frecce: niente spada, arco teso nella preparazione) o arma da lancio
+   * (accetta del predone: corta, e nel colpo il braccio si allunga solo un poco, perché l'arma vola via).
+   */
+  weapon?: "sword" | "bow" | "thrown";
   /** Larghezza dello sprite, se deve essere più larga del disegno (es. per l'arco). */
   spriteWidth?: number;
 }
@@ -158,6 +161,22 @@ const GOBLIN_LEGS: LegPoses = {
     "....................",
   ],
 };
+
+// ---------------------------------------------------------------------------
+// Predone delle Lande (Fase 8): testa avvolta in un panno con la coda al vento, occhi gialli, sciarpa rossa sul viso,
+// corpo del soldato in cuoio; lancia accette
+// ---------------------------------------------------------------------------
+
+const RAIDER_HEAD_ROWS: string[] = [
+  "......kkkkk.........",
+  ".....khHHhhk........",
+  "....khHhhhhhk.......",
+  "...kthhhhhhhhk......",
+  "..kttkhkkkkkhk......",
+  "..kt.kfffffekk......",
+  "..k..kmmmmmmmk......",
+  "......kmmmmmdk......",
+];
 
 // ---------------------------------------------------------------------------
 // Soldato nemico: elmo a cappello, cotta di maglia, sopravveste viola
@@ -439,6 +458,9 @@ function drawBow(grid: PixelGrid, handX: number, handY: number, drawAmount: numb
   }
 }
 
+/** Predone: la testa propria sopra il busto del soldato (righe 8-19), ricolorato in cuoio. */
+const RAIDER_BODY_ROWS: string[] = [...RAIDER_HEAD_ROWS, ...SOLDIER_BODY_ROWS.slice(RAIDER_HEAD_ROWS.length)];
+
 const SPECS: HumanoidSpec[] = [
   {
     idPrefix: "skeleton",
@@ -549,6 +571,32 @@ const SPECS: HumanoidSpec[] = [
     handX: 17,
     handY: 15,
   },
+  {
+    idPrefix: "raider",
+    bodyRows: RAIDER_BODY_ROWS,
+    colors: {
+      k: PALETTE.black,
+      h: PALETTE.wood,
+      H: PALETTE.woodLight,
+      t: PALETTE.earth,
+      f: PALETTE.skinDark,
+      e: PALETTE.yellow,
+      m: PALETTE.ember,
+      s: PALETTE.woodLight,
+      g: PALETTE.wood,
+      w: PALETTE.sand,
+      r: PALETTE.ember,
+      y: PALETTE.bronze,
+      d: PALETTE.earthDark,
+      x: PALETTE.stoneLight,
+      X: PALETTE.stonePale,
+    },
+    bladeKeys: { grip: "t", blade: "x", edge: "X", guard: "y" },
+    handX: 17,
+    handY: 15,
+    weapon: "thrown",
+    restingTip: { dx: 2, dy: -6 },
+  },
 ];
 
 /** Unisce parte superiore e gambe; bodyDrop abbassa la parte superiore (respiro, passo). */
@@ -655,7 +703,7 @@ function registerHumanoid(spriteManager: SpriteManager, spec: HumanoidSpec): voi
   const baseWidth = getSpriteWidth(spec);
   // la punta della spada arriva dove arriva il colpo: bordo anteriore dell'hitbox + attackRange
   const hitboxFrontColumn = anchorX + definition.hitbox.width;
-  const tipX = hitboxFrontColumn + definition.attackRange;
+  const tipX = spec.weapon === "thrown" ? spec.handX + 8 : hitboxFrontColumn + definition.attackRange;
   const attackSpriteWidth = Math.max(baseWidth, tipX + 3);
   const standing = composeRows(spec, baseWidth, legs.stand, 0);
   const prefix = spec.idPrefix;
@@ -806,6 +854,119 @@ function registerBat(spriteManager: SpriteManager): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Avvoltoio (Fase 8): le ali del pipistrello in piume marroni, testa calva rossa, becco chiaro e collare bianco
+// ---------------------------------------------------------------------------
+
+const VULTURE_COLORS: Record<string, string> = {
+  k: PALETTE.black,
+  d: PALETTE.earthDark,
+  v: PALETTE.wood,
+  a: PALETTE.woodLight,
+  R: PALETTE.skinDark,
+  y: PALETTE.yellow,
+  o: PALETTE.orange,
+  N: PALETTE.sand,
+  w: PALETTE.cream,
+  r: PALETTE.red,
+};
+
+/** Corpo dell'avvoltoio (colonne 6-9 della metà sinistra, la 9 è l'asse): testa, becco, collare, ventre. */
+const VULTURE_BODY_COLUMNS: string[] = ["....", "..kk", ".kRR", ".kyR", ".kkN", ".kww", "kwvv", "kvav", "kvvv", ".kvv", "..kk", "...."];
+
+/** Metà dell'avvoltoio: le ali (colonne 0-5) della posa del pipistrello e il corpo dell'avvoltoio. */
+function composeVultureHalf(batHalf: string[]): string[] {
+  return batHalf.map((row, rowIndex) => {
+    const bodyColumns = VULTURE_BODY_COLUMNS[rowIndex] ?? "....";
+    const columns = [...row];
+    for (let column = 0; column < bodyColumns.length; column++) {
+      const bodyKey = bodyColumns[column]!;
+      if (bodyKey !== ".") {
+        columns[6 + column] = bodyKey;
+      } else if (column >= 1 && "vrwa".includes(row[6 + column]!)) {
+        columns[6 + column] = "."; // via il corpo del pipistrello
+      }
+    }
+    return columns.join("");
+  });
+}
+
+function registerVulture(spriteManager: SpriteManager): void {
+  const pose = (name: string): string[] => mirrorHalf(composeVultureHalf(BAT_HALVES[name]!));
+  const up = pose("wingsUp");
+  const mid = pose("wingsMid");
+  const down = pose("wingsDown");
+  const folded = pose("folded");
+  // preparazione: ali spalancate e occhi che si accendono (arancio)
+  const screech = up.map((row) => row.split("y").join("o"));
+  const hurtGrid = createGrid(up[0]!.length, up.length);
+  stampRows(hurtGrid, mid);
+  for (const [x, y] of [[2, 0], [16, 1], [0, 3]] as const) {
+    setPixel(hurtGrid, x, y, "w", true);
+  }
+  const heap = [
+    ...Array<string>(8).fill(".".repeat(19)),
+    "....kkk.kRk.kkk....",
+    "..kkavdkwwwkdvakk..",
+    ".kavdddkvvvkdddvak.",
+    "kkkkkkkkkkkkkkkkkkk",
+  ];
+  const frames: Record<string, string[]> = {
+    vultureIdle1: up,
+    vultureIdle2: down,
+    vultureWalk1: up,
+    vultureWalk2: mid,
+    vultureWalk3: down,
+    vultureAttackA: screech,
+    vultureAttackB: folded,
+    vultureAttackC: mid,
+    vultureHurt: hurtGrid.map((row) => row.join("")),
+    vultureHeap: heap,
+  };
+  for (const [spriteId, pixelRows] of Object.entries(frames)) {
+    spriteManager.registerSprite(spriteId, pixelRows, VULTURE_COLORS, VULTURE_ANCHOR_X);
+  }
+}
+
+/** Colonna d'ancoraggio dell'avvoltoio (hitbox 14 px centrata su 19). */
+const VULTURE_ANCHOR_X = 3;
+
+// ---------------------------------------------------------------------------
+// Scorpione gigante (Fase 8): carapace bruno, chele, coda con il pungiglione rosso (forma procedurale, creatureTools.ts)
+// ---------------------------------------------------------------------------
+
+const SCORPION_COLORS: Record<string, string> = {
+  k: PALETTE.black,
+  d: PALETTE.earth,
+  m: PALETTE.wood,
+  l: PALETTE.woodLight,
+  w: PALETTE.cream,
+  e: PALETTE.red,
+  r: PALETTE.flame,
+};
+
+function registerScorpion(spriteManager: SpriteManager): void {
+  const pose = (name: ScorpionPose): string[] => composeScorpion(name);
+  registerCreature(
+    spriteManager,
+    "scorpion",
+    {
+      Idle1: pose("stand"),
+      Idle2: pose("breath"),
+      Walk1: pose("walk1"),
+      Walk2: pose("walk2"),
+      Walk3: pose("walk3"),
+      AttackA: pose("raise"),
+      AttackB: pose("strike"),
+      AttackC: pose("recover"),
+      Hurt: pose("hurt"),
+      Heap: pose("lying"),
+    },
+    SCORPION_COLORS,
+    4
+  );
+}
+
 /** Registra gli sprite di tutti i nemici. */
 export function registerEnemySprites(spriteManager: SpriteManager): void {
   SPECS.forEach((spec) => registerHumanoid(spriteManager, spec));
@@ -813,4 +974,6 @@ export function registerEnemySprites(spriteManager: SpriteManager): void {
   registerWolf(spriteManager);
   registerSlime(spriteManager, "slime", 16, 12, 1);
   registerSlime(spriteManager, "slimeSmall", 12, 9, 1);
+  registerVulture(spriteManager);
+  registerScorpion(spriteManager);
 }

@@ -93,6 +93,14 @@ const CROSSBOW_BOLT_ROWS = [
 ];
 
 /** Coltello da lancio che ruota (4 frame, 6x6). */
+/** Accetta dei predoni (Fase 8): manico di legno e lama di ferro, che ruota in quattro pose. */
+const HATCHET_ROWS = [
+  ["...ss...", "..swsk..", "..sgsk..", "...ek...", "...ek...", "...ek...", "...ek...", "........"],
+  ["........", "......s.", ".....sws", "....esgk", "...ek...", "..ek....", ".ek.....", "........"],
+  ["........", "........", "........", "eeeeesss", "kkkkkgws", ".....gsk", "........", "........"],
+  ["........", ".ek.....", "..ek....", "...ek...", "....esgk", ".....sws", "......s.", "........"],
+];
+
 const KNIFE_ROWS = [
   ["......", "..e...", "..e...", "..gs..", "..sw..", "...w.."],
   ["......", ".....w", "....s.", "...g..", ".ee...", "......"],
@@ -111,6 +119,7 @@ export function registerProjectileSprites(spriteManager: SpriteManager): void {
   spriteManager.registerSprite("projectilePlayerArrow", PLAYER_ARROW_ROWS, PROJECTILE_COLORS);
   spriteManager.registerSprite("projectileCrossbowBolt", CROSSBOW_BOLT_ROWS, PROJECTILE_COLORS);
   KNIFE_ROWS.forEach((rows, frameIndex) => spriteManager.registerSprite(`projectileKnife${frameIndex + 1}`, rows, PROJECTILE_COLORS));
+  HATCHET_ROWS.forEach((rows, frameIndex) => spriteManager.registerSprite(`projectileHatchet${frameIndex + 1}`, rows, PROJECTILE_COLORS));
   spriteManager.registerSprite("projectileJavelin", JAVELIN_ROWS, PROJECTILE_COLORS);
   spriteManager.registerSprite("projectileArrow", ARROW_ROWS, PROJECTILE_COLORS);
   spriteManager.registerSprite("projectileBolt1", BOLT_ROWS_1, PROJECTILE_COLORS);

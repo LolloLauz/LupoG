@@ -44,13 +44,17 @@ export class HazardSystem {
     if (isInWater) {
       return WATER_ENVIRONMENT;
     }
+    // gli scatti delle abilità si fermano prima degli spuntoni (come sul bordo di un abisso)
+    const spikes = hazards.filter((hazard) => hazard.kind === "spikes");
+    const withDashStops = (environment: PlayerEnvironment): PlayerEnvironment =>
+      spikes.length === 0 ? environment : { ...environment, dashStopZones: spikes };
     if (player.isOnGround) {
       const feetProbe = { x: bounds.x, y: bounds.y + bounds.height - 1, width: bounds.width, height: 3 };
       if (hazards.some((hazard) => hazard.kind === "ice" && CollisionSystem.intersects(feetProbe, hazard))) {
-        return ICE_ENVIRONMENT;
+        return withDashStops(ICE_ENVIRONMENT);
       }
     }
-    return NORMAL_PLAYER_ENVIRONMENT;
+    return withDashStops(NORMAL_PLAYER_ENVIRONMENT);
   }
 
   /** Spuntoni: se il giocatore li tocca subisce danno e rinculo. Restituisce vero se il colpo è andato a segno. */
