@@ -5,6 +5,8 @@ Questo documento è un piano, non una specifica. Lo stato reale delle funzionali
 **Stato:** Fasi 0-7 completate, più la **borsa** (aggiunta dopo la Fase 1, vedi sotto). Fase 8: completati i contenuti; modalità e controlli
 rimandati su richiesta.
 
+Il seguito (rarità, armature, nuove armi, negozio camminabile) è in `PIANO_EQUIPAGGIAMENTO.md`.
+
 ## Punto di partenza
 
 Il progetto ha già diversi punti d'aggancio (vedi `ARCHITECTURE.md`, sezione 10):
