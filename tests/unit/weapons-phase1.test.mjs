@@ -29,7 +29,7 @@ t("pugnale: combo di quattro colpi e passo più svelto",W.dagger.combos[0].input
 t("lancia: gli affondi arrivano più lontano di qualsiasi colpo di spada",['spearThrust1','spearThrust2'].every(id=>Object.values(sw).every(s=>reach(W.spear.attacks[id])>reach(s))));
 t("lancia: l'attacco pesante arriva più lontano di quelli delle altre armi; la mossa più lunga di tutte è della lancia",Object.values(W).filter(w=>w.id!=='spear').every(w=>Object.values(w.attacks).every(a=>reach(a)<reach(W.spear.attacks.spearHeavy)))&&Math.max(...Object.values(W.spear.attacks).map(reach))===Math.max(...Object.values(W).flatMap(w=>Object.values(w.attacks).map(reach))));
 t("ascia: colpi più lenti e più forti della spada, passo più lento",W.axe.attacks.axeChop1.damage>sw.swordLight1.damage&&W.axe.attacks.axeChop1.durationMs>sw.swordLight1.durationMs&&W.axe.attacks.axeHeavy.damage>sw.swordHeavy.damage&&W.axe.movementSpeedMultiplier<1);
-t("solo l'ascia rompe la guardia (tutti i suoi colpi)",Object.values(W).every(w=>Object.values(w.attacks).every(a=>(a.breaksGuard===true)===(w.id==='axe'))));
+t("solo l'ascia e lo spadone (E3) rompono la guardia (tutti i loro colpi)",Object.values(W).every(w=>Object.values(w.attacks).every(a=>(a.breaksGuard===true)===(w.id==='axe'||w.id==='greatsword'))));
 t("solo la mazza schiaccia le corazze (tutti i suoi colpi)",Object.values(W).every(w=>Object.values(w.attacks).every(a=>(a.crushesArmor===true)===(w.id==='mace'))));
 
 // --- effetti dei colpi sui nemici
@@ -121,7 +121,7 @@ const settle=e=>{for(let i=0;i<10;i++)e.update(1/60,cs,P,1024);return e};
 // --- motore
 {const src=readFileSync(join(projectRoot,'src/core/GameEngine.ts'),'utf8');
  t("i forzieri chiusi sono bersagli degli attacchi",src.includes('...closedChests];')&&src.includes('target instanceof Chest'));
- t("con E sopra un'arma la si mette nella borsa e la si impugna (salvando i progressi)",/wasPressed\("pickUp"\)/.test(src)&&/inventory\.addWeapon\(pickup\.weaponId, pickup\.ammo\)[\s\S]{0,1600}this\.player\.equipWeapon\(WEAPON_CONFIG\[pickup\.weaponId\], this\.inventory\.equippedAmmo\);\s*this\.saveBagWeapons\(\)/.test(src));
- t("i nemici d'élite lasciano la loro arma morendo",/enemy\.weaponDrop !== null\)[\s\S]{0,80}this\.dropWeapon\(enemy\.weaponDrop/.test(src));
- t("il trofeo del boss vale per il livello successivo e si azzera a ogni nuova partita",src.includes('this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward }')&&/private startNewGame[\s\S]{0,1400}?this\.weaponReward = null;\n    this\.startLevel/.test(src)&&src.includes('TROFEO: '));}
+ t("con E sopra un'arma la si mette nella borsa e la si impugna (salvando i progressi)",/wasPressed\("pickUp"\)/.test(src)&&/private pickUpWithE[\s\S]{0,700}this\.pickUpEquipment\(pickup\)/.test(src)&&/this\.inventory\.addWeapon\(item, pickup\.ammo\)[\s\S]{0,2400}this\.equipFromInventory\(\);\s*this\.saveBagWeapons\(\)/.test(src));
+ t("i nemici d'élite lasciano la loro arma morendo",/enemy\.weaponDrop !== null\)[\s\S]{0,80}this\.dropWeapon\(rollLootWeapon\(enemy\.weaponDrop/.test(src));
+ t("il trofeo del boss vale per il livello successivo e si azzera a ogni nuova partita",/rollLootWeapon\(reward, context, this\.lootRandom\)[\s\S]{0,200}this\.weaponReward = \{ levelId: this\.currentLevelId \+ 1, items \}/.test(src)&&/private startNewGame[\s\S]{0,1400}?this\.weaponReward = null;\n    this\.finalBossRewardName = null;\n    this\.startLevel/.test(src)&&src.includes('TROFEO: '));}
 }

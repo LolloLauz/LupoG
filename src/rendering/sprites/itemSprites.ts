@@ -1,5 +1,6 @@
 import { PALETTE } from "../../config/gameConfig";
 import type { SpriteManager } from "../SpriteManager";
+import { addOutline } from "./spriteTools";
 
 /**
  * Sprite 8x8 degli oggetti raccoglibili, in stile 16 bit: ogni oggetto ha la sua rampa
@@ -233,6 +234,76 @@ const CHEST_OPEN_ROWS = [
   "kkkkkkkkkkkkkkkk",
 ];
 
+/**
+ * Icone 16x16 delle armature (piano dell'equipaggiamento, E2): elmo, corazza, stivali. Le chiavi 1-4 sono i toni del
+ * materiale dal più scuro al più chiaro (luce in alto a sinistra): si disegnano sempre con la variante di colore del
+ * pezzo (getItemIconVariant), qui registrate con i toni dell'acciaio. Il contorno nero si aggiunge con addOutline.
+ */
+const ARMOR_ICON_COLORS: Record<string, string> = {
+  k: PALETTE.black,
+  "1": PALETTE.slate,
+  "2": PALETTE.gray,
+  "3": PALETTE.lightGray,
+  "4": PALETTE.white,
+};
+
+const ARMOR_ICON_HELMET_ROWS: string[] = [
+  "................",
+  "................",
+  "......4443......",
+  ".....443332.....",
+  "....44333322....",
+  "....43333322....",
+  "...4333333322...",
+  "...4322222221...",
+  "...432.....21...",
+  "...4322.2.221...",
+  "...43222.2221...",
+  "...4322222221...",
+  "....32222211....",
+  ".....221111.....",
+  "................",
+  "................",
+];
+
+const ARMOR_ICON_CHEST_ROWS: string[] = [
+  "................",
+  "................",
+  "..443......221..",
+  ".44333.44.32221.",
+  ".43332333332221.",
+  ".43323333332221.",
+  "..4233333333321.",
+  "...4333333332...",
+  "...4333333322...",
+  "...4333333322...",
+  "...4333333322...",
+  "...4332222222...",
+  "...4322222221...",
+  "....22222111....",
+  "................",
+  "................",
+];
+
+const ARMOR_ICON_BOOTS_ROWS: string[] = [
+  "................",
+  "................",
+  "...443...443....",
+  "...432...432....",
+  "...432...432....",
+  "...432...432....",
+  "...4321..4321...",
+  "...4321..4321...",
+  "...43221.43221..",
+  "..443322143322..",
+  "..4332221433222.",
+  "..3222211322221.",
+  "..1111111111111.",
+  "................",
+  "................",
+  "................",
+];
+
 export function registerItemSprites(spriteManager: SpriteManager): void {
   spriteManager.registerSprite("chestClosed", CHEST_CLOSED_ROWS, CHEST_COLORS);
   spriteManager.registerSprite("chestOpen", CHEST_OPEN_ROWS, CHEST_COLORS);
@@ -248,4 +319,7 @@ export function registerItemSprites(spriteManager: SpriteManager): void {
   spriteManager.registerSprite("itemCoin", COIN_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemGem", GEM_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemQuiver", QUIVER_ROWS, ITEM_COLORS);
+  spriteManager.registerSprite("armorIconHelmet", addOutline(ARMOR_ICON_HELMET_ROWS, "k"), ARMOR_ICON_COLORS);
+  spriteManager.registerSprite("armorIconChest", addOutline(ARMOR_ICON_CHEST_ROWS, "k"), ARMOR_ICON_COLORS);
+  spriteManager.registerSprite("armorIconBoots", addOutline(ARMOR_ICON_BOOTS_ROWS, "k"), ARMOR_ICON_COLORS);
 }

@@ -3,7 +3,7 @@ import { PALETTE } from "../../config/gameConfig";
 import { WEAPON_CONFIG, WEAPON_ICON_SIZE } from "../../config/weaponConfig";
 import type { CharacterId, WeaponId } from "../../types/EntityTypes";
 import type { SpriteManager } from "../SpriteManager";
-import { drawAxe, drawBow, drawCrossbow, drawMace, drawSpear, type WeaponDrawer } from "./weaponShapes";
+import { drawAxe, drawBow, drawCrossbow, drawGreatsword, drawMace, drawSpear, type WeaponDrawer } from "./weaponShapes";
 import { addOutline, createGrid, drawSlashArc, drawSword, remapSpriteKeys, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
 
 /**
@@ -17,6 +17,9 @@ import { addOutline, createGrid, drawSlashArc, drawSword, remapSpriteKeys, setPi
  *
  * Colori (luce dall'alto a sinistra): armatura in 4 toni (d, g, s, w), sopravveste rossa (m, r, o),
  * finiture d'oro (n, y), cuoio (e, l), scudo blu (N, B, L).
+ * Equipaggiamento (E2): elmo, busto e gambe hanno chiavi proprie per i toni dell'armatura, così ogni pezzo si
+ * ricolora da solo (vedi equipmentVisuals.ts): elmo 1-4 (HELMET_TONE_KEYS), busto d g s w (CHEST_TONE_KEYS),
+ * gambe 5-7 (BOOT_TONE_KEYS). Le righe restano scritte con d g s w: la sostituzione avviene componendo i frame.
  */
 const KNIGHT_COLORS: Record<string, string> = {
   k: PALETTE.black,
@@ -39,7 +42,25 @@ const KNIGHT_COLORS: Record<string, string> = {
   v: PALETTE.white,
   a: PALETTE.white,
   c: PALETTE.cyan,
+  // ferro scuro di ascia e mazza, corda dell'arco (chiavi proprie: le armature non le ricolorano)
+  j: PALETTE.gray,
+  q: PALETTE.lightGray,
 };
+
+/** Chiavi dei toni dell'armatura (dal più scuro al più chiaro) nelle tre parti del personaggio. */
+export const HELMET_TONE_KEYS = ["1", "2", "3", "4"] as const;
+export const CHEST_TONE_KEYS = ["d", "g", "s", "w"] as const;
+export const BOOT_TONE_KEYS = ["5", "6", "7"] as const;
+
+/** Le gambe usano d, g, s: componendo i frame diventano le chiavi degli stivali. */
+const BOOT_KEY_MAP: Readonly<Record<string, string>> = { d: "5", g: "6", s: "7" };
+/** Testa (elmo): d g s w diventano le chiavi dell'elmo (un personaggio può indicarne altre, vedi CharacterVisual). */
+const DEFAULT_HELMET_KEY_MAP: Readonly<Record<string, string>> = { d: "1", g: "2", s: "3", w: "4" };
+
+/** Gambe con le chiavi degli stivali. */
+function bootRows(legRows: string[]): string[] {
+  return remapSpriteKeys(legRows, BOOT_KEY_MAP);
+}
 
 /** Colori con il power-up del fuoco: lama incandescente e scie di fiamma. */
 const KNIGHT_FIRE_COLORS: Record<string, string> = {
@@ -223,7 +244,7 @@ function drawRestingWeapon(grid: PixelGrid, handY: number): void {
  */
 function composeKnightFrame(legRows: string[], bodyDrop: number, withSword = true): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
-  stampRows(grid, legRows, 0, BODY_ROWS.length);
+  stampRows(grid, bootRows(legRows), 0, BODY_ROWS.length);
   stampRows(grid, activeBodyRows, 0, bodyDrop);
   if (withSword) {
     drawRestingWeapon(grid, HAND_Y + bodyDrop);
@@ -238,7 +259,7 @@ export const KNIGHT_CROUCH_SUFFIX = "Crouch";
 const CROUCH_BODY_DROP = KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length - BODY_ROWS.length + 3;
 
 function stampCrouchedBody(grid: PixelGrid, shiftX: number): void {
-  stampRows(grid, KNIGHT_LEGS_CROUCH, shiftX, KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length);
+  stampRows(grid, bootRows(KNIGHT_LEGS_CROUCH), shiftX, KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length);
   stampRows(grid, activeBodyRows.slice(0, activeBodyRows.length - 3), shiftX, CROUCH_BODY_DROP);
 }
 
@@ -278,7 +299,7 @@ function composeAttackFrame(pose: SwordPose, crouched = false): string[] {
 /** Cavaliere colpito: indietreggia con la spada abbassata e stelline d'impatto. */
 function composeHurtFrame(): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
-  stampRows(grid, LEGS_FALL, 0, BODY_ROWS.length);
+  stampRows(grid, bootRows(LEGS_FALL), 0, BODY_ROWS.length);
   stampRows(grid, activeBodyRows, -1, 1);
   drawActiveWeapon(grid, HAND_X - 1, HAND_Y + 1, KNIGHT_WIDTH - 1, KNIGHT_HEIGHT - 3);
   for (const [x, y] of [[3, 2], [2, 4], [4, 1], [6, 0], [1, 7], [20, 3], [22, 5]] as const) {
@@ -381,6 +402,15 @@ const RANGED_POSES: Record<string, SwordPose> = {
   knightThrowB: { tipX: 32, tipY: 11, arcs: [{ radius: 14, startDegrees: -100, endDegrees: -30 }] },
 };
 
+/**
+ * Pose dello spadone (E3): le stesse della spada in frame più larghi (54 pixel), perché la lama lunga non esca dal frame.
+ * In alto la punta può uscire di qualche pixel (spadone alzato sopra la testa).
+ */
+const GREATSWORD_FRAME_WIDTH = 54;
+const GREATSWORD_POSES: Record<string, SwordPose> = Object.fromEntries(
+  Object.entries(ATTACK_POSES).map(([spriteId, pose]) => [spriteId, { ...pose, frameWidth: GREATSWORD_FRAME_WIDTH }])
+);
+
 /** Aspetto di ogni arma. Il suffisso degli sprite è WEAPON_CONFIG[id].spriteSuffix. */
 const WEAPON_VISUALS: Record<WeaponId, WeaponVisual> = {
   sword: { lengthScale: 1, draw: drawKnightSword, attackPoses: ATTACK_POSES, icon: { handX: 3, handY: 12, tipX: 13, tipY: 2 } },
@@ -392,6 +422,7 @@ const WEAPON_VISUALS: Record<WeaponId, WeaponVisual> = {
   crossbow: { lengthScale: 1, draw: drawCrossbow, attackPoses: RANGED_POSES, icon: { handX: 2, handY: 10, tipX: 13, tipY: 6 } },
   throwingKnives: { lengthScale: 0.45, draw: drawKnightSword, attackPoses: RANGED_POSES, icon: { handX: 5, handY: 11, tipX: 11, tipY: 5 } },
   javelin: { lengthScale: 1.1, draw: drawSpear, attackPoses: RANGED_POSES, icon: { handX: 6, handY: 10, tipX: 14, tipY: 2 } },
+  greatsword: { lengthScale: 1.3, draw: drawGreatsword, attackPoses: GREATSWORD_POSES, icon: { handX: 3, handY: 13, tipX: 14, tipY: 2 }, restTip: { offsetX: 2, offsetY: -17 } },
 };
 
 /** Icona di un'arma: l'arma in diagonale con il contorno nero. */
@@ -415,6 +446,8 @@ const HEAD_ROW_COUNT = 12;
 interface CharacterVisual {
   colors: Record<string, string>;
   headRows?: string[];
+  /** Chiavi della testa che un elmo ricolora -> chiavi dell'elmo (se omesso: d g s w -> 1 2 3 4). */
+  helmetKeyMap?: Readonly<Record<string, string>>;
 }
 
 /** Ranger: cappuccio e mantello verdi, cuoio al posto dell'armatura (f, F = volto; h, H, i = cappuccio). */
@@ -470,6 +503,8 @@ const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
       F: PALETTE.skin,
     },
     headRows: RANGER_HEAD_ROWS,
+    // con un elmo, il cappuccio prende i toni del materiale
+    helmetKeyMap: { h: "2", H: "3", i: "4" },
   },
   berserker: {
     colors: {
@@ -512,9 +547,31 @@ const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
   },
 };
 
-/** Parte superiore di un personaggio: la sua testa (se ne ha una) sopra il busto del cavaliere. */
+/**
+ * Parte superiore di un personaggio: la sua testa (se ne ha una) sopra il busto del cavaliere, con le chiavi
+ * dell'elmo al posto di quelle dell'armatura (così l'elmo si ricolora da solo).
+ */
 function characterBodyRows(visual: CharacterVisual): string[] {
-  return visual.headRows === undefined ? BODY_ROWS : [...visual.headRows, ...BODY_ROWS.slice(HEAD_ROW_COUNT)];
+  const headRows = visual.headRows ?? BODY_ROWS.slice(0, HEAD_ROW_COUNT);
+  return [...remapSpriteKeys(headRows, visual.helmetKeyMap ?? DEFAULT_HELMET_KEY_MAP), ...BODY_ROWS.slice(HEAD_ROW_COUNT)];
+}
+
+/**
+ * Colori di un personaggio, con i colori di partenza delle chiavi di elmo e stivali: senza armatura il
+ * personaggio ha il suo aspetto di sempre.
+ */
+function characterColors(visual: CharacterVisual): Record<string, string> {
+  const colors: Record<string, string> = { ...KNIGHT_COLORS, ...visual.colors };
+  HELMET_TONE_KEYS.forEach((key, index) => {
+    colors[key] = colors[CHEST_TONE_KEYS[index]]!;
+  });
+  for (const [originalKey, helmetKey] of Object.entries(visual.helmetKeyMap ?? DEFAULT_HELMET_KEY_MAP)) {
+    colors[helmetKey] = colors[originalKey]!;
+  }
+  for (const [originalKey, bootKey] of Object.entries(BOOT_KEY_MAP)) {
+    colors[bootKey] = colors[originalKey]!;
+  }
+  return colors;
 }
 
 /** Frame (1 o 2) dell'attesa di un personaggio con la sua arma iniziale: anteprima nei menu. */
@@ -530,7 +587,7 @@ export function getCharacterPreviewFrameId(characterId: CharacterId, frame: 1 | 
 export function registerCharacterPreviews(spriteManager: SpriteManager): void {
   for (const [characterId, characterVisual] of Object.entries(CHARACTER_VISUALS) as Array<[CharacterId, CharacterVisual]>) {
     const weaponId = CHARACTER_CONFIG[characterId].startingWeaponId;
-    const colors = { ...KNIGHT_COLORS, ...characterVisual.colors };
+    const colors = characterColors(characterVisual);
     activeVisual = WEAPON_VISUALS[weaponId];
     activeBodyRows = characterBodyRows(characterVisual);
     const frames = [composeKnightFrame(LEGS_STAND, 0), composeKnightFrame(LEGS_STAND, 1)];
@@ -551,7 +608,7 @@ export function registerCharacterPreviews(spriteManager: SpriteManager): void {
 export function registerKnightSprites(spriteManager: SpriteManager, characterId: CharacterId = DEFAULT_CHARACTER_ID): void {
   const character = CHARACTER_CONFIG[characterId];
   const characterVisual = CHARACTER_VISUALS[characterId];
-  const colors = { ...KNIGHT_COLORS, ...characterVisual.colors };
+  const colors = characterColors(characterVisual);
   const fireColors = { ...colors, b: KNIGHT_FIRE_COLORS.b!, v: KNIGHT_FIRE_COLORS.v!, a: KNIGHT_FIRE_COLORS.a!, c: KNIGHT_FIRE_COLORS.c! };
   for (const [weaponId, visual] of Object.entries(WEAPON_VISUALS) as Array<[WeaponId, WeaponVisual]>) {
     const weapon = WEAPON_CONFIG[weaponId];

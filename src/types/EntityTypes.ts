@@ -163,6 +163,8 @@ export interface ProjectileDefinition {
   isPiercing?: boolean;
   /** Proiettili del giocatore: a fine corsa resta a terra e si recupera (munizione di quest'arma). */
   recoveredAsAmmoOf?: WeaponId;
+  /** Elemento del colpo sul giocatore (E2): le resistenze delle armature ne riducono il danno. */
+  element?: ElementId;
 }
 
 /** Richiesta di lancio di un proiettile (da un nemico o da un boss al motore). */
@@ -194,6 +196,8 @@ export interface EnemyDefinition {
   name: string;
   /** Resistenze e debolezze agli elementi (Fase 7). */
   elementModifiers?: ElementModifiers;
+  /** Elemento dei colpi (equipaggiamento, E2): le resistenze delle armature del giocatore ne riducono il danno. */
+  attackElement?: ElementId;
   maxHealth: number;
   attackDamage: number;
   movementSpeed: number;
@@ -300,7 +304,7 @@ export interface ComboDefinition {
 }
 
 /** Armi del giocatore: corpo a corpo (Fase 1) e a distanza (Fase 2). */
-export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace" | "bow" | "crossbow" | "throwingKnives" | "javelin";
+export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace" | "bow" | "crossbow" | "throwingKnives" | "javelin" | "greatsword";
 
 /** Input che fanno partire un attacco. */
 export type AttackInputAction = "attack" | "heavyAttack";

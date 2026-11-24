@@ -103,6 +103,12 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
     swordPlunge: PLUNGE_FRAMES,
     daggerPlunge: PLUNGE_FRAMES,
     spearPlunge: PLUNGE_FRAMES,
+    // spadone (E3): le pose della spada, disegnate con la lama lunga in frame più larghi
+    greatswordSlash1: SLASH_DOWN_FRAMES,
+    greatswordSlash2: SLASH_UP_FRAMES,
+    greatswordHeavy: HEAVY_FRAMES,
+    greatswordWhirl: FINISHER_FRAMES,
+    greatswordPlunge: PLUNGE_FRAMES,
     axePlunge: PLUNGE_FRAMES,
     macePlunge: PLUNGE_FRAMES,
     // Fase 2: armi a distanza (mira e rinculo, lancio da dietro la testa)

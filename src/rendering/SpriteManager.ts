@@ -1,6 +1,15 @@
 import { PALETTE } from "../config/gameConfig";
 import type { Renderer } from "./Renderer";
 
+/**
+ * Variante di colore di uno sprite (equipaggiamento, piano E2-E3): alcune chiavi dei colori prendono un colore
+ * diverso, senza registrare un altro sprite. L'id identifica la combinazione di colori (stesso id = stessi colori).
+ */
+export interface SpriteColorVariant {
+  id: string;
+  colors: Readonly<Record<string, string>>;
+}
+
 interface CompiledSprite {
   normal: HTMLCanvasElement;
   flipped: HTMLCanvasElement;
@@ -12,6 +21,14 @@ interface CompiledSprite {
   silhouettes: Map<string, HTMLCanvasElement>;
   /** Colonna dello sprite (rivolto a destra) in cui inizia l'hitbox dell'entità. */
   anchorX: number;
+  /** Righe e colori originali: servono a comporre le varianti di colore. */
+  pixelRows: string[];
+  colorByKey: Record<string, string>;
+  /**
+   * Varianti di colore (chiave: id della variante), create alla prima richiesta: così si compongono solo
+   * i frame davvero disegnati con quell'equipaggiamento.
+   */
+  variants: Map<string, { normal: HTMLCanvasElement; flipped: HTMLCanvasElement }>;
 }
 
 /**
@@ -37,10 +54,17 @@ export class SpriteManager {
     anchorX = 0
   ): void {
     const width = pixelRows[0]?.length ?? 0;
-    const height = pixelRows.length;
     if (width === 0 || pixelRows.some((row) => row.length !== width)) {
       throw new Error(`Sprite "${spriteId}": righe di lunghezza diversa o vuote`);
     }
+    const { normal, flipped } = SpriteManager.paint(spriteId, pixelRows, colorByKey);
+    this.sprites.set(spriteId, { normal, flipped, silhouettes: new Map(), anchorX, pixelRows, colorByKey, variants: new Map() });
+  }
+
+  /** Disegna le righe di testo su un canvas, e la sua copia specchiata. */
+  private static paint(spriteId: string, pixelRows: string[], colorByKey: Readonly<Record<string, string>>): { normal: HTMLCanvasElement; flipped: HTMLCanvasElement } {
+    const width = pixelRows[0]?.length ?? 0;
+    const height = pixelRows.length;
     const normal = document.createElement("canvas");
     normal.width = width;
     normal.height = height;
@@ -70,8 +94,20 @@ export class SpriteManager {
     flippedContext.translate(width, 0);
     flippedContext.scale(-1, 1);
     flippedContext.drawImage(normal, 0, 0);
+    return { normal, flipped };
+  }
 
-    this.sprites.set(spriteId, { normal, flipped, silhouettes: new Map(), anchorX });
+  /** Immagini dello sprite con la variante di colore indicata (o quelle normali se null). */
+  private getImages(sprite: CompiledSprite, spriteId: string, variant: SpriteColorVariant | null): { normal: HTMLCanvasElement; flipped: HTMLCanvasElement } {
+    if (variant === null) {
+      return sprite;
+    }
+    let images = sprite.variants.get(variant.id);
+    if (images === undefined) {
+      images = SpriteManager.paint(spriteId, sprite.pixelRows, { ...sprite.colorByKey, ...variant.colors });
+      sprite.variants.set(variant.id, images);
+    }
+    return images;
   }
 
   /** Copia dell'immagine con ogni pixel non trasparente reso del colore indicato. */
@@ -109,6 +145,7 @@ export class SpriteManager {
    * @param hitboxScreenX bordo sinistro dell'hitbox, in coordinate dello schermo
    * @param hitboxScreenBottom bordo inferiore dell'hitbox, in coordinate dello schermo
    * @param flashColor se indicato, disegna la sagoma a tinta unita (lampo quando viene colpito)
+   * @param variant se indicata, i colori dell'equipaggiamento (vedi SpriteColorVariant)
    */
   public drawSpriteAligned(
     renderer: Renderer,
@@ -117,7 +154,8 @@ export class SpriteManager {
     hitboxScreenBottom: number,
     hitboxWidth: number,
     isFlipped: boolean,
-    flashColor: string | null = null
+    flashColor: string | null = null,
+    variant: SpriteColorVariant | null = null
   ): void {
     const sprite = this.getCompiledSprite(spriteId);
     const spriteWidth = sprite.normal.width;
@@ -128,7 +166,8 @@ export class SpriteManager {
     if (flashColor !== null) {
       this.drawSpriteSilhouette(renderer, spriteId, drawX, drawY, isFlipped, flashColor);
     } else {
-      renderer.drawImage(isFlipped ? sprite.flipped : sprite.normal, drawX, drawY);
+      const images = this.getImages(sprite, spriteId, variant);
+      renderer.drawImage(isFlipped ? images.flipped : images.normal, drawX, drawY);
     }
   }
 
@@ -138,14 +177,16 @@ export class SpriteManager {
     x: number,
     y: number,
     isFlipped: boolean,
-    isWhiteFlash = false
+    isWhiteFlash = false,
+    variant: SpriteColorVariant | null = null
   ): void {
     if (isWhiteFlash) {
       this.drawSpriteSilhouette(renderer, spriteId, x, y, isFlipped, PALETTE.white);
       return;
     }
     const sprite = this.getCompiledSprite(spriteId);
-    renderer.drawImage(isFlipped ? sprite.flipped : sprite.normal, x, y);
+    const images = this.getImages(sprite, spriteId, variant);
+    renderer.drawImage(isFlipped ? images.flipped : images.normal, x, y);
   }
 
   /** Disegna la sagoma dello sprite a tinta unita (usare un colore della palette). */

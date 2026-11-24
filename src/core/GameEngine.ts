@@ -12,7 +12,9 @@ import { SpriteManager } from "../rendering/SpriteManager";
 import { registerBossSprites } from "../rendering/sprites/bossSprites";
 import { registerEnemySprites } from "../rendering/sprites/enemySprites";
 import { registerItemSprites } from "../rendering/sprites/itemSprites";
-import { registerCharacterPreviews, registerKnightSprites } from "../rendering/sprites/knightSprites";
+import { getCharacterPreviewFrameId, registerCharacterPreviews, registerKnightSprites } from "../rendering/sprites/knightSprites";
+import type { SpriteColorVariant } from "../rendering/SpriteManager";
+import { SHOP_ROOM_CONFIG, SHOP_ROOM_LEVEL } from "../config/shopRoomConfig";
 import { CHARACTER_CONFIG, CHARACTER_ORDER } from "../config/characterConfig";
 import { ELEMENT_CONFIG } from "../config/elementConfig";
 import { ECONOMY_CONFIG, NO_UPGRADES, UPGRADE_CONFIG, UPGRADE_ORDER, computeUpgradeBonuses, type ShopOfferId } from "../config/progressionConfig";
@@ -32,14 +34,23 @@ import { ItemManager } from "../systems/ItemManager";
 import { LevelManager } from "../systems/LevelManager";
 import { LivesManager } from "../systems/LivesManager";
 import { ScoreManager } from "../systems/ScoreManager";
-import { Inventory, type InventorySnapshot } from "../systems/Inventory";
+import { Inventory, type EquipmentActionOutcome, type InventorySnapshot } from "../systems/Inventory";
 import { WeaponPickupManager } from "../systems/WeaponPickupManager";
+import type { WeaponPickup } from "../entities/WeaponPickup";
 import { BAG_SLOT_ACTIONS } from "../config/inventoryConfig";
 import { ITEM_CONFIG, ITEM_SIZE } from "../config/itemConfig";
-import type { CharacterId, Damageable, WeaponId } from "../types/EntityTypes";
+import type { CharacterId, Damageable } from "../types/EntityTypes";
+import type { ItemInstance } from "../types/ItemTypes";
+import { RARITY_CONFIG, getRarityRank } from "../config/rarityConfig";
+import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
+import { getItemIconSpriteId, getItemName, type RandomSource } from "../systems/ItemFactory";
+import { rollArmorDrop, rollFinalBossReward, rollLootArmor, rollLootWeapon, type LootContext } from "../systems/LootSystem";
+import type { LootSourceId } from "../config/lootConfig";
 import type { Vector2 } from "../types/GameTypes";
 import { HUDManager, type HUDData } from "../ui/HUDManager";
-import { ScreenManager, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
+import { ScreenManager, type EquipmentCell, type EquipmentView, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
+import { ARMOR_SETS } from "../config/armorConfig";
+import { getActiveSets } from "../systems/EquipmentStats";
 import { ProgressManager } from "../systems/ProgressManager";
 import { LEVEL_CONFIG } from "../config/levelConfig";
 import { GameLoop } from "./GameLoop";
@@ -54,6 +65,8 @@ const FALL_MARGIN = 40;
 const ARENA_LOCK_MARGIN = 24;
 /** Il trofeo di un boss compare a questa distanza (px) a destra della partenza del livello successivo. */
 const WEAPON_REWARD_OFFSET_X = 48;
+/** Distanza tra gli oggetti del trofeo (arma e armatura). */
+const WEAPON_REWARD_SPACING_X = 22;
 
 /** Parametri degli effetti di gioco (durate in ms, intensità in pixel). */
 const EFFECT_CONFIG = {
@@ -115,8 +128,13 @@ export class GameEngine {
   private readonly inventory = new Inventory();
   /** Borsa all'inizio del livello: ricominciando il livello torna così (come punteggio e gemme). */
   private levelStartInventory: InventorySnapshot = this.inventory.snapshot();
-  /** Trofeo dell'ultimo boss sconfitto: un'arma che compare all'inizio del livello indicato. */
-  private weaponReward: { levelId: number; weaponId: WeaponId } | null = null;
+  /**
+   * Trofeo dell'ultimo boss sconfitto: la sua arma (con una rarità alta) e un pezzo d'armatura, che compaiono
+   * all'inizio del livello indicato.
+   */
+  private weaponReward: { levelId: number; items: ItemInstance[] } | null = null;
+  /** Estrazioni casuali del bottino (rarità, armature): sostituibile nei test per risultati ripetibili. */
+  private lootRandom: RandomSource = Math.random;
   private levelPhase: LevelPhase = "playing";
   private bannerRemainingMs = 0;
   private levelElapsedSeconds = 0;
@@ -130,6 +148,10 @@ export class GameEngine {
   /** Gemme messe da parte e personaggi sbloccati completando il livello (righe del riquadro di fine livello). */
   private gemsBankedThisLevel = 0;
   private newlyUnlockedCharacterNames: string[] = [];
+  /** Vero nella stanza del negozio (E6), tra un livello e l'altro. */
+  private isInShopRoom = false;
+  /** Nome della ricompensa del boss finale (messa nello zaino), per il riquadro di fine livello. */
+  private finalBossRewardName: string | null = null;
   /** Vero se l'ultima partita ha stabilito un nuovo record. */
   private isNewRecord = false;
   private framesPerSecond = 0;
@@ -154,8 +176,8 @@ export class GameEngine {
     this.levelManager.loadLevel(FIRST_LEVEL_ID);
     const playerStart = this.levelManager.level.playerStart;
     this.player = new Player(playerStart.x, playerStart.y, CHARACTER_CONFIG[this.progressManager.characterId]);
-    this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+    this.loadSavedEquipment();
+    this.equipFromInventory();
     this.lastSafePosition = { ...playerStart };
     this.populateLevel();
     this.loop = new GameLoop(
@@ -207,6 +229,8 @@ export class GameEngine {
     if (currentState === "playing") {
       if (this.input.wasPressed("pause")) {
         this.gameState.change("paused");
+      } else if (this.input.wasPressed("openEquipment") && this.levelPhase === "playing" && !this.player.isDead) {
+        this.gameState.change("equipment");
       } else {
         this.updatePlaying(deltaTimeSeconds);
       }
@@ -272,6 +296,18 @@ export class GameEngine {
       case "resume":
         this.gameState.change("playing");
         break;
+      case "showEquipment":
+        this.gameState.change("equipment");
+        break;
+      case "closeEquipment":
+        this.gameState.change(this.gameState.previous === "paused" ? "paused" : "playing");
+        break;
+      case "equipmentUse":
+        this.useEquipmentCell(this.screens.selectedEquipmentCell);
+        break;
+      case "equipmentDrop":
+        this.dropEquipmentCell(this.screens.selectedEquipmentCell);
+        break;
       case null:
         break;
     }
@@ -289,7 +325,10 @@ export class GameEngine {
     this.progressManager.setCharacter(characterId);
     const startingWeaponId = CHARACTER_CONFIG[characterId].startingWeaponId;
     this.progressManager.discoverWeapon(startingWeaponId);
-    this.progressManager.setBagWeapons([startingWeaponId, ...this.progressManager.bagWeaponIds], startingWeaponId);
+    // l'arma iniziale entra nella borsa (se c'è già, anche di una rarità migliore, resta quella)
+    const savedItems = this.progressManager.bagWeaponItems;
+    const hasStartingWeapon = savedItems.some((item) => item.baseId === startingWeaponId);
+    this.progressManager.setBagWeapons(hasStartingWeapon ? savedItems : [startingWeaponId, ...savedItems], startingWeaponId);
     this.ensureCharacterSprites(characterId);
   }
 
@@ -300,40 +339,95 @@ export class GameEngine {
   private resetAllData(): void {
     this.progressManager.reset();
     this.highScoreManager.reset();
-    this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
+    this.loadSavedEquipment();
     this.levelStartInventory = this.inventory.snapshot();
     this.player.setCharacter(CHARACTER_CONFIG[this.progressManager.characterId]);
+    this.equipFromInventory();
     this.player.setUpgrades(computeUpgradeBonuses(NO_UPGRADES));
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
     this.weaponReward = null;
     this.isNewRecord = false;
   }
 
-  /** Bottega (Fase 6): compra la voce scelta e aggiorna l'arma in mano; l'esito compare come avviso. */
-  private buyFromShop(offerIndex: number): void {
+  /** Messaggio dell'esito di un acquisto. */
+  private static readonly PURCHASE_MESSAGES: Record<PurchaseOutcome, string> = {
+    bought: "COMPRATO!",
+    notEnoughCoins: "MONETE INSUFFICIENTI",
+    notNeeded: "NON SERVE",
+    bagFull: "BORSA PIENA",
+    soldOut: "ESAURITO",
+  };
+
+  /**
+   * Bottega (Fase 6, E6): compra la voce indicata e aggiorna l'arma in mano. Nella bottega a menu l'esito compare come
+   * avviso; nella stanza del negozio lo mostra chi chiama.
+   */
+  private buyFromShop(offerIndex: number): PurchaseOutcome {
     if (this.shop === null) {
-      return;
+      return "soldOut";
     }
     const outcome = this.shop.buy(offerIndex, { inventory: this.inventory, player: this.player, scoreManager: this.scoreManager });
     if (outcome === "bought") {
-      this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+      this.equipFromInventory();
       this.saveBagWeapons();
     }
-    const messages: Record<PurchaseOutcome, string> = {
-      bought: "COMPRATO!",
-      notEnoughCoins: "MONETE INSUFFICIENTI",
-      notNeeded: "NON SERVE",
-      bagFull: "BORSA PIENA",
-      soldOut: "ESAURITO",
-    };
-    this.screens.showNotice(messages[outcome], 1.5);
+    if (!this.isInShopRoom) {
+      this.screens.showNotice(GameEngine.PURCHASE_MESSAGES[outcome], 1.5);
+    }
+    return outcome;
   }
 
-  /** Si esce dalla bottega: comincia il livello successivo. */
+  /** Si esce dalla bottega (dal menu o dalla porta della stanza): comincia il livello successivo. */
   private leaveShop(): void {
     this.shop = null;
+    this.isInShopRoom = false;
     this.startLevel(this.currentLevelId + 1);
     this.gameState.change("playing");
+  }
+
+  /**
+   * Stanza del negozio (E6): la bottega come livello speciale senza nemici. Il livello completato resta quello
+   * corrente (currentLevelId); uscendo dalla porta in fondo comincia il successivo (leaveShop).
+   */
+  private enterShopRoom(): void {
+    this.isInShopRoom = true;
+    this.levelManager.loadLevelDefinition(SHOP_ROOM_LEVEL);
+    this.enemies = [];
+    this.boss = null;
+    this.chests = [];
+    this.itemManager.loadItems([]);
+    this.weaponPickups.clear();
+    this.effects.clear();
+    this.projectileSystem.clear();
+    const start = SHOP_ROOM_LEVEL.playerStart;
+    this.player.respawnAt(start);
+    this.lastSafePosition = { ...start };
+    this.levelPhase = "playing";
+    this.bannerRemainingMs = GAME_CONFIG.levelBannerDurationMs;
+    this.levelElapsedSeconds = 0;
+    this.updateCamera();
+  }
+
+  /** Indice della voce del piedistallo che il giocatore può comprare (abbastanza vicino), oppure -1. */
+  private findReachableShopOffer(): number {
+    if (this.shop === null) {
+      return -1;
+    }
+    const centerX = this.player.positionX + this.player.width / 2;
+    return this.shop.offers.findIndex((_, index) => {
+      const pedestalX = SHOP_ROOM_CONFIG.pedestalCenters[index];
+      return pedestalX !== undefined && Math.abs(pedestalX - centerX) <= SHOP_ROOM_CONFIG.reachDistance;
+    });
+  }
+
+  /** E nella stanza del negozio: compra la voce del piedistallo vicino; l'esito compare sopra il piedistallo. */
+  private buyFromShopRoom(offerIndex: number): void {
+    const outcome = this.buyFromShop(offerIndex);
+    const pedestalX = SHOP_ROOM_CONFIG.pedestalCenters[offerIndex] ?? this.player.positionX;
+    const color = outcome === "bought" ? PALETTE.lightGreen : PALETTE.lightGray;
+    this.effects.addPopup(GameEngine.PURCHASE_MESSAGES[outcome], pedestalX, 140, color);
+    if (outcome === "bought") {
+      this.effects.spawnSparkle(pedestalX, 176);
+    }
   }
 
   /** Potenziamento permanente comprato con le gemme (schermata dal titolo). */
@@ -369,23 +463,26 @@ export class GameEngine {
     this.livesManager.reset(DIFFICULTY_CONFIG[this.progressManager.difficulty].startingLives);
     this.isNewRecord = false;
     this.player.setCharacter(CHARACTER_CONFIG[this.progressManager.characterId]);
+    // a ogni nuova partita: le armi salvate nella borsa (con rarità), armature e zaino salvati,
+    // e le pozioni del potenziamento "Scorta"
+    this.loadSavedEquipment();
+    this.equipFromInventory();
     const upgrades = computeUpgradeBonuses(this.progressManager.upgradeLevels);
     this.player.setUpgrades(upgrades);
     this.player.revive();
-    // a ogni nuova partita: le armi salvate nella borsa e le pozioni del potenziamento "Scorta"
-    this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
     for (let potion = 0; potion < upgrades.startingPotions; potion++) {
       this.inventory.addPotion();
     }
     this.shop = null;
     this.weaponReward = null;
+    this.finalBossRewardName = null;
     this.startLevel(this.levelManager.hasLevel(levelId) ? levelId : FIRST_LEVEL_ID);
   }
 
   /** Carica un livello: nemici, boss, oggetti, giocatore alla partenza e camera. */
   private startLevel(levelId: number): void {
     this.currentLevelId = levelId;
+    this.isInShopRoom = false;
     this.progressManager.unlockLevel(levelId);
     this.levelManager.loadLevel(levelId);
     this.populateLevel();
@@ -416,7 +513,9 @@ export class GameEngine {
     // il trofeo del boss sconfitto aspetta poco più avanti della partenza (anche ricominciando il livello)
     if (this.weaponReward !== null && this.weaponReward.levelId === this.currentLevelId) {
       const start = this.levelManager.level.playerStart;
-      this.weaponPickups.spawn(this.weaponReward.weaponId, start.x + WEAPON_REWARD_OFFSET_X, start.y + PLAYER_CONFIG.hitboxHeight);
+      this.weaponReward.items.forEach((item, index) => {
+        this.weaponPickups.spawn(item, start.x + WEAPON_REWARD_OFFSET_X + index * WEAPON_REWARD_SPACING_X, start.y + PLAYER_CONFIG.hitboxHeight);
+      });
     }
   }
 
@@ -443,7 +542,7 @@ export class GameEngine {
     this.scoreManager.restore(this.levelStartScore, this.levelStartCollectibles, this.levelStartCoins);
     // anche la borsa torna com'era a inizio livello (pozioni e armi raccolte nel livello si ritrovano a terra)
     this.inventory.restore(this.levelStartInventory);
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+    this.equipFromInventory();
     this.saveBagWeapons();
     this.startLevel(this.currentLevelId);
   }
@@ -629,11 +728,21 @@ export class GameEngine {
       this.openChest(target);
       return;
     }
+    // furto di vita (modificatore dell'arma)
+    this.player.registerDamageDealt(damage);
     if (target === this.boss && this.boss !== null) {
       if (!this.boss.isAlive) {
         const reward = this.boss.definition.weaponReward;
         if (reward !== undefined && this.levelManager.hasLevel(this.currentLevelId + 1)) {
-          this.weaponReward = { levelId: this.currentLevelId + 1, weaponId: reward };
+          // trofeo: l'arma del boss con una rarità alta e un pezzo d'armatura (fonte "boss")
+          const context = this.getLootContext("boss");
+          const items: ItemInstance[] = [rollLootWeapon(reward, context, this.lootRandom)];
+          if (rollArmorDrop("boss", this.lootRandom)) {
+            items.push(rollLootArmor(context, this.lootRandom));
+          }
+          this.weaponReward = { levelId: this.currentLevelId + 1, items };
+        } else if (!this.levelManager.hasLevel(this.currentLevelId + 1)) {
+          this.storeFinalBossReward();
         }
         this.scoreManager.addScore(this.boss.scoreReward);
         this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerBoss);
@@ -650,25 +759,63 @@ export class GameEngine {
       this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.lightGray, PALETTE.red], 14);
       this.effects.addPopup(`+${enemy.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
       this.effects.triggerShake(EFFECT_CONFIG.enemyDeathShakePixels, EFFECT_CONFIG.enemyDeathShakeMs);
+      const source: LootSourceId = enemy.isElite ? "elite" : "enemy";
       if (enemy.weaponDrop !== null) {
-        this.dropWeapon(enemy.weaponDrop, centerX, targetBounds.y + targetBounds.height);
+        this.dropWeapon(rollLootWeapon(enemy.weaponDrop, this.getLootContext("elite"), this.lootRandom), centerX, targetBounds.y + targetBounds.height);
+      }
+      // i nemici possono lasciare un pezzo d'armatura (le élite più spesso)
+      if (rollArmorDrop(source, this.lootRandom)) {
+        this.dropWeapon(rollLootArmor(this.getLootContext(source), this.lootRandom), centerX + 10, targetBounds.y + targetBounds.height);
       }
     }
+  }
+
+  /** Fonte, livello e difficoltà di un bottino. */
+  private getLootContext(source: LootSourceId): LootContext {
+    return { source, levelId: this.currentLevelId, difficulty: this.progressManager.difficulty };
+  }
+
+  /**
+   * Boss finale sconfitto (E5): l'unica fonte dei Mitici. La partita finisce, quindi l'oggetto va direttamente nello
+   * zaino (salvato); se lo zaino è pieno prende il posto dell'oggetto meno raro.
+   */
+  private storeFinalBossReward(): void {
+    const reward = rollFinalBossReward(this.getLootContext("finalBoss"), this.lootRandom);
+    if (!this.inventory.addToBackpack(reward)) {
+      const items = this.inventory.backpackItems;
+      let weakestIndex = 0;
+      items.forEach((item, index) => {
+        if (getRarityRank(item.rarity) < getRarityRank(items[weakestIndex]!.rarity)) {
+          weakestIndex = index;
+        }
+      });
+      this.inventory.removeFromBackpack(weakestIndex);
+      this.inventory.addToBackpack(reward);
+    }
+    this.finalBossRewardName = getItemName(reward);
+    this.saveBagWeapons();
   }
 
   /** Forziere aperto: compare l'arma sopra il coperchio. */
   private openChest(chest: Chest): void {
     const weaponId = chest.drainOpenedWeapon();
     if (weaponId !== null) {
-      this.dropWeapon(weaponId, chest.positionX + chest.width / 2, chest.positionY);
+      // l'arma del forziere con una rarità estratta (fonte "chest") e, a volte, anche un pezzo d'armatura
+      const context = this.getLootContext("chest");
+      const centerX = chest.positionX + chest.width / 2;
+      this.dropWeapon(rollLootWeapon(weaponId, context, this.lootRandom), centerX, chest.positionY);
+      if (rollArmorDrop("chest", this.lootRandom)) {
+        this.dropWeapon(rollLootArmor(context, this.lootRandom), centerX + 18, chest.positionY + chest.height);
+      }
     }
   }
 
-  /** Un'arma compare a terra (forziere, nemico d'élite) con scintille e il suo nome. */
-  private dropWeapon(weaponId: WeaponId, centerX: number, bottomY: number): void {
-    const pickup = this.weaponPickups.spawn(weaponId, centerX, bottomY);
-    this.effects.spawnBurst(centerX, pickup.positionY + pickup.height / 2, [PALETTE.goldLight, PALETTE.white], 12);
-    this.effects.addPopup(WEAPON_CONFIG[weaponId].name.toUpperCase(), centerX, pickup.positionY - 4, PALETTE.goldLight);
+  /** Un oggetto compare a terra (forziere, nemico) con scintille e il suo nome, nel colore della rarità. */
+  private dropWeapon(item: ItemInstance, centerX: number, bottomY: number): void {
+    const pickup = this.weaponPickups.spawn(item, centerX, bottomY);
+    const rarityColor = RARITY_CONFIG[item.rarity].color;
+    this.effects.spawnBurst(centerX, pickup.positionY + pickup.height / 2, [rarityColor, PALETTE.white], 12);
+    this.effects.addPopup(getItemName(item), centerX, pickup.positionY - 4, rarityColor);
   }
 
   /**
@@ -721,16 +868,82 @@ export class GameEngine {
     }
     const drop = this.inventory.dropSlot(slotIndex);
     if (drop.kind === "weapon") {
-      this.weaponPickups.spawn(drop.weaponId, centerX, feetY, false, drop.ammo);
-      this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);
+      this.weaponPickups.spawn(drop.item, centerX, feetY, false, drop.ammo);
+      this.equipFromInventory();
       this.saveBagWeapons();
-      this.effects.addPopup(`${WEAPON_CONFIG[drop.weaponId].name.toUpperCase()} A TERRA`, centerX, popupY, PALETTE.lightGray);
+      this.effects.addPopup(`${getItemName(drop.item)} A TERRA`, centerX, popupY, PALETTE.lightGray);
     } else if (drop.kind === "potion") {
       this.itemManager.addItem("healthPotion", Math.round(centerX - ITEM_SIZE / 2), feetY - ITEM_SIZE);
       this.effects.addPopup("POZIONE A TERRA", centerX, popupY, PALETTE.lightGray);
     } else if (drop.kind === "lastWeapon") {
       this.effects.addPopup("È L'ULTIMA ARMA", centerX, popupY, PALETTE.lightGray);
     }
+  }
+
+  /**
+   * Schermata dell'equipaggiamento (E4), Invio: un'armatura indossata va nello zaino; un'arma della borsa va nello zaino
+   * (non l'ultima); un oggetto dello zaino si indossa o si impugna (quello di prima torna nello zaino).
+   */
+  private useEquipmentCell(cell: EquipmentCell): void {
+    let outcome: EquipmentActionOutcome = "empty";
+    if (cell.section === "armor") {
+      outcome = this.inventory.unequipArmor(cell.slot);
+    } else if (cell.section === "bag") {
+      const slot = this.inventory.bagSlots[cell.index];
+      if (slot?.kind === "potion") {
+        this.screens.showNotice("POZIONI: USALE CON 1-4", 1.5);
+        return;
+      }
+      outcome = this.inventory.moveWeaponToBackpack(cell.index);
+    } else {
+      outcome = this.inventory.equipFromBackpack(cell.index);
+    }
+    if (outcome === "equipped" || outcome === "unequipped") {
+      this.equipFromInventory();
+      this.saveBagWeapons();
+    }
+    const messages: Record<EquipmentActionOutcome, string> = {
+      equipped: "EQUIPAGGIATO",
+      unequipped: "NELLO ZAINO",
+      backpackFull: "ZAINO PIENO",
+      lastWeapon: "È L'ULTIMA ARMA",
+      empty: "",
+    };
+    if (messages[outcome] !== "") {
+      this.screens.showNotice(messages[outcome], 1.5);
+    }
+  }
+
+  /** Schermata dell'equipaggiamento, Q: l'oggetto scelto resta a terra ai piedi del giocatore (solo stando a terra). */
+  private dropEquipmentCell(cell: EquipmentCell): void {
+    if (!this.player.isOnGround) {
+      this.screens.showNotice("SOLO A TERRA", 1.5);
+      return;
+    }
+    const centerX = this.player.positionX + this.player.width / 2;
+    const feetY = this.player.positionY + this.player.height;
+    let dropped: ItemInstance | null = null;
+    if (cell.section === "bag") {
+      const slot = this.inventory.bagSlots[cell.index];
+      if (slot === null || slot === undefined) {
+        return;
+      }
+      if (slot.kind === "weapon" && this.inventory.weaponIds.length <= 1) {
+        this.screens.showNotice("È L'ULTIMA ARMA", 1.5);
+        return;
+      }
+      this.dropFromBag(cell.index);
+      this.screens.showNotice("A TERRA", 1.5);
+      return;
+    }
+    dropped = cell.section === "armor" ? this.inventory.takeArmor(cell.slot) : this.inventory.removeFromBackpack(cell.index);
+    if (dropped === null) {
+      return;
+    }
+    this.weaponPickups.spawn(dropped, centerX, feetY, false);
+    this.equipFromInventory();
+    this.saveBagWeapons();
+    this.screens.showNotice(`${getItemName(dropped)} A TERRA`, 1.5);
   }
 
   /** Faretra toccata: munizioni piene per tutte le armi della borsa che ne hanno (se non serve, resta a terra). */
@@ -749,33 +962,16 @@ export class GameEngine {
   }
 
   private pickUpWithE(): void {
+    if (this.isInShopRoom) {
+      const offerIndex = this.findReachableShopOffer();
+      if (offerIndex >= 0) {
+        this.buyFromShopRoom(offerIndex);
+        return;
+      }
+    }
     const pickup = this.weaponPickups.findReachablePickup(this.player);
     if (pickup !== null) {
-      const centerX = pickup.positionX + pickup.width / 2;
-      const result = this.inventory.addWeapon(pickup.weaponId, pickup.ammo);
-      if (result.outcome === "duplicate") {
-        this.effects.addPopup("GIÀ NELLA BORSA", centerX, pickup.positionY - 4, PALETTE.lightGray);
-        return;
-      }
-      this.weaponPickups.take(pickup);
-      this.progressManager.discoverWeapon(pickup.weaponId); // trovata una volta: resta sbloccata (bottega)
-      if (result.outcome === "refilled") {
-        // stessa arma da lancio: le munizioni tornano piene (anche quelle in mano)
-        if (this.inventory.equippedWeaponId === pickup.weaponId) {
-          this.player.setAmmo(this.inventory.equippedAmmo ?? 0);
-        }
-        this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
-        this.effects.addPopup("MUNIZIONI PIENE", centerX, pickup.positionY - 4, PALETTE.goldLight);
-        return;
-      }
-      if (result.droppedWeaponId !== null) {
-        // borsa piena: l'arma che si aveva in mano resta a terra al posto di quella presa (con le sue munizioni)
-        this.weaponPickups.spawn(result.droppedWeaponId, centerX, pickup.positionY + pickup.height, false, result.droppedAmmo ?? null);
-      }
-      this.player.equipWeapon(WEAPON_CONFIG[pickup.weaponId], this.inventory.equippedAmmo);
-      this.saveBagWeapons();
-      this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
-      this.effects.addPopup(WEAPON_CONFIG[pickup.weaponId].name.toUpperCase(), centerX, pickup.positionY - 4, PALETTE.goldLight);
+      this.pickUpEquipment(pickup);
       return;
     }
     const item = this.itemManager.findReachableBagItem(this.player);
@@ -790,6 +986,60 @@ export class GameEngine {
     this.itemManager.removeItem(item);
     this.effects.spawnSparkle(centerX, item.positionY + 4);
     this.effects.addPopup(item.definition.name.toUpperCase(), centerX, item.positionY - 4, PALETTE.lightGreen);
+  }
+
+  /**
+   * Raccolta di un oggetto a terra con E. Armatura (E2): si indossa se il posto è libero, altrimenti va nello zaino.
+   * Arma: entra nella borsa e si impugna; quella che esce dalla borsa (borsa piena, o stesso tipo ma diversa) va nello
+   * zaino se c'è spazio, altrimenti resta a terra (non prendibile finché non ci si allontana).
+   */
+  private pickUpEquipment(pickup: WeaponPickup): void {
+    const centerX = pickup.positionX + pickup.width / 2;
+    const popupY = pickup.positionY - 4;
+    const item = pickup.item;
+    const rarityColor = RARITY_CONFIG[item.rarity].color;
+    if (item.kind === "armor") {
+      const outcome = this.inventory.pickUpArmor(item);
+      if (outcome === "full") {
+        this.effects.addPopup("ZAINO PIENO", centerX, popupY, PALETTE.lightGray);
+        return;
+      }
+      this.weaponPickups.take(pickup);
+      this.equipFromInventory();
+      this.saveBagWeapons();
+      this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
+      this.effects.addPopup(outcome === "equipped" ? getItemName(item) : `${getItemName(item)} NELLO ZAINO`, centerX, popupY, rarityColor);
+      return;
+    }
+    const result = this.inventory.addWeapon(item, pickup.ammo);
+    if (result.outcome === "duplicate") {
+      this.effects.addPopup("GIÀ NELLA BORSA", centerX, popupY, PALETTE.lightGray);
+      return;
+    }
+    this.weaponPickups.take(pickup);
+    this.progressManager.discoverWeapon(item.baseId); // trovata una volta: resta sbloccata (bottega)
+    if (result.outcome === "refilled") {
+      // stessa arma da lancio: le munizioni tornano piene (anche quelle in mano)
+      if (this.inventory.equippedWeaponId === item.baseId) {
+        this.player.setAmmo(this.inventory.equippedAmmo ?? 0);
+      }
+      this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
+      this.effects.addPopup("MUNIZIONI PIENE", centerX, popupY, PALETTE.goldLight);
+      return;
+    }
+    let message = getItemName(item);
+    if (result.droppedItem !== undefined) {
+      // l'arma che esce dalla borsa va nello zaino; se è pieno resta a terra al posto di quella presa
+      if (this.inventory.addToBackpack(result.droppedItem)) {
+        message = `${message} (${getItemName(result.droppedItem)} NELLO ZAINO)`;
+      } else {
+        this.weaponPickups.spawn(result.droppedItem, centerX, pickup.positionY + pickup.height, false, result.droppedAmmo ?? null);
+      }
+    }
+    this.equipFromInventory();
+    this.saveBagWeapons();
+    this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
+    this.effects.addPopup(message, centerX, popupY, rarityColor);
   }
 
   /** Coltelli a terra: passandoci sopra tornano nella borsa (se l'arma c'è e non è piena). */
@@ -823,8 +1073,8 @@ export class GameEngine {
     this.inventory.setEquippedAmmo(ammo);
     const weapon = this.player.equippedWeapon;
     if (ammo === 0 && weapon.ammo?.isLostWhenEmpty === true && this.player.activeAttack === null) {
-      const nextWeaponId = this.inventory.removeWeapon(weapon.id);
-      this.player.equipWeapon(WEAPON_CONFIG[nextWeaponId], this.inventory.equippedAmmo);
+      this.inventory.removeWeapon(weapon.id);
+      this.equipFromInventory();
       this.saveBagWeapons();
       this.effects.addPopup(`${weapon.name.toUpperCase()} FINITO`, centerX, this.player.positionY - 6, PALETTE.lightGray);
     }
@@ -835,7 +1085,7 @@ export class GameEngine {
     const selection = this.inventory.selectSlot(slotIndex);
     const centerX = this.player.positionX + this.player.width / 2;
     if (selection.kind === "equip") {
-      this.player.equipWeapon(WEAPON_CONFIG[selection.weaponId], this.inventory.equippedAmmo);
+      this.equipFromInventory();
       this.saveBagWeapons();
     } else if (selection.kind === "potion") {
       if (this.player.currentHealth >= this.player.maxHealth) {
@@ -850,9 +1100,28 @@ export class GameEngine {
     }
   }
 
-  /** Salva nei progressi le armi della borsa e quella in mano (le pozioni non si salvano). */
+  /**
+   * Salva nei progressi le armi della borsa (con rarità e modificatori) e quella in mano, le armature indossate e lo
+   * zaino (le pozioni non si salvano).
+   */
   private saveBagWeapons(): void {
-    this.progressManager.setBagWeapons(this.inventory.weaponIds, this.inventory.equippedWeaponId);
+    this.progressManager.setBagWeapons(this.inventory.weaponItems, this.inventory.equippedWeaponId);
+    this.progressManager.setEquipment(this.inventory.equippedArmor, this.inventory.backpackItems);
+  }
+
+  /** La borsa, le armature e lo zaino salvati nei progressi (inizio partita, cancella dati). */
+  private loadSavedEquipment(): void {
+    this.inventory.reset(this.progressManager.bagWeaponItems, this.progressManager.equippedWeaponId);
+    this.inventory.setArmorAndBackpack(this.progressManager.savedArmor, this.progressManager.savedBackpack);
+  }
+
+  /**
+   * Il giocatore impugna l'arma in mano della borsa (con le sue munizioni, rarità e modificatori) e indossa le
+   * armature: l'unico punto in cui l'equipaggiamento passa dalla borsa al giocatore.
+   */
+  private equipFromInventory(): void {
+    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo, this.inventory.equippedWeaponItem);
+    this.player.setArmor(this.inventory.equippedArmor);
   }
 
   /** Scintille quando un proiettile viene deviato dalla spada o si schianta. */
@@ -1000,6 +1269,10 @@ export class GameEngine {
       completion.kind === "reachExit"
         ? this.player.positionX + this.player.width / 2 >= completion.exitX
         : this.boss !== null && this.boss.isDefeated;
+    if (isCompleted && this.isInShopRoom) {
+      this.leaveShop(); // la porta della bottega porta al livello successivo
+      return;
+    }
     if (isCompleted) {
       this.levelPhase = "completed";
       this.bannerRemainingMs = GAME_CONFIG.levelBannerDurationMs;
@@ -1025,8 +1298,16 @@ export class GameEngine {
   private advanceToNextLevel(): void {
     const nextLevelId = this.currentLevelId + 1;
     if (this.levelManager.hasLevel(nextLevelId)) {
-      this.shop = Shop.open(this.progressManager.discoveredWeaponIds, this.inventory);
-      this.gameState.change("shop");
+      this.shop = Shop.open(this.progressManager.discoveredWeaponIds, this.inventory, this.lootRandom, {
+        levelId: nextLevelId,
+        difficulty: this.progressManager.difficulty,
+      });
+      // E6: la stanza camminabile; con SHOP_ROOM_CONFIG.isEnabled = false, la bottega a menu della Fase 6
+      if (SHOP_ROOM_CONFIG.isEnabled) {
+        this.enterShopRoom();
+      } else {
+        this.gameState.change("shop");
+      }
     } else {
       this.finishRun("victory");
     }
@@ -1043,7 +1324,7 @@ export class GameEngine {
 
   private render(): void {
     const state = this.gameState.current;
-    if (state === "playing" || state === "paused") {
+    if (state === "playing" || state === "paused" || state === "equipment") {
       this.renderWorld();
       this.hud.render(this.renderer, this.spriteManager, this.getHUDData(), this.levelElapsedSeconds);
       this.renderLevelMessages();
@@ -1078,12 +1359,14 @@ export class GameEngine {
         }
         return slot.kind === "weapon"
           ? {
-              iconSpriteId: WEAPON_CONFIG[slot.weaponId].iconSpriteId,
+              iconSpriteId: getItemIconSpriteId(slot.item),
+              iconVariant: getItemIconVariant(slot.item),
+              rarityColor: slot.item.rarity === "common" ? null : RARITY_CONFIG[slot.item.rarity].color,
               iconSize: 16,
               count: slot.ammo ?? null,
               isEquipped: slotIndex === this.inventory.equippedSlotIndex,
             }
-          : { iconSpriteId: ITEM_CONFIG.healthPotion.spriteId, iconSize: 8, count: slot.count, isEquipped: false };
+          : { iconSpriteId: ITEM_CONFIG.healthPotion.spriteId, iconVariant: null, rarityColor: null, iconSize: 8, count: slot.count, isEquipped: false };
       }),
       powerUps: this.player.modifiers.activePowerUps.map((powerUp) => ({
         iconSpriteId: powerUp.definition.iconSpriteId,
@@ -1123,16 +1406,19 @@ export class GameEngine {
       gems: this.progressManager.gems,
       coins: this.scoreManager.coins,
       shopOffers: (this.shop?.offers ?? []).map((offer) => {
-        const icon = GameEngine.SHOP_ICONS[offer.id];
+        const item = offer.item;
         return {
           name: offer.name,
-          description: offer.description,
-          price: offer.price,
+          description: item === null ? offer.description : `${RARITY_CONFIG[item.rarity].name} - ${offer.description}`,
+          price: this.shop?.getPrice(offer) ?? offer.price,
           isSoldOut: offer.isSoldOut,
-          iconSpriteId: offer.weaponId !== null ? WEAPON_CONFIG[offer.weaponId].iconSpriteId : icon,
-          iconSize: offer.weaponId !== null ? 16 : 8,
+          iconSpriteId: item !== null ? getItemIconSpriteId(item) : GameEngine.SHOP_ICONS[offer.id],
+          iconVariant: item !== null ? getItemIconVariant(item) : null,
+          nameColor: item !== null ? RARITY_CONFIG[item.rarity].color : null,
+          iconSize: item !== null ? 16 : 8,
         };
       }),
+      equipment: this.gameState.is("equipment") ? this.getEquipmentView() : undefined,
       upgrades: UPGRADE_ORDER.map((upgradeId) => ({
         name: UPGRADE_CONFIG[upgradeId].name,
         description: UPGRADE_CONFIG[upgradeId].description,
@@ -1143,12 +1429,33 @@ export class GameEngine {
     };
   }
 
+  /** Dati della schermata dell'equipaggiamento (E4): armature, borsa, zaino, set attivi e bonus. */
+  private getEquipmentView(): EquipmentView {
+    const armor = this.inventory.equippedArmor;
+    return {
+      armor,
+      bag: this.inventory.bagSlots.map((slot, index) => {
+        if (slot === null) {
+          return null;
+        }
+        return slot.kind === "weapon"
+          ? { kind: "weapon", item: slot.item, ammo: slot.ammo ?? null, isEquipped: index === this.inventory.equippedSlotIndex }
+          : { kind: "potion", count: slot.count };
+      }),
+      backpack: this.inventory.backpackItems,
+      backpackCapacity: this.inventory.backpackCapacity,
+      activeSets: getActiveSets(armor).map((set) => `${ARMOR_SETS[set.material].name} ${set.pieces}/3`),
+      bonuses: this.player.equipmentBonuses,
+    };
+  }
+
   /** Icona (8x8) di ogni voce della bottega; l'arma usa la propria icona. */
   private static readonly SHOP_ICONS: Record<ShopOfferId, string> = {
     potion: "itemPotion",
     heal: "hudHeart",
     ammo: "itemQuiver",
     weapon: "itemCoin",
+    armor: "itemCoin",
   };
 
   private renderWorld(): void {
@@ -1165,6 +1472,9 @@ export class GameEngine {
 
   private renderWorldLayers(): void {
     this.levelManager.render(this.renderer, this.camera, this.levelElapsedSeconds);
+    if (this.isInShopRoom) {
+      this.renderShopRoom();
+    }
     this.chests.forEach((chest) => chest.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y));
     this.itemManager.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y, this.player);
     this.weaponPickups.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y, this.player);
@@ -1180,9 +1490,67 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Stanza del negozio (E6): il banco con il mercante e un piedistallo per ogni voce, con l'oggetto (colori e bagliore
+   * della rarità), il prezzo (rosso se le monete non bastano) e, sul piedistallo vicino, "E COMPRA" con il nome.
+   */
+  private renderShopRoom(): void {
+    const cameraX = this.camera.x;
+    const cameraY = this.camera.y;
+    const floorY = SHOP_ROOM_LEVEL.platforms[0]!.y - cameraY;
+    const counter = SHOP_ROOM_CONFIG.counter;
+    const merchantFrame = getCharacterPreviewFrameId("ranger", Math.floor(this.levelElapsedSeconds * 2) % 2 === 0 ? 1 : 2);
+    this.spriteManager.drawSprite(this.renderer, merchantFrame, SHOP_ROOM_CONFIG.merchantX - cameraX, floorY - 30, true, false, GameEngine.MERCHANT_VARIANT);
+    const counterX = counter.x - cameraX;
+    this.renderer.fillRect(counterX, floorY - counter.height, counter.width, counter.height, PALETTE.wood);
+    this.renderer.fillRect(counterX, floorY - counter.height, counter.width, 2, PALETTE.woodLight);
+    this.renderer.fillRect(counterX, floorY - 2, counter.width, 2, PALETTE.earthDark);
+    for (let plankX = 8; plankX < counter.width; plankX += 12) {
+      this.renderer.fillRect(counterX + plankX, floorY - counter.height + 3, 1, counter.height - 5, PALETTE.earth);
+    }
+    this.renderer.drawText("MERCANTE", counterX + counter.width / 2, floorY - counter.height - 40, PALETTE.lilac, { align: "center", shadowColor: PALETTE.black });
+    const offers = this.shop?.offers ?? [];
+    const reachable = this.findReachableShopOffer();
+    const bob = Math.sin(this.levelElapsedSeconds * 4) > 0 ? -1 : 0;
+    offers.forEach((offer, index) => {
+      const centerX = (SHOP_ROOM_CONFIG.pedestalCenters[index] ?? 0) - cameraX;
+      const pedestalTop = floorY - SHOP_ROOM_CONFIG.pedestalHeight;
+      const halfWidth = SHOP_ROOM_CONFIG.pedestalWidth / 2;
+      this.renderer.fillRect(centerX - halfWidth, pedestalTop, SHOP_ROOM_CONFIG.pedestalWidth, SHOP_ROOM_CONFIG.pedestalHeight, PALETTE.stoneShadow);
+      this.renderer.fillRect(centerX - halfWidth - 1, pedestalTop, SHOP_ROOM_CONFIG.pedestalWidth + 2, 2, PALETTE.stoneLight);
+      this.renderer.fillRect(centerX - halfWidth, pedestalTop + 2, 1, SHOP_ROOM_CONFIG.pedestalHeight - 2, PALETTE.stone);
+      if (offer.isSoldOut) {
+        this.renderer.drawText("VENDUTO", centerX, pedestalTop - 12, PALETTE.slate, { align: "center", shadowColor: PALETTE.black });
+        return;
+      }
+      const item = offer.item;
+      const iconSize = item === null ? 8 : 16;
+      const iconY = pedestalTop - iconSize - 3 + bob;
+      if (item !== null) {
+        this.renderer.fillGlow(centerX, iconY + iconSize / 2, 11, RARITY_CONFIG[item.rarity].color, 2, 4);
+      }
+      const iconSpriteId = item === null ? GameEngine.SHOP_ICONS[offer.id] : getItemIconSpriteId(item);
+      this.spriteManager.drawSprite(this.renderer, iconSpriteId, Math.round(centerX - iconSize / 2), iconY, false, false, item === null ? null : getItemIconVariant(item));
+      const price = this.shop?.getPrice(offer) ?? offer.price;
+      this.renderer.drawText(String(price), centerX, pedestalTop - 30, price <= this.scoreManager.coins ? PALETTE.goldLight : PALETTE.red, { align: "center", shadowColor: PALETTE.black });
+      if (index === reachable) {
+        const nameColor = item === null ? PALETTE.white : RARITY_CONFIG[item.rarity].color;
+        this.renderer.drawText(offer.name, centerX, pedestalTop - 52, nameColor, { align: "center", shadowColor: PALETTE.black });
+        this.renderer.drawText(item === null ? `E COMPRA - ${offer.description}` : `E COMPRA - ${RARITY_CONFIG[item.rarity].name}`, centerX, pedestalTop - 42, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+      }
+    });
+  }
+
+  /** Colori del mercante: il personaggio incappucciato con la veste del mercante (nessuno sprite nuovo). */
+  private static readonly MERCHANT_VARIANT: SpriteColorVariant = { id: "merchant", colors: SHOP_ROOM_CONFIG.merchantColors };
+
   /** Messaggi di inizio livello e di livello completato. */
   private renderLevelMessages(): void {
     if (this.bannerRemainingMs <= 0 || this.gameState.is("paused")) {
+      return;
+    }
+    if (this.isInShopRoom) {
+      this.hud.renderMessageBox(this.renderer, "BOTTEGA", ["E: COMPRA DAI PIEDISTALLI", "PORTA A DESTRA: PROSEGUI"]);
       return;
     }
     if (this.levelPhase === "completed") {
@@ -1194,7 +1562,10 @@ export class GameEngine {
         lines.push(`SALUTE +${GAME_CONFIG.levelCompleteHeal}`);
       }
       if (this.weaponReward !== null && this.weaponReward.levelId === this.currentLevelId + 1) {
-        lines.push(`TROFEO: ${WEAPON_CONFIG[this.weaponReward.weaponId].name.toUpperCase()}`);
+        lines.push(`TROFEO: ${getItemName(this.weaponReward.items[0]!)}`);
+      }
+      if (this.finalBossRewardName !== null && !this.levelManager.hasLevel(this.currentLevelId + 1)) {
+        lines.push(`NELLO ZAINO: ${this.finalBossRewardName}`);
       }
       this.hud.renderMessageBox(this.renderer, "LIVELLO COMPLETATO!", lines);
     } else {

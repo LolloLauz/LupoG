@@ -69,7 +69,7 @@ function readCanvasColors() {
   return colors;
 }
 
-const VALID_STATES = ["title", "controls", "levelSelect", "characterSelect", "confirmReset", "upgrades", "shop", "playing", "paused", "gameOver", "victory"];
+const VALID_STATES = ["title", "controls", "levelSelect", "characterSelect", "confirmReset", "upgrades", "shop", "equipment", "playing", "paused", "gameOver", "victory"];
 /** Le vite iniziali dipendono dalla difficoltà (facile ne ha di più). */
 const MAX_LIVES = Math.max(...Object.values(DIFFICULTY_CONFIG).map((difficulty) => difficulty.startingLives));
 

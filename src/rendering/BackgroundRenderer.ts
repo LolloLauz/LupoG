@@ -88,6 +88,8 @@ export class BackgroundRenderer {
         return this.buildWasteland(screenWidth);
       case "tower":
         return this.buildTower(screenWidth);
+      case "shop":
+        return this.buildShop(screenWidth);
     }
   }
 
@@ -896,6 +898,74 @@ export class BackgroundRenderer {
   // ===========================================================================
 
   /** Fondo degli abissi (sotto il livello del terreno): gradiente verso il nero. */
+  // ===========================================================================
+  // Bottega del mercante (E6): pareti di assi, travi, scaffali con vasi e pozioni, lanterne accese
+  // ===========================================================================
+
+  private buildShop(screenWidth: number): BackgroundStep[] {
+    const wallSpeed = 0.35;
+    const lanternSpacing = 128;
+    return [
+      this.createLayer(wallSpeed, (painter) => {
+        painter.fillRect(0, 0, LAYER_PERIOD, GROUND_Y, PALETTE.earth);
+        this.paintPit(painter, [PALETTE.earthDark, PALETTE.black]);
+        // assi verticali con le venature e le fughe scure
+        for (let plankX = 0; plankX < LAYER_PERIOD; plankX += 16) {
+          const shade = hashNumber(plankX + 3) % 3 === 0 ? PALETTE.earthDark : PALETTE.earth;
+          painter.fillRect(plankX, 0, 16, GROUND_Y, shade);
+          painter.fillRect(plankX, 0, 1, GROUND_Y, PALETTE.black);
+          painter.fillRect(plankX + 1, 0, 1, GROUND_Y, PALETTE.wood);
+          painter.fillRect(plankX + 7 + (hashNumber(plankX) % 5), 20 + (hashNumber(plankX + 9) % 120), 1, 14, PALETTE.earthDark);
+        }
+        // travi orizzontali
+        for (const beamY of [24, 138]) {
+          painter.fillRect(0, beamY, LAYER_PERIOD, 8, PALETTE.wood);
+          painter.fillRect(0, beamY, LAYER_PERIOD, 1, PALETTE.woodLight);
+          painter.fillRect(0, beamY + 7, LAYER_PERIOD, 1, PALETTE.earthDark);
+        }
+        // scaffali con vasi, sacchi e pozioni colorate
+        const goods = [PALETTE.red, PALETTE.lightGreen, PALETTE.lightBlue, PALETTE.lilac, PALETTE.goldLight, PALETTE.sand];
+        for (let shelfX = 40; shelfX < LAYER_PERIOD; shelfX += 128) {
+          for (const shelfY of [70, 108]) {
+            painter.fillRect(shelfX, shelfY, 56, 3, PALETTE.woodLight);
+            painter.fillRect(shelfX, shelfY + 3, 56, 1, PALETTE.earthDark);
+            for (let slot = 0; slot < 6; slot++) {
+              const itemX = shelfX + 3 + slot * 9;
+              const kind = hashNumber(shelfX + shelfY + slot * 7) % 3;
+              const color = goods[hashNumber(shelfX * 3 + slot + shelfY) % goods.length]!;
+              if (kind === 0) {
+                // boccetta: collo e pancia con il riflesso
+                painter.fillRect(itemX + 2, shelfY - 9, 2, 3, PALETTE.lightGray);
+                painter.fillRect(itemX, shelfY - 6, 6, 6, color);
+                painter.fillRect(itemX + 1, shelfY - 5, 1, 2, PALETTE.white);
+              } else if (kind === 1) {
+                // vaso di terracotta
+                painter.fillRect(itemX, shelfY - 7, 6, 7, PALETTE.flame);
+                painter.fillRect(itemX + 1, shelfY - 8, 4, 1, PALETTE.ember);
+                painter.fillRect(itemX, shelfY - 7, 1, 7, PALETTE.orange);
+              } else {
+                // sacco
+                painter.fillRect(itemX, shelfY - 6, 7, 6, PALETTE.sand);
+                painter.fillRect(itemX + 2, shelfY - 8, 3, 2, PALETTE.woodLight);
+                painter.fillRect(itemX + 6, shelfY - 6, 1, 6, PALETTE.woodLight);
+              }
+            }
+          }
+        }
+      }),
+      {
+        kind: "live",
+        draw: (renderer, cameraX, timeSeconds): void => {
+          const shift = Math.round(cameraX * wallSpeed);
+          const firstLantern = Math.floor((shift - 120) / lanternSpacing);
+          for (let lanternIndex = firstLantern; lanternIndex * lanternSpacing + 100 - shift < screenWidth + 40; lanternIndex++) {
+            this.drawTorch(renderer, lanternIndex * lanternSpacing + 100 - shift, 56, timeSeconds, lanternIndex);
+          }
+        },
+      },
+    ];
+  }
+
   private paintPit(painter: PixelPainter, colors: readonly string[]): void {
     painter.fillVerticalGradient(0, GROUND_Y, LAYER_PERIOD, LAYER_HEIGHT - GROUND_Y, colors);
   }

@@ -70,7 +70,7 @@ export class ProjectileSystem {
       if (CollisionSystem.intersects(bounds, player.getBounds())) {
         // la fonte del colpo è dietro il proiettile: il rinculo spinge nel verso in cui viaggiava
         const sourceCenterX = projectile.centerX - Math.sign(projectile.velocityX) * 8;
-        if (player.takeDamage(projectile.damage, sourceCenterX)) {
+        if (player.takeDamage(projectile.damage, sourceCenterX, projectile.definition.element)) {
           projectile.destroy();
           events.push({ kind: "hitPlayer", x: projectile.centerX, y: projectile.centerY });
           continue;

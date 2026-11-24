@@ -1,19 +1,22 @@
-import { PALETTE } from "../config/gameConfig";
-import { WEAPON_CONFIG } from "../config/weaponConfig";
+import { RARITY_CONFIG } from "../config/rarityConfig";
 import { AmmoDrop } from "../entities/AmmoDrop";
 import type { Player } from "../entities/Player";
 import { WeaponPickup } from "../entities/WeaponPickup";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { WeaponId } from "../types/EntityTypes";
-import { GAME_CONFIG } from "../config/gameConfig";
+import type { ItemInstance, WeaponItem } from "../types/ItemTypes";
+import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
+import { getItemIconSpriteId, getItemName, toWeaponItem } from "./ItemFactory";
+import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { CollisionSystem } from "./CollisionSystem";
 
 /**
- * Armi a terra (Fase 1 del piano espansioni). Si raccolgono con E e vanno nella borsa (Inventory);
- * se la borsa è piena, l'arma in mano resta a terra al posto di quella presa (spawn con isArmed false),
- * così si può tornare indietro e riprenderla.
+ * Oggetti a terra: armi (Fase 1 del piano espansioni) e, dal piano dell'equipaggiamento, armature, con la loro
+ * rarità. Si raccolgono con E: le armi vanno nella borsa (Inventory), le armature si indossano o vanno nello zaino.
+ * Un oggetto lasciato dal giocatore resta a terra non prendibile (spawn con isArmed false) finché lui non si
+ * allontana, così si può tornare indietro e riprenderlo.
  */
 export class WeaponPickupManager {
   private pickups: WeaponPickup[] = [];
@@ -35,9 +38,10 @@ export class WeaponPickupManager {
     this.elapsedSeconds = 0;
   }
 
-  /** Posa un'arma a terra: centerX al centro, bottomY sul terreno. */
-  public spawn(weaponId: WeaponId, centerX: number, bottomY: number, isArmed = true, ammo: number | null = null): WeaponPickup {
-    const pickup = new WeaponPickup(weaponId, centerX, bottomY, isArmed, ammo);
+  /** Posa un oggetto a terra (un id d'arma diventa un'arma Comune): centerX al centro, bottomY sul terreno. */
+  public spawn(item: ItemInstance | WeaponId, centerX: number, bottomY: number, isArmed = true, ammo: number | null = null): WeaponPickup {
+    const pickupItem: ItemInstance | WeaponItem = typeof item === "string" ? toWeaponItem(item) : item;
+    const pickup = new WeaponPickup(pickupItem, centerX, bottomY, isArmed, ammo);
     this.pickups.push(pickup);
     return pickup;
   }
@@ -96,8 +100,8 @@ export class WeaponPickupManager {
   }
 
   /**
-   * Disegna le armi (oscillano di un pixel e brillano) e, sopra quella che il giocatore può
-   * prendere, il suggerimento "E PRENDI" con il nome dell'arma.
+   * Disegna gli oggetti (oscillano di un pixel e brillano del colore della rarità) e, sopra quello che il
+   * giocatore può prendere, il suggerimento "E PRENDI" con il nome dell'oggetto, nel colore della rarità.
    */
   public render(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number, player: Player): void {
     for (const drop of this.ammoDrops) {
@@ -111,11 +115,12 @@ export class WeaponPickupManager {
       }
       const bobOffset = Math.sin(this.elapsedSeconds * 4 + pickup.bobPhase) > 0 ? -1 : 0;
       const screenY = pickup.positionY - cameraY + bobOffset;
-      renderer.fillGlow(screenX + pickup.width / 2, screenY + pickup.height / 2, 11, PALETTE.goldLight, 2, 4);
-      spriteManager.drawSprite(renderer, WEAPON_CONFIG[pickup.weaponId].iconSpriteId, screenX, screenY, false);
+      const rarityColor = RARITY_CONFIG[pickup.item.rarity].color;
+      renderer.fillGlow(screenX + pickup.width / 2, screenY + pickup.height / 2, 11, rarityColor, 2, 4);
+      spriteManager.drawSprite(renderer, getItemIconSpriteId(pickup.item), screenX, screenY, false, false, getItemIconVariant(pickup.item));
       if (pickup === reachable) {
-        const label = `E PRENDI ${WEAPON_CONFIG[pickup.weaponId].name.toUpperCase()}`;
-        renderer.drawText(label, screenX + pickup.width / 2, screenY - 10, PALETTE.goldLight, { align: "center", shadowColor: PALETTE.black });
+        const label = `E PRENDI ${getItemName(pickup.item)}`;
+        renderer.drawText(label, screenX + pickup.width / 2, screenY - 10, rarityColor, { align: "center", shadowColor: PALETTE.black });
       }
     }
   }

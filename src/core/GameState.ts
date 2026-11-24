@@ -9,8 +9,10 @@ const ALLOWED_TRANSITIONS: Record<GameStateName, GameStateName[]> = {
   confirmReset: ["title"],
   upgrades: ["title"],
   shop: ["playing"],
-  playing: ["paused", "gameOver", "victory", "shop"],
-  paused: ["playing", "title"],
+  // schermata dell'equipaggiamento (E4): dal gioco o dalla pausa, si torna da dove si era
+  equipment: ["playing", "paused"],
+  playing: ["paused", "gameOver", "victory", "shop", "equipment"],
+  paused: ["playing", "title", "equipment"],
   gameOver: ["title", "playing"],
   victory: ["title"],
 };

@@ -19,6 +19,7 @@ export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> =
   },
   magicBolt: {
     id: "magicBolt",
+    element: "shock",
     name: "Dardo magico",
     speed: 110,
     gravityScale: 0,
@@ -30,6 +31,7 @@ export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> =
   },
   fireball: {
     id: "fireball",
+    element: "fire",
     name: "Palla di fuoco",
     speed: 130,
     gravityScale: 0,

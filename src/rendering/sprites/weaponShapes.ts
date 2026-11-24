@@ -3,7 +3,7 @@ import { linePoints, setPixel, type PixelGrid } from "./spriteTools";
 /**
  * Forme delle armi della Fase 1 (pugnale, lancia, ascia, mazza), disegnate su una griglia di
  * sprite dall'impugnatura (hand) alla punta (tip). Chiavi dei colori, come per la spada:
- * "e" impugnatura (cuoio), "l" asta (legno), "b" metallo, "v" riflesso del metallo, "g" ferro scuro.
+ * "e" impugnatura (cuoio), "l" asta (legno), "b" metallo, "v" riflesso del metallo, "j" ferro scuro, "q" corda dell'arco (chiavi proprie: le armature ricolorano d, g, s, w).
  * Metallo e riflesso usano le stesse chiavi della lama: il power-up del fuoco li fa diventare incandescenti.
  */
 export type WeaponDrawer = (grid: PixelGrid, handX: number, handY: number, tipX: number, tipY: number) => void;
@@ -67,7 +67,7 @@ export const drawAxe: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
       setPixel(grid, Math.round(centerX + forward.x * across), Math.round(centerY + forward.y * across), key, true);
     }
     if (along === 1 || along === 2) {
-      setPixel(grid, Math.round(centerX - forward.x), Math.round(centerY - forward.y), "g", true);
+      setPixel(grid, Math.round(centerX - forward.x), Math.round(centerY - forward.y), "j", true);
     }
   }
 };
@@ -86,7 +86,7 @@ export const drawMace: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
   setPixel(grid, tipX - 1, tipY - 1, "v", true);
   setPixel(grid, tipX, tipY - 1, "v", true);
   for (const [offsetX, offsetY] of [[3, 0], [-3, 0], [0, 3], [0, -3]] as const) {
-    setPixel(grid, tipX + offsetX, tipY + offsetY, "g", true);
+    setPixel(grid, tipX + offsetX, tipY + offsetY, "j", true);
   }
 };
 
@@ -116,7 +116,7 @@ export const drawBow: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
   }
   for (const endpoint of endpoints) {
     for (const point of linePoints(endpoint.x, endpoint.y, handX, handY)) {
-      setPixel(grid, point.x, point.y, "s", false);
+      setPixel(grid, point.x, point.y, "q", false);
     }
   }
 };
@@ -134,4 +134,33 @@ export const drawCrossbow: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
     setPixel(grid, Math.round(frontX + side.x * along - direction.unitX * bendBack), Math.round(frontY + side.y * along - direction.unitY * bendBack), key, true);
   }
   setPixel(grid, Math.round(frontX + direction.unitX), Math.round(frontY + direction.unitY), "v", true);
+};
+
+/**
+ * Spadone a due mani (E3): impugnatura lunga (tre pixel di cuoio), elsa larga d'oro e lama larga due pixel con il filo
+ * luminoso sul davanti. Metallo e riflesso usano le chiavi della lama (b, v): fuoco e rarità li ricolorano.
+ */
+export const drawGreatsword: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
+  const direction = getDirection(handX, handY, tipX, tipY);
+  // spessore lungo un asse (non in diagonale): così la lama larga non ha buchi
+  const forward = getForwardPerpendicular(direction);
+  const perpendicular = Math.abs(forward.x) >= Math.abs(forward.y) ? { x: Math.sign(forward.x), y: 0 } : { x: 0, y: Math.sign(forward.y) };
+  const points = linePoints(handX, handY, tipX, tipY);
+  points.forEach((point, pointIndex) => {
+    if (pointIndex < 3) {
+      setPixel(grid, point.x, point.y, "e", true);
+      return;
+    }
+    setPixel(grid, point.x, point.y, "b", true);
+    if (pointIndex < points.length - 1) {
+      setPixel(grid, Math.round(point.x - perpendicular.x), Math.round(point.y - perpendicular.y), "b", true);
+      setPixel(grid, Math.round(point.x + perpendicular.x), Math.round(point.y + perpendicular.y), "v", true);
+    }
+  });
+  setPixel(grid, tipX, tipY, "v", true);
+  const guard = points[3] ?? points[points.length - 1]!;
+  const side = { x: -direction.unitY, y: direction.unitX };
+  for (const distance of [-3, -2, -1, 1, 2, 3]) {
+    setPixel(grid, Math.round(guard.x + side.x * distance), Math.round(guard.y + side.y * distance), "y", true);
+  }
 };

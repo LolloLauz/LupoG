@@ -8,6 +8,7 @@
  * Uso:   npm run balance            (report completo, circa 1 minuto)
  *        npm run balance -- --quick (meno ripetizioni, più veloce e meno preciso)
  *        npm run balance -- --characters (solo le partite complete di ogni personaggio, Fase 4)
+ *        npm run balance -- --equipment  (solo le partite complete con e senza equipaggiamento, piano E1-E6)
  *
  * IMPORTANTE: il bot è un giocatore semplice. "rusher" attacca sempre senza mai schivare;
  * "medio" prova a schivare in modo imperfetto. Non sostituisce una prova con persone reali:
@@ -23,6 +24,7 @@ const projectRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputDirectory = mkdtempSync(join(tmpdir(), "iron-balance-"));
 const isQuick = process.argv.includes("--quick");
 const isCharactersOnly = process.argv.includes("--characters");
+const isEquipmentOnly = process.argv.includes("--equipment");
 const repetitions = isQuick ? 15 : 40;
 const runRepetitions = isQuick ? 20 : 60;
 
@@ -56,6 +58,12 @@ const { GAME_CONFIG } = await loadModule("config/gameConfig");
 const { Inventory } = await loadModule("systems/Inventory");
 const { ITEM_CONFIG } = await loadModule("config/itemConfig");
 const { CHARACTER_CONFIG, CHARACTER_ORDER } = await loadModule("config/characterConfig");
+const { WEAPON_CONFIG } = await loadModule("config/weaponConfig");
+const { rollLootArmor, rollLootWeapon } = await loadModule("systems/LootSystem");
+const { getItemTotals, EMPTY_ARMOR } = await loadModule("systems/EquipmentStats");
+const { createArmorItem, createWeaponItem } = await loadModule("systems/ItemFactory");
+const { ARMOR_CONFIG } = await loadModule("config/armorConfig");
+const { RARITY_ORDER } = await loadModule("config/rarityConfig");
 
 const collisionSystem = new CollisionSystem();
 const combatSystem = new CombatSystem();
@@ -85,7 +93,8 @@ function createRandom(seed) {
 function playLevel(levelId, options = {}) {
   // character: le statistiche del personaggio (il bot usa sempre la spada, quindi misura solo quelle)
   // useAbility: il bot usa anche l'abilità del personaggio (tasto L; lo scudo al posto della schivata)
-  const { character = CHARACTER_CONFIG.knight, useAbility = false, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false } = options;
+  // armor, weaponItem: equipaggiamento (piano E1-E6): armature indossate e la spada con la sua rarità
+  const { character = CHARACTER_CONFIG.knight, useAbility = false, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false, armor = EMPTY_ARMOR, weaponItem = null } = options;
   const level = LEVEL_CONFIG.find((candidate) => candidate.id === levelId);
   const random = createRandom(seed);
   // come nel gioco: piattaforme (anche mobili e cancello dell'arena), pericoli, proiettili
@@ -95,7 +104,9 @@ function playLevel(levelId, options = {}) {
   const projectileSystem = new ProjectileSystem();
   let platforms = levelManager.platforms;
   const player = new Player(level.playerStart.x, level.playerStart.y, character);
-  player.currentHealth = startHealth;
+  player.setArmor(armor);
+  if (weaponItem !== null) player.equipWeapon(WEAPON_CONFIG.sword, null, weaponItem);
+  player.currentHealth = Math.min(player.maxHealth, startHealth);
   // come nel gioco: nemici d'élite compresi
   const enemies = (enemyOverride ?? level.enemies).map(
     (spawn) => new Enemy(ENEMY_CONFIG[spawn.type], spawn.position.x, spawn.position.y, undefined, { elite: spawn.elite, weaponDrop: spawn.weaponDrop })
@@ -262,7 +273,7 @@ function playLevel(levelId, options = {}) {
       healthLost += GAME_CONFIG.fallDamage;
       player.respawnAt({ x: Math.max(24, player.positionX - 60), y: 150 });
     }
-    const result = (outcome) => ({ outcome, time, healthLost, health: player.currentHealth, potions: inventory.potionCount });
+    const result = (outcome) => ({ outcome, time, healthLost, health: player.currentHealth, maxHealth: player.maxHealth, potions: inventory.potionCount });
     if (player.isReadyToRespawn) return result("dead");
     if (stopWhenClear && enemies.every((e) => !e.isAlive) && (boss === null || !boss.isAlive)) return result("win");
     if (!stopWhenClear && goalX !== null && player.positionX + player.width / 2 >= goalX) return result("win");
@@ -271,25 +282,58 @@ function playLevel(levelId, options = {}) {
   return { outcome: "timeout", time: maxSeconds, healthLost, health: player.currentHealth, potions: inventory.potionCount };
 }
 
-/** Partita completa: tutti i livelli di fila, salute che si porta dietro, vite limitate. */
-function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight, useAbility = false) {
+/** Punteggio semplice di un pezzo d'armatura per il bot: difesa, salute e stamina (la velocità conta poco). */
+const armorScore = (item) => {
+  const totals = getItemTotals(item);
+  return totals.defense * 3 + totals.maxHealth + totals.maxStamina * 0.3 + totals.moveSpeed;
+};
+
+/**
+ * Bottino di fine livello (E5) per il bot: forziere ed élite (se il livello ne ha), boss; ogni pezzo d'armatura
+ * migliore di quello indossato si indossa, la spada si cambia se esce di rarità più alta.
+ */
+function collectLoot(level, gear, random) {
+  const context = (source) => ({ source, levelId: level.id, difficulty: "normal" });
+  const sources = [...((level.chests ?? []).length > 0 ? ["chest"] : []), ...(level.enemies.some((enemy) => enemy.elite) ? ["elite"] : []), ...(level.hasBoss ? ["boss"] : [])];
+  for (const source of sources) {
+    const armorPiece = rollLootArmor(context(source), random);
+    const slot = ARMOR_CONFIG[armorPiece.baseId].slot;
+    if (gear.armor[slot] === null || armorScore(armorPiece) > armorScore(gear.armor[slot])) gear.armor = { ...gear.armor, [slot]: armorPiece };
+    const sword = rollLootWeapon("sword", context(source), random);
+    if (RARITY_ORDER.indexOf(sword.rarity) > RARITY_ORDER.indexOf(gear.weaponItem.rarity)) gear.weaponItem = sword;
+  }
+}
+
+/**
+ * Partita completa: tutti i livelli di fila, salute che si porta dietro, vite limitate.
+ * gearMode: "none" (senza equipaggiamento), "loot" (raccoglie il bottino a fine livello), "max" (tre pezzi d'acciaio
+ * Epici e una spada Leggendaria fin dall'inizio: il tetto).
+ */
+function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight, useAbility = false, gearMode = "none") {
   let lives = GAME_CONFIG.startingLives;
   let health = character.maxHealth;
+  const lootRandom = createRandom(seed * 7919);
+  const gear = { armor: { ...EMPTY_ARMOR }, weaponItem: createWeaponItem("sword") };
+  if (gearMode === "max") {
+    gear.armor = { helmet: createArmorItem("steelHelmet", "epic", [{ id: "defense", value: 8 }]), chest: createArmorItem("steelChest", "epic", [{ id: "defense", value: 8 }]), boots: createArmorItem("steelBoots", "epic", [{ id: "defense", value: 8 }]) };
+    gear.weaponItem = createWeaponItem("sword", "legendary", [{ id: "damage", value: 16 }, { id: "lifeSteal", value: 3 }]);
+  }
   // pozioni nella borsa: passano da un livello all'altro; ricominciando un livello tornano a quelle di inizio livello
   let potions = 0;
   const deathsPerLevel = LEVEL_CONFIG.map(() => 0);
   for (const level of LEVEL_CONFIG) {
     for (;;) {
-      const result = playLevel(level.id, { character, useAbility, dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions });
+      const result = playLevel(level.id, { character, useAbility, dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions, armor: gear.armor, weaponItem: gear.weaponItem });
       if (result.outcome === "win") {
         potions = result.potions;
         const hasNextLevel = LEVEL_CONFIG.some((other) => other.id === level.id + 1);
-        health = Math.min(character.maxHealth, result.health + (hasNextLevel ? GAME_CONFIG.levelCompleteHeal : 0));
+        if (gearMode === "loot") collectLoot(level, gear, lootRandom);
+        health = Math.min(result.maxHealth, result.health + (hasNextLevel ? GAME_CONFIG.levelCompleteHeal : 0));
         break;
       }
       deathsPerLevel[level.id - 1]++;
       lives--;
-      health = character.maxHealth;
+      health = Infinity; // salute piena (il massimo con l'equipaggiamento)
       if (lives <= 0) return { won: false, livesLeft: 0, deathsPerLevel };
     }
   }
@@ -300,7 +344,7 @@ const average = (values) => (values.length === 0 ? NaN : values.reduce((a, b) =>
 const skills = [["rusher (non schiva)", 0], ["medio (schiva a volte)", 0.5]];
 const pad = (text, width) => String(text).padEnd(width);
 
-if (!isCharactersOnly) {
+if (!isCharactersOnly && !isEquipmentOnly) {
 console.log("=== DUELLI (un gruppo di nemici su terreno piano, giocatore a 100 HP) ===");
 const duels = {
   "scheletro": [{ type: "skeleton", position: { x: 150, y: 176 } }],
@@ -351,6 +395,15 @@ for (const [label, skill] of skills) {
 }
 }
 
+console.log(`\n=== EQUIPAGGIAMENTO (E5): PARTITE COMPLETE DEL CAVALIERE, SENZA, CON IL BOTTINO DI FINE LIVELLO, AL MASSIMO ===`);
+for (const [label, skill] of skills) for (const gearMode of ["none", "loot", "max"]) {
+  const runs = Array.from({ length: runRepetitions }, (_, i) => playFullRun(skill, i + 1, CHARACTER_CONFIG.knight, false, gearMode));
+  const won = runs.filter((r) => r.won);
+  const totalDeaths = average(runs.map((r) => r.deathsPerLevel.reduce((a, b) => a + b, 0)));
+  console.log(`${pad(label, 24)} ${pad({ none: "senza", loot: "bottino", max: "massimo" }[gearMode], 8)} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)}`);
+}
+
+if (!isEquipmentOnly) {
 console.log(`\n=== PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, stamina, cura; con e senza l'abilità L) ===`);
 for (const characterId of CHARACTER_ORDER) {
   const character = CHARACTER_CONFIG[characterId];
@@ -360,5 +413,6 @@ for (const characterId of CHARACTER_ORDER) {
     const totalDeaths = average(runs.map((r) => r.deathsPerLevel.reduce((a, b) => a + b, 0)));
     console.log(`${pad(character.name, 10)} ${pad(label, 24)} ${useAbility ? "con abilità  " : "senza abilità"} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)}`);
   }
+}
 }
 console.log("\n(rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)");

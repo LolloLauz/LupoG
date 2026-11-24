@@ -82,6 +82,6 @@ const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null
 // --- motore: a ogni partita si impugna l'arma salvata
 {const src=readFileSync(join(projectRoot,'src/core/GameEngine.ts'),'utf8');
  const m=src.match(/private startNewGame\([^)]*\): void \{([\s\S]*?)\n  \}/);
- const resetBag='this.inventory.reset(this.progressManager.bagWeaponIds, this.progressManager.equippedWeaponId);\n    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo);';
- t("GameEngine dà al giocatore la borsa e l'arma salvate all'avvio e a ogni nuova partita",m!==null&&m[1].includes(resetBag)&&src.split(resetBag).length===3);}
+ const resetBag='this.loadSavedEquipment();\n    this.equipFromInventory();';
+ t("GameEngine dà al giocatore la borsa e l'arma salvate all'avvio e a ogni nuova partita",m!==null&&m[1].includes(resetBag)&&src.split(resetBag).length===3&&/private loadSavedEquipment[\s\S]{0,200}this\.inventory\.reset\(this\.progressManager\.bagWeaponItems, this\.progressManager\.equippedWeaponId\)/.test(src)&&/private equipFromInventory[\s\S]{0,200}this\.player\.equipWeapon\(WEAPON_CONFIG\[this\.inventory\.equippedWeaponId\], this\.inventory\.equippedAmmo, this\.inventory\.equippedWeaponItem\)/.test(src));}
 }

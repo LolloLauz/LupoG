@@ -95,13 +95,16 @@ senza aggiornare il mondo né consumare gli input: un tasto premuto in quell'int
 | `title` | `controls`, `levelSelect`, `playing` |
 | `controls` | `title` |
 | `levelSelect` (2.0) | `title`, `playing` |
-| `playing` | `paused`, `gameOver`, `victory` |
-| `paused` | `playing`, `title` |
+| `playing` | `paused`, `gameOver`, `victory`, `shop`, `equipment` |
+| `paused` | `playing`, `title`, `equipment` |
+| `equipment` (E4) | `playing`, `paused` (si torna da dove si era) |
 | `gameOver` | `title`, `playing` (è il "Riprova") |
 | `victory` | `title` |
 
 Un cambio di stato imposta il **contesto di input** (`gameplay` solo in `playing`, `menu` altrove) e azzera i cursori dei menu.
 All'interno di `playing` il motore distingue ancora due **fasi del livello**: `playing` e `completed` (messaggio di fine livello).
+Anche la **stanza del negozio** (E6) è `playing`: è un livello speciale (`SHOP_ROOM_LEVEL`, `GameEngine.isInShopRoom`) caricato tra un livello e
+l'altro; la bottega a menu (`shop`) resta come ripiego.
 
 ---
 
@@ -323,6 +326,7 @@ d'aggancio elencati, volutamente minimi.
 | Nuove ambientazioni | già possibile (2.0: sei; Fase 8 del piano espansioni: sette, con le Lande Desolate) | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer`, `TerrainRenderer` | un caso in `BackgroundRenderer.buildTheme` (livelli di parallasse) e i colori del terreno; una tessitura nuova richiede un caso in `TerrainRenderer` |
 | Personaggi alternativi | implementato (Fase 4 del piano espansioni: cavaliere, ranger, berserker, paladino) | `CharacterDefinition`, `CHARACTER_CONFIG`, `CHARACTER_VISUALS` (`knightSprites.ts`), `Player.setCharacter`, `ProgressManager.characterId`, schermata `characterSelect` | un personaggio nuovo: un id in `CharacterId`, una voce in `CHARACTER_CONFIG` e in `CHARACTER_ORDER`, una voce in `CHARACTER_VISUALS` (colori e, se serve, le 12 righe della testa). Un tratto che non è una statistica (es. la parata del paladino, Fase 5) richiede un campo in `CharacterDefinition` letto da `Player` |
 | Progressione: monete, bottega, potenziamenti permanenti, sblocchi | implementato (Fase 6 del piano espansioni) | `progressionConfig.ts`, `Shop`, `ScoreManager.coins`, `ProgressManager` (gemme, potenziamenti, armi trovate, `isCharacterUnlocked`), `Player.setUpgrades` | una voce nuova della bottega: un id in `ShopOfferId`, una voce in `SHOP_OFFERS` e il suo caso in `Shop.buy`/`findRefusal`; un potenziamento nuovo: una voce in `UPGRADE_CONFIG` e `UPGRADE_ORDER` e il suo effetto in `computeUpgradeBonuses` |
+| Equipaggiamento: rarità, modificatori, armature, zaino, bottino, negozio camminabile | implementato (piano dell'equipaggiamento, E1-E6) | `RARITY_CONFIG`, `AFFIX_CONFIG`, `ARMOR_CONFIG`, `LEGENDARY_ITEMS`/`MYTHIC_ITEMS`, `LOOT_SOURCES`, `ItemFactory`, `EquipmentStats`, `LootSystem`, `Inventory` (zaino e armature), `Player.equipWeapon(..., item)`/`setArmor`, `SpriteColorVariant` | un modificatore nuovo: un id in `AffixId`, una voce in `AFFIX_CONFIG` e il suo effetto in `EquipmentStats` (e, se è una statistica nuova, in `Player`); un pezzo d'armatura o un Leggendario: solo dati; uno sprite su misura per un Mitico: vedi `PIANO_EQUIPAGGIAMENTO.md` |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |
 | Selettore di difficoltà | implementato (2.0) | `DIFFICULTY_CONFIG`, menu del titolo, `ProgressManager` | - |
 | Audio | escluso dal progetto | eventi già individuabili in `GameEngine` (colpi, raccolte, morte) | un `AudioManager` chiamato da quei punti |

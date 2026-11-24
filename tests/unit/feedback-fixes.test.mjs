@@ -120,7 +120,7 @@ export default async function (t, load) {
   }
 
   // --- 3. tasto Q ---
-  t("Q lascia a terra, solo in gioco", CONTROLS_CONFIG.dropItem?.includes("KeyQ") && INPUT_CONTEXT_ACTIONS.gameplay.includes("dropItem") && !INPUT_CONTEXT_ACTIONS.menu.includes("dropItem") && CONTROLS_ROWS.some((r) => r.keyGroups.flat().includes("Q")));
+  t("Q lascia a terra, in gioco e nella schermata dell'equipaggiamento (E4)", CONTROLS_CONFIG.dropItem?.includes("KeyQ") && INPUT_CONTEXT_ACTIONS.gameplay.includes("dropItem") && INPUT_CONTEXT_ACTIONS.menu.includes("dropItem") && CONTROLS_ROWS.some((r) => r.keyGroups.flat().includes("Q")));
   {
     const bag = new Inventory();
     bag.reset(["sword", "throwingKnives"], "throwingKnives");
@@ -138,7 +138,7 @@ export default async function (t, load) {
     t("lasciando un'arma che non è in mano, quella in mano resta", other.dropSlot(2).kind === "weapon" && other.equippedWeaponId === "sword");
   }
   t("motore: Q tenuto + 1-4 lascia quel posto, Q da solo (al rilascio) l'arma in mano; 1-4 senza Q usa il posto", /if \(isDropHeld\) \{[\s\S]{0,80}this\.dropFromBag\(slotIndex\);[\s\S]{0,40}\} else \{[\s\S]{0,20}this\.useBagSlot\(slotIndex\)/.test(engineSource) && /wasReleased\("dropItem"\) && !this\.hasDroppedWithSlotKey\)[\s\S]{0,40}this\.dropFromBag\(this\.inventory\.equippedSlotIndex\)/.test(engineSource));
-  t("motore: si lascia solo stando a terra; l'arma diventa un'arma a terra con le munizioni, la pozione un oggetto", /private dropFromBag[\s\S]{0,300}!this\.player\.isOnGround[\s\S]{0,300}this\.weaponPickups\.spawn\(drop\.weaponId, centerX, feetY, false, drop\.ammo\)[\s\S]{0,600}this\.itemManager\.addItem\("healthPotion"/.test(engineSource));
+  t("motore: si lascia solo stando a terra; l'arma diventa un'arma a terra con le munizioni, la pozione un oggetto", /private dropFromBag[\s\S]{0,300}!this\.player\.isOnGround[\s\S]{0,300}this\.weaponPickups\.spawn\(drop\.item, centerX, feetY, false, drop\.ammo\)[\s\S]{0,600}this\.itemManager\.addItem\("healthPotion"/.test(engineSource));
   {
     const items = new ItemManager();
     items.loadItems([]);
@@ -183,6 +183,6 @@ export default async function (t, load) {
     t("conferma: la voce predefinita è NO (Invio torna al titolo senza cancellare)", press("confirmReset", "confirm") === "backToTitle");
     press("confirmReset", "menuDown");
     t("conferma: scendendo su SÌ si cancella; ESC torna indietro", press("confirmReset", "confirm") === "resetAllData" && press("confirmReset", "pause") === "backToTitle");
-    t("motore: cancella progressi e record e rimette cavaliere, borsa con la spada e avviso", /case "resetAllData":[\s\S]{0,60}this\.resetAllData\(\);[\s\S]{0,120}showNotice/.test(engineSource) && /private resetAllData\(\): void \{[\s\S]{0,80}this\.progressManager\.reset\(\);[\s\S]{0,20}this\.highScoreManager\.reset\(\);[\s\S]{0,400}setCharacter[\s\S]{0,200}equipWeapon/.test(engineSource));
+    t("motore: cancella progressi e record e rimette cavaliere, borsa con la spada e avviso", /case "resetAllData":[\s\S]{0,60}this\.resetAllData\(\);[\s\S]{0,120}showNotice/.test(engineSource) && /private resetAllData\(\): void \{[\s\S]{0,80}this\.progressManager\.reset\(\);[\s\S]{0,20}this\.highScoreManager\.reset\(\);[\s\S]{0,400}loadSavedEquipment\(\)[\s\S]{0,200}setCharacter[\s\S]{0,200}equipFromInventory\(\)/.test(engineSource));
   }
 }

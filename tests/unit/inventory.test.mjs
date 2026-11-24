@@ -69,8 +69,8 @@ const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null
 // --- motore
 {const src=readFileSync(join(projectRoot,'src/core/GameEngine.ts'),'utf8');
  t("con E si prende prima un'arma, se non c'è una pozione (borsa piena: messaggio)",/private pickUpWithE[\s\S]*findReachablePickup[\s\S]*findReachableBagItem[\s\S]*addPotion\(\)[\s\S]*BORSA PIENA/.test(src));
- t("borsa piena: l'arma vecchia resta a terra, non prendibile finché non ci si allontana",/droppedWeaponId !== null\)[\s\S]{0,200}weaponPickups\.spawn\(result\.droppedWeaponId, centerX, pickup\.positionY \+ pickup\.height, false, result\.droppedAmmo \?\? null\)/.test(src));
+ t("borsa piena: l'arma vecchia va nello zaino; se è pieno resta a terra, non prendibile finché non ci si allontana",/result\.droppedItem !== undefined\)[\s\S]{0,300}this\.inventory\.addToBackpack\(result\.droppedItem\)[\s\S]{0,200}weaponPickups\.spawn\(result\.droppedItem, centerX, pickup\.positionY \+ pickup\.height, false, result\.droppedAmmo \?\? null\)/.test(src));
  t("i tasti numerici usano il posto: arma in mano o pozione (non a salute piena)",/BAG_SLOT_ACTIONS\.forEach[\s\S]{0,400}useBagSlot\(slotIndex\)/.test(src)&&/currentHealth >= this\.player\.maxHealth\)[\s\S]{0,200}SALUTE PIENA[\s\S]{0,80}return;[\s\S]{0,80}consumePotion\(slotIndex\)/.test(src));
  t("ricominciando il livello la borsa torna com'era all'inizio del livello",/private restartCurrentLevel[\s\S]{0,500}this\.inventory\.restore\(this\.levelStartInventory\)/.test(src)&&src.includes('this.levelStartInventory = this.inventory.snapshot();'));
- t("a ogni nuova partita la borsa riparte dalle armi salvate, senza pozioni",/private startNewGame[\s\S]{0,600}this\.inventory\.reset\(this\.progressManager\.bagWeaponIds/.test(src));}
+ t("a ogni nuova partita la borsa riparte dalle armi salvate, senza pozioni",/private startNewGame[\s\S]{0,600}this\.loadSavedEquipment\(\)/.test(src)&&/private loadSavedEquipment[\s\S]{0,120}this\.inventory\.reset\(this\.progressManager\.bagWeaponItems/.test(src));}
 }

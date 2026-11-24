@@ -3,7 +3,11 @@
 Questo documento è un piano, non una specifica. Lo stato reale delle funzionalità resta in `FEATURES.md`. Continua `PIANO_ESPANSIONI.md`
 (Fasi 0-8, completate le parti di contenuto).
 
-**Stato:** non iniziato. Le fasi qui si chiamano **E1-E6** per non confondersi con le Fasi 0-8 del piano precedente.
+**Stato:** E1-E6 **completate** (25/11/2026), con una scelta in più: per ora gli sprite si limitano a **ricolorare armi e armature**
+(metallo delle armi nel colore della rarità, armature nei toni del materiale con il riflesso della rarità); i **Mitici non hanno ancora
+lo sprite su misura** e usano gli stessi colori di rarità. Lo spadone usa le pose della spada in frame più larghi. Restano aperti: il rinnovo
+a pagamento dell'offerta (opzionale), le altre armi, gli sprite su misura dei Mitici (procedura sotto). Le fasi qui si chiamano **E1-E6**
+per non confondersi con le Fasi 0-8 del piano precedente.
 
 ## Decisioni prese
 
@@ -11,7 +15,8 @@ Questo documento è un piano, non una specifica. Lo stato reale delle funzionali
 |---|---|
 | Negozio | **stanza camminabile** tra un livello e l'altro. Se si rivela troppo complesso, si fa **per ultimo** (E6) e fino ad allora resta la bottega a menu della Fase 6 |
 | Armature | **3 slot**: elmo, corazza, stivali |
-| Rarità | **6 livelli**: Comune, Non comune, Raro, Epico, Leggendario, **Mitico**. Il Mitico ha **sprite disegnato su misura** (vedi "Come si aggiunge un oggetto Mitico") |
+| Rarità | **6 livelli**: Comune, Non comune, Raro, Epico, Leggendario, **Mitico**. Il Mitico avrà uno **sprite disegnato su misura** (vedi "Come si aggiunge un oggetto Mitico"); **per ora** solo ricolorazione, come le altre rarità |
+| Sprite (25/11/2026) | **solo ricolorazioni di armi e armature** per ora: nessun frame nuovo per oggetto, varianti di colore create alla prima richiesta |
 | Rivendita | **no** |
 | Armi nuove | per ora **solo lo Spadone a due mani**; altre in seguito |
 | Audio, rimappatura tasti, controller, modalità roguelike | **esclusi** (come prima) |
@@ -108,7 +113,7 @@ Per un'arma o un'armatura già esistente in `WEAPON_CONFIG` basta dire quale sos
 
 ### 2. Cosa viene fatto (per chi modifica a mano)
 
-1. **Dati**: una voce in `MYTHIC_ITEMS` (`src/config/...`) con id, nome, tipo di base, rarità `mythic`, modificatori fissi ed eventuale effetto speciale.
+1. **Dati**: una voce in `MYTHIC_ITEMS` (`src/config/uniqueItemConfig.ts`) con id, nome, descrizione, tipo di base e modificatori fissi (entro i tetti di `AFFIX_CONFIG`). Già così l'oggetto funziona, con i colori della rarità Mitica (`RARITY_CONFIG.mythic.weaponColors`); i passi seguenti servono solo per lo sprite su misura.
 2. **Sprite**: uno sprite **disegnato a mano** come righe di testo (vedi la skill del progetto `iron-shadow-pixel-sprites` e `CODE_MANUAL.md`, sezione 3.6):
    - arma: l'icona 16x16 (`WEAPON_ICON_SIZE`) e, se vuoi un'arma diversa da quelle esistenti, la funzione di disegno in `weaponShapes.ts` o un `WeaponVisual` dedicato in `knightSprites.ts`;
    - armatura: le righe della parte superiore o dell'elmo (le 12 righe della testa, come `RANGER_HEAD_ROWS`) con la sua mappa di colori;

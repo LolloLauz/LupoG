@@ -5,7 +5,7 @@ import type { InputManager } from "../core/InputManager";
 import { BackgroundRenderer } from "../rendering/BackgroundRenderer";
 import { measureTextWidth } from "../rendering/BitmapFont";
 import type { Renderer } from "../rendering/Renderer";
-import type { SpriteManager } from "../rendering/SpriteManager";
+import type { SpriteColorVariant, SpriteManager } from "../rendering/SpriteManager";
 import { getCharacterPreviewFrameId } from "../rendering/sprites/knightSprites";
 import type { CharacterDefinition, CharacterId } from "../types/EntityTypes";
 import type { GameStateName } from "../types/GameTypes";
@@ -13,6 +13,15 @@ import type { ThemeId } from "../types/LevelTypes";
 import { MenuManager } from "./MenuManager";
 import { TITLE_GOLD_ROWS, drawOrnateFrame } from "./HUDManager";
 import { cycleRampColor } from "../rendering/PaletteEffects";
+import { ARMOR_CONFIG, ARMOR_SLOTS, ARMOR_SLOT_NAMES } from "../config/armorConfig";
+import { RARITY_CONFIG } from "../config/rarityConfig";
+import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
+import { compareItemStats, describeItemStats } from "../systems/EquipmentStats";
+import { getItemBaseName, getItemIconSpriteId, getItemName, getUniqueItemDefinition } from "../systems/ItemFactory";
+import type { ArmorSlot, EquipmentBonuses, EquippedArmor, ItemInstance, WeaponItem } from "../types/ItemTypes";
+
+/** Icona della sagoma di un posto d'armatura vuoto. */
+const ARMOR_ICON_BY_SLOT: Record<ArmorSlot, string> = { helmet: "armorIconHelmet", chest: "armorIconChest", boots: "armorIconBoots" };
 
 /** Comandi che i menu possono richiedere al motore. */
 export type MenuCommand =
@@ -30,7 +39,42 @@ export type MenuCommand =
   | "cycleDifficulty"
   | "startSelectedLevel"
   | "backToTitle"
-  | "resume";
+  | "resume"
+  | "showEquipment"
+  | "equipmentUse"
+  | "equipmentDrop"
+  | "closeEquipment";
+
+/** Un posto della borsa nella schermata dell'equipaggiamento (E4). */
+export type EquipmentBagView = { kind: "weapon"; item: WeaponItem; ammo: number | null; isEquipped: boolean } | { kind: "potion"; count: number } | null;
+
+/** Dati della schermata dell'equipaggiamento (E4). */
+export interface EquipmentView {
+  armor: Readonly<EquippedArmor>;
+  bag: EquipmentBagView[];
+  backpack: readonly ItemInstance[];
+  backpackCapacity: number;
+  /** Set attivi, già scritti ("SET DEL SOLDATO 2/3"). */
+  activeSets: string[];
+  /** Bonus totali dell'equipaggiamento (riassunto a destra). */
+  bonuses: EquipmentBonuses;
+}
+
+/** Casella scelta nella schermata dell'equipaggiamento. */
+export type EquipmentCell = { section: "armor"; slot: ArmorSlot } | { section: "bag"; index: number } | { section: "backpack"; index: number };
+
+/** Geometria della schermata dell'equipaggiamento: caselle, passo, righe dello zaino. */
+export const EQUIPMENT_LAYOUT = {
+  cellSize: 20,
+  cellStep: 24,
+  topRowY: 40,
+  armorX: 16,
+  bagX: 96,
+  backpackX: 16,
+  backpackY: 76,
+  backpackColumns: 6,
+  cardY: 126,
+} as const;
 
 /** Un livello come appare nella schermata di selezione. */
 export interface LevelSummary {
@@ -59,6 +103,8 @@ export interface ScreenData {
   coins: number;
   shopOffers: ShopOfferView[];
   upgrades: UpgradeView[];
+  /** Equipaggiamento (E4): solo quando serve la sua schermata. */
+  equipment?: EquipmentView;
 }
 
 /** Una voce della bottega come appare sullo schermo. */
@@ -68,6 +114,10 @@ export interface ShopOfferView {
   price: number;
   isSoldOut: boolean;
   iconSpriteId: string;
+  /** Colori della rarità dell'oggetto (armi e armature), null per le altre voci. */
+  iconVariant?: SpriteColorVariant | null;
+  /** Colore del nome (la rarità), null = bianco. */
+  nameColor?: string | null;
   /** Lato dell'icona (16 le armi, 8 gli oggetti). */
   iconSize: 8 | 16;
 }
@@ -91,11 +141,12 @@ const THEME_SWATCHES: Record<ThemeId, [string, string]> = {
   ice: [PALETTE.iceWhite, PALETTE.blue],
   wasteland: [PALETTE.sand, PALETTE.ember],
   tower: [PALETTE.lilac, PALETTE.violet],
+  shop: [PALETTE.woodLight, PALETTE.earth],
 };
 
 /** Riga della schermata dei controlli: tasti (come tasti disegnati) e descrizione. */
 /** Righe della tabella dei controlli: prima riga e passo (i tasti sono alti 14 px). */
-export const CONTROLS_TABLE = { firstRowY: 40, rowStep: 15 } as const;
+export const CONTROLS_TABLE = { firstRowY: 38, rowStep: 14 } as const;
 /** Righe di testo sotto la tabella dei controlli (combo, picchiata, salto). */
 export const CONTROLS_NOTES_Y = [193, 204, 215] as const;
 
@@ -114,6 +165,7 @@ export const CONTROLS_ROWS: ControlsRow[] = [
   { keyGroups: [["S"], ["↓"]], description: "ABBASSATI" },
   { keyGroups: [["E"], ["Q"]], description: "E PRENDI, Q LASCIA (Q+1-4)" },
   { keyGroups: [["1", "2", "3", "4"]], description: "BORSA: USA IL POSTO" },
+  { keyGroups: [["I"]], description: "EQUIPAGGIAMENTO" },
   { keyGroups: [["ESC"]], description: "PAUSA" },
 ];
 
@@ -162,6 +214,8 @@ export class ScreenManager {
     paused: new MenuManager<MenuCommand>([
       { label: "RIPRENDI", command: "resume" },
       { label: "ESCI AL TITOLO", command: "backToTitle" },
+      // ultima voce: chi preme S e Invio per uscire al titolo trova la voce di sempre
+      { label: "EQUIPAGGIAMENTO", command: "showEquipment" },
     ]),
     gameOver: new MenuManager<MenuCommand>([
       { label: "RIPROVA", command: "newGame" },
@@ -186,6 +240,19 @@ export class ScreenManager {
   /** Voce evidenziata nella bottega (l'ultima è "PROSEGUI") e nei potenziamenti (l'ultima è "INDIETRO"). */
   private shopIndex = 0;
   private upgradeIndex = 0;
+  /** Cursore della schermata dell'equipaggiamento: riga 0 = armature e borsa, righe 1-2 = zaino. */
+  private equipmentRow = 0;
+  private equipmentColumn = 0;
+
+  /** Casella scelta nella schermata dell'equipaggiamento. */
+  public get selectedEquipmentCell(): EquipmentCell {
+    if (this.equipmentRow === 0) {
+      return this.equipmentColumn < ARMOR_SLOTS.length
+        ? { section: "armor", slot: ARMOR_SLOTS[this.equipmentColumn]! }
+        : { section: "bag", index: this.equipmentColumn - ARMOR_SLOTS.length };
+    }
+    return { section: "backpack", index: (this.equipmentRow - 1) * EQUIPMENT_LAYOUT.backpackColumns + this.equipmentColumn };
+  }
 
   public get selectedShopIndex(): number {
     return this.shopIndex;
@@ -230,6 +297,8 @@ export class ScreenManager {
     this.selectedCharacterIndex = null;
     this.shopIndex = 0;
     this.upgradeIndex = 0;
+    this.equipmentRow = 0;
+    this.equipmentColumn = 0;
   }
 
   /** Legge l'input e restituisce l'eventuale comando scelto dal giocatore. */
@@ -255,6 +324,9 @@ export class ScreenManager {
       }
       return null;
     }
+    if (state === "equipment") {
+      return this.updateEquipment(input, data);
+    }
     if (state === "upgrades") {
       this.upgradeIndex = ScreenManager.moveCursor(input, this.upgradeIndex, data.upgrades.length + 1);
       if (input.wasPressed("confirm")) {
@@ -263,6 +335,37 @@ export class ScreenManager {
       return input.wasPressed("pause") ? "backToTitle" : null;
     }
     return this.menus[state]?.update(input) ?? null;
+  }
+
+  /**
+   * Schermata dell'equipaggiamento (E4): frecce per scegliere la casella, Invio per usarla (indossare, togliere,
+   * mettere nello zaino), Q per lasciarla a terra, I o Esc per chiudere.
+   */
+  private updateEquipment(input: InputManager, data: ScreenData): MenuCommand | null {
+    const bagCount = data.equipment?.bag.length ?? 4;
+    const capacity = data.equipment?.backpackCapacity ?? 12;
+    const rowLength = (row: number): number => (row === 0 ? ARMOR_SLOTS.length + bagCount : Math.min(EQUIPMENT_LAYOUT.backpackColumns, capacity - (row - 1) * EQUIPMENT_LAYOUT.backpackColumns));
+    const rowCount = 1 + Math.ceil(capacity / EQUIPMENT_LAYOUT.backpackColumns);
+    if (input.wasPressed("menuLeft")) {
+      this.equipmentColumn = (this.equipmentColumn - 1 + rowLength(this.equipmentRow)) % rowLength(this.equipmentRow);
+    }
+    if (input.wasPressed("menuRight")) {
+      this.equipmentColumn = (this.equipmentColumn + 1) % rowLength(this.equipmentRow);
+    }
+    if (input.wasPressed("menuUp")) {
+      this.equipmentRow = (this.equipmentRow - 1 + rowCount) % rowCount;
+    }
+    if (input.wasPressed("menuDown")) {
+      this.equipmentRow = (this.equipmentRow + 1) % rowCount;
+    }
+    this.equipmentColumn = Math.min(this.equipmentColumn, rowLength(this.equipmentRow) - 1);
+    if (input.wasPressed("confirm")) {
+      return "equipmentUse";
+    }
+    if (input.wasPressed("dropItem")) {
+      return "equipmentDrop";
+    }
+    return input.wasPressed("pause") || input.wasPressed("openEquipment") ? "closeEquipment" : null;
   }
 
   /** Cursore verticale circolare (W/S). */
@@ -344,6 +447,9 @@ export class ScreenManager {
         break;
       case "upgrades":
         this.renderUpgrades(renderer, data);
+        break;
+      case "equipment":
+        this.renderEquipment(renderer, data);
         break;
       case "paused":
         this.renderPause(renderer);
@@ -503,14 +609,14 @@ export class ScreenManager {
     renderer.fillVerticalGradient(0, 0, renderer.width, renderer.height, [PALETTE.wine, PALETTE.darkBlue, PALETTE.black]);
     this.drawGradientTitle(renderer, "BOTTEGA", centerX, 10, 2, TITLE_GOLD_ROWS);
     this.drawDivider(renderer, 32);
-    this.spriteManager.drawSprite(renderer, "itemCoin", centerX - 30, 40, false);
-    renderer.drawText(`MONETE ${data.coins}`, centerX - 18, 41, PALETTE.goldLight, { shadowColor: PALETTE.black });
+    this.spriteManager.drawSprite(renderer, "itemCoin", centerX - 30, 38, false);
+    renderer.drawText(`MONETE ${data.coins}`, centerX - 18, 39, PALETTE.goldLight, { shadowColor: PALETTE.black });
     data.shopOffers.forEach((offer, index) => {
-      const rowY = 58 + index * 26;
+      const rowY = 54 + index * 24;
       this.drawListRow(renderer, rowY, index === this.shopIndex);
       const iconY = offer.iconSize === 16 ? rowY - 1 : rowY + 3;
-      this.spriteManager.drawSprite(renderer, offer.iconSpriteId, offer.iconSize === 16 ? 38 : 42, iconY, false);
-      const nameColor = offer.isSoldOut ? PALETTE.slate : PALETTE.white;
+      this.spriteManager.drawSprite(renderer, offer.iconSpriteId, offer.iconSize === 16 ? 38 : 42, iconY, false, false, offer.iconVariant ?? null);
+      const nameColor = offer.isSoldOut ? PALETTE.slate : (offer.nameColor ?? PALETTE.white);
       renderer.drawText(offer.name, 60, rowY, nameColor, { shadowColor: PALETTE.black });
       renderer.drawText(offer.description, 60, rowY + 9, PALETTE.lightGray, { shadowColor: PALETTE.black });
       if (offer.isSoldOut) {
@@ -521,7 +627,7 @@ export class ScreenManager {
         this.spriteManager.drawSprite(renderer, "itemCoin", renderer.width - 46, rowY + 3, false);
       }
     });
-    const continueY = 58 + data.shopOffers.length * 26 + 4;
+    const continueY = 54 + data.shopOffers.length * 24 + 4;
     const isContinueSelected = this.shopIndex === data.shopOffers.length;
     this.drawListRow(renderer, continueY, isContinueSelected);
     renderer.drawText("PROSEGUI", centerX, continueY + 4, isContinueSelected ? PALETTE.white : PALETTE.gray, {
@@ -571,6 +677,160 @@ export class ScreenManager {
     renderer.drawText("W/S: scegli   INVIO: compra   ESC: indietro", centerX, 222, PALETTE.gray, { align: "center" });
   }
 
+  /**
+   * Schermata dell'equipaggiamento (E4), sopra il gioco fermo: in alto armature indossate e borsa, poi lo zaino e il
+   * riassunto dei bonus, in basso la scheda della casella scelta (nome nel colore della rarità, statistiche e, per gli
+   * oggetti dello zaino, il confronto con quello indossato: in verde se migliora, in rosso se peggiora).
+   */
+  private renderEquipment(renderer: Renderer, data: ScreenData): void {
+    const view = data.equipment;
+    renderer.drawDitherOverlay();
+    drawOrnateFrame(renderer, 6, 4, renderer.width - 12, renderer.height - 8);
+    this.drawGradientTitle(renderer, "EQUIPAGGIAMENTO", renderer.width / 2, 10, 2, TITLE_GOLD_ROWS);
+    if (view === undefined) {
+      return;
+    }
+    const layout = EQUIPMENT_LAYOUT;
+    const selected = this.selectedEquipmentCell;
+    renderer.drawText("ARMATURA", layout.armorX, 30, PALETTE.stonePale, { shadowColor: PALETTE.black });
+    renderer.drawText("BORSA", layout.bagX, 30, PALETTE.stonePale, { shadowColor: PALETTE.black });
+    ARMOR_SLOTS.forEach((slot, index) => {
+      const x = layout.armorX + index * layout.cellStep;
+      const item = view.armor[slot];
+      this.drawEquipmentCell(renderer, x, layout.topRowY, item, selected.section === "armor" && selected.slot === slot, false);
+      if (item === null) {
+        // posto vuoto: la sagoma del pezzo
+        this.spriteManager.drawSpriteSilhouette(renderer, ARMOR_ICON_BY_SLOT[slot], x + 2, layout.topRowY + 2, false, PALETTE.slate);
+      }
+    });
+    view.bag.forEach((slot, index) => {
+      const x = layout.bagX + index * layout.cellStep;
+      const isSelected = selected.section === "bag" && selected.index === index;
+      if (slot?.kind === "potion") {
+        this.drawEquipmentCell(renderer, x, layout.topRowY, null, isSelected, false);
+        this.spriteManager.drawSprite(renderer, "itemPotion", x + 6, layout.topRowY + 6, false);
+        renderer.drawText(String(slot.count), x + layout.cellSize - 2, layout.topRowY + layout.cellSize - 8, PALETTE.white, { align: "right", shadowColor: PALETTE.black });
+      } else {
+        this.drawEquipmentCell(renderer, x, layout.topRowY, slot?.item ?? null, isSelected, slot?.isEquipped === true);
+      }
+      renderer.drawText(String(index + 1), x + 2, layout.topRowY + 2, slot !== null && slot.kind === "weapon" && slot.isEquipped ? PALETTE.goldLight : PALETTE.stonePale, { shadowColor: PALETTE.black });
+    });
+    view.activeSets.forEach((line, index) => {
+      renderer.drawText(line, 200, 34 + index * 10, PALETTE.cyan, { shadowColor: PALETTE.black });
+    });
+    renderer.drawText(`ZAINO ${view.backpack.length}/${view.backpackCapacity}`, layout.backpackX, 66, PALETTE.stonePale, { shadowColor: PALETTE.black });
+    for (let index = 0; index < view.backpackCapacity; index++) {
+      const x = layout.backpackX + (index % layout.backpackColumns) * layout.cellStep;
+      const y = layout.backpackY + Math.floor(index / layout.backpackColumns) * layout.cellStep;
+      this.drawEquipmentCell(renderer, x, y, view.backpack[index] ?? null, selected.section === "backpack" && selected.index === index, false);
+    }
+    this.renderEquipmentSummary(renderer, view.bonuses);
+    this.renderEquipmentCard(renderer, view, selected);
+    this.renderNotice(renderer, 116);
+    renderer.drawText("FRECCE: scegli  INVIO: usa  Q: lascia  I: chiudi", renderer.width / 2, 220, PALETTE.gray, { align: "center" });
+  }
+
+  /** Casella con l'icona dell'oggetto (colori della rarità), lineetta della rarità; cornice bianca sul cursore. */
+  private drawEquipmentCell(renderer: Renderer, x: number, y: number, item: ItemInstance | null, isSelected: boolean, isEquipped: boolean): void {
+    const size = EQUIPMENT_LAYOUT.cellSize;
+    renderer.fillRect(x + 1, y + 1, size - 2, size - 2, PALETTE.black);
+    renderer.strokeRect(x, y, size, size, isEquipped ? PALETTE.goldLight : PALETTE.gray);
+    if (item !== null) {
+      this.spriteManager.drawSprite(renderer, getItemIconSpriteId(item), x + 2, y + 2, false, false, getItemIconVariant(item));
+      if (item.rarity !== "common") {
+        renderer.fillRect(x + 3, y + size - 3, size - 6, 1, RARITY_CONFIG[item.rarity].color);
+      }
+    }
+    if (isSelected) {
+      const isBlinkOn = Math.floor(this.animationTimeSeconds * 4) % 2 === 0;
+      renderer.strokeRect(x - 2, y - 2, size + 4, size + 4, isBlinkOn ? PALETTE.white : PALETTE.goldLight);
+    }
+  }
+
+  /** Riassunto dei bonus di tutto l'equipaggiamento (a destra dello zaino). */
+  private renderEquipmentSummary(renderer: Renderer, bonuses: EquipmentBonuses): void {
+    const percent = (value: number): string => `${value >= 0 ? "+" : ""}${Math.round(value * 100)}%`;
+    const lines: string[] = [
+      `DANNO ${percent(bonuses.damageMultiplier - 1)}`,
+      `DIFESA ${Math.round((1 - bonuses.damageTakenMultiplier) * 100)}%`,
+      `VELOCITÀ ${percent(bonuses.movementSpeedMultiplier - 1)}`,
+      `SALUTE +${bonuses.maxHealth}  STAMINA +${bonuses.maxStamina}`,
+    ];
+    if (bonuses.recoveryMultiplier < 1) {
+      lines.push(`RECUPERO -${Math.round((1 - bonuses.recoveryMultiplier) * 100)}%`);
+    }
+    if (bonuses.lifeStealFraction > 0) {
+      lines.push(`FURTO DI VITA ${Math.round(bonuses.lifeStealFraction * 100)}%`);
+    }
+    renderer.drawText("BONUS", 172, 66, PALETTE.stonePale, { shadowColor: PALETTE.black });
+    lines.slice(0, 5).forEach((line, index) => {
+      renderer.drawText(line, 172, 77 + index * 9, PALETTE.lightGray, { shadowColor: PALETTE.black });
+    });
+  }
+
+  /** Scheda della casella scelta: nome, rarità e tipo, statistiche (con il confronto per gli oggetti dello zaino). */
+  private renderEquipmentCard(renderer: Renderer, view: EquipmentView, cell: EquipmentCell): void {
+    const top = EQUIPMENT_LAYOUT.cardY;
+    drawOrnateFrame(renderer, 12, top, renderer.width - 24, 88);
+    let item: ItemInstance | null = null;
+    let comparedWith: ItemInstance | null = null;
+    let hint = "";
+    if (cell.section === "armor") {
+      item = view.armor[cell.slot];
+      hint = item === null ? `${ARMOR_SLOT_NAMES[cell.slot]}: VUOTO` : "INVIO: TOGLI (NELLO ZAINO)";
+    } else if (cell.section === "bag") {
+      const slot = view.bag[cell.index] ?? null;
+      if (slot?.kind === "weapon") {
+        item = slot.item;
+        hint = "INVIO: METTI NELLO ZAINO";
+      } else {
+        hint = slot?.kind === "potion" ? `POZIONI: ${slot.count}` : "POSTO VUOTO";
+      }
+    } else {
+      item = view.backpack[cell.index] ?? null;
+      hint = item === null ? "ZAINO: POSTO VUOTO" : "INVIO: INDOSSA / IMPUGNA";
+      if (item !== null) {
+        comparedWith = ScreenManager.findEquippedCounterpart(item, view);
+      }
+    }
+    if (item === null) {
+      renderer.drawText(hint, renderer.width / 2, top + 38, PALETTE.gray, { align: "center", shadowColor: PALETTE.black });
+      return;
+    }
+    const rarity = RARITY_CONFIG[item.rarity];
+    renderer.drawText(getItemName(item), 22, top + 8, rarity.color, { shadowColor: PALETTE.black });
+    const slotName = item.kind === "armor" ? ARMOR_SLOT_NAMES[ARMOR_CONFIG[item.baseId].slot] : "ARMA";
+    renderer.drawText(`${rarity.name} - ${getItemBaseName(item)} (${slotName})`, 22, top + 19, PALETTE.lightGray, { shadowColor: PALETTE.black });
+    const differences = comparedWith === null && cell.section !== "backpack" ? null : compareItemStats(item, comparedWith);
+    const lines = describeItemStats(item);
+    lines.slice(0, 8).forEach((line, index) => {
+      const x = index < 4 ? 22 : 164;
+      const y = top + 32 + (index % 4) * 10;
+      const text = line.text === "" ? line.label : `${line.label} ${line.text}`;
+      renderer.drawText(text, x, y, PALETTE.white, { shadowColor: PALETTE.black });
+      const difference = differences?.get(line.key) ?? 0;
+      if (differences !== null && difference !== 0) {
+        const differenceText = `(${difference > 0 ? "+" : ""}${difference})`;
+        renderer.drawText(differenceText, x + measureTextWidth(text, 1) + 4, y, difference > 0 ? PALETTE.lightGreen : PALETTE.red, { shadowColor: PALETTE.black });
+      }
+    });
+    if (lines.length === 0) {
+      renderer.drawText("NESSUN BONUS", 22, top + 32, PALETTE.gray, { shadowColor: PALETTE.black });
+    }
+    const unique = item.uniqueId === undefined ? undefined : getUniqueItemDefinition(item.uniqueId);
+    const footer = comparedWith !== null ? `AL POSTO DI: ${getItemName(comparedWith)}` : (unique?.description ?? hint);
+    renderer.drawText(footer, 22, top + 74, comparedWith !== null ? PALETTE.stonePale : unique !== undefined ? PALETTE.cyan : PALETTE.gray, { shadowColor: PALETTE.black });
+  }
+
+  /** L'oggetto indossato con cui confrontare un oggetto dello zaino: stesso posto d'armatura, o arma dello stesso tipo, o arma in mano. */
+  private static findEquippedCounterpart(item: ItemInstance, view: EquipmentView): ItemInstance | null {
+    if (item.kind === "armor") {
+      return view.armor[ARMOR_CONFIG[item.baseId].slot];
+    }
+    const weapons = view.bag.flatMap((slot) => (slot?.kind === "weapon" ? [slot] : []));
+    return weapons.find((slot) => slot.item.baseId === item.baseId)?.item ?? weapons.find((slot) => slot.isEquipped)?.item ?? null;
+  }
+
   /** Conferma prima di cancellare record e progressi: la voce predefinita è "no". */
   private renderResetConfirm(renderer: Renderer, data: ScreenData): void {
     this.renderTitle(renderer, data);
@@ -613,10 +873,10 @@ export class ScreenManager {
   private renderPause(renderer: Renderer): void {
     const boxX = renderer.width / 2 - 76;
     renderer.drawDitherOverlay();
-    drawOrnateFrame(renderer, boxX, 74, 152, 92);
-    this.drawGradientTitle(renderer, "PAUSA", renderer.width / 2, 86, 2, TITLE_GOLD_ROWS);
-    this.menus.paused?.render(renderer, renderer.width / 2, 118);
-    renderer.drawText("ESC: riprendi", renderer.width / 2, 150, PALETTE.gray, { align: "center" });
+    drawOrnateFrame(renderer, boxX, 70, 152, 106);
+    this.drawGradientTitle(renderer, "PAUSA", renderer.width / 2, 82, 2, TITLE_GOLD_ROWS);
+    this.menus.paused?.render(renderer, renderer.width / 2, 112);
+    renderer.drawText("ESC: riprendi", renderer.width / 2, 160, PALETTE.gray, { align: "center" });
   }
 
   private renderGameOver(renderer: Renderer, data: ScreenData): void {

@@ -68,6 +68,18 @@ const MACE_ATTACKS: Record<string, AttackDefinition> = {
   macePlunge: { id: "macePlunge", damage: 30, ...PLUNGE_TIMING, hitbox: PLUNGE_HITBOX, animation: "macePlunge", plunge: PLUNGE, crushesArmor: true },
 };
 
+/**
+ * Spadone a due mani (E3): lento, danno alto, portata lunga; ogni colpo rompe la guardia. Si cammina più piano.
+ * Il turbine finale colpisce anche dietro (area da -16 a +44 px).
+ */
+const GREATSWORD_ATTACKS: Record<string, AttackDefinition> = {
+  greatswordSlash1: { id: "greatswordSlash1", damage: 30, durationMs: 520, hitStartMs: 220, hitEndMs: 340, cooldownMs: 260, hitbox: { x: 6, y: -2, width: 32, height: 26 }, animation: "greatswordSlash1", breaksGuard: true },
+  greatswordSlash2: { id: "greatswordSlash2", damage: 34, durationMs: 540, hitStartMs: 230, hitEndMs: 350, cooldownMs: 280, hitbox: { x: 6, y: 0, width: 32, height: 26 }, animation: "greatswordSlash2", breaksGuard: true },
+  greatswordHeavy: { id: "greatswordHeavy", damage: 58, durationMs: 820, hitStartMs: 420, hitEndMs: 560, cooldownMs: 700, hitbox: { x: 4, y: -4, width: 36, height: 30 }, animation: "greatswordHeavy", breaksGuard: true },
+  greatswordWhirl: { id: "greatswordWhirl", damage: 48, durationMs: 700, hitStartMs: 300, hitEndMs: 480, cooldownMs: 650, hitbox: { x: -16, y: 0, width: 60, height: 24 }, animation: "greatswordWhirl", breaksGuard: true },
+  greatswordPlunge: { id: "greatswordPlunge", damage: 38, ...PLUNGE_TIMING, hitbox: PLUNGE_HITBOX, animation: "greatswordPlunge", plunge: PLUNGE, breaksGuard: true },
+};
+
 // --- armi a distanza (Fase 2): gli attacchi lanciano un proiettile e non hanno area d'urto ---
 /** Area d'urto nulla: le armi a distanza feriscono solo con i proiettili. */
 const NO_HITBOX = { x: 0, y: 0, width: 0, height: 0 } as const;
@@ -236,6 +248,32 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: { attack: "maceSwing1", heavyAttack: "maceHeavy" },
     air: airSet("MAZZA", "maceSwing1", "maceSwing2", "macePlunge"),
     movementSpeedMultiplier: 0.9,
+  },
+  greatsword: {
+    id: "greatsword",
+    name: "Spadone",
+    spriteSuffix: "Greatsword",
+    iconSpriteId: "weaponIconGreatsword",
+    attacks: GREATSWORD_ATTACKS,
+    combos: [
+      {
+        id: "giantBlade",
+        name: "LAMA DEL GIGANTE",
+        inputSequence: ["attack", "attack"],
+        attackIds: ["greatswordSlash1", "greatswordSlash2"],
+        comboWindowMs: 450,
+      },
+      {
+        id: "whirlwind",
+        name: "TURBINE",
+        inputSequence: ["attack", "attack", "heavyAttack"],
+        attackIds: ["greatswordSlash1", "greatswordSlash2", "greatswordWhirl"],
+        comboWindowMs: 450,
+      },
+    ],
+    defaultAttackByInput: { attack: "greatswordSlash1", heavyAttack: "greatswordHeavy" },
+    air: airSet("SPADONE", "greatswordSlash1", "greatswordSlash2", "greatswordPlunge"),
+    movementSpeedMultiplier: 0.85,
   },
   // armi a distanza (Fase 2): niente combo, in aria si tira come a terra
   bow: {

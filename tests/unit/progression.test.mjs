@@ -25,7 +25,7 @@ export default async function (t, load) {
   // --- configurazione ---
   t("economia: monete per nemico, élite e boss", P.ECONOMY_CONFIG.coinsPerEnemy > 0 && P.ECONOMY_CONFIG.eliteCoinMultiplier > 1 && P.ECONOMY_CONFIG.coinsPerBoss > P.ECONOMY_CONFIG.coinsPerEnemy);
   t("la moneta dei livelli dà monete oltre ai punti", ITEM_CONFIG.scoreCoin.coins === 10 && ITEM_CONFIG.scoreCoin.scoreBonus === 50);
-  t("bottega: quattro voci con prezzo positivo", Object.values(P.SHOP_OFFERS).length === 4 && Object.values(P.SHOP_OFFERS).every((o) => o.price > 0 && o.name.length > 0));
+  t("bottega: cinque voci con prezzo positivo (E5: anche l'armatura)", Object.values(P.SHOP_OFFERS).length === 5 && Object.values(P.SHOP_OFFERS).every((o) => o.price > 0 && o.name.length > 0));
   t("potenziamenti: quattro, ognuno con costi crescenti", P.UPGRADE_ORDER.length === 4 && P.UPGRADE_ORDER.every((id) => { const c = P.UPGRADE_CONFIG[id].costs; return c.length > 0 && c.every((cost, i) => cost > 0 && (i === 0 || cost >= c[i - 1])); }));
   {
     const bonus = P.computeUpgradeBonuses({ vitality: 2, endurance: 1, strength: 3, supplies: 1 });
@@ -63,11 +63,11 @@ export default async function (t, load) {
   {
     const c = customer();
     const noWeapons = Shop.open(["sword"], c.inventory, () => 0);
-    t("bottega senza armi trovate da vendere: pozione, cura, faretra", noWeapons.offers.map((o) => o.id).join() === "potion,heal,ammo");
+    t("bottega senza armi trovate da vendere: pozione, cura, faretra e un'armatura", noWeapons.offers.map((o) => o.id).join() === "potion,heal,ammo,armor");
     c.inventory.addWeapon("axe");
     const shop = Shop.open(["sword", "axe", "bow", "mace"], c.inventory, () => 0.99);
     const weaponOffer = shop.offers.find((o) => o.id === "weapon");
-    t("l'arma in vendita è una di quelle trovate che non sono nella borsa", weaponOffer !== undefined && ["bow", "mace"].includes(weaponOffer.weaponId) && weaponOffer.name === WEAPON_CONFIG[weaponOffer.weaponId].name.toUpperCase());
+    t("l'arma in vendita è una di quelle trovate che non sono nella borsa", weaponOffer !== undefined && ["bow", "mace"].includes(weaponOffer.weaponId) && weaponOffer.name.startsWith(WEAPON_CONFIG[weaponOffer.weaponId].name.toUpperCase()) && weaponOffer.item.baseId === weaponOffer.weaponId);
     const index = (id) => shop.offers.findIndex((o) => o.id === id);
     t("cura: +40 HP per 25 monete", shop.buy(index("heal"), c) === "bought" && c.player.currentHealth === 90 && c.scoreManager.coins === 475);
     c.player.currentHealth = c.player.maxHealth;
@@ -87,7 +87,10 @@ export default async function (t, load) {
     const full = customer();
     full.inventory.reset(["sword", "axe", "mace", "spear"], "sword");
     const fullShop = Shop.open(["sword", "axe", "mace", "spear", "bow"], full.inventory);
-    t("borsa senza posti liberi: l'arma non si compra", fullShop.buy(3, full) === "bagFull" && !full.inventory.hasWeapon("bow"));
+    t("borsa senza posti liberi: l'arma comprata va nello zaino", fullShop.buy(3, full) === "bought" && !full.inventory.hasWeapon("bow") && full.inventory.backpackItems.some((item) => item.baseId === "bow"));
+    while (full.inventory.addToBackpack({ kind: "armor", baseId: "clothHelmet", rarity: "common", affixes: [] }));
+    const fullShop2 = Shop.open(["sword", "axe", "mace", "spear", "dagger"], full.inventory);
+    t("borsa e zaino pieni: l'arma non si compra", fullShop2.buy(3, full) === "bagFull" && !full.inventory.hasWeapon("dagger"));
   }
 
   // --- progressi: gemme, potenziamenti, armi trovate, sblocchi ---
@@ -168,6 +171,6 @@ export default async function (t, load) {
   // --- motore ---
   t("motore: monete da nemici (élite x3) e boss; ricominciando un livello tornano quelle di inizio livello", /addCoins\(ECONOMY_CONFIG\.coinsPerBoss\)/.test(engineSource) && /addCoins\(ECONOMY_CONFIG\.coinsPerEnemy \* \(enemy\.isElite \? ECONOMY_CONFIG\.eliteCoinMultiplier : 1\)\)/.test(engineSource) && engineSource.includes("this.scoreManager.restore(this.levelStartScore, this.levelStartCollectibles, this.levelStartCoins);"));
   t("motore: a fine livello si mettono da parte le gemme e si sblocca il livello successivo (e i personaggi)", /this\.gemsBankedThisLevel = this\.scoreManager\.collectiblesFound - this\.levelStartCollectibles;\s*this\.progressManager\.addGems\(this\.gemsBankedThisLevel\);[\s\S]{0,300}this\.progressManager\.unlockLevel\(nextLevelId\)/.test(engineSource));
-  t("motore: dopo il riquadro di fine livello la bottega (o la vittoria); PROSEGUI avvia il livello successivo", /private advanceToNextLevel[\s\S]{0,300}Shop\.open\(this\.progressManager\.discoveredWeaponIds, this\.inventory\);\s*this\.gameState\.change\("shop"\)/.test(engineSource) && /private leaveShop[\s\S]{0,120}this\.startLevel\(this\.currentLevelId \+ 1\);\s*this\.gameState\.change\("playing"\)/.test(engineSource));
-  t("motore: a ogni partita potenziamenti e pozioni della Scorta; le armi raccolte diventano trovate", /private startNewGame[\s\S]{0,400}computeUpgradeBonuses\(this\.progressManager\.upgradeLevels\)[\s\S]{0,80}this\.player\.setUpgrades\(upgrades\)[\s\S]{0,600}upgrades\.startingPotions/.test(engineSource) && /this\.weaponPickups\.take\(pickup\);\s*this\.progressManager\.discoverWeapon\(pickup\.weaponId\)/.test(engineSource));
+  t("motore: dopo il riquadro di fine livello la bottega (o la vittoria); PROSEGUI avvia il livello successivo", /private advanceToNextLevel[\s\S]{0,300}Shop\.open\(this\.progressManager\.discoveredWeaponIds, this\.inventory, this\.lootRandom, \{[\s\S]{0,120}\}\);[\s\S]{0,300}this\.gameState\.change\("shop"\)/.test(engineSource) && /private leaveShop[\s\S]{0,120}this\.startLevel\(this\.currentLevelId \+ 1\);\s*this\.gameState\.change\("playing"\)/.test(engineSource));
+  t("motore: a ogni partita potenziamenti e pozioni della Scorta; le armi raccolte diventano trovate", /private startNewGame[\s\S]{0,800}computeUpgradeBonuses\(this\.progressManager\.upgradeLevels\)[\s\S]{0,80}this\.player\.setUpgrades\(upgrades\)[\s\S]{0,600}upgrades\.startingPotions/.test(engineSource) && /this\.weaponPickups\.take\(pickup\);\s*this\.progressManager\.discoverWeapon\(item\.baseId\)/.test(engineSource));
 }

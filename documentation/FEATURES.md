@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.0.0**.
+Versione: **2.0.0**. (Il piano dell'equipaggiamento è in "Non ancora rilasciato" nel CHANGELOG.)
 
 **Stati usati:**
 
@@ -26,8 +26,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 955 controlli) | Implementata | |
-| Test nel browser (`npm run test:browser`, 174 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174 |
+| Test unitari inclusi (`npm test`, 1063 controlli) | Implementata | |
+| Test nel browser (`npm run test:browser`, 175 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
 | Compatibilità con Firefox, Safari, Edge e browser mobili | Da implementare | non provata: verificato solo Chromium |
@@ -162,9 +162,27 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Nuovi oggetti tramite configurazione | Implementata | esempio 8 del manuale |
 | Power-up temporanei (Furia, Velocità, Scudo, Fuoco, Rigenerazione) | Implementata | 2.0 Fase 5; vedi `ARCHITECTURE.md` sez. 10 |
 | Potenziamenti permanenti con le gemme (Vitalità, Resistenza, Forza, Scorta), schermata dal titolo; gemme messe da parte a fine livello | Implementata | Fase 6 del piano espansioni; `UPGRADE_CONFIG`; non usano `PowerUpDefinition.type = "permanent"` (i bonus vanno direttamente al giocatore) |
-| Monete (monete raccolte, nemici, boss) e bottega tra un livello e l'altro (pozione, cura, faretra, un'arma già trovata) | Implementata | Fase 6; `ECONOMY_CONFIG`, `SHOP_OFFERS`, `Shop`; il bot di bilanciamento non usa la bottega |
+| Monete (monete raccolte, nemici, boss) e bottega tra un livello e l'altro (pozione, cura, faretra, un'arma già trovata) | Implementata | Fase 6; `ECONOMY_CONFIG`, `SHOP_OFFERS`, `Shop`; il bot di bilanciamento non usa la bottega. Dal piano dell'equipaggiamento (E6) la bottega è una stanza camminabile; quella a menu resta come ripiego (`SHOP_ROOM_CONFIG.isEnabled`) |
 | Sblocchi: Ranger, Berserker e Paladino raggiungendo i livelli 3, 4 e 6; armi trovate almeno una volta in vendita nella bottega | Implementata | Fase 6; salvati nei progressi |
 | Nuove ambientazioni | Implementata | Fase 4 della 2.0: sei ambientazioni; Fase 8 del piano espansioni: Lande Desolate |
+
+## Equipaggiamento (piano E1-E6)
+
+| Funzionalità | Stato | Note |
+|---|---|---|
+| Rarità degli oggetti (Comune, Non comune, Raro, Epico, Leggendario, Mitico) con colore, peso, prezzo e numero di modificatori | Implementata | E1; `RARITY_CONFIG` |
+| Oggetti con modificatori estratti (danno, recupero, velocità, furto di vita, salute, stamina, difesa, resistenza, elemento, rompe la guardia) e tetti sul totale | Implementata | E1; `AFFIX_CONFIG`, `ItemFactory`, `EquipmentStats`; estrazione con seme iniettabile |
+| Leggendari (uno per arma, tre armature) e Mitici (un'arma e un elmo) fissi | Implementata | E1/E3; `LEGENDARY_ITEMS`, `MYTHIC_ITEMS` |
+| Sprite su misura per i Mitici | Pianificata | per ora i Mitici usano i colori della rarità, come gli altri oggetti (scelta del 25/11/2026); procedura in `PIANO_EQUIPAGGIAMENTO.md` |
+| Migrazione dei salvataggi (armi di prima = Comuni) | Implementata | E1; `ProgressManager` salva `bagItems`, `armor`, `backpack` e continua a scrivere `bagWeaponIds` |
+| Armature: elmo, corazza, stivali in quattro materiali (stoffa, cuoio, ferro, acciaio), set di materiale, resistenze agli elementi dei colpi nemici | Implementata | E2; `ARMOR_CONFIG`, `ARMOR_SETS`; `EnemyDefinition.attackElement`, `ProjectileDefinition.element` |
+| Aspetto: metallo delle armi nel colore della rarità, armature che ricolorano la loro parte del personaggio | Implementata | E2-E3; varianti di colore create alla prima richiesta (`SpriteColorVariant`), nessun frame in più |
+| Spadone a due mani (lento, portata lunga, rompe la guardia, due combo) | Implementata | E3; scheletro d'élite del livello 4 |
+| Schermata dell'equipaggiamento (tasto I, anche dalla pausa) con zaino di 12 posti, confronto in verde e rosso, scheda dell'oggetto, Q per lasciare a terra | Implementata | E4 |
+| Fonti degli oggetti: forzieri, nemici, élite, boss (arma e armatura), boss finale (unica fonte dei Mitici), rarità che crescono con il livello e la difficoltà | Implementata | E5; `LOOT_SOURCES`, `LootSystem` |
+| Bottega come stanza camminabile: mercante, piedistalli, E per comprare, porta d'uscita; arma e armatura con rarità; prezzi che salgono a ogni acquisto; niente rivendita | Implementata | E6; `SHOP_ROOM_LEVEL`, `SHOP_ROOM_CONFIG`, ambientazione `shop` |
+| Rinnovo dell'offerta della bottega a pagamento | Pianificata | opzionale nel piano |
+| Altre armi (frusta, falce, ...) | Pianificata | stesso metodo dello spadone |
 
 ## Interfaccia
 

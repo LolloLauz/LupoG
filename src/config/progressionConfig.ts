@@ -16,8 +16,8 @@ export const ECONOMY_CONFIG = {
   coinsPerBoss: 50,
 } as const;
 
-/** Voci della bottega (Fase 6). */
-export type ShopOfferId = "potion" | "heal" | "ammo" | "weapon";
+/** Voci della bottega (Fase 6; l'armatura dal piano dell'equipaggiamento, E5). */
+export type ShopOfferId = "potion" | "heal" | "ammo" | "weapon" | "armor";
 
 export interface ShopOfferDefinition {
   id: ShopOfferId;
@@ -32,7 +32,15 @@ export const SHOP_OFFERS: Record<ShopOfferId, ShopOfferDefinition> = {
   ammo: { id: "ammo", name: "FARETRA", description: "Munizioni piene", price: 20 },
   // l'arma in vendita cambia a ogni bottega: una di quelle già trovate (sbloccate) che non è nella borsa
   weapon: { id: "weapon", name: "ARMA", description: "Un'arma già trovata", price: 60 },
+  // E5: un pezzo d'armatura a caso; arma e armatura hanno una rarità e costano secondo la rarità (getItemPrice)
+  armor: { id: "armor", name: "ARMATURA", description: "Un pezzo d'armatura", price: 45 },
 };
+
+/**
+ * Aumento del prezzo di armi e armature a ogni acquisto di equipaggiamento nella stessa visita (come in Dead Cells):
+ * +25% per ogni oggetto già comprato. Niente rivendita.
+ */
+export const SHOP_PRICE_INCREASE_PER_PURCHASE = 0.25;
 
 /** Salute recuperata con la voce "CURA". */
 export const SHOP_HEAL_AMOUNT = 40;

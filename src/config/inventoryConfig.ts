@@ -11,6 +11,8 @@ export const INVENTORY_CONFIG = {
    * aiuta molto (vedi BALANCE.md), quindi la scorta resta piccola.
    */
   maxPotionSlots: 1,
+  /** Posti dello zaino (equipaggiamento, E4): armi e armature di riserva, nella schermata dell'equipaggiamento. */
+  backpackSize: 12,
 } as const;
 
 /** Tasto numerico di ogni posto della borsa, nell'ordine (posto 1 = tasto 1). */

@@ -4,7 +4,11 @@ import { DEFAULT_DIFFICULTY, DIFFICULTY_CONFIG, type DifficultyId } from "../con
 import { INVENTORY_CONFIG } from "../config/inventoryConfig";
 import { DEFAULT_WEAPON_ID, isWeaponId } from "../config/weaponConfig";
 import type { CharacterId, WeaponId } from "../types/EntityTypes";
+import type { EquippedArmor, ItemInstance, WeaponItem } from "../types/ItemTypes";
+import { ARMOR_CONFIG, ARMOR_SLOTS } from "../config/armorConfig";
+import { EMPTY_ARMOR } from "./EquipmentStats";
 import type { StorageLike } from "./HighScoreManager";
+import { cloneItem, parseStoredItem, toWeaponItem } from "./ItemFactory";
 
 const STORAGE_KEY = "ironAndShadow.progress";
 
@@ -17,6 +21,14 @@ interface StoredProgress {
   equippedWeaponId: WeaponId;
   /** Armi nella borsa (senza doppioni, l'arma in mano compresa). Le pozioni non si salvano. */
   bagWeaponIds: WeaponId[];
+  /**
+   * Equipaggiamento (E1-E4): gli oggetti delle armi nella borsa (stesso ordine di bagWeaponIds, con rarità e
+   * modificatori), le armature indossate e lo zaino. Un salvataggio di prima ha solo bagWeaponIds: le armi
+   * diventano Comuni, nessuna armatura, zaino vuoto.
+   */
+  bagItems: WeaponItem[];
+  armor: EquippedArmor;
+  backpack: ItemInstance[];
   /** Fase 6: gemme messe da parte (da spendere nei potenziamenti), livelli dei potenziamenti, armi trovate almeno una volta. */
   gems: number;
   upgradeLevels: Record<UpgradeId, number>;
@@ -119,23 +131,45 @@ export class ProgressManager {
     return [...this.progress.bagWeaponIds];
   }
 
+  /** Oggetti delle armi nella borsa (rarità e modificatori), nello stesso ordine di bagWeaponIds. */
+  public get bagWeaponItems(): WeaponItem[] {
+    return this.progress.bagItems.map((item) => cloneItem(item));
+  }
+
+  /** Armature indossate salvate. */
+  public get savedArmor(): EquippedArmor {
+    return { ...this.progress.armor };
+  }
+
+  /** Oggetti dello zaino salvati. */
+  public get savedBackpack(): ItemInstance[] {
+    return this.progress.backpack.map((item) => cloneItem(item));
+  }
+
   public setEquippedWeapon(weaponId: WeaponId): void {
     if (weaponId !== this.progress.equippedWeaponId) {
-      const bagWeaponIds = this.progress.bagWeaponIds.includes(weaponId) ? this.progress.bagWeaponIds : [...this.progress.bagWeaponIds, weaponId];
-      this.progress = { ...this.progress, equippedWeaponId: weaponId, bagWeaponIds };
+      const items = this.progress.bagItems.some((item) => item.baseId === weaponId) ? this.progress.bagItems : [...this.progress.bagItems, toWeaponItem(weaponId)];
+      this.setBagWeapons(items, weaponId);
+    }
+  }
+
+  /** Salva le armi della borsa (id o oggetti) e quella in mano (scrive solo se qualcosa cambia). */
+  public setBagWeapons(weapons: ReadonlyArray<WeaponId | WeaponItem>, equippedWeaponId: WeaponId): void {
+    const bagItems = ProgressManager.normalizeBag(weapons.map((weapon) => toWeaponItem(weapon)), equippedWeaponId);
+    const bagWeaponIds = bagItems.map((item) => item.baseId);
+    const isSame = equippedWeaponId === this.progress.equippedWeaponId && JSON.stringify(bagItems) === JSON.stringify(this.progress.bagItems);
+    if (!isSame) {
+      this.progress = { ...this.progress, equippedWeaponId, bagWeaponIds, bagItems };
       this.save();
     }
   }
 
-  /** Salva le armi della borsa e quella in mano (scrive solo se qualcosa cambia). */
-  public setBagWeapons(weaponIds: readonly WeaponId[], equippedWeaponId: WeaponId): void {
-    const bagWeaponIds = ProgressManager.normalizeBag(weaponIds, equippedWeaponId);
-    const isSame =
-      equippedWeaponId === this.progress.equippedWeaponId &&
-      bagWeaponIds.length === this.progress.bagWeaponIds.length &&
-      bagWeaponIds.every((weaponId, index) => this.progress.bagWeaponIds[index] === weaponId);
-    if (!isSame) {
-      this.progress = { ...this.progress, equippedWeaponId, bagWeaponIds };
+  /** Salva armature indossate e zaino (scrive solo se qualcosa cambia). */
+  public setEquipment(armor: Readonly<EquippedArmor>, backpack: readonly ItemInstance[]): void {
+    const nextArmor = { ...armor };
+    const nextBackpack = backpack.slice(0, INVENTORY_CONFIG.backpackSize).map((item) => cloneItem(item));
+    if (JSON.stringify(nextArmor) !== JSON.stringify(this.progress.armor) || JSON.stringify(nextBackpack) !== JSON.stringify(this.progress.backpack)) {
+      this.progress = { ...this.progress, armor: nextArmor, backpack: nextBackpack };
       this.save();
     }
   }
@@ -170,6 +204,9 @@ export class ProgressManager {
       characterId: DEFAULT_CHARACTER_ID,
       equippedWeaponId: DEFAULT_WEAPON_ID,
       bagWeaponIds: [DEFAULT_WEAPON_ID],
+      bagItems: [toWeaponItem(DEFAULT_WEAPON_ID)],
+      armor: { ...EMPTY_ARMOR },
+      backpack: [],
       gems: 0,
       upgradeLevels: { ...NO_UPGRADES },
       discoveredWeaponIds: [...ALWAYS_DISCOVERED_WEAPONS],
@@ -209,20 +246,59 @@ export class ProgressManager {
       }
       const storedDiscovered = Array.isArray(record.discoveredWeaponIds) ? record.discoveredWeaponIds.filter(isWeaponId) : [];
       const discoveredWeaponIds = [...new Set([...ALWAYS_DISCOVERED_WEAPONS, ...storedDiscovered, ...storedBag, equippedWeaponId])];
-      return { gems, upgradeLevels, discoveredWeaponIds, unlockedLevelId: levelId, difficulty, characterId, equippedWeaponId, bagWeaponIds: ProgressManager.normalizeBag(storedBag, equippedWeaponId) };
+      // equipaggiamento (E1-E4): oggetti delle armi (o, nei salvataggi di prima, armi Comuni dagli id), armature, zaino
+      const storedItems = Array.isArray(record.bagItems)
+        ? record.bagItems.map((entry) => parseStoredItem(entry)).filter((item): item is WeaponItem => item !== null && item.kind === "weapon")
+        : [];
+      const bagItems = ProgressManager.normalizeBag(storedItems.length > 0 ? storedItems : storedBag.map((weaponId) => toWeaponItem(weaponId)), equippedWeaponId);
+      const armor: EquippedArmor = { ...EMPTY_ARMOR };
+      if (typeof record.armor === "object" && record.armor !== null) {
+        const storedArmor = record.armor as Record<string, unknown>;
+        for (const slot of ARMOR_SLOTS) {
+          const item = parseStoredItem(storedArmor[slot]);
+          if (item !== null && item.kind === "armor" && ARMOR_CONFIG[item.baseId].slot === slot) {
+            armor[slot] = item;
+          }
+        }
+      }
+      const backpack = Array.isArray(record.backpack)
+        ? record.backpack.map((entry) => parseStoredItem(entry)).filter((item): item is ItemInstance => item !== null).slice(0, INVENTORY_CONFIG.backpackSize)
+        : [];
+      return {
+        gems,
+        upgradeLevels,
+        discoveredWeaponIds,
+        unlockedLevelId: levelId,
+        difficulty,
+        characterId,
+        equippedWeaponId,
+        bagWeaponIds: bagItems.map((item) => item.baseId),
+        bagItems,
+        armor,
+        backpack,
+      };
     } catch {
       return fallback;
     }
   }
 
-  /** Armi senza doppioni, l'arma in mano sempre presente, al massimo una per posto della borsa. */
-  private static normalizeBag(weaponIds: readonly WeaponId[], equippedWeaponId: WeaponId): WeaponId[] {
-    const unique = [...new Set(weaponIds)];
-    if (!unique.includes(equippedWeaponId)) {
-      unique.unshift(equippedWeaponId);
+  /** Armi senza doppioni (una per tipo), l'arma in mano sempre presente, al massimo una per posto della borsa. */
+  private static normalizeBag(items: readonly WeaponItem[], equippedWeaponId: WeaponId): WeaponItem[] {
+    const unique: WeaponItem[] = [];
+    for (const item of items) {
+      if (!unique.some((existing) => existing.baseId === item.baseId)) {
+        unique.push(cloneItem(item));
+      }
+    }
+    if (!unique.some((item) => item.baseId === equippedWeaponId)) {
+      unique.unshift(toWeaponItem(equippedWeaponId));
     }
     const limited = unique.slice(0, INVENTORY_CONFIG.slotCount);
-    return limited.includes(equippedWeaponId) ? limited : [equippedWeaponId, ...limited.slice(0, INVENTORY_CONFIG.slotCount - 1)];
+    if (limited.some((item) => item.baseId === equippedWeaponId)) {
+      return limited;
+    }
+    const equipped = unique.find((item) => item.baseId === equippedWeaponId)!;
+    return [equipped, ...limited.filter((item) => item !== equipped).slice(0, INVENTORY_CONFIG.slotCount - 1)];
   }
 
   private save(): void {

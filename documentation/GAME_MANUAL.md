@@ -53,9 +53,10 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Schivata | **K** (costa stamina) |
 | Abilità del personaggio | **L** (lo scudo del Paladino si tiene premuto) |
 | Accovacciarsi | **S** oppure **↓** (solo a terra: non ci si muove e non ci si rialza sotto un soffitto; si può attaccare restando accovacciati, con un colpo più basso) |
-| Prendere un'arma o una pozione | **E** stando sopra (va nella borsa, vedi "La borsa") |
-| Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa) |
+| Prendere un'arma, un'armatura o una pozione | **E** stando sopra (vedi "La borsa" ed "Equipaggiamento"); nella bottega, **E** vicino a un piedistallo compra |
+| Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa); nella schermata dell'equipaggiamento, **Q** sull'oggetto scelto |
 | Usare un posto della borsa | **1**, **2**, **3**, **4** (arma: la impugni; pozione: la bevi) |
+| Equipaggiamento (armature, borsa, zaino) | **I** (anche dalla pausa); **I** o **Esc** la richiude |
 | Pausa / riprendi | **Esc** |
 | Menu: scegliere | **W** / **S** oppure **↑** / **↓** (scelta del personaggio: anche **A** / **D** oppure **←** / **→**) |
 | Menu: confermare | **Invio** |
@@ -216,7 +217,7 @@ la sequenza riparte dal primo colpo. Se premi il tasto negli **ultimi 0,2 second
 
 ### Le armi
 
-Oltre alla spada ci sono quattro armi corpo a corpo. Si usano con gli stessi tasti (Spazio, J) e ognuna ha i propri colpi e la propria combo.
+Oltre alla spada ci sono cinque armi corpo a corpo. Si usano con gli stessi tasti (Spazio, J) e ognuna ha i propri colpi e la propria combo.
 
 | Arma | Colpi leggeri (Spazio) | Combo | Attacco pesante (J) | Passo | Particolarità |
 |---|---|---|---|---|---|
@@ -225,6 +226,7 @@ Oltre alla spada ci sono quattro armi corpo a corpo. Si usano con gli stessi tas
 | **Lancia** | affondi da 13 danni, 300 ms | **Danza della lancia** (Spazio ×3): 13 + 13 + fendente ampio da 20; **Carica del drago** (Spazio, J): 13 + affondo da 34 lungo 44 px | affondo da 32 danni, 560 ms | un po' più lento (×0,95) | **la portata più lunga**: colpisce fino a circa 40 px davanti, ma l'affondo è stretto |
 | **Ascia** | 22 / 26 danni, 400-440 ms | **Doppio taglio** (Spazio ×2): 22 + 26; **Spaccaossa** (Spazio ×2, J): 22 + 26 + 52 | 46 danni, 700 ms | più lento (×0,85) | **rompe la guardia**: interrompe anche un nemico che ha già iniziato il suo colpo |
 | **Mazza** | 17 danni, 340 ms | **Tempesta di colpi** (Spazio ×3): 17 + 17 + 28; **Terremoto** (Spazio, J): 17 + 32, colpisce in basso anche **dietro** di te | 36 danni, 620 ms | più lento (×0,9) | **schiaccia le corazze**: danno pieno al golem, che resta stordito per 0,6 secondi |
+| **Spadone** (a due mani) | 30 / 34 danni, 520-540 ms | **Lama del gigante** (Spazio ×2): 30 + 34; **Turbine** (Spazio ×2, J): 30 + 34 + 48, colpisce anche **dietro** di te | 58 danni, 820 ms | più lento (×0,85) | **portata lunga e rompe la guardia** come l'ascia; il più lento di tutti |
 
 I boss non vengono mai storditi: contro di loro ascia e mazza contano solo per il danno.
 
@@ -247,7 +249,9 @@ I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno
 
 - **Forzieri**: colpiscili con qualsiasi arma per aprirli; l'arma compare sopra il coperchio.
 - **Nemici d'élite**: hanno un **alone dorato**, il doppio della salute, il 30% di danno in più e valgono il triplo dei punti. Sconfitti, lasciano la loro arma.
-- **Trofei dei boss**: il Cavaliere Nero, la Strega e il Re dei Lupi lasciano un'arma, che trovi poco dopo la partenza del livello successivo. Il riquadro di fine livello la annuncia ("TROFEO").
+- **Trofei dei boss**: il Cavaliere Nero, la Strega e il Re dei Lupi lasciano un'arma (di rarità alta) e un pezzo d'armatura, che trovi poco dopo la partenza del livello successivo. Il riquadro di fine livello li annuncia ("TROFEO").
+
+Ogni arma trovata ha una **rarità** (vedi "Equipaggiamento"): la stessa arma può essere Comune o, con fortuna, Epica.
 
 | Livello | Arma | Dove |
 |---|---|---|
@@ -255,7 +259,7 @@ I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno
 | 2 | Lancia | soldato d'élite |
 | 3 | Ascia | forziere |
 | 4 | Mazza | trofeo del Cavaliere Nero, all'inizio del livello |
-| 4 | Pugnale | scheletro d'élite |
+| 4 | Spadone | scheletro d'élite |
 | 5 | Ascia | trofeo della Strega, all'inizio del livello |
 | 5 | Mazza | forziere vicino al golem |
 | 6 | Lancia | trofeo del Re dei Lupi, all'inizio del livello |
@@ -279,12 +283,62 @@ La borsa ha **4 posti**, mostrati sotto la barra in alto a destra, ognuno con il
 - **Q** lascia a terra l'**arma in mano** (impugni la prossima della borsa); tenendo **Q** e premendo **1-4** lasci il contenuto di quel posto
   (un'arma, oppure **una** pozione). Solo stando a terra; l'ultima arma non si può lasciare. Un'arma lasciata tiene le sue munizioni e si
   riprende con **E** dopo essersi allontanati un attimo; una pozione si riprende subito.
-- Un'arma che hai già non si prende due volte ("GIÀ NELLA BORSA").
-- **Borsa piena**: una nuova arma prende il posto di quella in mano, che resta a terra nello stesso punto (puoi riprenderla dopo
-  esserti allontanato un attimo); una pozione in più non entra ("BORSA PIENA").
+- Un'arma **identica** a una che hai già non si prende due volte ("GIÀ NELLA BORSA"). Un'arma dello **stesso tipo ma diversa** (un'altra
+  rarità o altri modificatori) prende il posto della tua, che va nello **zaino**.
+- **Borsa piena**: una nuova arma prende il posto di quella in mano, che va nello **zaino** (vedi "Equipaggiamento"); se anche lo zaino è
+  pieno resta a terra nello stesso punto (puoi riprenderla dopo esserti allontanato un attimo). Una pozione in più non entra ("BORSA PIENA").
 - Se perdi una vita, la borsa torna **com'era all'inizio del livello** (come punteggio e gemme): ciò che avevi raccolto nel livello è di nuovo a terra.
-- Le **armi** della borsa e quella in mano sono **salvate**: le ritrovi alla partita successiva. Le pozioni no: ogni partita parte senza.
+- Le **armi** della borsa (con la loro rarità) e quella in mano sono **salvate**, come armature e zaino: le ritrovi alla partita successiva.
+  Le pozioni no: ogni partita parte senza.
 - I **power-up**, le monete e le gemme non cambiano: si usano toccandoli.
+
+### Equipaggiamento: rarità, armature e zaino
+
+**Rarità.** Ogni arma e ogni armatura ha una rarità, che si riconosce dal **colore** del nome, del bagliore a terra e dell'oggetto stesso
+(il metallo delle armi, il riflesso delle armature):
+
+| Rarità | Colore | Modificatori |
+|---|---|---|
+| Comune | grigio | nessuno |
+| Non comune | verde | 1 |
+| Raro | blu | 2 |
+| Epico | viola | 3, di cui uno che cambia il modo di giocare (un elemento, "rompe la guardia" o una resistenza) |
+| Leggendario | arancione | oggetto unico con nome ed effetti fissi (uno per ogni arma, più tre armature) |
+| Mitico | rosso | oggetto unico, il più raro: solo dal boss finale |
+
+Più è rara, più l'arma fa danno (fino a +20%) e più l'armatura protegge. I **modificatori** sono: danno, recupero tra un colpo e l'altro
+più corto, velocità, furto di vita (una parte del danno inflitto torna in salute), salute, stamina, difesa, resistenza a un elemento,
+colpi con un elemento (fuoco, veleno, gelo, fulmine, come i power-up) e "rompe la guardia". Il nome dell'oggetto dice il primo
+modificatore (per esempio *Spada della Furia*: più danno). I valori hanno un **tetto**: per esempio la difesa totale non supera il 25%.
+
+**Armature.** Tre posti: **elmo**, **corazza**, **stivali**. Quattro materiali:
+
+| Materiale | Effetto |
+|---|---|
+| Stoffa (Cappuccio, Tunica, Calzari) | leggera: stamina in più |
+| Cuoio | un po' di difesa e velocità |
+| Ferro | difesa e salute, un po' più lento |
+| Acciaio | la difesa più alta, il più lento |
+
+La corazza conta più di elmo e stivali. Ogni pezzo cambia il colore della sua parte del personaggio. **Set**: due o tre pezzi dello
+stesso materiale danno un bonus (Set del Viandante, del Predone, del Soldato, del Guardiano). Le **resistenze** riducono il danno dei
+colpi di quell'elemento: il veleno di melme e scorpioni, il gelo del golem, il fuoco delle palle di fuoco, il fulmine dei dardi magici.
+La difesa non scende mai sotto 1 danno per colpo.
+
+**Raccogliere un'armatura** (E): se il suo posto è libero la indossi subito, altrimenti va nello zaino ("ZAINO PIENO" se non c'è spazio).
+
+**Schermata dell'equipaggiamento** (tasto **I**, anche dalla pausa). Il gioco si ferma. In alto le armature indossate e la borsa, sotto lo
+**zaino** (12 posti per armi e armature di riserva) e il riassunto dei bonus; in basso la scheda dell'oggetto scelto. Frecce per scegliere:
+
+- **Invio** su un'armatura indossata la toglie (nello zaino); su un'arma della borsa la mette nello zaino (non l'ultima); su un oggetto dello
+  zaino lo indossa o lo impugna (quello che aveva lo stesso posto torna nello zaino).
+- **Q** lascia a terra l'oggetto scelto (solo stando a terra).
+- Per gli oggetti dello zaino la scheda li **confronta** con quello che indossi: tra parentesi la differenza, **verde** se migliora,
+  **rossa** se peggiora.
+
+**Dove si trovano**: forzieri ed élite lasciano la loro arma con una rarità e a volte un pezzo d'armatura; i nemici normali qualche volta
+un'armatura; i boss un'arma e un'armatura di rarità alta; il **boss finale** mette nello zaino un oggetto Leggendario o **Mitico**.
+Avanzando nei livelli (e a difficoltà difficile) le rarità alte escono più spesso, e le armature passano dalla stoffa all'acciaio.
 
 ### Come ti feriscono
 
@@ -556,16 +610,20 @@ Se perdi una vita, il punteggio torna al valore che avevi all'inizio di quel liv
 
 Se perdi una vita tornano quelle che avevi all'inizio del livello; ogni nuova partita parte da zero.
 
-**Bottega.** Dopo il riquadro di fine livello (tranne l'ultimo) si entra nella bottega. W/S per scegliere, Invio per comprare;
-per andare avanti si sceglie **PROSEGUI** (Esc non esce, così non si salta la bottega per sbaglio). Il prezzo è rosso se le monete non bastano.
+**Bottega.** Dopo il riquadro di fine livello (tranne l'ultimo) si entra nella **bottega del mercante**, una stanza in cui si cammina:
+niente nemici. Ogni voce sta su un **piedistallo** con il suo prezzo sopra (rosso se le monete non bastano); avvicinati e premi **E**
+per comprarla. Per andare avanti esci dalla **porta in fondo** a destra.
 
 | Voce | Prezzo | Effetto |
 |---|---|---|
 | Pozione | 40 | una pozione nella borsa (se c'è posto) |
 | Cura | 25 | +40 HP subito (non a salute piena) |
 | Faretra | 20 | munizioni piene per tutte le armi della borsa (se ne mancano) |
-| Un'arma | 60 | una delle armi **già trovate almeno una volta** che non hai nella borsa, scelta a caso; serve un posto libero; si compra una volta sola |
+| Un'arma | 60 × rarità | una delle armi **già trovate almeno una volta** che non hai nella borsa, scelta a caso, con una rarità; va nella borsa o, se è piena, nello zaino; si compra una volta sola |
+| Un'armatura | 45 × rarità | un pezzo d'armatura con una rarità: lo indossi (posto libero) o va nello zaino; si compra una volta sola |
 
+Il prezzo di arma e armatura cresce con la rarità (Non comune ×1,5 ... Leggendario ×5) e **sale del 25% dopo ogni acquisto di
+equipaggiamento** nella stessa visita. L'offerta cambia a ogni visita e, avanzando, le rarità sono più alte. **Non si rivende niente.**
 Un acquisto che non serve non toglie monete ("NON SERVE", "BORSA PIENA").
 
 **Gemme e potenziamenti permanenti.** Le gemme raccolte in un livello vengono **messe da parte quando lo completi** (il riquadro di

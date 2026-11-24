@@ -54,6 +54,14 @@ export const THEME_STYLES: Record<ThemeId, ThemeStyle> = {
     ledgeColors: [PALETTE.stonePale, PALETTE.stoneLight, PALETTE.stone],
     detailColors: [PALETTE.woodLight, PALETTE.sand],
   },
+  // E6: la bottega del mercante, pavimento di assi di legno
+  shop: {
+    terrainTexture: "stoneTiles",
+    surfaceColors: [PALETTE.sand, PALETTE.woodLight, PALETTE.wood],
+    fillColors: [PALETTE.woodLight, PALETTE.wood, PALETTE.earth, PALETTE.earthDark],
+    ledgeColors: [PALETTE.woodLight, PALETTE.wood, PALETTE.earth],
+    detailColors: [PALETTE.gold, PALETTE.goldLight],
+  },
   tower: {
     terrainTexture: "runeStone",
     surfaceColors: [PALETTE.lilac, PALETTE.amethyst, PALETTE.violet],
@@ -279,7 +287,7 @@ export const LEVEL_CONFIG: LevelDefinition[] = [
       { type: "bat", position: { x: 1150, y: 110 } },
       { type: "slime", position: { x: 1340, y: 190 } },
       { type: "skeletonArcher", position: { x: 1470, y: 176 } },
-      { type: "skeleton", position: { x: 1600, y: 176 }, elite: true, weaponDrop: "dagger" },
+      { type: "skeleton", position: { x: 1600, y: 176 }, elite: true, weaponDrop: "greatsword" },
       { type: "bat", position: { x: 1660, y: 120 } },
     ],
     items: [

@@ -131,6 +131,29 @@ livello un predone in meno (al suo posto un goblin, che è l'élite) e un avvolt
 Partite complete (7 livelli): 100% per entrambi i bot. Con sette livelli invece di sei il **Ranger che non schiva** (75 HP, con la spada) scende al
 25-30% (era 65%); quello che schiva resta al 100%. Il balzo all'indietro del Ranger ora si ferma anche prima degli spuntoni: il bot ci finiva sopra.
 
+### Piano dell'equipaggiamento (E1-E6): rarità e armature
+
+`npm run balance -- --equipment` (anche nel report completo): partite complete del cavaliere (60 ripetizioni) in tre modi. **Senza**
+equipaggiamento; con il **bottino** di fine livello (per ogni forziere, élite e boss del livello il bot estrae con `LootSystem` un pezzo
+d'armatura, che indossa se è migliore, e una spada, che prende se è di rarità più alta; la bottega no, perché costa monete); al **massimo**
+(tre pezzi d'acciaio Epici e una spada Leggendaria dall'inizio: il tetto).
+
+| Bot | senza | bottino | massimo |
+|---|---|---|---|
+| rusher: vinte / vite rimaste / morti medie | 100% / 2,10 / 0,90 | 98% / 3,00 / 0,05 | 100% / 3,00 / 0,00 |
+| medio: vinte / vite rimaste / morti medie | 100% / 2,90 / 0,10 | 100% / 3,00 / 0,00 | 100% / 3,00 / 0,00 |
+
+- **Come temuto nel piano, l'equipaggiamento rende il gioco più facile per il bot.** Le morti (già rare) quasi spariscono; le poche
+  che restano senza equipaggiamento sono nei livelli 6 e 7, dove ogni piccolo vantaggio sposta l'esito. Armi e armature, misurate
+  separatamente (misura rapida), aiutano entrambe.
+- **Primi valori ridotti dopo la misura**: difesa delle armature circa dimezzata (corazza d'acciaio 8% → 5%, elmo 4% → 3%, ...), salute
+  della corazza d'acciaio 15 → 10, set più deboli, tetti più bassi (difesa 40% → **25%**, salute +60 → **+40**), modificatori di difesa e
+  salute più piccoli. Il risultato del bot non è cambiato: è vicino alla soglia, quindi la misura non distingue bene.
+- **La rarità non peggiora il caso peggiore**: al massimo il bot non muore mai, ma senza equipaggiamento vinceva già il 100%.
+  Il gioco era già facile per il bot (vedi Fase 5): prima di cambiare altri valori serve una **prova con persone**. Le leve sono i tetti
+  in `affixConfig.ts`, le statistiche in `armorConfig.ts`, i pesi delle fonti in `lootConfig.ts` (meno armature: `armorChance`) e la difficoltà.
+- Il bot non usa elementi e furto di vita in modo diverso da una persona: li riceve dalla spada estratta, come il gioco.
+
 ### Fase 6: bottega e potenziamenti
 
 Il bot di `tools/balance.mjs` **non usa la bottega né i potenziamenti**, quindi le misure qui sopra valgono per una partita senza acquisti.
@@ -209,3 +232,8 @@ boss conviene rilanciare `npm run balance` e guardare più valori vicini.
 | Pozione, moneta, gemma | `src/config/itemConfig.ts` | `ITEM_CONFIG` |
 | Posizione di nemici e oggetti | `src/config/levelConfig.ts` | `LEVEL_CONFIG` |
 | Moltiplicatori di difficoltà | `src/config/gameConfig.ts` | `DIFFICULTY_CONFIG` |
+| Rarità (pesi, prezzi, numero di modificatori, potenza) | `src/config/rarityConfig.ts` | `RARITY_CONFIG` |
+| Modificatori e tetti | `src/config/affixConfig.ts` | `AFFIX_CONFIG` |
+| Armature e set | `src/config/armorConfig.ts` | `ARMOR_CONFIG`, `ARMOR_SETS` |
+| Fonti degli oggetti (forzieri, nemici, boss, bottega) | `src/config/lootConfig.ts` | `LOOT_SOURCES`, `LOOT_LEVEL_SCALE` |
+| Prezzi della bottega e aumento a ogni acquisto | `src/config/progressionConfig.ts`, `src/systems/ItemFactory.ts` | `SHOP_OFFERS`, `SHOP_PRICE_INCREASE_PER_PURCHASE`, `ITEM_BASE_PRICES` |

@@ -356,17 +356,26 @@ try {
     iron.tap("Enter"); for (let i = 0; i < 5; i++) iron.step();
     e.bannerRemainingMs = 0; e.scoreManager.addCoins(100);
     e.levelPhase = "completed"; e.bannerRemainingMs = 1; iron.step(); iron.step();
-    result.shopState = e.gameState.current; result.shopColors = colorsOk();
+    // E6: la bottega è una stanza camminabile (si resta "playing"); E vicino al primo piedistallo compra la pozione
+    result.shopState = e.gameState.current; result.inShopRoom = e.isInShopRoom; result.shopColors = colorsOk();
+    e.bannerRemainingMs = 0;
+    e.player.positionX = 136 - e.player.width / 2; iron.step();
     const coinsBefore = e.scoreManager.coins;
-    iron.tap("Enter"); iron.step(); iron.step(); // compra la prima voce: pozione
+    iron.tap("KeyE"); iron.step(); iron.step();
     result.bought = coinsBefore - e.scoreManager.coins; result.potions = e.inventory.potionCount;
-    iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
-    result.afterShop = e.gameState.current; result.level = e.currentLevelId;
+    // E4: la schermata dell'equipaggiamento si apre con I, usa solo colori della palette e si chiude con I
+    iron.tap("KeyI"); iron.step(); iron.step();
+    result.equipmentState = e.gameState.current; result.equipmentColors = colorsOk();
+    iron.tap("KeyI"); iron.step(); iron.step(); result.afterEquipment = e.gameState.current;
+    // la porta in fondo alla stanza porta al livello 2
+    iron.setKey("KeyD", true); for (let i = 0; i < 600 && e.isInShopRoom; i++) iron.step(); iron.setKey("KeyD", false); iron.step();
+    result.afterShop = e.gameState.current; result.level = e.currentLevelId; result.leftShopRoom = !e.isInShopRoom;
     iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
     return result;
   })()`);
   check("potenziamenti: si aprono dal titolo (solo colori della palette) ed Esc torna al titolo", progression.upgradesState === "upgrades" && progression.upgradesColors === true && progression.afterUpgrades === "title", JSON.stringify(progression));
-  check("bottega: compare a fine livello (solo colori della palette), si compra una pozione, PROSEGUI porta al livello 2", progression.shopState === "shop" && progression.shopColors === true && progression.bought === 40 && progression.potions === 1 && progression.afterShop === "playing" && progression.level === 2, JSON.stringify(progression));
+  check("bottega (E6): a fine livello si entra nella stanza del negozio (solo colori della palette), E sul piedistallo compra una pozione, la porta porta al livello 2", progression.shopState === "playing" && progression.inShopRoom === true && progression.shopColors === true && progression.bought === 40 && progression.potions === 1 && progression.afterShop === "playing" && progression.level === 2 && progression.leftShopRoom === true, JSON.stringify(progression));
+  check("equipaggiamento (E4): I apre la schermata (solo colori della palette) e la richiude", progression.equipmentState === "equipment" && progression.equipmentColors === true && progression.afterEquipment === "playing", JSON.stringify(progression));
 
   // --- velocità coerente
   const speeds = await evaluate(page, `(() => {

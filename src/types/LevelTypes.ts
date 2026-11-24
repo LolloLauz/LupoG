@@ -2,7 +2,8 @@ import type { EnemyTypeId, WeaponId } from "./EntityTypes";
 import type { Rectangle, Vector2 } from "./GameTypes";
 
 /** Ambientazioni disponibili. */
-export type ThemeId = "forest" | "castle" | "dungeon" | "swamp" | "ice" | "wasteland" | "tower";
+/** Ambientazioni disponibili ("shop" è la stanza del negozio tra un livello e l'altro, E6). */
+export type ThemeId = "forest" | "castle" | "dungeon" | "swamp" | "ice" | "wasteland" | "tower" | "shop";
 
 /** Tessiture del terreno disponibili (disegnate da TerrainRenderer). */
 export type TerrainTexture = "grassAndEarth" | "stoneTiles" | "dungeonBricks" | "swampMud" | "snowAndRock" | "runeStone";

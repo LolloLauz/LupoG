@@ -1,6 +1,6 @@
 import { PALETTE } from "../config/gameConfig";
 import type { Renderer } from "../rendering/Renderer";
-import type { SpriteManager } from "../rendering/SpriteManager";
+import type { SpriteColorVariant, SpriteManager } from "../rendering/SpriteManager";
 
 /** Dati mostrati dall'HUD (il motore li compone a ogni frame). */
 export interface HUDData {
@@ -20,9 +20,10 @@ export interface HUDData {
   /**
    * Posti della borsa, in ordine (null = vuoto): icona (16 px le armi, 8 px le pozioni), quantità
    * (pozioni o munizioni; null per le armi senza munizioni) e se è l'arma in mano. Disegnati sotto il
-   * pannello, a destra, con il tasto numerico di ognuno.
+   * pannello, a destra, con il tasto numerico di ognuno. Le armi hanno i colori della loro rarità (iconVariant) e,
+   * se non sono Comuni, una lineetta del colore della rarità sotto l'icona (rarityColor).
    */
-  bag: Array<{ iconSpriteId: string; iconSize: 8 | 16; count: number | null; isEquipped: boolean } | null>;
+  bag: Array<{ iconSpriteId: string; iconVariant: SpriteColorVariant | null; rarityColor: string | null; iconSize: 8 | 16; count: number | null; isEquipped: boolean } | null>;
   /** Power-up attivi: icona, colore e frazione di tempo che resta (1 = appena preso). */
   powerUps: Array<{ iconSpriteId: string; color: string; remainingFraction: number }>;
   boss: {
@@ -191,7 +192,10 @@ export class HUDManager {
       if (slot !== null) {
         // icone centrate nel riquadro (armi 16x16, pozione 8x8)
         const iconOffset = (geometry.size - slot.iconSize) / 2;
-        spriteManager.drawSprite(renderer, slot.iconSpriteId, slotX + iconOffset, geometry.y + iconOffset, false);
+        spriteManager.drawSprite(renderer, slot.iconSpriteId, slotX + iconOffset, geometry.y + iconOffset, false, false, slot.iconVariant);
+        if (slot.rarityColor !== null) {
+          renderer.fillRect(slotX + 3, geometry.y + geometry.size - 3, geometry.size - 6, 1, slot.rarityColor);
+        }
         if (slot.count !== null) {
           // munizioni finite in rosso
           const countColor = slot.count === 0 ? PALETTE.red : PALETTE.white;

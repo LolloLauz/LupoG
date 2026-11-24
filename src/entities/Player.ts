@@ -3,6 +3,10 @@ import { CombatSystem } from "../combat/CombatSystem";
 import { ComboManager } from "../combat/ComboManager";
 import { PlayerModifiers } from "../combat/PlayerModifiers";
 import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
+import { buildEquipmentVariant } from "../rendering/sprites/equipmentVisuals";
+import type { SpriteColorVariant } from "../rendering/SpriteManager";
+import { EMPTY_ARMOR, NO_EQUIPMENT_BONUSES, computeEquipmentBonuses } from "../systems/EquipmentStats";
+import { createWeaponItem } from "../systems/ItemFactory";
 import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
 import { ABILITY_CONFIG } from "../config/abilityConfig";
@@ -17,6 +21,7 @@ import { CollisionSystem } from "../systems/CollisionSystem";
 import type { AbilityDefinition, AttackDefinition, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
+import type { EquipmentBonuses, EquippedArmor, WeaponItem } from "../types/ItemTypes";
 import { GameObject } from "./GameObject";
 
 /** Intervallo (ms) del lampeggio durante l'invulnerabilità. */
@@ -54,6 +59,19 @@ export class Player extends GameObject {
   private character: CharacterDefinition = CHARACTER_CONFIG[DEFAULT_CHARACTER_ID];
   /** Potenziamenti permanenti (Fase 6): salute e stamina in più, danno moltiplicato. */
   private upgrades: UpgradeBonuses = computeUpgradeBonuses(NO_UPGRADES);
+  /**
+   * Equipaggiamento (piano E1-E4): l'oggetto dell'arma in mano (rarità e modificatori) e le armature indossate.
+   * I bonus si calcolano in un punto solo (refreshEquipment) e valgono come i potenziamenti.
+   */
+  private weaponItem: WeaponItem = createWeaponItem(DEFAULT_WEAPON_ID);
+  private armor: EquippedArmor = { ...EMPTY_ARMOR };
+  private equipment: EquipmentBonuses = NO_EQUIPMENT_BONUSES;
+  /** Colori dell'arma (rarità) e delle armature indossate, applicati agli sprite del personaggio (null = nessuno). */
+  private equipmentVariant: SpriteColorVariant | null = null;
+  /** Gli stessi colori senza quelli dell'arma: con il power-up del fuoco la lama resta incandescente. */
+  private armorOnlyVariant: SpriteColorVariant | null = null;
+  /** Furto di vita: frazioni di HP non ancora restituite. */
+  private lifeStealAccumulator = 0;
   public currentHealth: number = this.character.maxHealth;
 
   // --- stamina e abilità (Fase 5) ---
@@ -133,7 +151,7 @@ export class Player extends GameObject {
 
   /** Salute massima del personaggio (più i potenziamenti). */
   public get maxHealth(): number {
-    return this.character.maxHealth + this.upgrades.maxHealth;
+    return this.character.maxHealth + this.upgrades.maxHealth + this.equipment.maxHealth;
   }
 
   /**
@@ -156,7 +174,7 @@ export class Player extends GameObject {
   }
 
   public get maxStamina(): number {
-    return this.character.maxStamina + this.upgrades.maxStamina;
+    return this.character.maxStamina + this.upgrades.maxStamina + this.equipment.maxStamina;
   }
 
   /** Abilità speciale del personaggio (tasto L). */
@@ -265,11 +283,67 @@ export class Player extends GameObject {
     return this.weapon;
   }
 
+  /** L'oggetto dell'arma in mano (rarità e modificatori). */
+  public get equippedWeaponItem(): WeaponItem {
+    return this.weaponItem;
+  }
+
+  /** Armature indossate. */
+  public get equippedArmor(): Readonly<EquippedArmor> {
+    return this.armor;
+  }
+
+  /** Bonus attuali dell'equipaggiamento (con i tetti). */
+  public get equipmentBonuses(): Readonly<EquipmentBonuses> {
+    return this.equipment;
+  }
+
+  /**
+   * Indossa le armature indicate (E2): salute e stamina massime cambiano subito; quelle attuali restano,
+   * ma non oltre il nuovo massimo.
+   */
+  public setArmor(armor: Readonly<EquippedArmor>): void {
+    this.armor = { ...armor };
+    this.refreshEquipment();
+  }
+
+  /** Ricalcola i bonus e i colori dell'equipaggiamento (l'unico punto in cui si applicano). */
+  private refreshEquipment(): void {
+    this.equipment = computeEquipmentBonuses(this.weaponItem, this.armor);
+    this.equipmentVariant = buildEquipmentVariant(this.weaponItem, this.armor, true);
+    this.armorOnlyVariant = buildEquipmentVariant(this.weaponItem, this.armor, false);
+    this.currentHealth = Math.min(this.currentHealth, this.maxHealth);
+    this.staminaValue = Math.min(this.staminaValue, this.maxStamina);
+  }
+
+  /**
+   * Furto di vita (modificatore delle armi): una parte del danno inflitto torna in salute, a punti interi.
+   * Lo chiama il motore per ogni colpo andato a segno.
+   */
+  public registerDamageDealt(damage: number): void {
+    const fraction = this.equipment.lifeStealFraction;
+    if (fraction <= 0 || this.isDead || damage <= 0) {
+      return;
+    }
+    this.lifeStealAccumulator += damage * fraction;
+    const wholePoints = Math.floor(this.lifeStealAccumulator + 1e-6);
+    if (wholePoints > 0) {
+      this.lifeStealAccumulator -= wholePoints;
+      this.heal(wholePoints);
+    }
+  }
+
   /**
    * Cambia arma (di solito una voce di WEAPON_CONFIG): l'attacco in corso e la combo vengono annullati.
    * ammo = munizioni di quell'arma (solo per le armi con munizioni; se omesso: piene).
+   * item = l'oggetto (rarità e modificatori); se omesso e l'arma cambia, un'arma Comune.
    */
-  public equipWeapon(weapon: WeaponDefinition, ammo: number | null = null): void {
+  public equipWeapon(weapon: WeaponDefinition, ammo: number | null = null, item: WeaponItem | null = null): void {
+    const nextItem = item ?? (this.weaponItem.baseId === weapon.id ? this.weaponItem : createWeaponItem(weapon.id));
+    if (nextItem !== this.weaponItem) {
+      this.weaponItem = nextItem;
+      this.refreshEquipment();
+    }
     if (this.weapon !== weapon) {
       const wasAttacking = this.currentAttack !== null;
       this.cancelAttack();
@@ -353,19 +427,23 @@ export class Player extends GameObject {
 
   /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
   public getDamageMultiplier(): number {
-    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.upgrades.damageMultiplier;
+    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.upgrades.damageMultiplier * this.equipment.damageMultiplier;
   }
 
-  /** Elementi dei colpi (Fase 7): quelli dei power-up attivi (fuoco, veleno, gelo, fulmine), senza doppioni. */
+  /**
+   * Elementi dei colpi (Fase 7): quelli dei power-up attivi (fuoco, veleno, gelo, fulmine) e quelli
+   * dell'equipaggiamento (modificatori delle armi), senza doppioni.
+   */
   public getAttackElements(): ElementId[] {
     const elements = this.modifiers.activePowerUps.flatMap((powerUp) => (powerUp.definition.element === undefined ? [] : [powerUp.definition.element]));
-    return [...new Set(elements)];
+    return [...new Set([...elements, ...this.equipment.elements])];
   }
 
-  /** Proprietà del colpo per il bersaglio: quelle dell'attacco (ascia, mazza) più gli elementi attivi. */
+  /** Proprietà del colpo per il bersaglio: quelle dell'attacco (ascia, mazza) e dell'arma, più gli elementi attivi. */
   public getHitProperties(attack: AttackDefinition): HitProperties {
     const elements = this.getAttackElements();
-    return { breaksGuard: attack.breaksGuard, crushesArmor: attack.crushesArmor, ...(elements.length > 0 ? { elements } : {}) };
+    const breaksGuard = attack.breaksGuard === true || this.equipment.breaksGuard ? true : attack.breaksGuard;
+    return { breaksGuard, crushesArmor: attack.crushesArmor, ...(elements.length > 0 ? { elements } : {}) };
   }
 
   /** Danno aggiunto a ogni colpo (power-up del fuoco). */
@@ -434,10 +512,10 @@ export class Player extends GameObject {
   }
 
   /**
-   * Il giocatore subisce danno da una fonte posta a sourceX.
-   * Restituisce false se il colpo viene ignorato (invulnerabile o già morto).
+   * Il giocatore subisce danno da una fonte posta a sourceX; element = elemento del colpo (le resistenze delle
+   * armature lo riducono). Restituisce false se il colpo viene ignorato (invulnerabile o già morto).
    */
-  public takeDamage(damage: number, sourceCenterX: number): boolean {
+  public takeDamage(damage: number, sourceCenterX: number, element?: ElementId): boolean {
     this.lastGuardOutcome = null;
     if (this.isDead || this.isInvulnerable) {
       return false;
@@ -446,8 +524,11 @@ export class Player extends GameObject {
       return false;
     }
     this.isGuardUp = false;
-    // lo scudo (power-up e paladino) riduce il danno, ma un colpo toglie sempre almeno 1 HP
-    const takenMultiplier = this.modifiers.getValue("damageTakenMultiplier") * this.character.damageTakenMultiplier;
+    // lo scudo (power-up e paladino), la difesa e le resistenze delle armature riducono il danno,
+    // ma un colpo toglie sempre almeno 1 HP
+    const resistance = element === undefined ? 0 : (this.equipment.resistances[element] ?? 0);
+    const takenMultiplier =
+      this.modifiers.getValue("damageTakenMultiplier") * this.character.damageTakenMultiplier * this.equipment.damageTakenMultiplier * (1 - resistance);
     const reducedDamage = Math.max(1, Math.round(damage * takenMultiplier));
     this.msSinceLastHit = 0;
     this.currentHealth = Math.max(0, this.currentHealth - reducedDamage);
@@ -602,7 +683,9 @@ export class Player extends GameObject {
       this.positionX - cameraX,
       this.positionY + this.height - cameraY,
       PLAYER_CONFIG.hitboxWidth,
-      this.facingDirection === "left"
+      this.facingDirection === "left",
+      null,
+      fireSuffix === "" ? this.equipmentVariant : this.armorOnlyVariant
     );
     // scudo alzato: una barriera di luce davanti (bianca finché la parata è perfetta)
     if (this.isGuardUp) {
@@ -699,7 +782,7 @@ export class Player extends GameObject {
       if (this.currentAttack.charge !== undefined && this.attackElapsedMs >= this.currentAttack.durationMs) {
         this.releaseCharge(); // tenuto troppo a lungo: l'arco tira da solo
       } else if (this.attackElapsedMs >= this.currentAttack.durationMs) {
-        this.attackCooldownRemainingMs = this.currentAttack.cooldownMs;
+        this.attackCooldownRemainingMs = this.getAttackCooldownMs(this.currentAttack);
         this.currentAttack = null;
         this.targetsHitByCurrentAttack.clear();
         this.comboManager.onAttackFinished();
@@ -831,7 +914,7 @@ export class Player extends GameObject {
   private getMsUntilAttackAllowed(): number {
     let remainingMs = this.attackCooldownRemainingMs;
     if (this.currentAttack !== null) {
-      remainingMs = this.currentAttack.durationMs - this.attackElapsedMs + this.currentAttack.cooldownMs;
+      remainingMs = this.currentAttack.durationMs - this.attackElapsedMs + this.getAttackCooldownMs(this.currentAttack);
     }
     return Math.max(remainingMs, this.dodgeRemainingMs);
   }
@@ -945,12 +1028,17 @@ export class Player extends GameObject {
 
   /** Il colpo in picchiata tocca terra: finisce, con il suo tempo di recupero. */
   private finishPlungeOnLanding(): void {
-    this.attackCooldownRemainingMs = this.currentAttack?.cooldownMs ?? 0;
+    this.attackCooldownRemainingMs = this.currentAttack === null ? 0 : this.getAttackCooldownMs(this.currentAttack);
     this.currentAttack = null;
     this.attackElapsedMs = 0;
     this.targetsHitByCurrentAttack.clear();
     this.airComboManager.reset();
     this.hasPendingPlungeLanding = true;
+  }
+
+  /** Recupero dopo un attacco, accorciato dai modificatori "recupero" dell'arma. */
+  private getAttackCooldownMs(attack: AttackDefinition): number {
+    return attack.cooldownMs * this.equipment.recoveryMultiplier;
   }
 
   /** Consuma stamina; se non basta non consuma niente, segnala "stanco" e restituisce false. */
@@ -1096,7 +1184,8 @@ export class Player extends GameObject {
         this.character.movementSpeed *
         this.weapon.movementSpeedMultiplier *
         this.environment.speedMultiplier *
-        this.modifiers.getValue("movementSpeedMultiplier")
+        this.modifiers.getValue("movementSpeedMultiplier") *
+        this.equipment.movementSpeedMultiplier
     );
     // la direzione resta bloccata mentre si attacca
     if (direction !== 0 && this.currentAttack === null) {

@@ -157,6 +157,11 @@ export class Enemy extends GameObject implements Damageable {
   }
 
   /** Vero per i nemici volanti (definition.flight). */
+  /** Elemento dei colpi (le resistenze delle armature del giocatore ne riducono il danno), se ne ha uno. */
+  public get attackElement(): ElementId | undefined {
+    return this.definition.attackElement;
+  }
+
   public get isFlying(): boolean {
     return this.definition.flight !== undefined;
   }

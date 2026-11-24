@@ -37,7 +37,7 @@ t("un tasto che non continua nessuna combo fa ripartire la sequenza",run(['attac
 
 // --- dati delle combo di ogni arma (a terra e in aria)
 const sets=Object.values(W).flatMap(w=>[[`${w.id} a terra`,w,w.combos,w.defaultAttackByInput],...(w.air?[[`${w.id} in aria`,w,w.air.combos,w.air.defaultAttackByInput]]:[])]);
-t("ogni arma corpo a corpo ha la sua categoria di attacchi in aria (quelle a distanza tirano come a terra)",MELEE.length===5&&MELEE.every(w=>w.air!==undefined)&&Object.values(W).filter(isRanged).every(w=>w.air===undefined));
+t("ogni arma corpo a corpo ha la sua categoria di attacchi in aria (quelle a distanza tirano come a terra)",MELEE.length===6&&MELEE.every(w=>w.air!==undefined)&&Object.values(W).filter(isRanged).every(w=>w.air===undefined));
 const bad=[];
 for(const [label,w,cs,def] of sets){
  for(const c of cs){if(c.inputSequence.length!==c.attackIds.length||!c.attackIds.every(id=>w.attacks[id]))bad.push(`${label}/${c.id}: attacchi`);}
