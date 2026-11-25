@@ -437,7 +437,7 @@ interface AbilityBase {
 }
 
 /**
- * Abilità speciale (tasti 5-8): ha un costo (ResourceCost) e un tempo di ricarica.
+ * Abilità speciale (tasti 7-0): ha un costo (ResourceCost) e un tempo di ricarica.
  * - attack: un attacco speciale (area d'urto, scatto, proiettile), usato solo a terra;
  *   impactEffect = effetto del motore quando il colpo diventa attivo (onda d'urto: tremolio e polvere).
  * - guard: si tiene premuto per alzare lo scudo (para i colpi davanti); alzato da meno di perfectWindowMs, la
@@ -464,6 +464,12 @@ export type GuardOutcome = "perfect" | "blocked" | "broken";
 
 /** Personaggi giocabili (Fase 4). */
 export type CharacterId = "knight" | "ranger" | "berserker" | "paladin";
+
+/** Ricarica passiva delle munizioni (vedi AmmoRegeneration). */
+export interface AmmoRegenerationDefinition {
+  weaponId: WeaponId;
+  intervalMs: number;
+}
 
 /**
  * Un personaggio: le statistiche che cambiano da una classe all'altra, l'arma con cui inizia e l'aspetto.
@@ -494,6 +500,8 @@ export interface CharacterDefinition {
   dodgeSpeed: number;
   /** Cura lenta: HP al secondo dopo delayAfterHitMs senza subire colpi. Se omessa, nessuna cura. */
   regeneration?: { healthPerSecond: number; delayAfterHitMs: number };
+  /** Passiva: le munizioni di un'arma della borsa tornano da sole, una ogni intervalMs. Se omessa, nessuna ricarica. */
+  ammoRegeneration?: AmmoRegenerationDefinition;
   /** Stamina (Fase 5): massimo e recupero al secondo (dopo PLAYER_CONFIG.staminaRegenDelayMs dall'ultimo consumo). */
   maxStamina: number;
   staminaRegenPerSecond: number;
@@ -504,7 +512,7 @@ export interface CharacterDefinition {
   manaRegenPerSecond: number;
   /** Attributi di partenza (Classi Fase 0: tutti a zero). */
   baseAttributes: Readonly<Attributes>;
-  /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto 5 o L). Player ne tiene attivo uno. */
+  /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto 7 o L). Player ne tiene attivo uno. */
   abilityIds: readonly AbilityId[];
   /**
    * Sblocco (Fase 6): il personaggio si sceglie solo dopo aver raggiunto questo livello (1 = subito disponibile).

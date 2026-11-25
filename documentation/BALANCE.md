@@ -229,6 +229,7 @@ boss conviene rilanciare `npm run balance` e guardare più valori vicini.
 | Danni e durata degli attacchi, combo | `src/config/playerConfig.ts` | `ATTACK_DEFINITIONS`, `COMBO_DEFINITIONS` |
 | Nemici normali | `src/config/enemyConfig.ts` | `ENEMY_CONFIG` |
 | Boss e fasi | `src/config/enemyConfig.ts` | `BOSS_CONFIG` |
+| Ricarica delle frecce del Ranger (2.1.1: una ogni 3 s; non misurata, il bot usa solo la spada; valore da rivedere nella Classi Fase 6) | `src/config/characterConfig.ts` | `ammoRegeneration.intervalMs` |
 | Cura di livello, danno da caduta, vite | `src/config/gameConfig.ts` | `GAME_CONFIG` |
 | Pozione, moneta, gemma | `src/config/itemConfig.ts` | `ITEM_CONFIG` |
 | Posizione di nemici e oggetti | `src/config/levelConfig.ts` | `LEVEL_CONFIG` |

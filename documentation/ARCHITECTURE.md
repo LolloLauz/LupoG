@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.1.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.1.1**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -119,10 +119,10 @@ l'altro; la bottega a menu (`shop`) resta come ripiego.
 - **Eventi per frame.** `wasPressed` e `wasReleased` valgono per **un solo frame** (`endFrame()` li azzera); `isHeld` vale finché il tasto è premuto.
   L'auto-repeat del sistema operativo viene ignorato.
 - **Comandi (2.1).** `attack` = J, `heavyAttack` = K, `dodge` = Shift sinistro; Spazio non è assegnato. Le mosse speciali sono quattro azioni,
-  `ability1`-`ability4` (tasti 5-8, anche del tastierino numerico; L è un alias di `ability1`). `ABILITY_SLOT_ACTIONS` (`controlsConfig.ts`) dice quale
+  `ability1`-`ability4` (tasti 7, 8, 9 e 0, anche del tastierino numerico; L è un alias di `ability1`; 5 e 6 non sono assegnati). `ABILITY_SLOT_ACTIONS` (`controlsConfig.ts`) dice quale
   azione comanda ogni slot: `Player.handleInput` cerca il tasto premuto, sceglie lo slot con `selectAbilitySlot` (non durante un attacco o una
-  schivata; uno slot vuoto non fa niente) e avvia l'abilità; lo scudo resta alzato finché è tenuto il tasto del suo slot. L'HUD mostra il numero
-  del tasto dello slot attivo.
+  schivata; uno slot vuoto non fa niente) e avvia l'abilità; lo scudo resta alzato finché è tenuto il tasto del suo slot. L'HUD mostra la cifra
+  del tasto dello slot attivo, presa da `ABILITY_SLOT_KEY_LABELS` (`controlsConfig.ts`).
 - **Contesti.** `INPUT_CONTEXT_ACTIONS` indica quali azioni sono ammesse in `gameplay` e in `menu`: in pausa e nei menu salto e attacco semplicemente
   non esistono, quindi non serve controllarlo altrove.
 - **Robustezza.** Alla perdita del focus tutti i tasti vengono rilasciati (altrimenti resterebbero "incastrati").
@@ -342,7 +342,7 @@ d'aggancio elencati, volutamente minimi.
 | Nemici a distanza e volanti, balzo, divisione, corazza, proiettili, pericoli, piattaforme mobili | già possibile (2.0) | `ENEMY_CONFIG` (`ranged`, `flight`, `lunge`, `splitInto`, `armor`), `PROJECTILE_CONFIG`, `LevelDefinition.hazards` e `movingPlatforms` | solo dati e sprite |
 | Boss con una silhouette nuova | già possibile (2.0) | `BOSS_SPRITE_SHAPES` (`knight`, `witch`, `sorcerer`, `beast`) | una forma nuova richiede una funzione che componga i frame in `bossSprites.ts` e la sua hitbox in `SHAPE_HITBOX` |
 | Nuove ambientazioni | già possibile (2.0: sei; Fase 8 del piano espansioni: sette, con le Lande Desolate) | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer`, `TerrainRenderer` | un caso in `BackgroundRenderer.buildTheme` (livelli di parallasse) e i colori del terreno; una tessitura nuova richiede un caso in `TerrainRenderer` |
-| Personaggi alternativi | implementato (Fase 4 del piano espansioni: cavaliere, ranger, berserker, paladino) | `CharacterDefinition`, `CHARACTER_CONFIG`, `CHARACTER_VISUALS` (`knightSprites.ts`), `Player.setCharacter`, `ProgressManager.characterId`, schermata `characterSelect` | un personaggio nuovo: un id in `CharacterId`, una voce in `CHARACTER_CONFIG` e in `CHARACTER_ORDER`, una voce in `CHARACTER_VISUALS` (colori e, se serve, le 12 righe della testa). Un tratto che non è una statistica (es. la parata del paladino, Fase 5) richiede un campo in `CharacterDefinition` letto da `Player` |
+| Personaggi alternativi | implementato (Fase 4 del piano espansioni: cavaliere, ranger, berserker, paladino) | `CharacterDefinition`, `CHARACTER_CONFIG`, `CHARACTER_VISUALS` (`knightSprites.ts`), `Player.setCharacter`, `ProgressManager.characterId`, schermata `characterSelect` | un personaggio nuovo: un id in `CharacterId`, una voce in `CHARACTER_CONFIG` e in `CHARACTER_ORDER`, una voce in `CHARACTER_VISUALS` (colori e, se serve, le 12 righe della testa). Un tratto che non è una statistica (es. la parata del paladino, Fase 5) richiede un campo in `CharacterDefinition` letto da `Player`. La ricarica delle munizioni è già solo un dato (`ammoRegeneration`, letto da `GameEngine`) |
 | Progressione: monete, bottega, sblocchi | implementato (Fase 6 del piano espansioni; nella 2.1 rimossi i potenziamenti permanenti) | `progressionConfig.ts`, `Shop`, `ScoreManager.coins`, `ProgressManager` (`unlockLevel`, `isCharacterUnlocked`) | una voce nuova della bottega: un id in `ShopOfferId`, una voce in `SHOP_OFFERS` e il suo caso in `Shop.buy`/`findRefusal` |
 | Equipaggiamento: rarità, modificatori, armature, zaino, bottino, negozio camminabile | implementato (piano dell'equipaggiamento, E1-E6) | `RARITY_CONFIG`, `AFFIX_CONFIG`, `ARMOR_CONFIG`, `LEGENDARY_ITEMS`/`MYTHIC_ITEMS`, `LOOT_SOURCES`, `ItemFactory`, `EquipmentStats`, `LootSystem`, `Inventory` (zaino e armature), `Player.equipWeapon(..., item)`/`setArmor`, `SpriteColorVariant` | un modificatore nuovo: un id in `AffixId`, una voce in `AFFIX_CONFIG` e il suo effetto in `EquipmentStats` (e, se è una statistica nuova, in `Player`); un pezzo d'armatura o un Leggendario: solo dati; uno sprite su misura per un Mitico: vedi `PIANO_EQUIPAGGIAMENTO.md` |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |
@@ -366,6 +366,8 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 
 **Fonti permanenti (Classi Fase 0).** Accanto ai power-up, `PlayerModifiers` tiene fonti che non scadono (`setSourceEffects`, oggi solo `"attributes"`): i loro effetti entrano nella stessa formula, e `clear()` toglie solo i power-up. `Player.setAttributes` calcola gli effetti con `computeAttributeEffects` (da `ATTRIBUTE_CONFIG`, oggi vuoti) e li registra; `maxHealth`, `maxStamina` e `maxMana` leggono le statistiche `maxHealthBonus`, `maxStaminaBonus`, `maxManaBonus`. Stamina e mana sono due `ResourcePool`; le abilità pagano un `ResourceCost` (`stamina`, `mana`, `health`) e stanno in un elenco con uno slot attivo. L'affinità classe × categoria d'arma (`WEAPON_AFFINITY_CONFIG`) moltiplica danno e recupero. Con i valori neutri introdotti dalla Fase 0 (2.0.1) niente di questo cambia il gioco.
 
+**Ricarica passiva delle munizioni (2.1.1).** È un dato della classe, `CharacterDefinition.ammoRegeneration` (`weaponId`, `intervalMs`; oggi solo il Ranger: arco, 3000 ms). La logica è in `systems/AmmoRegeneration.ts`, che tiene il tempo trascorso e aggiunge una munizione con `Inventory.addAmmo`. Il tempo scorre solo se `Inventory.isMissingAmmo` è vero, cioè se l'arma è nella borsa (non nello zaino) e non è piena; altrimenti si azzera. `GameEngine.regenerateAmmo` la chiama dentro `updatePickupsAndBag` (quindi solo in gioco e con il giocatore vivo) e, se l'arma è quella in mano, aggiorna anche `Player.setAmmo`. `startLevel` azzera il conteggio.
+
 ---
 
 ## 11. Testabilità e strumenti
@@ -374,7 +376,7 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 |---|---|
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
-| `npm test` | 1090 controlli unitari in Node (meno di 1 secondo) |
+| `npm test` | 1097 controlli unitari in Node (meno di 1 secondo) |
 | `npm run test:browser` | 176 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |

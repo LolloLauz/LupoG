@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.1.0.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.1.1.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -51,7 +51,7 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Attacco leggero | **J** |
 | Attacco pesante | **K** |
 | Schivata | **Shift sinistro** (costa stamina) |
-| Mosse speciali | **5**, **6**, **7**, **8** (sopra le lettere o sul tastierino numerico); **L** vale come il **5**. Oggi ogni personaggio ha una sola mossa, sul **5** (lo scudo del Paladino si tiene premuto) |
+| Mosse speciali | **7**, **8**, **9**, **0** (sopra le lettere o sul tastierino numerico); **L** vale come il **7**. Oggi ogni personaggio ha una sola mossa, sul **7** (lo scudo del Paladino si tiene premuto) |
 | Accovacciarsi | **S** oppure **↓** (solo a terra: non ci si muove e non ci si rialza sotto un soffitto; si può attaccare restando accovacciati, con un colpo più basso) |
 | Prendere un'arma, un'armatura o una pozione | **E** stando sopra (vedi "La borsa" ed "Equipaggiamento"); nella bottega, **E** vicino a un piedistallo compra |
 | Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa); nella schermata dell'equipaggiamento, **Q** sull'oggetto scelto |
@@ -64,7 +64,7 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 Durante la pausa e nei menu i comandi di gioco (salto, attacco...) sono bloccati. Se la finestra del browser perde il focus il gioco va
 in pausa da solo.
 
-**Spazio** non fa niente.
+**Spazio**, **5** e **6** non fanno niente.
 
 I tasti si possono cambiare in `src/config/controlsConfig.ts`.
 
@@ -111,7 +111,7 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 Il personaggio si sceglie dal titolo (*Personaggio*) e resta salvato. Durante una partita non si può cambiare. Tutti hanno gli stessi tasti, lo stesso salto e la stessa hitbox;
 cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale e abilità (vedi *Stamina* e *Mosse speciali* più sotto).
 
-| Personaggio | Salute | Velocità | Danno | Danno subito | Stamina (recupero/s) | Schivata (stamina, attesa) | Arma iniziale | Mossa (tasto 5) |
+| Personaggio | Salute | Velocità | Danno | Danno subito | Stamina (recupero/s) | Schivata (stamina, attesa) | Arma iniziale | Mossa (tasto 7) |
 |---|---|---|---|---|---|---|---|---|
 | **Cavaliere** | 100 | 80 | ×1 | ×1 | 100 (30) | 25, 0,7 s | spada | **Onda d'urto** |
 | **Ranger** | 75 | 96 | ×1 | ×1 | 100 (40) | 20, 0,45 s (più lunga) | arco | **Tiro in ritirata** |
@@ -122,6 +122,8 @@ cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale e ab
   le armi, cambia solo le statistiche.
 - Velocità: la velocità dell'arma in mano si moltiplica con quella del personaggio (es. Paladino con l'ascia: 72 × 0,85).
 - I power-up si sommano ai tratti: la Furia moltiplica anche il danno del Berserker, lo Scudo anche la difesa del Paladino.
+- **Passiva del Ranger:** le frecce dell'**arco** si ricaricano da sole, **una ogni 3 secondi** (vedi "Le armi"). Nella scheda del
+  personaggio compare "PASSIVA: LE FRECCE SI RICARICANO". La sua schivata resta più lunga e più frequente.
 
 ### Stamina
 
@@ -129,14 +131,14 @@ La **barra verde** sotto la salute è la **stamina** (diventa gialla sotto un te
 
 - la **schivata** (Shift sinistro): da 20 a 40 secondo il personaggio (il Berserker è quello che fa più fatica);
 - ogni **attacco pesante** (K), compresi il tiro caricato dell'arco e il colpo in picchiata: **15**;
-- la **mossa speciale** (tasto 5 o L) e lo scudo alzato.
+- la **mossa speciale** (tasto 7 o L) e lo scudo alzato.
 
 Gli attacchi leggeri (J), il salto e la corsa non costano niente. La stamina si ricarica da sola **0,6 secondi** dopo l'ultimo consumo.
 Se non basta l'azione non parte e compare "STANCO".
 
-### Mosse speciali (tasti 5-8)
+### Mosse speciali (tasti 7, 8, 9, 0)
 
-Ogni personaggio ha un'abilità propria. I tasti **5**-**8** sono i quattro posti delle mosse; oggi è occupato solo il primo (tasto **5**, o **L**).
+Ogni personaggio ha un'abilità propria. I tasti **7**, **8**, **9** e **0** sono i quattro posti delle mosse; oggi è occupato solo il primo (tasto **7**, o **L**).
 Un posto vuoto non fa niente. Durante un attacco o una schivata la mossa attiva non cambia. L'abilità costa stamina e poi va ricaricata:
 nel riquadro accanto alla barra della stamina c'è il **numero del tasto**; la parte scura scende mentre si ricarica; il numero è dorato
 quando l'abilità è pronta (ricaricata e con abbastanza stamina).
@@ -147,7 +149,7 @@ Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma
 | **Onda d'urto** | Cavaliere | 40 | 6 s | colpo a terra da **25** che investe tutti fino a **40 px davanti e dietro**; rompe la guardia; tremolio e polvere |
 | **Tiro in ritirata** | Ranger | 30 | 4 s | **balzo all'indietro** (circa 55 px, invulnerabile) e una **freccia da 20** in avanti che non consuma munizioni |
 | **Carica furiosa** | Berserker | 40 | 5 s | **scatto in avanti** di circa 70 px che **travolge** e attraversa i nemici (35 danni, rompe la guardia); non rende invulnerabili |
-| **Scudo** | Paladino | 10 per alzarlo | 0,3 s | **tieni premuto 5** (o L): lo scudo para i colpi **da davanti** (anche le frecce); non ti muovi ma puoi girarti; consuma 12 di stamina al secondo |
+| **Scudo** | Paladino | 10 per alzarlo | 0,3 s | **tieni premuto 7** (o L): lo scudo para i colpi **da davanti** (anche le frecce); non ti muovi ma puoi girarti; consuma 12 di stamina al secondo |
 
 - Gli scatti (balzo del Ranger, carica del Berserker) **si fermano sul bordo** di un abisso.
 - **Parata perfetta**: se lo scudo è alzato da **meno di 0,25 secondi** quando arriva il colpo (la barriera davanti al Paladino è
@@ -161,7 +163,7 @@ Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma
 |---|---|
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
 | barra verde sotto la salute | stamina (gialla sotto un terzo) |
-| riquadro con il numero del tasto (**5**) | mossa speciale: dorata quando è pronta, scura mentre si ricarica, azzurra con lo scudo alzato |
+| riquadro con il numero del tasto (**7**) | mossa speciale: dorata quando è pronta, scura mentre si ricarica, azzurra con lo scudo alzato |
 | icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
 | icona dell'elmo **x3** | vite rimaste |
 | 4 riquadri numerati sotto la barra, a destra | la borsa: armi e pozioni (con quante sono); l'arma in mano ha la cornice dorata |
@@ -245,10 +247,17 @@ deviano con la spada e non hanno combo. Si usano anche in aria (lì non c'è la 
 | **Coltelli** | lancio ad arco, 12 danni | lancio più basso (per i nemici piccoli) | **6** | il coltello cade dove colpisce o dove si ferma: **passandoci sopra lo recuperi** (+1); quelli caduti negli abissi si perdono |
 | **Giavellotto** | lancio potente ad arco, **50 danni**, **trafigge** tutti i nemici sulla sua strada | come J | **3** | ogni giavellotto lanciato **si perde**; finiti i giavellotti l'arma esce dalla borsa e impugni l'arma successiva |
 
-Senza munizioni l'arma non tira ("SENZA MUNIZIONI"), nemmeno il tiro caricato dell'arco. Frecce e dardi non si recuperano: in ogni
+Senza munizioni l'arma non tira ("SENZA MUNIZIONI"), nemmeno il tiro caricato dell'arco. Frecce e dardi tirati non si recuperano: in ogni
 livello c'è una **faretra** che, toccandola, riempie le munizioni di **tutte** le armi della borsa (se sono già piene resta a terra
 per dopo). Anche raccogliendo di nuovo un'arma con munizioni che hai già le sue munizioni tornano piene. Nella borsa il numero sotto l'icona indica le munizioni (in rosso quando sono finite).
 I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno delle frecce).
+
+**Frecce del Ranger.** Solo con il Ranger le frecce dell'arco tornano da sole, **una ogni 3 secondi**, fino al massimo di 12:
+
+- vale con l'arco **in mano o in borsa**, non nello **zaino** (e non per un arco lasciato a terra);
+- il tempo scorre solo se manca almeno una freccia: dopo un tiro con l'arco pieno, la prima torna dopo 3 secondi interi;
+- il conteggio riparte da zero a ogni livello; in pausa e nei menu è fermo;
+- i **quadrelli della balestra** e le altre munizioni non si ricaricano. La faretra continua a riempire tutto subito.
 
 **Dove si trovano**
 

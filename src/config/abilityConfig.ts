@@ -1,7 +1,7 @@
 import type { AbilityDefinition, AbilityId, AttackDefinition } from "../types/EntityTypes";
 
 /**
- * Abilità speciali dei personaggi (Fase 5, tasti 5-8). Ognuna ha un costo (stamina, mana o salute: Classi Fase 0)
+ * Abilità speciali dei personaggi (Fase 5, tasti 7-0). Ognuna ha un costo (stamina, mana o salute: Classi Fase 0)
  * e un tempo di ricarica.
  * Le abilità d'attacco sono attacchi come quelli delle armi (area d'urto, durata, animazione con lo stesso id),
  * più eventuali scatti (dash) e proiettili; l'arma in mano cambia solo l'aspetto.
@@ -86,7 +86,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     id: "shieldGuard",
     kind: "guard",
     name: "SCUDO",
-    description: "Tieni 5: para davanti",
+    description: "Tieni 7: para davanti",
     cost: { stamina: 10 },
     cooldownMs: 300,
     modifiers: [],

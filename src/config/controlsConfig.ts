@@ -1,6 +1,9 @@
 import type { GameAction, InputContext } from "../types/GameTypes";
 
-/** Azione di ogni slot delle mosse speciali, nell'ordine (slot 0 = tasto 5). */
+/** Cifra del tasto di ogni slot delle mosse speciali (la mostra l'HUD). */
+export const ABILITY_SLOT_KEY_LABELS: readonly string[] = ["7", "8", "9", "0"];
+
+/** Azione di ogni slot delle mosse speciali, nell'ordine (slot 0 = tasto 7). */
 export const ABILITY_SLOT_ACTIONS: readonly GameAction[] = ["ability1", "ability2", "ability3", "ability4"];
 
 /**
@@ -15,11 +18,11 @@ export const CONTROLS_CONFIG: Record<GameAction, string[]> = {
   attack: ["KeyJ"],
   heavyAttack: ["KeyK"],
   dodge: ["ShiftLeft"],
-  /** Mosse speciali, una per slot (tasti 5-8; L vale come il 5). Lo scudo del Paladino si tiene premuto. */
-  ability1: ["Digit5", "Numpad5", "KeyL"],
-  ability2: ["Digit6", "Numpad6"],
-  ability3: ["Digit7", "Numpad7"],
-  ability4: ["Digit8", "Numpad8"],
+  /** Mosse speciali, una per slot (tasti 7, 8, 9 e 0; L vale come il 7). Lo scudo del Paladino si tiene premuto. */
+  ability1: ["Digit7", "Numpad7", "KeyL"],
+  ability2: ["Digit8", "Numpad8"],
+  ability3: ["Digit9", "Numpad9"],
+  ability4: ["Digit0", "Numpad0"],
   crouch: ["KeyS", "ArrowDown"],
   pickUp: ["KeyE"],
   /** Q: lascia a terra l'arma in mano; Q tenuto + 1-4: lascia il contenuto di quel posto (anche una pozione). */

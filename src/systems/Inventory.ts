@@ -281,6 +281,12 @@ export class Inventory {
     return this.equippedWeaponId;
   }
 
+  /** Vero se quest'arma è nella borsa e le manca almeno una munizione. */
+  public isMissingAmmo(weaponId: WeaponId): boolean {
+    const max = WEAPON_CONFIG[weaponId].ammo?.max;
+    return max !== undefined && this.slots.some((slot) => slot?.kind === "weapon" && slot.weaponId === weaponId && slot.ammo !== undefined && slot.ammo < max);
+  }
+
   /** Vero se almeno un'arma della borsa non ha le munizioni piene. */
   public get needsAmmo(): boolean {
     return this.slots.some((slot) => {

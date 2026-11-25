@@ -910,7 +910,7 @@ export class Player extends GameObject {
   private handleInput(input: InputSource): void {
     const isDodging = this.dodgeRemainingMs > 0;
 
-    // mosse speciali (5-8, L = 5): il tasto sceglie lo slot; lo scudo si tiene premuto, le altre partono alla pressione
+    // mosse speciali (7-0, L = 7): il tasto sceglie lo slot; lo scudo si tiene premuto, le altre partono alla pressione
     const pressedSlot = ABILITY_SLOT_ACTIONS.findIndex((action) => input.wasPressed(action));
     // durante un attacco o una schivata lo slot attivo non cambia; uno slot vuoto non fa niente
     const isSlotChosen = pressedSlot >= 0 && this.currentAttack === null && !isDodging && this.selectAbilitySlot(pressedSlot);

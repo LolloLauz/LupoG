@@ -150,7 +150,7 @@ export default async function (t, load) {
       return pressed.join();
     };
     t("comandi: J attacco, K attacco pesante, Shift sinistro schivata", actionsOf("KeyJ") === "attack" && actionsOf("KeyK") === "heavyAttack" && actionsOf("ShiftLeft") === "dodge");
-    t("comandi: 5-8 le quattro mosse, L vale come il 5, Spazio non fa niente", ["Digit5", "Digit6", "Digit7", "Digit8"].map(actionsOf).join() === "ability1,ability2,ability3,ability4" && actionsOf("KeyL") === "ability1" && actionsOf("Space") === "");
+    t("comandi: 7, 8, 9, 0 le quattro mosse, L vale come il 7, 5, 6 e Spazio non fanno niente", ["Digit7", "Digit8", "Digit9", "Digit0"].map(actionsOf).join() === "ability1,ability2,ability3,ability4" && actionsOf("KeyL") === "ability1" && actionsOf("Digit5") === "" && actionsOf("Digit6") === "" && actionsOf("Space") === "");
   }
 
   // --- schermate e stati ---

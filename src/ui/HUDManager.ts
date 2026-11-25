@@ -1,3 +1,4 @@
+import { ABILITY_SLOT_KEY_LABELS } from "../config/controlsConfig";
 import { PALETTE } from "../config/gameConfig";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteColorVariant, SpriteManager } from "../rendering/SpriteManager";
@@ -9,7 +10,7 @@ export interface HUDData {
   /** Stamina (Fase 5): barra verde sotto la salute. */
   stamina: number;
   maxStamina: number;
-  /** Mossa dello slot attivo (slotNumber 0 = tasto 5): ricarica che manca (1 = appena usata), pronta (ricarica finita e stamina sufficiente), in uso (scudo alzato). */
+  /** Mossa dello slot attivo (slotNumber 0 = tasto 7): ricarica che manca (1 = appena usata), pronta (ricarica finita e stamina sufficiente), in uso (scudo alzato). */
   ability: { slotNumber: number; cooldownFraction: number; isReady: boolean; isActive: boolean };
   lives: number;
   score: number;
@@ -167,7 +168,7 @@ export class HUDManager {
     }
     const isPulsing = ability.isReady && !ability.isActive && Math.floor(timeSeconds * 2) % 2 === 0;
     const letterColor = ability.isActive ? PALETTE.white : ability.isReady ? (isPulsing ? PALETTE.cream : PALETTE.goldLight) : PALETTE.gray;
-    renderer.drawText(String(ability.slotNumber + 5), abilityBox.x + 3, abilityBox.y + 2, letterColor);
+    renderer.drawText(ABILITY_SLOT_KEY_LABELS[ability.slotNumber] ?? "", abilityBox.x + 3, abilityBox.y + 2, letterColor);
   }
 
   /** X del riquadro della borsa numero slotIndex (0 = tasto 1). */

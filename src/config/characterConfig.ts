@@ -39,9 +39,11 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     id: "ranger",
     name: "RANGER",
     description: "Veloce, colpisce da lontano.",
-    trait: "SCHIVATA LUNGA E LEGGERA",
+    trait: "PASSIVA: LE FRECCE SI RICARICANO",
     spriteSuffix: "Ranger",
     startingWeaponId: "bow",
+    // passiva: una freccia ogni 3 secondi (valore da bilanciare nella Fase 6)
+    ammoRegeneration: { weaponId: "bow", intervalMs: 3000 },
     maxHealth: 75,
     movementSpeed: 96,
     damageMultiplier: 1,

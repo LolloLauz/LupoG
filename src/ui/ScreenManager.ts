@@ -146,7 +146,7 @@ export const CONTROLS_ROWS: ControlsRow[] = [
   { keyGroups: [["J"]], description: "ATTACCO" },
   { keyGroups: [["K"]], description: "ATTACCO PESANTE" },
   { keyGroups: [["SHIFT SX"]], description: "SCHIVATA (COSTA STAMINA)" },
-  { keyGroups: [["5", "6", "7", "8"], ["L"]], description: "MOSSE (L = 5)" },
+  { keyGroups: [["7", "8", "9", "0"], ["L"]], description: "MOSSE (L = 7)" },
   { keyGroups: [["S"], ["↓"]], description: "ABBASSATI" },
   { keyGroups: [["E"], ["Q"]], description: "E PRENDI, Q LASCIA (Q+1-4)" },
   { keyGroups: [["1", "2", "3", "4"]], description: "BORSA: USA IL POSTO" },

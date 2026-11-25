@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.1.0**.
+Versione: **2.1.1**.
 
 **Stati usati:**
 
@@ -26,7 +26,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 1090 controlli) | Implementata | |
+| Test unitari inclusi (`npm test`, 1097 controlli) | Implementata | |
 | Test nel browser (`npm run test:browser`, 176 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
@@ -101,7 +101,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Personaggi con classi (`CharacterDefinition`, `CHARACTER_CONFIG`): **Cavaliere** (equilibrato, spada), **Ranger** (veloce, 75 HP, arco, schivata lunga e frequente), **Berserker** (130 HP, danno ×1,3, ascia, schivata corta e ogni 1,6 s), **Paladino** (lento, 110 HP, danno subito ×0,75, mazza, si cura di 1 HP/s dopo 4 s senza colpi) | Implementata | Fase 4 del piano espansioni; sprite ricolorati dal cavaliere con testa propria (cappuccio, elmo con corna, pennacchio bianco); non provato da persone; il bot di bilanciamento usa solo la spada |
 | Scelta del personaggio dal menu del titolo (schermata con statistiche in tacche, arma iniziale e tratto), salvata nei progressi | Implementata | Fase 4; la scelta vale dalla partita successiva, che parte con la sola arma iniziale; durante la partita la classe non cambia |
 | Stamina (barra nell'HUD): la consumano schivata, attacchi pesanti (15) e abilità; recupero dopo 0,6 s; "STANCO" quando non basta | Implementata | Fase 5 del piano espansioni; valori per personaggio in `CHARACTER_CONFIG` |
-| Abilità speciali (tasti 5-8, L = 5; oggi una per personaggio, sul 5; costo in stamina e ricarica): onda d'urto (Cavaliere), tiro in ritirata (Ranger), carica furiosa (Berserker), scudo (Paladino) | Implementata | Fase 5; `ABILITY_CONFIG`; gli scatti si fermano sul bordo degli abissi; non provato da persone |
+| Abilità speciali (tasti 7, 8, 9, 0, L = 7; oggi una per personaggio, sul 7; costo in stamina e ricarica): onda d'urto (Cavaliere), tiro in ritirata (Ranger), carica furiosa (Berserker), scudo (Paladino) | Implementata | Fase 5; `ABILITY_CONFIG`; gli scatti si fermano sul bordo degli abissi; non provato da persone |
+| Passiva del Ranger: le frecce dell'arco si ricaricano, una ogni 3 s, con l'arco in mano o in borsa (non nello zaino; i quadrelli della balestra no) | Implementata | 2.1.1; `CharacterDefinition.ammoRegeneration`, `AmmoRegeneration`; valore da bilanciare (Classi Fase 6); non provata da persone |
 | Parata con lo scudo (Paladino): para i colpi da davanti e le frecce, costa stamina; parata perfetta (scudo alzato da meno di 0,25 s) gratuita, stordisce l'attaccante per 1 s; guardia rotta senza stamina | Implementata | Fase 5; i boss non vengono storditi |
 | Gestione delle cadute (danno e ripartenza dall'ultimo punto sicuro) | Implementata | |
 
