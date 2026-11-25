@@ -156,7 +156,7 @@ export default async function (t, load) {
     }
     t(`nel contesto "${context}" nessun tasto è assegnato a due azioni`, conflicts === "", conflicts);
   }
-  t("i comandi richiesti sono mappati (A/D, frecce, W, freccia su, J, K, Shift sinistro, 5-8, Esc)", ["KeyA", "KeyD", "ArrowLeft", "ArrowRight", "KeyW", "ArrowUp", "KeyJ", "KeyK", "ShiftLeft", "Digit5", "Digit6", "Digit7", "Digit8", "Escape"].every((key) => Object.values(CONTROLS_CONFIG).some((keys) => keys.includes(key))));
+  t("i comandi richiesti sono mappati (A/D, frecce, W, freccia su, J, K, Shift sinistro, 7-0, Esc)", ["KeyA", "KeyD", "ArrowLeft", "ArrowRight", "KeyW", "ArrowUp", "KeyJ", "KeyK", "ShiftLeft", "Digit7", "Digit8", "Digit9", "Digit0", "Escape"].every((key) => Object.values(CONTROLS_CONFIG).some((keys) => keys.includes(key))));
 
   // ---------- palette e configurazione generale ----------
   const paletteValues = Object.values(PALETTE);

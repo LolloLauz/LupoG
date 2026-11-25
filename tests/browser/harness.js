@@ -250,7 +250,7 @@ function playGame({ skill, seed, maxFrames, renderEvery = 3, paletteColors, stop
 function fuzz({ frames, seed, paletteColors }) {
   releaseAll();
   const random = createRandom(seed);
-  const codes = ["KeyA", "KeyD", "KeyW", "KeyS", "KeyJ", "KeyK", "KeyL", "ShiftLeft", "Digit5", "Digit6", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyQ", "Tab"];
+  const codes = ["KeyA", "KeyD", "KeyW", "KeyS", "KeyJ", "KeyK", "KeyL", "ShiftLeft", "Digit7", "Digit0", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyQ", "Tab"];
   const deltas = [1 / 30, 1 / 60, 1 / 120, 1 / 144, 0.05];
   const problems = new Set();
   const badColors = new Set();

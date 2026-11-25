@@ -1,4 +1,5 @@
 import { CombatSystem } from "../combat/CombatSystem";
+import { AmmoRegeneration } from "../systems/AmmoRegeneration";
 import { DIFFICULTY_CONFIG, DIFFICULTY_ORDER, GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import type { Boss } from "../entities/Boss";
 import { Chest } from "../entities/Chest";
@@ -126,6 +127,8 @@ export class GameEngine {
   private readonly weaponPickups = new WeaponPickupManager();
   /** La borsa: pozioni e armi, scelte con i tasti numerici. */
   private readonly inventory = new Inventory();
+  /** Passiva di ricarica delle munizioni (le frecce del Ranger). */
+  private readonly ammoRegeneration = new AmmoRegeneration();
   /** Armi trovate in questa partita (più quelle sempre disponibili): la bottega vende quelle che mancano nella borsa. */
   private readonly discoveredWeaponIds = new Set<WeaponId>();
   /** Borsa all'inizio del livello: ricominciando il livello torna così (come punteggio e monete). */
@@ -452,6 +455,7 @@ export class GameEngine {
     this.lastSafePosition = { ...playerStart };
     this.effects.clear();
     this.projectileSystem.clear();
+    this.ammoRegeneration.reset();
     // i power-up non passano da un livello all'altro
     this.player.modifiers.clear();
     this.levelPhase = "playing";
@@ -773,6 +777,7 @@ export class GameEngine {
     if (this.player.isDead) {
       return;
     }
+    this.regenerateAmmo(deltaTimeSeconds);
     this.recoverAmmoDrops();
     this.refillAmmoFromQuiver();
     if (this.input.wasPressed("pickUp")) {
@@ -979,6 +984,14 @@ export class GameEngine {
     this.equipFromInventory();
     this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
     this.effects.addPopup(message, centerX, popupY, rarityColor);
+  }
+
+  /** Passiva della classe (le frecce del Ranger): le munizioni tornano piano piano, anche con l'arma non in mano. */
+  private regenerateAmmo(deltaTimeSeconds: number): void {
+    const definition = this.player.characterDefinition.ammoRegeneration;
+    if (this.ammoRegeneration.update(deltaTimeSeconds * 1000, definition, this.inventory) && this.inventory.equippedWeaponId === definition?.weaponId) {
+      this.player.setAmmo(this.inventory.equippedAmmo ?? 0);
+    }
   }
 
   /** Coltelli a terra: passandoci sopra tornano nella borsa (se l'arma c'è e non è piena). */

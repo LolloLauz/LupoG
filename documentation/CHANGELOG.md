@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.1.1 – Classi, Fase 1: ritocchi a comandi e Ranger (2026-11-25)
+Le mosse speciali cambiano tasti e il Ranger ricarica le frecce.
+### Aggiunto
+- **Passiva del Ranger**: le frecce dell'arco si ricaricano, **una ogni 3 s** (valore da bilanciare), con l'arco in mano o in borsa; non nello zaino. I quadrelli della balestra e le altre munizioni no. Il tempo scorre solo se manca una freccia e riparte da zero a ogni livello. Nuovi `CharacterDefinition.ammoRegeneration` (`AmmoRegenerationDefinition`), `systems/AmmoRegeneration.ts`, `Inventory.isMissingAmmo`, `GameEngine.regenerateAmmo`.
+- Test: `tests/unit/ammo-regeneration.test.mjs` (7 controlli).
+### Modificato
+- **Mosse speciali** sui tasti **7, 8, 9 e 0** (anche tastierino numerico; prima 5-8), con **L** come alias del 7. **5** e **6** non sono assegnati. L'HUD mostra la cifra di `ABILITY_SLOT_KEY_LABELS`. Aggiornati la schermata dei controlli, la descrizione dello scudo, i test unitari e quelli del browser.
+- Il tratto del Ranger nella scheda del personaggio è "PASSIVA: LE FRECCE SI RICARICANO" (prima "SCHIVATA LUNGA E LEGGERA"; la schivata non cambia).
+- Versione portata a 2.1.1 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Verificato
+- `npm run typecheck`, `npm test` (1097 controlli in 30 file), `npm run verify-docs`, `npm run test:browser` (176/176), `npm run balance` (identico al baseline).
+
 ## 2.1.0 – Classi, Fase 1: partite scollegate e nuovi comandi (2026-11-25)
 Ogni nuova partita parte da zero e i comandi cambiano.
 ### Modificato

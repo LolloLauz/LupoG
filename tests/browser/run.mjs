@@ -177,10 +177,10 @@ try {
     await page.waitForTimeout(500);
     const pausedHash2 = await canvasHash(page);
     check("tasto Esc: la pausa congela l'immagine", pausedHash1 === pausedHash2 && pausedHash1 !== movingHash);
-    await page.keyboard.down("KeyD"); await page.keyboard.press("KeyJ"); await page.keyboard.press("ShiftLeft"); await page.keyboard.press("Digit5");
+    await page.keyboard.down("KeyD"); await page.keyboard.press("KeyJ"); await page.keyboard.press("ShiftLeft"); await page.keyboard.press("Digit7");
     await page.waitForTimeout(300);
     await page.keyboard.up("KeyD");
-    check("in pausa i comandi di gioco (D, J, Shift, 5) non hanno effetto", (await canvasHash(page)) === pausedHash1);
+    check("in pausa i comandi di gioco (D, J, Shift, 7) non hanno effetto", (await canvasHash(page)) === pausedHash1);
     await page.keyboard.press("Escape");
     await page.waitForTimeout(800);
     check("Esc di nuovo: il gioco riprende", (await canvasHash(page)) !== pausedHash1);
@@ -190,7 +190,7 @@ try {
     check(`il browser di prova mantiene un ritmo di disegno fluido (${fps.toFixed(0)} FPS con il gioco in esecuzione)`, fps >= 30);
 
     // tasti a caso sulla build reale
-    const keyNames = ["KeyA", "KeyD", "KeyW", "KeyS", "KeyJ", "KeyK", "KeyL", "ShiftLeft", "Digit5", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+    const keyNames = ["KeyA", "KeyD", "KeyW", "KeyS", "KeyJ", "KeyK", "KeyL", "ShiftLeft", "Digit7", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
     const keyCount = isQuick ? 400 : 1500;
     for (let i = 0; i < keyCount; i++) {
       const key = keyNames[Math.floor(Math.random() * keyNames.length)];

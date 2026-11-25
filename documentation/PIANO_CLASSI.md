@@ -7,7 +7,7 @@
 Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili fino al bilanciamento finale. Ogni fase si chiude con un gioco giocabile, i test verdi e la documentazione aggiornata, prima di passare alla successiva.
 
 1. **Fase 0, fondazione**: risorse, tag delle armi, statistiche e abilità come dati, tutto neutro. Nessun cambiamento per chi gioca.
-2. **Fase 1, partite scollegate (v2.1)**: salvataggio ridotto, gemme in monete, Shift per la schivata, tasti 5-8 per le mosse.
+2. **Fase 1, partite scollegate (v2.1)**: salvataggio ridotto, gemme in monete, Shift per la schivata, tasti 7-0 per le mosse.
 3. **Fase 2, il Mago (v2.2)**: mana, bastone, incantesimi, pozione di mana.
 4. **Fase 3, compatibilità armi e classi (v2.3)**: tabella applicata a tutte e cinque le classi, filtro del loot.
 5. **Fase 4, statistiche (v2.4)**: cinque attributi, pentagono, punti spesi in bottega.
@@ -48,11 +48,12 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 - [x] **Potenziamenti permanenti:** rimuovere i potenziamenti a gemme e la voce Potenziamenti dal titolo; sistemare Cancella dati e la scheda del personaggio.
 - [x] **Comandi:**
   - schivata su Shift sinistro; K liberato;
-  - mosse speciali sui tasti 5-8, con L come alias dello slot 1 (lo scudo del Paladino resta a tasto premuto);
+  - mosse speciali sui tasti 7, 8, 9 e 0, con L come alias dello slot 1 (lo scudo del Paladino resta a tasto premuto);
   - l'attacco eseguito con Spazio passa al tasto J; l'attacco pesante eseguito con J passa a K;
   - modificare `controlsConfig.ts` e la schermata Controlli.
 - [x] **Test:** aggiornare i test su salvataggio, comandi e punteggio; il bot dei test del browser usa i nuovi tasti.
 - [x] **Documentazione:** sezioni 4, 5, 11b del GAME_MANUAL (controlli, schermate, gemme, sblocchi) e la sezione sull'input di ARCHITECTURE.
+- [x] **Ritocchi dopo la fase (2.1.1):** mosse spostate dai tasti 5-8 ai tasti 7-0; passiva del Ranger, le frecce dell'arco si ricaricano (una ogni 3 s, valore da bilanciare nella Fase 6).
 
 **Criterio di chiusura:** due partite di seguito non condividono nulla tranne livelli raggiunti, classi, record e difficoltà.
 
@@ -70,7 +71,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
   - colpo ad area come l'onda d'urto;
   - balzo/teletrasporto come il tiro in ritirata;
   - barriera come lo scudo del Paladino.
-- [ ] **Loadout:** slot attivi sui tasti 5-8, indicatori nell'HUD con ricarica e mana sufficiente.
+- [ ] **Loadout:** slot attivi sui tasti 7-0, indicatori nell'HUD con ricarica e mana sufficiente.
 - [ ] **Pozione di mana:** secondo tipo di pozione nella borsa, un posto proprio, massimo 2; aggiunta a bottega e loot (`Inventory`, `Shop`, `LootSystem`, HUD).
 - [ ] **Loot del Mago:** a terra compaiono solo bastoni con affissi; per le altre armi il filtro della Fase 3 viene qui anticipato per il solo Mago.
 - [ ] **Sprite:** testa, veste e bastone provvisori con le routine esistenti (`CHARACTER_VISUALS`, `WEAPON_VISUALS`); l'arte rifinita è nella Fase 6.
@@ -89,6 +90,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 - [ ] **Divieti:** `Player.equipWeapon` rifiuta le armi ✗ con il messaggio "NON PUOI USARLA"; se l'arma è in uno slot (zaino) resta lì, ma non si impugna.
 - [ ] **Filtro del loot:** `ItemFactory` e `LootSystem` non generano a terra armi vietate per la classe in uso, e le sostituiscono con un'arma compatibile; vale anche per forzieri, élite, trofei dei boss e bottega.
 - [ ] **Peso:** ogni arma e armatura ha un peso; senza le statistiche della Fase 4 il peso dà solo un malus di velocità fisso, che la Fase 4 sostituisce con il requisito di Forza.
+- [ ] **Munizioni nello zaino (difetto da correggere):** oggi un'arma da lancio spostata nello zaino e ripresa torna con le munizioni piene, perché lo zaino conserva solo l'oggetto (`Inventory.moveWeaponToBackpack` ed `equipFromBackpack`; anche lo scambio a borsa piena in `GameEngine.pickUpEquipment` ignora `droppedAmmo`). Lo zaino deve conservare il numero di munizioni, anche nello snapshot di inizio livello.
 - [ ] **Schermata equipaggiamento:** mostrare bonus e malus della classe accanto al confronto con l'oggetto indossato.
 - [ ] **Test:** una prova per ogni cella della tabella (vietata, malus, bonus); verifica che nessun livello possa lasciare il giocatore senza arma impugnabile.
 - [ ] **Documentazione:** la tabella entra nel manuale, nella sezione delle armi.
@@ -125,7 +127,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 - [ ] **Mosse extra:** altre 3 mosse per Cavaliere, Ranger, Berserker e Paladino (4 per classe in tutto), ognuna come voce di `ABILITY_CONFIG` con il suo costo in mana, stamina o salute.
 - [ ] **Come si ottengono:** da decidere tra mosse note dall'inizio o trovate (pergamene, boss); l'INT del Mago e la Tempra delle altre classi possono fissare i requisiti.
-- [ ] **Passivi:** uno per classe (il Paladino ha già la cura lenta); nuovi campi in `CharacterDefinition` letti da `Player`.
+- [ ] **Passivi:** uno per classe (il Paladino ha già la cura lenta, il Ranger la ricarica delle frecce); nuovi campi in `CharacterDefinition` letti da `Player`.
 - [ ] **Sinergie elementali:** regole in `ELEMENT_CONFIG` (ad esempio gelo e mazza, bruciatura e fulmine), solo dati e un caso in `StatusEffects` dove serve.
 - [ ] **Animazioni:** riuso delle pose comuni (`ABILITY_POSES`); nessuna arte nuova qui.
 - [ ] **Test e documentazione:** una prova per ogni mossa (costo, ricarica, effetto) e per ogni sinergia; tabelle del manuale aggiornate.
