@@ -26,13 +26,13 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 **Obiettivo:** preparare i punti d'innesto per mana, affinità e statistiche con valori neutri, così il gioco si comporta esattamente come prima. È il lavoro che evita di rifare tutto dopo.
 
-- [ ] **Risorse:** aggiungere un `ResourcePool` (stamina e mana) a `Player`; il costo delle abilità in `AbilityDefinition` diventa `{ mana?, stamina?, salute? }`, con i costi attuali tradotti.
-- [ ] **Abilità come lista:** `CharacterDefinition.abilityId` diventa un elenco di abilità (oggi 1 elemento) e `Player` ne gestisce uno slot attivo.
-- [ ] **Tag delle armi:** in `WeaponDefinition` aggiungere categoria, peso e statistica di scaling, per tutte le armi esistenti.
-- [ ] **Compatibilità come dati:** nuova tabella classe × categoria di arma (file di configurazione nuovo) con tutti i valori a ×1 e nessun divieto.
-- [ ] **Statistiche nella pipeline:** attributi di base a zero come nuova fonte di `PlayerModifiers`, accanto ad `EquipmentStats`.
-- [ ] Campo `modifiers` vuoto nella definizione degli incantesimi, per i modificatori futuri.
-- [ ] **Test di parità:** il simulatore di bilanciamento deve dare le stesse percentuali di prima (come per il Cavaliere Nero); i test esistenti passano senza modifiche.
+- [x] **Risorse:** aggiungere un `ResourcePool` (stamina e mana) a `Player`; il costo delle abilità in `AbilityDefinition` diventa `{ mana?, stamina?, salute? }`, con i costi attuali tradotti.
+- [x] **Abilità come lista:** `CharacterDefinition.abilityId` diventa un elenco di abilità (oggi 1 elemento) e `Player` ne gestisce uno slot attivo.
+- [x] **Tag delle armi:** in `WeaponDefinition` aggiungere categoria, peso e statistica di scaling, per tutte le armi esistenti.
+- [x] **Compatibilità come dati:** nuova tabella classe × categoria di arma (file di configurazione nuovo) con tutti i valori a ×1 e nessun divieto.
+- [x] **Statistiche nella pipeline:** attributi di base a zero come nuova fonte di `PlayerModifiers`, accanto ad `EquipmentStats`.
+- [x] Campo `modifiers` vuoto nella definizione degli incantesimi, per i modificatori futuri.
+- [x] **Test di parità:** il simulatore di bilanciamento deve dare le stesse percentuali di prima (come per il Cavaliere Nero); i test esistenti passano senza modifiche. *Fatto: simulatore identico al baseline; in `stamina-abilities.test.mjs` adattate solo tre asserzioni sulla forma dei dati (`abilityIds`, `cost.stamina`) e due scritture del campo privato della stamina, nessun controllo di comportamento.*
 
 **Criterio di chiusura:** nessuna differenza osservabile, `npm run balance` identico, tutti i controlli verdi.
 

@@ -1,4 +1,4 @@
-import type { ActivePowerUp, PlayerStatName, PowerUpDefinition } from "../types/EntityTypes";
+import type { ActivePowerUp, ModifierSourceId, PlayerStatName, PowerUpDefinition, StatModifierEffect } from "../types/EntityTypes";
 
 /** Valore di partenza di ogni statistica: 1 per i moltiplicatori, 0 per i bonus. */
 const STAT_BASE_VALUES: Record<PlayerStatName, number> = {
@@ -7,6 +7,9 @@ const STAT_BASE_VALUES: Record<PlayerStatName, number> = {
   damageTakenMultiplier: 1,
   bonusDamage: 0,
   healthRegenPerSecond: 0,
+  maxHealthBonus: 0,
+  maxStaminaBonus: 0,
+  maxManaBonus: 0,
 };
 
 /**
@@ -15,9 +18,12 @@ const STAT_BASE_VALUES: Record<PlayerStatName, number> = {
  *   valore = (base + somma dei bonus "add") x prodotto dei fattori "multiply",
  * quindi la scadenza di un power-up non può alterare gli altri.
  * Lo stesso power-up raccolto di nuovo non si somma: ne riparte la durata.
+ * Classi Fase 0: oltre ai power-up ci sono fonti permanenti (gli attributi, vedi setSourceEffects), che
+ * entrano nella stessa formula ma non scadono e non si tolgono con clear().
  */
 export class PlayerModifiers {
   private active: ActivePowerUp[] = [];
+  private readonly sourceEffects = new Map<ModifierSourceId, readonly StatModifierEffect[]>();
 
   /** Power-up attivi (per l'HUD e gli effetti grafici). */
   public get activePowerUps(): readonly ActivePowerUp[] {
@@ -48,24 +54,38 @@ export class PlayerModifiers {
     this.active = this.active.filter((powerUp) => powerUp.definition.type !== "temporary" || powerUp.remainingMs > 0);
   }
 
-  /** Toglie tutti i power-up (morte, nuova partita, nuovo livello). */
+  /** Toglie tutti i power-up (morte, nuova partita, nuovo livello). Le fonti permanenti restano. */
   public clear(): void {
     this.active = [];
   }
 
-  /** Valore effettivo di una statistica con i power-up attivi. */
+  /** Sostituisce gli effetti di una fonte permanente (es. gli attributi); un elenco vuoto la annulla. */
+  public setSourceEffects(source: ModifierSourceId, effects: readonly StatModifierEffect[]): void {
+    this.sourceEffects.set(source, [...effects]);
+  }
+
+  /** Effetti attuali di una fonte permanente (vuoto se non impostata). */
+  public getSourceEffects(source: ModifierSourceId): readonly StatModifierEffect[] {
+    return this.sourceEffects.get(source) ?? [];
+  }
+
+  /** Valore effettivo di una statistica con i power-up attivi e le fonti permanenti. */
   public getValue(stat: PlayerStatName): number {
     let additive = 0;
     let multiplier = 1;
     for (const powerUp of this.active) {
       for (const effect of powerUp.definition.effects) {
-        if (effect.stat !== stat) {
-          continue;
+        if (effect.stat === stat) {
+          if (effect.operation === "add") additive += effect.value;
+          else multiplier *= effect.value;
         }
-        if (effect.operation === "add") {
-          additive += effect.value;
-        } else {
-          multiplier *= effect.value;
+      }
+    }
+    for (const effects of this.sourceEffects.values()) {
+      for (const effect of effects) {
+        if (effect.stat === stat) {
+          if (effect.operation === "add") additive += effect.value;
+          else multiplier *= effect.value;
         }
       }
     }

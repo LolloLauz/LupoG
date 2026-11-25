@@ -8,6 +8,8 @@ import { ATTACK_DEFINITIONS, COMBO_DEFINITIONS, DEFAULT_ATTACK_BY_INPUT } from "
  * anche il nome della sua animazione in PLAYER_ANIMATIONS.
  * Un'arma nuova: un id in WeaponId, una voce qui, le animazioni dei suoi attacchi e il suo aspetto
  * in WEAPON_VISUALS (knightSprites.ts).
+ * Classi Fase 0: ogni arma ha una categoria (tabella di compatibilità con le classi, WEAPON_AFFINITY_CONFIG),
+ * un peso e l'attributo che ne farà crescere il danno; per ora nessuno dei tre cambia il gioco.
  */
 
 /** Colpo in picchiata (Fase 3): velocità di discesa e del rimbalzo, uguali per tutte le armi. */
@@ -144,6 +146,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: DEFAULT_ATTACK_BY_INPUT,
     air: airSet("SPADA", "swordLight1", "swordLight2", "swordPlunge"),
     movementSpeedMultiplier: 1,
+    category: "blade",
+    weight: 2,
+    scalingAttribute: "strength",
   },
   dagger: {
     id: "dagger",
@@ -170,6 +175,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: { attack: "daggerStab1", heavyAttack: "daggerLunge" },
     air: airSet("PUGNALE", "daggerStab1", "daggerStab2", "daggerPlunge"),
     movementSpeedMultiplier: 1.15,
+    category: "blade",
+    weight: 1,
+    scalingAttribute: "dexterity",
   },
   spear: {
     id: "spear",
@@ -196,6 +204,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: { attack: "spearThrust1", heavyAttack: "spearHeavy" },
     air: airSet("LANCIA", "spearThrust1", "spearThrust2", "spearPlunge"),
     movementSpeedMultiplier: 0.95,
+    category: "polearm",
+    weight: 3,
+    scalingAttribute: "strength",
   },
   axe: {
     id: "axe",
@@ -222,6 +233,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: { attack: "axeChop1", heavyAttack: "axeHeavy" },
     air: airSet("ASCIA", "axeChop1", "axeChop2", "axePlunge"),
     movementSpeedMultiplier: 0.85,
+    category: "heavy",
+    weight: 4,
+    scalingAttribute: "strength",
   },
   mace: {
     id: "mace",
@@ -248,6 +262,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: { attack: "maceSwing1", heavyAttack: "maceHeavy" },
     air: airSet("MAZZA", "maceSwing1", "maceSwing2", "macePlunge"),
     movementSpeedMultiplier: 0.9,
+    category: "heavy",
+    weight: 4,
+    scalingAttribute: "strength",
   },
   greatsword: {
     id: "greatsword",
@@ -274,6 +291,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     defaultAttackByInput: { attack: "greatswordSlash1", heavyAttack: "greatswordHeavy" },
     air: airSet("SPADONE", "greatswordSlash1", "greatswordSlash2", "greatswordPlunge"),
     movementSpeedMultiplier: 0.85,
+    category: "heavy",
+    weight: 5,
+    scalingAttribute: "strength",
   },
   // armi a distanza (Fase 2): niente combo, in aria si tira come a terra
   bow: {
@@ -285,6 +305,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     combos: [],
     defaultAttackByInput: { attack: "bowShot", heavyAttack: "bowCharge" },
     movementSpeedMultiplier: 1,
+    category: "ranged",
+    weight: 2,
+    scalingAttribute: "dexterity",
     // frecce e dardi non si recuperano: si ricaricano con la faretra (oggetto dei livelli) o riprendendo l'arma
     ammo: { max: 12, isLostWhenEmpty: false },
   },
@@ -297,6 +320,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     combos: [],
     defaultAttackByInput: { attack: "crossbowShot", heavyAttack: "crossbowShot" },
     movementSpeedMultiplier: 0.9,
+    category: "ranged",
+    weight: 3,
+    scalingAttribute: "dexterity",
     ammo: { max: 6, isLostWhenEmpty: false },
   },
   throwingKnives: {
@@ -308,6 +334,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     combos: [],
     defaultAttackByInput: { attack: "knifeThrow", heavyAttack: "knifeThrowLow" },
     movementSpeedMultiplier: 1.1,
+    category: "thrown",
+    weight: 1,
+    scalingAttribute: "dexterity",
     ammo: { max: 6, isLostWhenEmpty: false },
   },
   javelin: {
@@ -319,6 +348,9 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     combos: [],
     defaultAttackByInput: { attack: "javelinThrow", heavyAttack: "javelinThrow" },
     movementSpeedMultiplier: 0.95,
+    category: "thrown",
+    weight: 2,
+    scalingAttribute: "dexterity",
     ammo: { max: 3, isLostWhenEmpty: true },
   },
 };

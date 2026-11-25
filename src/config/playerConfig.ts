@@ -48,6 +48,8 @@ export const PLAYER_CONFIG = {
   heavyAttackStaminaCost: 15,
   /** Dopo aver consumato stamina, il recupero riparte dopo questo tempo (ms). */
   staminaRegenDelayMs: 600,
+  /** Mana (Classi Fase 0): dopo averlo consumato, il recupero riparte dopo questo tempo (ms). Da bilanciare con il Mago. */
+  manaRegenDelayMs: 600,
 } as const;
 
 /** Definizione degli attacchi della spada (usata dal sistema di combattimento). */

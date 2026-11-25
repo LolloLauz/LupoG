@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.0.0**. (Il piano dell'equipaggiamento è in "Non ancora rilasciato" nel CHANGELOG.)
+Versione: **2.0.1**. (Il piano dell'equipaggiamento è in "Non ancora rilasciato" nel CHANGELOG.)
 
 **Stati usati:**
 

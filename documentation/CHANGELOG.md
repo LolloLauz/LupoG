@@ -1,6 +1,21 @@
 # Changelog
 
-## Non ancora rilasciato
+## 2.0.1 – Classi, Fase 0: fondazione senza cambiamenti visibili (2026-11-25)
+Refactor: per chi gioca non cambia niente (`npm run balance` identico al baseline). Prepara i punti d'innesto per mana, affinità delle armi e attributi, tutti con valori neutri.
+### Aggiunto
+- **Risorse** (`combat/ResourcePool.ts`): valore, massimo e recupero letti da callback, attesa dopo il consumo (`trySpend`, `canSpend`, `drain`, `empty`, `refill`, `clampToMax`, `update`). `Player` ha due pool: stamina (come prima) e **mana** (0 per tutti; getter `mana`, `maxMana`; `PLAYER_CONFIG.manaRegenDelayMs` = 600).
+- **Costo delle abilità**: `AbilityDefinition.staminaCost` diventa `cost: ResourceCost` (`{ stamina?, mana?, health? }`; la salute si paga solo se ne resta almeno 1). Nuovo campo `modifiers: AbilityModifier[]`, vuoto: punto d'estensione per i modificatori degli incantesimi. Base comune `AbilityBase`.
+- **Abilità come lista**: `CharacterDefinition.abilityId` diventa `abilityIds: AbilityId[]` (un elemento per classe). `Player`: `abilities`, `activeAbilitySlotIndex`, `selectAbilitySlot(i)` (rifiuta slot inesistenti, abbassa lo scudo se lo slot cambia), ricarica per slot, `canAfford(cost)`, `isAbilityReady`. HUD e bot del simulatore usano `isAbilityReady`.
+- **Tag delle armi**: `WeaponDefinition.category` (`WeaponCategoryId`: `blade`, `heavy`, `polearm`, `ranged`, `thrown`), `weight` (1-5), `scalingAttribute`.
+- **Affinità** (`weaponAffinityConfig.ts`): `WEAPON_AFFINITY_CONFIG` classe × categoria (`WeaponAffinity`: `isAllowed`, `damageMultiplier`, `recoveryMultiplier`), tutte le celle `NEUTRAL_WEAPON_AFFINITY`; `getWeaponAffinity(characterId, weaponId)`. `Player.weaponAffinity` entra in `getDamageMultiplier` e nel recupero tra gli attacchi (×1).
+- **Attributi** (`attributeConfig.ts`, `systems/AttributeStats.ts`): `ATTRIBUTE_CONFIG` (Forza, Destrezza, Intelligenza, Vitalità, Tempra, con `effectsPerPoint` vuoti), `ATTRIBUTE_ORDER`, `ZERO_ATTRIBUTES`; `computeAttributeEffects(attributi)`. `CharacterDefinition.baseAttributes` (tutti a zero), `maxMana`, `manaRegenPerSecond` (0). `Player.attributes`, `setAttributes()`.
+- **Fonti permanenti nei modificatori**: `PlayerModifiers.setSourceEffects(fonte, effetti)`, `getSourceEffects`, `ModifierSourceId = "attributes"`, sommate nella stessa formula dei power-up; `clear()` toglie solo i power-up. Nuove statistiche `maxHealthBonus`, `maxStaminaBonus`, `maxManaBonus` lette da `Player.maxHealth`, `maxStamina`, `maxMana`.
+- Test: `tests/unit/classes-phase0.test.mjs` (50 controlli); in `stamina-abilities.test.mjs` adattate tre asserzioni sulla forma dei dati e due scritture del campo privato della stamina.
+### Modificato
+- Versione portata a 2.0.1 (`package.json`, `GAME_CONFIG.version` e documenti).
+
+**La 2.0.1 contiene anche le modifiche fatte dopo la 2.0.0 e non ancora uscite in una versione (piano espansioni e piano dell'equipaggiamento E1-E6):**
+
 ### Aggiunto
 - **Piano dell'equipaggiamento, E1 – rarità e oggetti**: sei rarità (`RARITY_CONFIG`: Comune grigio, Non comune verde, Raro blu, Epico viola, Leggendario arancione, Mitico rosso) con peso, prezzo e numero di modificatori (0/1/2/3; Leggendari e Mitici fissi). Un'arma è ora un **oggetto** (`ItemInstance`: tipo + rarità + modificatori, `types/ItemTypes.ts`). Modificatori (`AFFIX_CONFIG`) con un intervallo per rarità e un **tetto** sul totale: danno, recupero, velocità, furto di vita, salute, stamina, difesa, resistenza, elemento, rompe la guardia; un Epico ne ha sempre uno "di stile". Estrazione con seme iniettabile (`ItemFactory.createSeededRandom`). Nomi dal primo modificatore (*Spada della Furia*). Leggendari: uno per arma e tre armature; Mitici: *Ombra Eterna* e *Corona dell'Ombra* (`uniqueItemConfig.ts`). **Migrazione dei salvataggi**: le armi di prima diventano Comuni (`ProgressManager.bagItems`; `bagWeaponIds` continua a essere scritto). Bonus applicati in un punto solo (`Player.refreshEquipment`, `EquipmentStats.computeEquipmentBonuses`).
 - **E2 – armature**: elmo, corazza, stivali in **stoffa, cuoio, ferro, acciaio** (`ARMOR_CONFIG`, 12 pezzi), statistiche base che crescono con la rarità, **set** dello stesso materiale (2 e 3 pezzi), **resistenze** contro i colpi con un elemento (nuovi `EnemyDefinition.attackElement`: melme e scorpione veleno, golem gelo; `ProjectileDefinition.element`: palla di fuoco, dardo magico). Difesa minima 1 danno per colpo. Raccogliendo un'armatura la si indossa (posto libero) o va nello zaino.
