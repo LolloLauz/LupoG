@@ -1,0 +1,222 @@
+# Iron & Shadow – Piano di implementazione a fasi
+
+25 nov 2026 · @Lauz
+
+## Panoramica
+
+Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili fino al bilanciamento finale. Ogni fase si chiude con un gioco giocabile, i test verdi e la documentazione aggiornata, prima di passare alla successiva.
+
+1. **Fase 0, fondazione**: risorse, tag delle armi, statistiche e abilità come dati, tutto neutro. Nessun cambiamento per chi gioca.
+2. **Fase 1, partite scollegate (v2.1)**: salvataggio ridotto, gemme in monete, Shift per la schivata, tasti 5-8 per le mosse.
+3. **Fase 2, il Mago (v2.2)**: mana, bastone, incantesimi, pozione di mana.
+4. **Fase 3, compatibilità armi e classi (v2.3)**: tabella applicata a tutte e cinque le classi, filtro del loot.
+5. **Fase 4, statistiche (v2.4)**: cinque attributi, pentagono, punti spesi in bottega.
+6. **Fase 5, contenuto per classe (v2.5)**: mosse extra, passivi, sinergie elementali, tutto come dati.
+7. **Fase 6, grafica e bilanciamento (v2.6)**: animazioni dedicate, poi una sessione di bilanciamento con il simulatore.
+
+### Gate comune a ogni fase
+
+- `npm run typecheck`, `npm test`, `npm run balance`, `npm run test:browser` e `npm run verify-docs` passano;
+- GAME_MANUAL, ARCHITECTURE e CODE_MANUAL sono aggiornati;
+- il numero di versione sale.
+
+---
+
+## Fase 0 – Fondazione senza cambiamenti visibili
+
+**Obiettivo:** preparare i punti d'innesto per mana, affinità e statistiche con valori neutri, così il gioco si comporta esattamente come prima. È il lavoro che evita di rifare tutto dopo.
+
+- [ ] **Risorse:** aggiungere un `ResourcePool` (stamina e mana) a `Player`; il costo delle abilità in `AbilityDefinition` diventa `{ mana?, stamina?, salute? }`, con i costi attuali tradotti.
+- [ ] **Abilità come lista:** `CharacterDefinition.abilityId` diventa un elenco di abilità (oggi 1 elemento) e `Player` ne gestisce uno slot attivo.
+- [ ] **Tag delle armi:** in `WeaponDefinition` aggiungere categoria, peso e statistica di scaling, per tutte le armi esistenti.
+- [ ] **Compatibilità come dati:** nuova tabella classe × categoria di arma (file di configurazione nuovo) con tutti i valori a ×1 e nessun divieto.
+- [ ] **Statistiche nella pipeline:** attributi di base a zero come nuova fonte di `PlayerModifiers`, accanto ad `EquipmentStats`.
+- [ ] Campo `modifiers` vuoto nella definizione degli incantesimi, per i modificatori futuri.
+- [ ] **Test di parità:** il simulatore di bilanciamento deve dare le stesse percentuali di prima (come per il Cavaliere Nero); i test esistenti passano senza modifiche.
+
+**Criterio di chiusura:** nessuna differenza osservabile, `npm run balance` identico, tutti i controlli verdi.
+
+---
+
+## Fase 1 – Partite scollegate e nuovi comandi (v2.1)
+
+**Obiettivo:** ogni nuova partita parte da zero, con le sole eccezioni decise, e i comandi sono quelli nuovi. Cambia il comportamento, quindi è una versione a sé.
+
+- [ ] **Salvataggio:** `ProgressManager` conserva solo livelli già giocati, classi sbloccate, record e difficoltà; aggiungere un campo di versione con migrazione dal formato 2.0, che scarta il resto.
+- [ ] **Azzeramento a nuova partita:** borsa, zaino, armature, monete e gemme ripartono da zero; nessun cambio di classe durante la partita.
+- [ ] **Gemme in monete:** raccogliere una gemma dà 30 monete (valore da bilanciare) oltre ai 200 punti; togliere il contatore gemme dall'HUD.
+- [ ] **Potenziamenti permanenti:** rimuovere i potenziamenti a gemme e la voce Potenziamenti dal titolo; sistemare Cancella dati e la scheda del personaggio.
+- [ ] **Comandi:**
+  - schivata su Shift sinistro; K liberato;
+  - mosse speciali sui tasti 5-8, con L come alias dello slot 1 (lo scudo del Paladino resta a tasto premuto);
+  - l'attacco eseguito con Spazio passa al tasto J; l'attacco pesante eseguito con J passa a K;
+  - modificare `controlsConfig.ts` e la schermata Controlli.
+- [ ] **Test:** aggiornare i test su salvataggio, comandi e punteggio; il bot dei test del browser usa i nuovi tasti.
+- [ ] **Documentazione:** sezioni 4, 5, 11b del GAME_MANUAL (controlli, schermate, gemme, sblocchi) e la sezione sull'input di ARCHITECTURE.
+
+**Criterio di chiusura:** due partite di seguito non condividono nulla tranne livelli raggiunti, classi, record e difficoltà.
+
+---
+
+## Fase 2 – Il Mago (v2.2)
+
+**Obiettivo:** una classe giocabile dall'inizio alla fine, con mana, bastone e 3-4 incantesimi, usando animazioni ed effetti esistenti dove possibile.
+
+- [ ] **Personaggio:** voce nuova in `CHARACTER_CONFIG` e `CHARACTER_ORDER` (salute bassa, mana alto, velocità media), tipo in `CharacterId`, scheda nella schermata Personaggio, condizione di sblocco dopo la strega.
+- [ ] **Mana:** barra nell'HUD sotto la stamina, rigenerazione lenta, un po' di mana recuperato quando il bastone colpisce.
+- [ ] **Bastone:** arma nuova in `WEAPON_CONFIG`, solo per il Mago; attacchi leggeri deboli; bonus a potenza degli incantesimi e riduzione del costo, validi solo se in mano al Mago.
+- [ ] **Incantesimi** (dati in `ABILITY_CONFIG`): quattro mosse che riusano i tipi esistenti:
+  - proiettile elementale (`ProjectileSystem`, con gli elementi di `ELEMENT_CONFIG`);
+  - colpo ad area come l'onda d'urto;
+  - balzo/teletrasporto come il tiro in ritirata;
+  - barriera come lo scudo del Paladino.
+- [ ] **Loadout:** slot attivi sui tasti 5-8, indicatori nell'HUD con ricarica e mana sufficiente.
+- [ ] **Pozione di mana:** secondo tipo di pozione nella borsa, un posto proprio, massimo 2; aggiunta a bottega e loot (`Inventory`, `Shop`, `LootSystem`, HUD).
+- [ ] **Loot del Mago:** a terra compaiono solo bastoni con affissi; per le altre armi il filtro della Fase 3 viene qui anticipato per il solo Mago.
+- [ ] **Sprite:** testa, veste e bastone provvisori con le routine esistenti (`CHARACTER_VISUALS`, `WEAPON_VISUALS`); l'arte rifinita è nella Fase 6.
+- [ ] **Test e bot:** unit test su costi, rigenerazione e sblocco; bot di bilanciamento per il Mago nel simulatore.
+- [ ] **Documentazione:** nuova voce nelle tabelle dei personaggi, abilità, armi, oggetti e punteggi del manuale.
+
+**Criterio di chiusura:** il Mago completa i 7 livelli con il bot del simulatore e non può restare senza modo di attaccare.
+
+---
+
+## Fase 3 – Compatibilità armi e classi (v2.3)
+
+**Obiettivo:** ogni classe ha armi preferite, armi con malus e armi vietate, con la tabella come unica fonte di verità.
+
+- [ ] **Valori reali:** riempire la tabella di compatibilità (bozza nel documento di progetto): bonus di danno, munizioni o velocità per le armi preferite, malus per quelle meno adatte.
+- [ ] **Divieti:** `Player.equipWeapon` rifiuta le armi ✗ con il messaggio "NON PUOI USARLA"; se l'arma è in uno slot (zaino) resta lì, ma non si impugna.
+- [ ] **Filtro del loot:** `ItemFactory` e `LootSystem` non generano a terra armi vietate per la classe in uso, e le sostituiscono con un'arma compatibile; vale anche per forzieri, élite, trofei dei boss e bottega.
+- [ ] **Peso:** ogni arma e armatura ha un peso; senza le statistiche della Fase 4 il peso dà solo un malus di velocità fisso, che la Fase 4 sostituisce con il requisito di Forza.
+- [ ] **Schermata equipaggiamento:** mostrare bonus e malus della classe accanto al confronto con l'oggetto indossato.
+- [ ] **Test:** una prova per ogni cella della tabella (vietata, malus, bonus); verifica che nessun livello possa lasciare il giocatore senza arma impugnabile.
+- [ ] **Documentazione:** la tabella entra nel manuale, nella sezione delle armi.
+
+**Criterio di chiusura:** tutte e cinque le classi completano i livelli con armi trovate lungo il percorso, senza drop inutilizzabili.
+
+---
+
+## Fase 4 – Statistiche e pentagono (v2.4)
+
+**Obiettivo:** cinque attributi che cambiano davvero il modo di giocare, con una schermata che li mostra come un pentagono.
+
+- [ ] **Attributi:** Forza, Destrezza, Intelligenza, Vitalità e Tempra; valori base per classe in `CHARACTER_CONFIG`.
+- [ ] **Effetti** (tutti via `PlayerModifiers`, con tetti come quello della difesa al 25%):
+  - **Forza:** danno corpo a corpo, peso trasportabile e requisiti di armi e armature pesanti.
+  - **Destrezza:** danno a distanza, velocità d'attacco, costo della schivata.
+  - **Intelligenza:** mana massimo e rigenerazione, potenza e costo degli incantesimi, grado degli incantesimi usabili.
+  - **Vitalità:** salute massima e un po' di difesa.
+  - **Tempra:** stamina massima e recupero, resistenze agli elementi.
+- [ ] **Scaling delle armi:** ogni arma legge la statistica indicata nei suoi tag (Fase 0).
+- [ ] **Punti:** un numero fisso a fine livello e un bonus per ogni boss, spesi nella bottega camminabile; quantità da decidere.
+- [ ] **Schermata delle statistiche:** pentagono a pixel con i cinque valori, apribile dalla schermata dell'equipaggiamento (tasto I) e dalla bottega; tutti i colori dalla palette.
+- [ ] **Power-up temporanei:** passano dalla stessa pipeline e cambiano le statistiche solo per la loro durata, senza toccare i valori base.
+- [ ] **Requisiti:** armi e armature pesanti richiedono Forza; incantesimi di grado alto richiedono Intelligenza; messaggi chiari quando manca il requisito.
+- [ ] **Test e documentazione:** formule e tetti nei test unitari; sezione nuova nel manuale e in ARCHITECTURE.
+
+**Criterio di chiusura:** due build molto diverse (ad esempio tutta Forza e tutta Intelligenza) giocano in modo riconoscibilmente diverso nel simulatore.
+
+---
+
+## Fase 5 – Contenuto per classe (v2.5)
+
+**Obiettivo:** tutte le classi hanno le loro mosse, un passivo e le sinergie elementali, ancora come dati e con animazioni riusate.
+
+- [ ] **Mosse extra:** altre 3 mosse per Cavaliere, Ranger, Berserker e Paladino (4 per classe in tutto), ognuna come voce di `ABILITY_CONFIG` con il suo costo in mana, stamina o salute.
+- [ ] **Come si ottengono:** da decidere tra mosse note dall'inizio o trovate (pergamene, boss); l'INT del Mago e la Tempra delle altre classi possono fissare i requisiti.
+- [ ] **Passivi:** uno per classe (il Paladino ha già la cura lenta); nuovi campi in `CharacterDefinition` letti da `Player`.
+- [ ] **Sinergie elementali:** regole in `ELEMENT_CONFIG` (ad esempio gelo e mazza, bruciatura e fulmine), solo dati e un caso in `StatusEffects` dove serve.
+- [ ] **Animazioni:** riuso delle pose comuni (`ABILITY_POSES`); nessuna arte nuova qui.
+- [ ] **Test e documentazione:** una prova per ogni mossa (costo, ricarica, effetto) e per ogni sinergia; tabelle del manuale aggiornate.
+
+**Criterio di chiusura:** ogni classe ha 4 mosse funzionanti, un passivo e almeno una sinergia sfruttabile.
+
+---
+
+## Fase 6 – Grafica e bilanciamento (v2.6)
+
+**Obiettivo:** sostituire le animazioni provvisorie e portare tutti i numeri a valori giocabili, in due sessioni separate.
+
+### Sessione A, grafica
+
+- [ ] Animazioni e sprite dedicati per le mosse di ogni classe, una classe alla volta, iniziando dal Mago.
+- [ ] Effetti visivi degli incantesimi e del bastone; icone delle mosse nell'HUD.
+- [ ] Controllo che nessun pixel esca dalla palette (`MAX_PALETTE_COLORS`) e che le ancore degli sprite siano coerenti.
+
+### Sessione B, bilanciamento
+
+- [ ] Estendere il simulatore con un bot per ciascuna classe e per le build di statistiche.
+- [ ] Ritoccare costi, ricariche, danni, valori della tabella di compatibilità, prezzo delle gemme e punti statistica.
+- [ ] Verificare i boss (HP, fasi) e il tasso di sopravvivenza per classe e per difficoltà.
+- [ ] Aggiornare BALANCE.md e il manuale con i valori finali.
+
+**Criterio di chiusura:** ogni classe completa il gioco in modo simile alle altre sul simulatore, a tutte e tre le difficoltà.
+
+---
+
+## Dopo la 2.6 e decisioni aperte
+
+**Rimandati a dopo il bilanciamento:** modificatori di incantesimo (il campo `modifiers` esiste già dalla Fase 0), maestria delle armi e doni a scelta a fine livello.
+
+**Decisioni ancora da prendere:**
+
+- [ ] Quanti punti statistica si guadagnano per livello e per boss.
+- [ ] Come si ottengono le mosse extra delle classi (note dall'inizio o trovate).
+- [ ] Valore in monete della gemma (proposta: 30).
+
+---
+
+## Come lavoriamo con Claude Code
+
+### Configurazione iniziale (una volta sola)
+
+- [x] Questo file in `documentation/PIANO_CLASSI.md`: è la fonte di verità che ogni sessione legge e spunta.
+- [x] `CLAUDE.md` alla radice, corto (≤ 80 righe): comandi del gate, manuali da aggiornare, regola della versione (package.json + CHANGELOG), convenzioni (documenti in italiano, colori solo dalla palette, dati nei `*_CONFIG`), skill di progetto, flusso di fase, puntatore a questo file.
+- [x] Permessi in `.claude/settings.json`: `npm run typecheck|test|balance|test:browser|verify-docs|build` e i comandi git di sola lettura senza prompt (`/fewer-permission-prompts` o skill `update-config`).
+- [x] Tre agent in `.claude/agents/`, con il modello fissato:
+
+| Agent | Modello | Compito |
+|---|---|---|
+| `gate-runner` | haiku | Lancia i 5 comandi del gate e restituisce solo PASS/FAIL ed errori (file:riga), così l'output dei test non riempie il contesto |
+| `balance-check` | sonnet | Lancia `npm run balance`, lo confronta con `tools/balance-baseline.txt` e riporta le differenze (parità della Fase 0, Fase 6B) |
+| `docs-sync` | sonnet | Dal diff della fase aggiorna GAME_MANUAL, ARCHITECTURE, CODE_MANUAL e CHANGELOG, e fa passare `verify-docs` |
+
+- [x] Baseline di `npm run balance` salvato prima di iniziare la Fase 0.
+
+Per cercare nel codice basta l'agent integrato `Explore`.
+
+### Modello per fase
+
+| Fase | Sessione principale | Perché |
+|---|---|---|
+| 0 Fondazione | Opus, effort high | Refactor delicato, parità esatta |
+| 1 Partite scollegate | Sonnet (Opus per la migrazione del salvataggio) | Modifiche ripetitive su tasti, HUD, salvataggio |
+| 2 Mago | Opus per il design, poi Sonnet | Dati, HUD e pozione sono meccanici |
+| 3 Compatibilità | Opus | Filtro del loot e "mai senz'arma" |
+| 4 Statistiche | Opus, effort high | Formule, tetti, pipeline dei modificatori |
+| 5 Contenuto | Sonnet | Soprattutto voci di config, guidate da una skill |
+| 6A Grafica | Opus | Pixel art in righe di testo, skill `iron-shadow-pixel-sprites` |
+| 6B Bilanciamento | Sonnet + `/loop` | Cicli "ritocca → `balance-check`" |
+
+`/fast` va bene nei cicli corti di correzione, non nella progettazione.
+
+### Flusso di ogni fase
+
+1. `/clear`, poi plan mode su Opus: legge questo file e `CLAUDE.md` e produce il piano di dettaglio della fase.
+2. Prima delle Fasi 3 e 4: `/grilling` per chiudere le decisioni aperte.
+3. Branch `classi/fase-N` da `espansioni`.
+4. TDD (`/tdd`) dove ci sono formule: costi, rigenerazione, statistiche.
+5. `gate-runner` dopo ogni blocco significativo; `docs-sync` a fine fase.
+6. `/code-review medium` sul branch prima del merge.
+7. Spuntare le checkbox qui, alzare la versione, commit e merge su `espansioni`.
+
+### Skill da aggiungere
+
+- Dopo la Fase 2: `iron-shadow-add-ability` (voce in `ABILITY_CONFIG`, costo, posa da `ABILITY_POSES`, HUD, test, manuale) ed eventualmente `iron-shadow-add-class`, scritte quando il percorso del Mago è noto, così la Fase 5 diventa ripetitiva.
+- Facoltativa: `/chiudi-fase` per i passi 5-7 del flusso.
+
+### Da evitare
+
+- Hook che lanciano i test a ogni modifica: `test:browser` è lento. Al massimo un hook di `typecheck`, da valutare dopo la Fase 0.
+- Worktree o agent in parallelo sulle fasi: sono sequenziali e toccano gli stessi file (`Player`, config).

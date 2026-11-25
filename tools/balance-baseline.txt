@@ -1,0 +1,74 @@
+=== DUELLI (un gruppo di nemici su terreno piano, giocatore a 100 HP) ===
+scheletro         rusher (non schiva)      HP persi  10.0   tempo 3.0s
+goblin            rusher (non schiva)      HP persi   8.0   tempo 2.4s
+soldato           rusher (non schiva)      HP persi  15.0   tempo 3.2s
+2 goblin          rusher (non schiva)      HP persi  16.0   tempo 3.5s
+scheletro+goblin  rusher (non schiva)      HP persi  20.0   tempo 4.8s
+lupo              rusher (non schiva)      HP persi   9.0   tempo 1.8s
+melma             rusher (non schiva)      HP persi   0.0   tempo 2.1s
+arciere           rusher (non schiva)      HP persi  20.0   tempo 9.9s
+pipistrello       rusher (non schiva)      HP persi   0.0   tempo 40.0s
+golem             rusher (non schiva)      HP persi  15.0   tempo 4.8s
+predone           rusher (non schiva)      HP persi  27.0   tempo 9.6s
+scorpione         rusher (non schiva)      HP persi  10.0   tempo 2.5s
+avvoltoio         rusher (non schiva)      HP persi   0.0   tempo 40.0s
+
+=== BOSS DA SOLO (giocatore a 100 HP, nessun altro nemico, nel livello del boss) ===
+CAVALIERE NERO       rusher (non schiva)      vittorie 100%   HP persi 32   tempo 23s
+CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   HP persi 18   tempo 22s
+STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   HP persi 35   tempo 35s
+STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   HP persi 23   tempo 35s
+RE DEI LUPI          rusher (non schiva)      vittorie 100%   HP persi 39   tempo 34s
+RE DEI LUPI          medio (schiva a volte)   vittorie 100%   HP persi 19   tempo 32s
+SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   HP persi 51   tempo 35s
+SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   HP persi 22   tempo 35s
+SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   HP persi 55   tempo 38s
+SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   HP persi 28   tempo 38s
+
+=== LIVELLI (singoli, giocatore a 100 HP) ===
+Livello 1 rusher (non schiva)      vittorie 100%   HP persi  44   tempo 32s
+Livello 1 medio (schiva a volte)   vittorie 100%   HP persi  37   tempo 31s
+Livello 2 rusher (non schiva)      vittorie 100%   HP persi  58   tempo 37s
+Livello 2 medio (schiva a volte)   vittorie 100%   HP persi  37   tempo 36s
+Livello 3 rusher (non schiva)      vittorie 100%   HP persi 107   tempo 40s
+Livello 3 medio (schiva a volte)   vittorie 100%   HP persi  46   tempo 40s
+Livello 4 rusher (non schiva)      vittorie 100%   HP persi  65   tempo 51s
+Livello 4 medio (schiva a volte)   vittorie 100%   HP persi  69   tempo 55s
+Livello 5 rusher (non schiva)      vittorie 100%   HP persi 108   tempo 57s
+Livello 5 medio (schiva a volte)   vittorie 100%   HP persi  67   tempo 53s
+Livello 6 rusher (non schiva)      vittorie 100%   HP persi 132   tempo 55s
+Livello 6 medio (schiva a volte)   vittorie  98%   HP persi 118   tempo 71s
+Livello 7 rusher (non schiva)      vittorie 100%   HP persi 115   tempo 60s
+Livello 7 medio (schiva a volte)   vittorie  98%   HP persi  93   tempo 63s
+
+=== PARTITE COMPLETE (3 vite, salute portata da un livello all'altro, +30 HP a fine livello) ===
+rusher (non schiva)      partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie per livello 0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.15 / 0.75
+medio (schiva a volte)   partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie per livello 0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.08
+
+=== EQUIPAGGIAMENTO (E5): PARTITE COMPLETE DEL CAVALIERE, SENZA, CON IL BOTTINO DI FINE LIVELLO, AL MASSIMO ===
+rusher (non schiva)      senza    partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie 0.90
+rusher (non schiva)      bottino  partite vinte  98%   vite rimaste (se vinta) 3.00   morti medie 0.05
+rusher (non schiva)      massimo  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie 0.10
+medio (schiva a volte)   bottino  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+medio (schiva a volte)   massimo  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+
+=== PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, stamina, cura; con e senza l'abilità L) ===
+CAVALIERE  rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie 0.90
+CAVALIERE  rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 2.15   morti medie 0.85
+CAVALIERE  medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie 0.10
+CAVALIERE  medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03
+RANGER     rusher (non schiva)      senza abilità partite vinte  30%   vite rimaste (se vinta) 1.61   morti medie 2.52
+RANGER     rusher (non schiva)      con abilità   partite vinte   5%   vite rimaste (se vinta) 1.00   morti medie 2.95
+RANGER     medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 2.82   morti medie 0.18
+RANGER     medio (schiva a volte)   con abilità   partite vinte  93%   vite rimaste (se vinta) 2.27   morti medie 0.88
+BERSERKER  rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+BERSERKER  rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+BERSERKER  medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+BERSERKER  medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 2.95   morti medie 0.05
+PALADINO   rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 2.70   morti medie 0.30
+PALADINO   rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 2.70   morti medie 0.30
+PALADINO   medio (schiva a volte)   senza abilità partite vinte  95%   vite rimaste (se vinta) 2.53   morti medie 0.60
+PALADINO   medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+
+(rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)
