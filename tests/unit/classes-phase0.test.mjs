@@ -72,6 +72,9 @@ export default async function (t, load) {
     t("canAfford: costo vuoto sempre pagabile", p.canAfford({}));
     t("canAfford: senza mana un costo in mana non si paga", !p.canAfford({ mana: 1 }));
     t("canAfford: la salute deve restare almeno a 1", !p.canAfford({ health: p.currentHealth }) && p.canAfford({ health: p.currentHealth - 1 }));
+    p.currentHealth = 1.4;
+    t("canAfford: con salute frazionaria deve restare almeno 1 punto", !p.canAfford({ health: 1 }) && p.canAfford({ health: 0.3 }));
+    p.currentHealth = p.maxHealth;
     t("canAfford: stamina come prima", p.canAfford({ stamina: p.stamina }) && !p.canAfford({ stamina: p.stamina + 1 }));
     t("isAbilityReady: pronta a riposo", p.isAbilityReady);
   }
@@ -140,6 +143,11 @@ export default async function (t, load) {
     t("Fase 0: alzare gli attributi non cambia niente", p.maxHealth === before.health && p.maxStamina === before.stamina && p.getDamageMultiplier() === before.damage && p.attributes.strength === 9);
     p.modifiers.setSourceEffects("attributes", [{ stat: "maxHealthBonus", operation: "add", value: 20 }, { stat: "maxStaminaBonus", operation: "add", value: 5 }]);
     t("i bonus della pipeline entrano nei massimi di salute e stamina", p.maxHealth === before.health + 20 && p.maxStamina === before.stamina + 5);
+    p.modifiers.add({ ...POWER_UP_CONFIG.speed, id: "speed", effects: [{ stat: "maxHealthBonus", operation: "add", value: 30 }], durationMs: 100 });
+    p.heal(1000);
+    const boosted = p.currentHealth;
+    step(p, [], [], 10);
+    t("allo scadere di un power-up che alza il massimo la salute scende al nuovo massimo", boosted === before.health + 50 && p.currentHealth === before.health + 20, `${boosted} -> ${p.currentHealth}`);
     p.revive();
     t("la morte non toglie le fonti permanenti", p.maxHealth === before.health + 20);
     p.setCharacter(CHARACTER_CONFIG.knight);

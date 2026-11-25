@@ -253,7 +253,7 @@ export class Player extends GameObject {
     return (
       this.staminaPool.canSpend(cost.stamina ?? 0) &&
       this.manaPool.canSpend(cost.mana ?? 0) &&
-      (healthCost <= 0 || this.currentHealth > healthCost)
+      (healthCost <= 0 || this.currentHealth - healthCost >= 1)
     );
   }
 
@@ -826,7 +826,11 @@ export class Player extends GameObject {
     this.airComboManager.update(deltaTimeMs);
     // prima la cura del frame, poi la scadenza: così l'ultimo frame del power-up conta
     this.applyRegeneration(deltaTimeMs);
+    const powerUpCount = this.modifiers.activePowerUps.length;
     this.modifiers.update(deltaTimeMs);
+    if (this.modifiers.activePowerUps.length < powerUpCount) {
+      this.clampResourcesToMax(); // un power-up scaduto può abbassare i massimi
+    }
     this.auraElapsedMs += deltaTimeMs;
     // tolleranza nel salto: "coyote time" (si salta anche subito dopo aver lasciato il bordo)
     this.coyoteRemainingMs = this.isOnGround

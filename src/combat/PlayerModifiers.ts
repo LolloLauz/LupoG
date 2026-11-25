@@ -73,21 +73,21 @@ export class PlayerModifiers {
   public getValue(stat: PlayerStatName): number {
     let additive = 0;
     let multiplier = 1;
-    const apply = (effect: StatModifierEffect): void => {
-      if (effect.stat !== stat) {
-        return;
-      }
-      if (effect.operation === "add") {
-        additive += effect.value;
-      } else {
-        multiplier *= effect.value;
-      }
-    };
     for (const powerUp of this.active) {
-      powerUp.definition.effects.forEach(apply);
+      for (const effect of powerUp.definition.effects) {
+        if (effect.stat === stat) {
+          if (effect.operation === "add") additive += effect.value;
+          else multiplier *= effect.value;
+        }
+      }
     }
     for (const effects of this.sourceEffects.values()) {
-      effects.forEach(apply);
+      for (const effect of effects) {
+        if (effect.stat === stat) {
+          if (effect.operation === "add") additive += effect.value;
+          else multiplier *= effect.value;
+        }
+      }
     }
     return (STAT_BASE_VALUES[stat] + additive) * multiplier;
   }

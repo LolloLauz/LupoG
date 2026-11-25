@@ -32,7 +32,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 - [x] **Compatibilità come dati:** nuova tabella classe × categoria di arma (file di configurazione nuovo) con tutti i valori a ×1 e nessun divieto.
 - [x] **Statistiche nella pipeline:** attributi di base a zero come nuova fonte di `PlayerModifiers`, accanto ad `EquipmentStats`.
 - [x] Campo `modifiers` vuoto nella definizione degli incantesimi, per i modificatori futuri.
-- [x] **Test di parità:** il simulatore di bilanciamento deve dare le stesse percentuali di prima (come per il Cavaliere Nero); i test esistenti passano senza modifiche.
+- [x] **Test di parità:** il simulatore di bilanciamento deve dare le stesse percentuali di prima (come per il Cavaliere Nero); i test esistenti passano senza modifiche. *Fatto: simulatore identico al baseline; in `stamina-abilities.test.mjs` adattate solo tre asserzioni sulla forma dei dati (`abilityIds`, `cost.stamina`) e due scritture del campo privato della stamina, nessun controllo di comportamento.*
 
 **Criterio di chiusura:** nessuna differenza osservabile, `npm run balance` identico, tutti i controlli verdi.
 
