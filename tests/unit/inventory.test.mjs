@@ -50,12 +50,12 @@ t("la schermata dei controlli mostra E e 1-4 e la tabella non tocca le scritte s
  p.takeDamage(40,0);const hp=p.currentHealth;const im=new ItemManager();const sm=new ScoreManager();
  im.loadItems([{type:'healthPotion',position:{x:102,y:190}},{type:'powerSpeed',position:{x:104,y:190}}]);
  const got=im.collectItems(p,sm);
- t("solo la pozione è un oggetto da borsa",Object.values(ITEM_CONFIG).filter(d=>d.storedInBag).map(d=>d.id).join()==='healthPotion');
+ t("solo le pozioni (salute e mana) sono oggetti da borsa",Object.values(ITEM_CONFIG).filter(d=>d.storedInBag).map(d=>d.id).join()==='healthPotion,manaPotion');
  t("toccando un power-up si attiva subito (come prima); la pozione no",got.length===1&&got[0].definition.id==='powerSpeed'&&p.modifiers.has('speed')&&p.currentHealth===hp);}
 
 // --- motore
 {const src=readFileSync(join(projectRoot,'src/core/GameEngine.ts'),'utf8');
- t("con E si prende prima un'arma, se non c'è una pozione (borsa piena: messaggio)",/private pickUpWithE[\s\S]*findReachablePickup[\s\S]*findReachableBagItem[\s\S]*addPotion\(\)[\s\S]*BORSA PIENA/.test(src));
+ t("con E si prende prima un'arma, se non c'è una pozione (borsa piena: messaggio)",/private pickUpWithE[\s\S]*findReachablePickup[\s\S]*findReachableBagItem[\s\S]*addPotion\([\s\S]*BORSA PIENA/.test(src));
  t("borsa piena: l'arma vecchia va nello zaino; se è pieno resta a terra, non prendibile finché non ci si allontana",/result\.droppedItem !== undefined\)[\s\S]{0,300}this\.inventory\.addToBackpack\(result\.droppedItem\)[\s\S]{0,200}weaponPickups\.spawn\(result\.droppedItem, centerX, pickup\.positionY \+ pickup\.height, false, result\.droppedAmmo \?\? null\)/.test(src));
  t("i tasti numerici usano il posto: arma in mano o pozione (non a salute piena)",/BAG_SLOT_ACTIONS\.forEach[\s\S]{0,400}useBagSlot\(slotIndex\)/.test(src)&&/currentHealth >= this\.player\.maxHealth\)[\s\S]{0,200}SALUTE PIENA[\s\S]{0,80}return;[\s\S]{0,80}consumePotion\(slotIndex\)/.test(src));
  t("ricominciando il livello la borsa torna com'era all'inizio del livello",/private restartCurrentLevel[\s\S]{0,500}this\.inventory\.restore\(this\.levelStartInventory\)/.test(src)&&src.includes('this.levelStartInventory = this.inventory.snapshot();'));

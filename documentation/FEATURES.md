@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.1.1**.
+Versione: **2.2.0**.
 
 **Stati usati:**
 
@@ -26,8 +26,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 1097 controlli) | Implementata | |
-| Test nel browser (`npm run test:browser`, 176 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176 |
+| Test unitari inclusi (`npm test`, 1166 controlli) | Implementata | |
+| Test nel browser (`npm run test:browser`, 177 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176; 2.2.0: 177/177 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
 | Compatibilità con Firefox, Safari, Edge e browser mobili | Da implementare | non provata: verificato solo Chromium |
@@ -101,8 +101,14 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Personaggi con classi (`CharacterDefinition`, `CHARACTER_CONFIG`): **Cavaliere** (equilibrato, spada), **Ranger** (veloce, 75 HP, arco, schivata lunga e frequente), **Berserker** (130 HP, danno ×1,3, ascia, schivata corta e ogni 1,6 s), **Paladino** (lento, 110 HP, danno subito ×0,75, mazza, si cura di 1 HP/s dopo 4 s senza colpi) | Implementata | Fase 4 del piano espansioni; sprite ricolorati dal cavaliere con testa propria (cappuccio, elmo con corna, pennacchio bianco); non provato da persone; il bot di bilanciamento usa solo la spada |
 | Scelta del personaggio dal menu del titolo (schermata con statistiche in tacche, arma iniziale e tratto), salvata nei progressi | Implementata | Fase 4; la scelta vale dalla partita successiva, che parte con la sola arma iniziale; durante la partita la classe non cambia |
 | Stamina (barra nell'HUD): la consumano schivata, attacchi pesanti (15) e abilità; recupero dopo 0,6 s; "STANCO" quando non basta | Implementata | Fase 5 del piano espansioni; valori per personaggio in `CHARACTER_CONFIG` |
-| Abilità speciali (tasti 7, 8, 9, 0, L = 7; oggi una per personaggio, sul 7; costo in stamina e ricarica): onda d'urto (Cavaliere), tiro in ritirata (Ranger), carica furiosa (Berserker), scudo (Paladino) | Implementata | Fase 5; `ABILITY_CONFIG`; gli scatti si fermano sul bordo degli abissi; non provato da persone |
+| Abilità speciali (tasti 7, 8, 9, 0, L = 7; una per le prime quattro classi, sul 7, quattro per il Mago; costo in stamina o in mana e ricarica): onda d'urto (Cavaliere), tiro in ritirata (Ranger), carica furiosa (Berserker), scudo (Paladino) | Implementata | Fase 5; `ABILITY_CONFIG`; gli scatti si fermano sul bordo degli abissi; non provato da persone |
 | Passiva del Ranger: le frecce dell'arco si ricaricano, una ogni 3 s, con l'arco in mano o in borsa (non nello zaino; i quadrelli della balestra no) | Implementata | 2.1.1; `CharacterDefinition.ammoRegeneration`, `AmmoRegeneration`; valore da bilanciare (Classi Fase 6); non provata da persone |
+| **Mago** (70 HP, velocità 84, stamina 80, **mana 100** con recupero 6/s dopo 600 ms, bastone; si sblocca sconfiggendo la Strega della Palude) | Implementata | Classi Fase 2 (2.2.0); `CHARACTER_CONFIG.mage`, `usesSpellFocus`; sprite provvisori (cappello a punta, veste viola); valori da bilanciare nella Fase 6; non provato da persone |
+| Incantesimi del Mago sui tasti 7-0: dardo di fuoco (15 mana, bruciatura), nova di gelo (30, area con gelo), balzo arcano (20, scatto invulnerabile), barriera (guardia tenuta sul tasto 0, costa mana) | Implementata | Classi Fase 2; `ABILITY_CONFIG`, `AttackDefinition.elements`, guardia con `resource` e `costPerBlockedDamage`; con più mosse il bordo dorato segna lo slot attivo |
+| Bastone (catalizzatore): colpi 8/8/14 (MULINELLO), SPAZZATA ARCANA, incantesimi più forti (×1,2) e meno cari (×0,85), 5 mana per bersaglio colpito; Leggendario BASTONE DELLE STELLE | Implementata | Classi Fase 2; `WeaponDefinition.spellFocus`, `Player.activeSpellFocus`; vale solo per chi ha `usesSpellFocus` |
+| Tabella di compatibilità arma-classe: il Mago solo bastone, le altre classi tutto tranne il bastone | In sviluppo | Classi Fase 2; oggi la legge solo il filtro del bottino (`resolveLootWeaponId`: forzieri, élite, trofei, bottega); `equipWeapon` la applicherà dalla Fase 3 |
+| Pozione di mana (+40 mana): posto proprio nella borsa (max 2), bottino per chi ha mana, in bottega a 35 monete al posto della faretra | Implementata | Classi Fase 2; `ITEM_CONFIG.manaPotion`, `LOOT_SOURCES[..].manaPotionChance`; valori da bilanciare |
+| HUD con mana: barra blu sotto la stamina e un riquadro per ogni mossa (numero rosso se la risorsa non basta) | Implementata | Classi Fase 2; senza mana l'HUD resta com'era |
 | Parata con lo scudo (Paladino): para i colpi da davanti e le frecce, costa stamina; parata perfetta (scudo alzato da meno di 0,25 s) gratuita, stordisce l'attaccante per 1 s; guardia rotta senza stamina | Implementata | Fase 5; i boss non vengono storditi |
 | Gestione delle cadute (danno e ripartenza dall'ultimo punto sicuro) | Implementata | |
 
@@ -164,7 +170,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Power-up temporanei (Furia, Velocità, Scudo, Fuoco, Rigenerazione) | Implementata | 2.0 Fase 5; vedi `ARCHITECTURE.md` sez. 10 |
 | Potenziamenti permanenti con le gemme | Non prevista | rimossi nella 2.1 (Classi Fase 1) |
 | Monete (monete raccolte, nemici, boss) e bottega tra un livello e l'altro (pozione, cura, faretra, un'arma trovata nella partita, spada sempre compresa) | Implementata | Fase 6; `ECONOMY_CONFIG`, `SHOP_OFFERS`, `Shop`; il bot di bilanciamento non usa la bottega. Dal piano dell'equipaggiamento (E6) la bottega è una stanza camminabile; quella a menu resta come ripiego (`SHOP_ROOM_CONFIG.isEnabled`) |
-| Sblocchi: Ranger, Berserker e Paladino raggiungendo i livelli 3, 4 e 6 | Implementata | Fase 6; ricavati dal livello più avanzato raggiunto |
+| Sblocchi: Ranger, Berserker, Mago e Paladino raggiungendo i livelli 3, 4, 5 e 6 | Implementata | Fase 6; ricavati dal livello più avanzato raggiunto |
 | Nuove ambientazioni | Implementata | Fase 4 della 2.0: sei ambientazioni; Fase 8 del piano espansioni: Lande Desolate |
 
 ## Equipaggiamento (piano E1-E6)

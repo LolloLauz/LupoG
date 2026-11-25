@@ -71,4 +71,20 @@ PALADINO   rusher (non schiva)      con abilità   partite vinte 100%   vite rim
 PALADINO   medio (schiva a volte)   senza abilità partite vinte  95%   vite rimaste (se vinta) 2.53   morti medie 0.60
 PALADINO   medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 
+=== MAGO (Classi Fase 2): BASTONE E INCANTESIMI (7 dardo, 8 nova, 9 balzo, 0 barriera contro i boss) ===
+MAGO contro CAVALIERE NERO       rusher (non schiva)      vittorie 100%   HP persi 22   tempo 20s
+MAGO contro CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   HP persi 17   tempo 21s
+MAGO contro STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   HP persi 33   tempo 32s
+MAGO contro STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   HP persi 26   tempo 33s
+MAGO contro RE DEI LUPI          rusher (non schiva)      vittorie 100%   HP persi 25   tempo 28s
+MAGO contro RE DEI LUPI          medio (schiva a volte)   vittorie 100%   HP persi 23   tempo 30s
+MAGO contro SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   HP persi 47   tempo 33s
+MAGO contro SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   HP persi 32   tempo 36s
+MAGO contro SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   HP persi 35   tempo 34s
+MAGO contro SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   HP persi 27   tempo 37s
+MAGO rusher (non schiva)      senza    partite vinte  13%   vite rimaste (se vinta) 1.25   morti medie 2.83 (0.00 / 0.00 / 0.60 / 0.00 / 0.03 / 1.80 / 0.40)
+MAGO rusher (non schiva)      bottino  partite vinte  95%   vite rimaste (se vinta) 3.00   morti medie 0.15 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.15)
+MAGO medio (schiva a volte)   senza    partite vinte  93%   vite rimaste (se vinta) 2.48   morti medie 0.68 (0.00 / 0.00 / 0.03 / 0.00 / 0.03 / 0.20 / 0.42)
+MAGO medio (schiva a volte)   bottino  partite vinte  95%   vite rimaste (se vinta) 2.77   morti medie 0.37 (0.00 / 0.00 / 0.23 / 0.00 / 0.00 / 0.03 / 0.10)
+
 (rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)

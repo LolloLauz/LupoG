@@ -8,7 +8,8 @@ import { PLAYER_CONFIG } from "./playerConfig";
  * Gli altri personaggi hanno valori propri. Salto, hitbox e tempi sono comuni (PLAYER_CONFIG).
  * Fase 5: stamina (massimo, recupero, costo della schivata) e abilità speciale (ABILITY_CONFIG).
  * Fase 6: i personaggi si sbloccano raggiungendo un livello (unlockLevel); il cavaliere è sempre disponibile.
- * Classi Fase 0: mana (per ora 0 per tutti), attributi di partenza (a zero) e abilità come elenco (una per classe).
+ * Classi Fase 0: mana (0 per le classi senza incantesimi), attributi di partenza (a zero) e abilità come elenco.
+ * Classi Fase 2: il Mago, con mana, bastone e quattro incantesimi (tasti 7-0).
  */
 export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
   knight: {
@@ -110,10 +111,36 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     unlockLevel: 6,
     unlockText: "SCONFIGGI IL RE DEI LUPI",
   },
+  mage: {
+    id: "mage",
+    name: "MAGO",
+    description: "Fragile, colpisce con la magia.",
+    trait: "INCANTESIMI A MANA SUI TASTI 7-0",
+    spriteSuffix: "Mage",
+    startingWeaponId: "staff",
+    maxHealth: 70,
+    movementSpeed: 84,
+    damageMultiplier: 1,
+    damageTakenMultiplier: 1,
+    dodgeDurationMs: PLAYER_CONFIG.dodgeDurationMs,
+    dodgeCooldownMs: PLAYER_CONFIG.dodgeCooldownMs,
+    dodgeSpeed: PLAYER_CONFIG.dodgeSpeed,
+    maxStamina: 80,
+    staminaRegenPerSecond: 30,
+    dodgeStaminaCost: 25,
+    // mana: recupero lento (valori da bilanciare nella Fase 6); il bastone ne ridà un po' a ogni colpo
+    maxMana: 100,
+    manaRegenPerSecond: 6,
+    usesSpellFocus: true,
+    baseAttributes: ZERO_ATTRIBUTES,
+    abilityIds: ["firebolt", "frostNova", "arcaneLeap", "arcaneBarrier"],
+    unlockLevel: 5,
+    unlockText: "SCONFIGGI LA STREGA DELLA PALUDE",
+  },
 };
 
-/** Ordine nella schermata di scelta. */
-export const CHARACTER_ORDER: readonly CharacterId[] = ["knight", "ranger", "berserker", "paladin"];
+/** Ordine nella schermata di scelta (quello in cui si sbloccano). */
+export const CHARACTER_ORDER: readonly CharacterId[] = ["knight", "ranger", "berserker", "mage", "paladin"];
 
 export const DEFAULT_CHARACTER_ID: CharacterId = "knight";
 

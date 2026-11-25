@@ -93,6 +93,15 @@ export const LEGENDARY_ITEMS: Record<string, UniqueItemDefinition> = {
     baseId: "greatsword",
     affixes: [{ id: "damage", value: 18 }, { id: "element", value: 0, element: "frost" }, { id: "lifeSteal", value: 4 }],
   },
+  // Classi Fase 2: il Leggendario del bastone del Mago
+  starStaff: {
+    id: "starStaff",
+    name: "BASTONE DELLE STELLE",
+    description: "Fulmini e colpi rapidi.",
+    kind: "weapon",
+    baseId: "staff",
+    affixes: [{ id: "damage", value: 14 }, { id: "element", value: 0, element: "shock" }, { id: "recovery", value: 15 }],
+  },
   guardianHelm: {
     id: "guardianHelm",
     name: "ELMO DEL GUARDIANO",

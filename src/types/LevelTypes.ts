@@ -26,6 +26,7 @@ export interface ThemeStyle {
 /** Tipi di oggetto raccoglibile. */
 export type ItemTypeId =
   | "healthPotion"
+  | "manaPotion"
   | "scoreCoin"
   | "collectible"
   | "powerBerserk"

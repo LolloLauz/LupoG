@@ -1,5 +1,30 @@
 # Changelog
 
+## 2.2.0 – Classi, Fase 2: il Mago (2026-11-25)
+Quinta classe giocabile: il Mago, con mana, bastone e quattro incantesimi.
+### Aggiunto
+- **Mago** (`CHARACTER_CONFIG.mage`): 70 HP, velocità 84, stamina 80 (recupero 30, schivata 25), **mana 100** con recupero 6/s dopo 600 ms dall'ultimo consumo, arma iniziale bastone. Si sblocca al livello 5 ("SCONFIGGI LA STREGA DELLA PALUDE"). `CHARACTER_ORDER`: cavaliere, ranger, berserker, mago, paladino. La schermata del personaggio ha 5 colonne e la riga "100 MANA". Sprite provvisori: cappello a punta e veste viola (`CHARACTER_VISUALS.mage`).
+- **Quattro incantesimi** sui tasti 7-0 (`ABILITY_CONFIG`): **DARDO DI FUOCO** (15 mana, 0,9 s, proiettile `arcaneFireball` da 22 con bruciatura, senza munizioni), **NOVA DI GELO** (30 mana, 5 s, area da 18 con gelo), **BALZO ARCANO** (20 mana, 3 s, scatto indietro invulnerabile), **BARRIERA** (guardia tenuta sul tasto 0: 10 mana per alzarla, 10/s, 1 mana per punto parato, parata perfetta come lo scudo). Nuovi `AttackDefinition.elements` e, nella guardia, `resource: "stamina" | "mana"`. Animazioni `abilityFirebolt`, `abilityFrostNova`, `abilityArcaneLeap`.
+- **Bastone** (`WEAPON_CONFIG.staff`, categoria `staff`, peso 2, scaling `intelligence`): colpi 8/8/14 (combo MULINELLO), pesante 18, combo SPAZZATA ARCANA (finale 16, colpisce anche dietro), picchiata 14. Il **catalizzatore** `WeaponDefinition.spellFocus` (potenza ×1,2, costo in mana ×0,85 arrotondato, 5 mana per bersaglio colpito) vale solo per le classi con `CharacterDefinition.usesSpellFocus`. Leggendario **BASTONE DELLE STELLE**. `drawStaff`, `WEAPON_VISUALS.staff`.
+- `Player`: `activeSpellFocus`, `getAbilityCost`, `getDamageMultiplierFor(attacco)` (usato da `CombatSystem` e dai proiettili), `restoreMana`, `abilitySlots`, `drainNoMana` (popup "SENZA MANA"); `ResourcePool.restore`; `registerHit` ridà mana con gli attacchi dell'arma.
+- **Compatibilità arma-classe**: categoria `staff` in `WEAPON_AFFINITY_CONFIG`; il Mago usa solo il bastone, le altre classi tutto tranne il bastone (`FORBIDDEN_WEAPON_AFFINITY`). Per ora i divieti li legge solo il filtro del bottino `resolveLootWeaponId` (forzieri, élite, trofei dei boss, bottega); `equipWeapon` li applicherà dalla Fase 3.
+- **Pozione di mana** (`ITEM_CONFIG.manaPotion`, +40 mana, sprite `itemManaPotion`): `BagSlot` pozione con `potionId` (`PotionId`), ogni tipo con il suo posto (max 2); `Inventory.addPotion(potionId)`, `canAddPotion(potionId)`, `getPotionCount(potionId)`. Si beve con 1-4 ("MANA PIENO" se pieno), si raccoglie con E, Q la lascia a terra. Bottino: `manaPotionChance` (forziere 1, élite 0,5, boss 1, altri 0) con `rollManaPotionDrop`, solo per le classi con mana. Bottega: `manaPotion` a 35 monete al posto della faretra per chi ha mana.
+- **Bottega del Mago**: trova sempre un bastone in vendita (sostituisce il suo, che va nello zaino), ma non uno identico a quello che ha già. Le voci fisse per classe sono dati (`SHOP_BASIC_OFFERS`); un'arma identica a una della borsa è comunque rifiutata ("NON SERVE").
+- **Trofeo del boss finale** per classe: solo armature e armi che la classe può usare (`LootContext.characterId`); per le altre classi i trofei restano quelli di prima.
+- **HUD**: `HUDData.abilities[]` (un riquadro per slot, passo 11 px, numero rosso se la risorsa non basta, bordo dorato sullo slot scelto con più mosse), `mana`/`maxMana`; con il mana stamina e mana su due barre da 3 px (`STAMINA_BAR_WITH_MANA_GEOMETRY`, `MANA_BAR_GEOMETRY`). Senza mana l'HUD resta com'era, salvo il numero rosso quando la stamina non basta.
+- **Simulatore**: bot del Mago (`playMageTurn`), sezione "MAGO" (boss da solo, partite complete senza e con bottino) e opzione `--mage`; il Mago è escluso dalla sezione "tutti con la spada".
+- Test: `tests/unit/mage-phase2.test.mjs` (66 controlli); giro del Mago nei test del browser.
+### Modificato
+- `AttackDefinition`/guardia: `staminaPerBlockedDamage` rinominato `costPerBlockedDamage`.
+- Test adattati: characters, classes-phase0, stamina-abilities, combos-phase3, config-integrity, equipment-phases, feedback-fixes, inventory, progression, weapons-phase1.
+- Versione portata a 2.2.0 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Corretto
+- Un attacco senza area d'urto (balzo arcano) non colpisce più niente: prima, nel primo frame, un'area vuota sovrapposta a un nemico poteva ferirlo (`Player.getActiveAttackHitbox`).
+- Colpire un forziere con il bastone non ridà mana: i forzieri sono scena (`Damageable.isScenery`).
+### Verificato
+- `npm run balance`: le righe del baseline restano identiche, si aggiungono solo quelle del Mago (`tools/balance-baseline.txt` aggiornato).
+- `npm test` (1166 controlli in 31 file), `npm run test:browser` (177/177), `npm run verify-docs`.
+
 ## 2.1.1 – Classi, Fase 1: ritocchi a comandi e Ranger (2026-11-25)
 Le mosse speciali cambiano tasti e il Ranger ricarica le frecce.
 ### Aggiunto

@@ -142,7 +142,7 @@ export default async function (t, load) {
 
   // ---------- oggetti ----------
   t("ITEM_CONFIG: la chiave coincide con l'id e lo sprite esiste", Object.entries(ITEM_CONFIG).every(([key, item]) => key === item.id && sprites.has(item.spriteId)));
-  t("ogni oggetto ha almeno un effetto", Object.values(ITEM_CONFIG).every((item) => item.healAmount > 0 || item.scoreBonus > 0 || (item.coins ?? 0) > 0 || item.refillsAmmo === true));
+  t("ogni oggetto ha almeno un effetto", Object.values(ITEM_CONFIG).every((item) => item.healAmount > 0 || (item.manaAmount ?? 0) > 0 || item.scoreBonus > 0 || (item.coins ?? 0) > 0 || item.refillsAmmo === true));
 
   // ---------- controlli ----------
   t("ogni azione ha almeno un tasto", Object.values(CONTROLS_CONFIG).every((keys) => keys.length > 0));

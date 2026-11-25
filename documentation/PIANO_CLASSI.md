@@ -63,20 +63,20 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 **Obiettivo:** una classe giocabile dall'inizio alla fine, con mana, bastone e 3-4 incantesimi, usando animazioni ed effetti esistenti dove possibile.
 
-- [ ] **Personaggio:** voce nuova in `CHARACTER_CONFIG` e `CHARACTER_ORDER` (salute bassa, mana alto, velocità media), tipo in `CharacterId`, scheda nella schermata Personaggio, condizione di sblocco dopo la strega.
-- [ ] **Mana:** barra nell'HUD sotto la stamina, rigenerazione lenta, un po' di mana recuperato quando il bastone colpisce.
-- [ ] **Bastone:** arma nuova in `WEAPON_CONFIG`, solo per il Mago; attacchi leggeri deboli; bonus a potenza degli incantesimi e riduzione del costo, validi solo se in mano al Mago.
-- [ ] **Incantesimi** (dati in `ABILITY_CONFIG`): quattro mosse che riusano i tipi esistenti:
+- [x] **Personaggio:** voce nuova in `CHARACTER_CONFIG` e `CHARACTER_ORDER` (salute bassa, mana alto, velocità media), tipo in `CharacterId`, scheda nella schermata Personaggio, condizione di sblocco dopo la strega. *Fatto: 70 HP, 100 mana, velocità 84, si sblocca al livello 5; nella scelta sta tra il Berserker e il Paladino (ordine di sblocco).*
+- [x] **Mana:** barra nell'HUD sotto la stamina, rigenerazione lenta, un po' di mana recuperato quando il bastone colpisce. *Fatto: 6 al secondo dopo 0,6 s dall'ultimo consumo, +5 per ogni bersaglio colpito con il bastone (non con gli incantesimi).*
+- [x] **Bastone:** arma nuova in `WEAPON_CONFIG`, solo per il Mago; attacchi leggeri deboli; bonus a potenza degli incantesimi e riduzione del costo, validi solo se in mano al Mago. *Fatto: `WeaponDefinition.spellFocus` (×1,2 danno, ×0,85 mana), letto solo dalle classi con `usesSpellFocus`; categoria `staff` nella tabella di compatibilità; Leggendario "Bastone delle Stelle".*
+- [x] **Incantesimi** (dati in `ABILITY_CONFIG`): quattro mosse che riusano i tipi esistenti (*fatto: dardo di fuoco, nova di gelo, balzo arcano, barriera; elementi degli attacchi con `AttackDefinition.elements`, guardia a mana con `resource`*):
   - proiettile elementale (`ProjectileSystem`, con gli elementi di `ELEMENT_CONFIG`);
   - colpo ad area come l'onda d'urto;
   - balzo/teletrasporto come il tiro in ritirata;
   - barriera come lo scudo del Paladino.
-- [ ] **Loadout:** slot attivi sui tasti 7-0, indicatori nell'HUD con ricarica e mana sufficiente.
-- [ ] **Pozione di mana:** secondo tipo di pozione nella borsa, un posto proprio, massimo 2; aggiunta a bottega e loot (`Inventory`, `Shop`, `LootSystem`, HUD).
-- [ ] **Loot del Mago:** a terra compaiono solo bastoni con affissi; per le altre armi il filtro della Fase 3 viene qui anticipato per il solo Mago.
-- [ ] **Sprite:** testa, veste e bastone provvisori con le routine esistenti (`CHARACTER_VISUALS`, `WEAPON_VISUALS`); l'arte rifinita è nella Fase 6.
-- [ ] **Test e bot:** unit test su costi, rigenerazione e sblocco; bot di bilanciamento per il Mago nel simulatore.
-- [ ] **Documentazione:** nuova voce nelle tabelle dei personaggi, abilità, armi, oggetti e punteggi del manuale.
+- [x] **Loadout:** slot attivi sui tasti 7-0, indicatori nell'HUD con ricarica e mana sufficiente. *Fatto: un riquadro per slot (`Player.abilitySlots`), numero rosso se la risorsa non basta, bordo dorato sullo slot attivo.*
+- [x] **Pozione di mana:** secondo tipo di pozione nella borsa, un posto proprio, massimo 2; aggiunta a bottega e loot (`Inventory`, `Shop`, `LootSystem`, HUD). *Fatto: +40 mana; in bottega al posto della faretra per chi ha mana; dal bottino di forzieri, élite e boss solo per chi ha mana.*
+- [x] **Loot del Mago:** a terra compaiono solo bastoni con affissi; per le altre armi il filtro della Fase 3 viene qui anticipato per il solo Mago. *Fatto: `resolveLootWeaponId` su forzieri, élite, trofei dei boss e bottega; il divieto in `equipWeapon` resta alla Fase 3.*
+- [x] **Sprite:** testa, veste e bastone provvisori con le routine esistenti (`CHARACTER_VISUALS`, `WEAPON_VISUALS`); l'arte rifinita è nella Fase 6.
+- [x] **Test e bot:** unit test su costi, rigenerazione e sblocco; bot di bilanciamento per il Mago nel simulatore. *Fatto: `mage-phase2.test.mjs`, giro del Mago nei test del browser, sezione MAGO in `npm run balance` (anche `--mage`).*
+- [x] **Documentazione:** nuova voce nelle tabelle dei personaggi, abilità, armi, oggetti e punteggi del manuale. *Fatto (2.2.0): anche ARCHITECTURE, CODE_MANUAL, TESTING, FEATURES, BALANCE (sezione del Mago) e CHANGELOG.*
 
 **Criterio di chiusura:** il Mago completa i 7 livelli con il bot del simulatore e non può restare senza modo di attaccare.
 

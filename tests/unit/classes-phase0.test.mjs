@@ -58,13 +58,13 @@ export default async function (t, load) {
   // --- costi e modificatori delle abilità ---
   const abilities = Object.values(ABILITY_CONFIG);
   t("ogni abilità ha un costo come oggetto e nessun vecchio staminaCost", abilities.every((a) => typeof a.cost === "object" && a.staminaCost === undefined));
-  t("i costi di oggi sono tutti in stamina (40, 30, 40, 10), senza mana né salute",
+  t("i costi delle abilità della Fase 0 sono in stamina (40, 30, 40, 10), senza mana né salute",
     ["shockwave", "backstepShot", "furiousCharge", "shieldGuard"].map((id) => ABILITY_CONFIG[id].cost.stamina).join() === "40,30,40,10" &&
-      abilities.every((a) => a.cost.mana === undefined && a.cost.health === undefined));
+      ["shockwave", "backstepShot", "furiousCharge", "shieldGuard"].every((id) => ABILITY_CONFIG[id].cost.mana === undefined && ABILITY_CONFIG[id].cost.health === undefined));
   t("campo modifiers presente e vuoto in ogni abilità", abilities.every((a) => Array.isArray(a.modifiers) && a.modifiers.length === 0));
 
   // --- mana ---
-  t("nessuna classe ha mana (0 massimo, 0 recupero)", CHARACTER_ORDER.every((id) => CHARACTER_CONFIG[id].maxMana === 0 && CHARACTER_CONFIG[id].manaRegenPerSecond === 0));
+  t("solo il Mago ha mana (Classi Fase 2); le altre classi 0 massimo, 0 recupero", CHARACTER_ORDER.filter((id) => id !== "mage").every((id) => CHARACTER_CONFIG[id].maxMana === 0 && CHARACTER_CONFIG[id].manaRegenPerSecond === 0) && CHARACTER_CONFIG.mage.maxMana > 0);
   {
     const p = grounded("paladin");
     step(p, [], [], 120);
@@ -80,8 +80,8 @@ export default async function (t, load) {
   }
 
   // --- abilità come elenco ---
-  t("ogni classe ha un elenco di abilità (oggi una) e nessun vecchio abilityId",
-    CHARACTER_ORDER.every((id) => Array.isArray(CHARACTER_CONFIG[id].abilityIds) && CHARACTER_CONFIG[id].abilityIds.length === 1 && CHARACTER_CONFIG[id].abilityId === undefined));
+  t("ogni classe ha un elenco di abilità (una, quattro il Mago) e nessun vecchio abilityId",
+    CHARACTER_ORDER.every((id) => Array.isArray(CHARACTER_CONFIG[id].abilityIds) && CHARACTER_CONFIG[id].abilityIds.length === (id === "mage" ? 4 : 1) && CHARACTER_CONFIG[id].abilityId === undefined));
   {
     const p = grounded("knight");
     t("slot: abilities e slot attivo 0", p.abilities.length === 1 && p.abilities[0].id === "shockwave" && p.activeAbilitySlotIndex === 0 && p.ability.id === "shockwave");
@@ -103,10 +103,10 @@ export default async function (t, load) {
 
   // --- compatibilità classe x categoria ---
   t("la tabella ha una riga per ogni classe e le stesse categorie", CHARACTER_ORDER.every((id) => Object.keys(WEAPON_AFFINITY_CONFIG[id] ?? {}).sort().join() === [...categoryIds].sort().join()));
-  t("Fase 0: tutte le celle neutre (×1, nessun divieto)",
+  t("tutte le celle ×1; divieti solo per il bastone (Classi Fase 2: solo il Mago, e il Mago solo il bastone)",
     CHARACTER_ORDER.every((id) => categoryIds.every((category) => {
       const cell = WEAPON_AFFINITY_CONFIG[id][category];
-      return cell.isAllowed === true && cell.damageMultiplier === 1 && cell.recoveryMultiplier === 1;
+      return cell.isAllowed === ((id === "mage") === (category === "staff")) && cell.damageMultiplier === 1 && cell.recoveryMultiplier === 1;
     })));
   t("getWeaponAffinity passa dalla categoria dell'arma", getWeaponAffinity("berserker", "axe") === WEAPON_AFFINITY_CONFIG.berserker.heavy && getWeaponAffinity("ranger", "bow") === NEUTRAL_WEAPON_AFFINITY);
   {

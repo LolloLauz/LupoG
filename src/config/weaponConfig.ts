@@ -82,6 +82,21 @@ const GREATSWORD_ATTACKS: Record<string, AttackDefinition> = {
   greatswordPlunge: { id: "greatswordPlunge", damage: 38, ...PLUNGE_TIMING, hitbox: PLUNGE_HITBOX, animation: "greatswordPlunge", plunge: PLUNGE, breaksGuard: true },
 };
 
+/**
+ * Bastone (Classi Fase 2): l'arma del Mago. Colpi deboli e lenti, ma ogni bersaglio colpito ridà mana; in mano al
+ * Mago rende gli incantesimi più forti e meno costosi (spellFocus). Non ha munizioni e non costa mana: il Mago ha
+ * sempre un modo di attaccare.
+ */
+const STAFF_ATTACKS: Record<string, AttackDefinition> = {
+  staffStrike1: { id: "staffStrike1", damage: 8, durationMs: 320, hitStartMs: 120, hitEndMs: 220, cooldownMs: 160, hitbox: { x: 6, y: 4, width: 22, height: 16 }, animation: "staffStrike1" },
+  staffStrike2: { id: "staffStrike2", damage: 8, durationMs: 320, hitStartMs: 120, hitEndMs: 220, cooldownMs: 160, hitbox: { x: 6, y: 6, width: 22, height: 16 }, animation: "staffStrike2" },
+  staffSpin: { id: "staffSpin", damage: 14, durationMs: 420, hitStartMs: 160, hitEndMs: 290, cooldownMs: 400, hitbox: { x: 4, y: 2, width: 24, height: 20 }, animation: "staffSpin" },
+  // spazzata: colpo basso che raggiunge anche chi sta dietro (finale della combo mista)
+  staffSweep: { id: "staffSweep", damage: 16, durationMs: 480, hitStartMs: 200, hitEndMs: 330, cooldownMs: 450, hitbox: { x: -10, y: 12, width: 40, height: 12 }, animation: "staffSweep" },
+  staffHeavy: { id: "staffHeavy", damage: 18, durationMs: 560, hitStartMs: 260, hitEndMs: 380, cooldownMs: 450, hitbox: { x: 6, y: 0, width: 24, height: 24 }, animation: "staffHeavy" },
+  staffPlunge: { id: "staffPlunge", damage: 14, ...PLUNGE_TIMING, hitbox: PLUNGE_HITBOX, animation: "staffPlunge", plunge: PLUNGE },
+};
+
 // --- armi a distanza (Fase 2): gli attacchi lanciano un proiettile e non hanno area d'urto ---
 /** Area d'urto nulla: le armi a distanza feriscono solo con i proiettili. */
 const NO_HITBOX = { x: 0, y: 0, width: 0, height: 0 } as const;
@@ -265,6 +280,37 @@ export const WEAPON_CONFIG: Record<WeaponId, WeaponDefinition> = {
     category: "heavy",
     weight: 4,
     scalingAttribute: "strength",
+  },
+  staff: {
+    id: "staff",
+    name: "Bastone",
+    spriteSuffix: "Staff",
+    iconSpriteId: "weaponIconStaff",
+    attacks: STAFF_ATTACKS,
+    combos: [
+      {
+        id: "staffFlurry",
+        name: "MULINELLO",
+        inputSequence: ["attack", "attack", "attack"],
+        attackIds: ["staffStrike1", "staffStrike2", "staffSpin"],
+        comboWindowMs: 400,
+      },
+      {
+        id: "arcaneSweep",
+        name: "SPAZZATA ARCANA",
+        inputSequence: ["attack", "heavyAttack"],
+        attackIds: ["staffStrike1", "staffSweep"],
+        comboWindowMs: 400,
+      },
+    ],
+    defaultAttackByInput: { attack: "staffStrike1", heavyAttack: "staffHeavy" },
+    air: airSet("BASTONE", "staffStrike1", "staffStrike2", "staffPlunge"),
+    movementSpeedMultiplier: 1,
+    category: "staff",
+    weight: 2,
+    scalingAttribute: "intelligence",
+    // valori da bilanciare nella Fase 6
+    spellFocus: { powerMultiplier: 1.2, manaCostMultiplier: 0.85, manaPerHit: 5 },
   },
   greatsword: {
     id: "greatsword",

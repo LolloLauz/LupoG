@@ -1,12 +1,13 @@
 import { ARMOR_CONFIG } from "../config/armorConfig";
-import { SHOP_HEAL_AMOUNT, SHOP_OFFERS, SHOP_PRICE_INCREASE_PER_PURCHASE, type ShopOfferId } from "../config/progressionConfig";
+import { SHOP_BASIC_OFFERS, SHOP_HEAL_AMOUNT, SHOP_OFFERS, SHOP_PRICE_INCREASE_PER_PURCHASE, type ShopOfferId } from "../config/progressionConfig";
 import type { DifficultyId } from "../config/gameConfig";
 import type { Player } from "../entities/Player";
-import type { WeaponId } from "../types/EntityTypes";
+import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
+import type { CharacterId, WeaponId } from "../types/EntityTypes";
 import type { ItemInstance } from "../types/ItemTypes";
 import type { Inventory } from "./Inventory";
-import { getItemName, getItemPrice, pickRandom, type RandomSource } from "./ItemFactory";
-import { rollLootArmor, rollLootWeapon } from "./LootSystem";
+import { areItemsEqual, getItemName, getItemPrice, pickRandom, type RandomSource } from "./ItemFactory";
+import { resolveLootWeaponId, rollLootArmor, rollLootWeapon } from "./LootSystem";
 import type { ScoreManager } from "./ScoreManager";
 
 /** Una voce della bottega: per arma e armatura, l'oggetto in vendita (con la sua rarità). */
@@ -32,10 +33,14 @@ export interface ShopCustomer {
   scoreManager: ScoreManager;
 }
 
-/** Livello raggiunto e difficoltà: decidono le rarità in vendita (più alte avanzando). */
+/**
+ * Livello raggiunto e difficoltà: decidono le rarità in vendita (più alte avanzando). characterId (Classi Fase 2):
+ * la classe che compra, per il filtro delle armi e la pozione di mana (se omessa: il cavaliere).
+ */
 export interface ShopContext {
   levelId: number;
   difficulty: DifficultyId;
+  characterId?: CharacterId;
 }
 
 /**
@@ -60,12 +65,23 @@ export class Shop {
     randomNumber: RandomSource = Math.random,
     context: ShopContext = { levelId: 1, difficulty: "normal" }
   ): Shop {
-    const offers = (["potion", "heal", "ammo"] as const).map((id) => Shop.createOffer(id, null));
-    const candidates = discoveredWeaponIds.filter((weaponId) => !inventory.hasWeapon(weaponId));
+    const characterId = context.characterId ?? DEFAULT_CHARACTER_ID;
+    const basicOffers = CHARACTER_CONFIG[characterId].maxMana > 0 ? SHOP_BASIC_OFFERS.withMana : SHOP_BASIC_OFFERS.default;
+    const offers = basicOffers.map((id) => Shop.createOffer(id, null));
     const lootContext = { source: "shop" as const, levelId: context.levelId, difficulty: context.difficulty };
+    // armi vietate alla classe diventano armi permesse; se la classe ha armi vietate (il Mago) e ha già tutte quelle
+    // permesse, in vendita c'è comunque una di quelle (un bastone di un'altra rarità prende il posto del suo)
+    const resolvedIds = [...new Set(discoveredWeaponIds.map((weaponId) => resolveLootWeaponId(characterId, weaponId)))];
+    const hasForbiddenWeapons = discoveredWeaponIds.some((weaponId) => resolveLootWeaponId(characterId, weaponId) !== weaponId);
+    const missingIds = resolvedIds.filter((weaponId) => !inventory.hasWeapon(weaponId));
+    const candidates = missingIds.length === 0 && hasForbiddenWeapons ? resolvedIds : missingIds;
     if (candidates.length > 0) {
       const weaponId = pickRandom(candidates, randomNumber);
-      offers.push(Shop.createOffer("weapon", rollLootWeapon(weaponId, lootContext, randomNumber)));
+      const weapon = rollLootWeapon(weaponId, lootContext, randomNumber);
+      // un'arma identica a una della borsa (il bastone Comune del Mago) non si mette in vendita
+      if (!inventory.weaponItems.some((item) => areItemsEqual(item, weapon))) {
+        offers.push(Shop.createOffer("weapon", weapon));
+      }
     }
     offers.push(Shop.createOffer("armor", rollLootArmor(lootContext, randomNumber)));
     return new Shop(offers);
@@ -98,6 +114,9 @@ export class Shop {
       case "potion":
         inventory.addPotion();
         break;
+      case "manaPotion":
+        inventory.addPotion("manaPotion");
+        break;
       case "heal":
         player.heal(SHOP_HEAL_AMOUNT);
         break;
@@ -121,8 +140,12 @@ export class Shop {
     }
     if (item.kind === "armor") {
       inventory.pickUpArmor(item);
-    } else if (inventory.hasFreeSlot) {
-      inventory.addWeapon(item);
+    } else if (inventory.hasFreeSlot || inventory.hasWeapon(item.baseId)) {
+      // un'arma dello stesso tipo prende il posto della vecchia, che va nello zaino (bastone del Mago)
+      const result = inventory.addWeapon(item);
+      if (result.droppedItem !== undefined) {
+        inventory.addToBackpack(result.droppedItem);
+      }
     } else {
       inventory.addToBackpack(item);
     }
@@ -137,13 +160,20 @@ export class Shop {
     if (offer.id === "potion" && !inventory.canAddPotion()) {
       return "bagFull";
     }
+    if (offer.id === "manaPotion" && !inventory.canAddPotion("manaPotion")) {
+      return "bagFull";
+    }
     if (offer.id === "heal" && player.currentHealth >= player.maxHealth) {
       return "notNeeded";
     }
     if (offer.id === "ammo" && !inventory.needsAmmo) {
       return "notNeeded";
     }
-    if (offer.id === "weapon" && !inventory.hasFreeSlot && !inventory.hasBackpackRoom) {
+    // un'arma identica a una della borsa (il bastone del Mago, stessa rarità e stessi modificatori) non serve
+    if (offer.id === "weapon" && offer.item?.kind === "weapon" && inventory.weaponItems.some((item) => areItemsEqual(item, offer.item!))) {
+      return "notNeeded";
+    }
+    if (offer.id === "weapon" && !inventory.hasBackpackRoom && (!inventory.hasFreeSlot || (offer.weaponId !== null && inventory.hasWeapon(offer.weaponId)))) {
       return "bagFull";
     }
     if (offer.id === "armor" && offer.item?.kind === "armor") {

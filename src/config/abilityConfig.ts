@@ -50,6 +50,49 @@ const FURIOUS_CHARGE_ATTACK: AttackDefinition = {
   dash: { speed: 230, startMs: 100, endMs: 400 },
 };
 
+/**
+ * Mago (Classi Fase 2): gli incantesimi costano mana e riusano i tipi delle altre abilità.
+ * Dardo di fuoco: un proiettile che brucia (come il tiro del Ranger, senza munizioni).
+ */
+const FIREBOLT_ATTACK: AttackDefinition = {
+  id: "abilityFirebolt",
+  damage: 22,
+  durationMs: 360,
+  hitStartMs: 0,
+  hitEndMs: 0,
+  cooldownMs: 120,
+  hitbox: NO_HITBOX,
+  animation: "abilityFirebolt",
+  projectile: { projectileId: "arcaneFireball", launchAtMs: 180, originX: 18, originY: 9, aimY: 0, usesAmmo: false },
+  elements: ["fire"],
+};
+
+/** Nova di gelo: colpo ad area intorno al Mago, come l'onda d'urto, che rallenta chi colpisce. */
+const FROST_NOVA_ATTACK: AttackDefinition = {
+  id: "abilityFrostNova",
+  damage: 18,
+  durationMs: 450,
+  hitStartMs: 200,
+  hitEndMs: 280,
+  cooldownMs: 150,
+  hitbox: { x: -40, y: 0, width: 92, height: 24 },
+  animation: "abilityFrostNova",
+  elements: ["frost"],
+};
+
+/** Balzo arcano: uno scatto all'indietro, invulnerabile, per allontanarsi (come il tiro in ritirata, senza freccia). */
+const ARCANE_LEAP_ATTACK: AttackDefinition = {
+  id: "abilityArcaneLeap",
+  damage: 0,
+  durationMs: 320,
+  hitStartMs: 0,
+  hitEndMs: 0,
+  cooldownMs: 100,
+  hitbox: NO_HITBOX,
+  animation: "abilityArcaneLeap",
+  dash: { speed: -300, startMs: 0, endMs: 240, invulnerable: true },
+};
+
 export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
   shockwave: {
     id: "shockwave",
@@ -90,9 +133,55 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { stamina: 10 },
     cooldownMs: 300,
     modifiers: [],
+    resource: "stamina",
     drainPerSecond: 12,
     perfectWindowMs: 250,
-    staminaPerBlockedDamage: 1.5,
+    costPerBlockedDamage: 1.5,
+    parryStunMs: 1000,
+  },
+  firebolt: {
+    id: "firebolt",
+    kind: "attack",
+    name: "DARDO DI FUOCO",
+    description: "Proiettile che brucia",
+    cost: { mana: 15 },
+    cooldownMs: 900,
+    modifiers: [],
+    attack: FIREBOLT_ATTACK,
+  },
+  frostNova: {
+    id: "frostNova",
+    kind: "attack",
+    name: "NOVA DI GELO",
+    description: "Gela tutti intorno",
+    cost: { mana: 30 },
+    cooldownMs: 5000,
+    modifiers: [],
+    attack: FROST_NOVA_ATTACK,
+    impactEffect: "shockwave",
+  },
+  arcaneLeap: {
+    id: "arcaneLeap",
+    kind: "attack",
+    name: "BALZO ARCANO",
+    description: "Balzo indietro",
+    cost: { mana: 20 },
+    cooldownMs: 3000,
+    modifiers: [],
+    attack: ARCANE_LEAP_ATTACK,
+  },
+  arcaneBarrier: {
+    id: "arcaneBarrier",
+    kind: "guard",
+    name: "BARRIERA",
+    description: "Tieni 0: para davanti",
+    cost: { mana: 10 },
+    cooldownMs: 300,
+    modifiers: [],
+    resource: "mana",
+    drainPerSecond: 10,
+    perfectWindowMs: 250,
+    costPerBlockedDamage: 1,
     parryStunMs: 1000,
   },
 };

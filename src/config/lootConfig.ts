@@ -14,15 +14,20 @@ export interface LootSourceDefinition {
   rarityWeights: Partial<Record<RarityId, number>>;
   /** Probabilità (0-1) di un pezzo d'armatura (in più dell'arma per forzieri, élite e boss; da solo per i nemici). */
   armorChance: number;
+  /**
+   * Probabilità (0-1) di una pozione di mana (Classi Fase 2), estratta solo per le classi con mana: per le altre il
+   * bottino non cambia. Valori da bilanciare nella Fase 6.
+   */
+  manaPotionChance: number;
 }
 
 export const LOOT_SOURCES: Record<LootSourceId, LootSourceDefinition> = {
-  chest: { id: "chest", rarityWeights: { common: 55, uncommon: 30, rare: 12, epic: 3, legendary: 0.4 }, armorChance: 0.35 },
-  enemy: { id: "enemy", rarityWeights: { common: 70, uncommon: 25, rare: 5 }, armorChance: 0.04 },
-  elite: { id: "elite", rarityWeights: { common: 35, uncommon: 35, rare: 20, epic: 8, legendary: 1 }, armorChance: 0.5 },
-  boss: { id: "boss", rarityWeights: { rare: 50, epic: 38, legendary: 12 }, armorChance: 1 },
-  finalBoss: { id: "finalBoss", rarityWeights: { legendary: 70, mythic: 30 }, armorChance: 0 },
-  shop: { id: "shop", rarityWeights: { common: 45, uncommon: 35, rare: 15, epic: 5 }, armorChance: 0.5 },
+  chest: { id: "chest", rarityWeights: { common: 55, uncommon: 30, rare: 12, epic: 3, legendary: 0.4 }, armorChance: 0.35, manaPotionChance: 1 },
+  enemy: { id: "enemy", rarityWeights: { common: 70, uncommon: 25, rare: 5 }, armorChance: 0.04, manaPotionChance: 0 },
+  elite: { id: "elite", rarityWeights: { common: 35, uncommon: 35, rare: 20, epic: 8, legendary: 1 }, armorChance: 0.5, manaPotionChance: 0.5 },
+  boss: { id: "boss", rarityWeights: { rare: 50, epic: 38, legendary: 12 }, armorChance: 1, manaPotionChance: 1 },
+  finalBoss: { id: "finalBoss", rarityWeights: { legendary: 70, mythic: 30 }, armorChance: 0, manaPotionChance: 0 },
+  shop: { id: "shop", rarityWeights: { common: 45, uncommon: 35, rare: 15, epic: 5 }, armorChance: 0.5, manaPotionChance: 0 },
 };
 
 /**

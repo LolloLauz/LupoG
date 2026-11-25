@@ -162,6 +162,30 @@ Raccogliendo tutto e sconfiggendo tutti i nemici del livello si guadagnano da 74
 una pozione costa 40. Il valore della gemma è provvisorio. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
 perché il gioco sembrava già facile per il bot.
 
+## Classi Fase 2: il Mago (2.2.0)
+
+Il Mago ha un bot proprio (`playMageTurn` in `tools/balance.mjs`; solo lui con `npm run balance -- --mage`): colpisce con il
+bastone e usa gli incantesimi. Il dardo (7) parte appena il bersaglio è a tiro, la nova (8) quando è vicino. Al momento del colpo,
+se decide di schivare, usa il balzo (9) al posto della schivata. Contro i boss alza la barriera (0), come lo scudo del Paladino.
+Non bada al mana: se non basta, l'incantesimo semplicemente non parte.
+Le pozioni di mana non sono misurate: il simulatore non apre forzieri.
+Gli altri personaggi restano nella sezione "tutti con la spada" e i loro numeri non cambiano (righe del baseline identiche).
+
+| Misura (60 partite) | rusher | medio |
+|---|---|---|
+| Boss da soli (40 prove ciascuno) | 100% vittorie, 22-47 HP persi | 100% vittorie, 17-32 HP persi |
+| Partite complete senza bottino | 13% (morti ai livelli 3, 6 e 7) | 93%, 2,48 vite rimaste |
+| Partite complete con il bottino di fine livello | 95% | 95% |
+
+**Valori scelti.** Con la prima proposta (65 HP, 4 mana al secondo) il medio vinceva il 30% delle partite. Il rusher moriva sempre
+al livello 3: perde quanto il Cavaliere (circa 105 HP) ma ne ha 65. Il mana conta più della salute:
+- 75 HP con 4 mana al secondo: il medio arriva al 47%;
+- 75 HP con 6 mana al secondo: il medio arriva al 100%.
+
+Scelti **70 HP e 6 mana al secondo** (rusher 20%, medio 93% su 30 prove): una classe fragile, come il Ranger rusher (30%).
+Il bastone (+5 mana a colpo, incantesimi ×1,2 e mana ×0,85) è rimasto com'era. Tutti i valori del Mago (salute, mana, costi,
+ricariche, danni, bastone, prezzo della pozione di mana e probabilità nel bottino) vanno rivisti nella Classi Fase 6.
+
 ## Versione 2.0 con i power-up (2.0.0-alpha.5)
 
 Con i power-up nei livelli: partita completa vinta dal bot "medio" circa **75%** (era 73%), dal rusher circa 32% (invariato); boss da solo:
@@ -230,6 +254,10 @@ boss conviene rilanciare `npm run balance` e guardare più valori vicini.
 | Nemici normali | `src/config/enemyConfig.ts` | `ENEMY_CONFIG` |
 | Boss e fasi | `src/config/enemyConfig.ts` | `BOSS_CONFIG` |
 | Ricarica delle frecce del Ranger (2.1.1: una ogni 3 s; non misurata, il bot usa solo la spada; valore da rivedere nella Classi Fase 6) | `src/config/characterConfig.ts` | `ammoRegeneration.intervalMs` |
+| Mago: salute, mana e recupero (2.2.0) | `src/config/characterConfig.ts` | `CHARACTER_CONFIG.mage` |
+| Incantesimi: costi, ricariche, danni, elementi | `src/config/abilityConfig.ts` | `ABILITY_CONFIG` (firebolt, frostNova, arcaneLeap, arcaneBarrier) |
+| Bastone e catalizzatore | `src/config/weaponConfig.ts` | `WEAPON_CONFIG.staff`, `spellFocus` |
+| Pozione di mana (bottino e bottega) | `src/config/itemConfig.ts`, `lootConfig.ts`, `progressionConfig.ts` | `manaPotion`, `manaPotionChance`, `SHOP_OFFERS.manaPotion` |
 | Cura di livello, danno da caduta, vite | `src/config/gameConfig.ts` | `GAME_CONFIG` |
 | Pozione, moneta, gemma | `src/config/itemConfig.ts` | `ITEM_CONFIG` |
 | Posizione di nemici e oggetti | `src/config/levelConfig.ts` | `LEVEL_CONFIG` |

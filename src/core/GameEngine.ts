@@ -38,14 +38,14 @@ import { ScoreManager } from "../systems/ScoreManager";
 import { Inventory, type EquipmentActionOutcome, type InventorySnapshot } from "../systems/Inventory";
 import { WeaponPickupManager } from "../systems/WeaponPickupManager";
 import type { WeaponPickup } from "../entities/WeaponPickup";
-import { BAG_SLOT_ACTIONS } from "../config/inventoryConfig";
+import { BAG_SLOT_ACTIONS, POTION_IDS, type PotionId } from "../config/inventoryConfig";
 import { ITEM_CONFIG, ITEM_SIZE } from "../config/itemConfig";
 import type { CharacterId, Damageable, WeaponId } from "../types/EntityTypes";
 import type { ItemInstance } from "../types/ItemTypes";
 import { RARITY_CONFIG } from "../config/rarityConfig";
 import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
 import { getItemIconSpriteId, getItemName, type RandomSource } from "../systems/ItemFactory";
-import { rollArmorDrop, rollFinalBossReward, rollLootArmor, rollLootWeapon, type LootContext } from "../systems/LootSystem";
+import { resolveLootWeaponId, rollArmorDrop, rollFinalBossReward, rollLootArmor, rollLootWeapon, rollManaPotionDrop, type LootContext } from "../systems/LootSystem";
 import type { LootSourceId } from "../config/lootConfig";
 import type { Vector2 } from "../types/GameTypes";
 import { HUDManager, type HUDData } from "../ui/HUDManager";
@@ -700,7 +700,7 @@ export class GameEngine {
         if (reward !== undefined && this.levelManager.hasLevel(this.currentLevelId + 1)) {
           // trofeo: l'arma del boss con una rarità alta e un pezzo d'armatura (fonte "boss")
           const context = this.getLootContext("boss");
-          const items: ItemInstance[] = [rollLootWeapon(reward, context, this.lootRandom)];
+          const items: ItemInstance[] = [rollLootWeapon(this.resolveLootWeapon(reward), context, this.lootRandom)];
           if (rollArmorDrop("boss", this.lootRandom)) {
             items.push(rollLootArmor(context, this.lootRandom));
           }
@@ -708,6 +708,7 @@ export class GameEngine {
         } else if (!this.levelManager.hasLevel(this.currentLevelId + 1)) {
           this.awardFinalBossReward();
         }
+        this.dropManaPotionIfRolled("boss", centerX, targetBounds.y + targetBounds.height);
         this.scoreManager.addScore(this.boss.scoreReward);
         this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerBoss);
         this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.red, PALETTE.orange, PALETTE.yellow], 50);
@@ -725,18 +726,33 @@ export class GameEngine {
       this.effects.triggerShake(EFFECT_CONFIG.enemyDeathShakePixels, EFFECT_CONFIG.enemyDeathShakeMs);
       const source: LootSourceId = enemy.isElite ? "elite" : "enemy";
       if (enemy.weaponDrop !== null) {
-        this.dropWeapon(rollLootWeapon(enemy.weaponDrop, this.getLootContext("elite"), this.lootRandom), centerX, targetBounds.y + targetBounds.height);
+        this.dropWeapon(rollLootWeapon(this.resolveLootWeapon(enemy.weaponDrop), this.getLootContext("elite"), this.lootRandom), centerX, targetBounds.y + targetBounds.height);
       }
       // i nemici possono lasciare un pezzo d'armatura (le élite più spesso)
       if (rollArmorDrop(source, this.lootRandom)) {
         this.dropWeapon(rollLootArmor(this.getLootContext(source), this.lootRandom), centerX + 10, targetBounds.y + targetBounds.height);
       }
+      this.dropManaPotionIfRolled(source, centerX - 10, targetBounds.y + targetBounds.height);
     }
+  }
+
+  /** Filtro del bottino (Classi Fase 2): un'arma vietata alla classe in uso diventa un'arma che può impugnare. */
+  private resolveLootWeapon(weaponId: WeaponId): WeaponId {
+    return resolveLootWeaponId(this.player.characterDefinition.id, weaponId);
+  }
+
+  /** Pozione di mana nel bottino (Classi Fase 2): solo per le classi con mana; compare a terra, si raccoglie con E. */
+  private dropManaPotionIfRolled(source: LootSourceId, centerX: number, bottomY: number): void {
+    if (!rollManaPotionDrop(source, this.player.characterDefinition.id, this.lootRandom)) {
+      return;
+    }
+    this.itemManager.addItem("manaPotion", Math.round(centerX - ITEM_SIZE / 2), Math.round(bottomY - ITEM_SIZE));
+    this.effects.addPopup(ITEM_CONFIG.manaPotion.name.toUpperCase(), centerX, bottomY - ITEM_SIZE - 6, PALETTE.lightBlue);
   }
 
   /** Fonte, livello e difficoltà di un bottino. */
   private getLootContext(source: LootSourceId): LootContext {
-    return { source, levelId: this.currentLevelId, difficulty: this.progressManager.difficulty };
+    return { source, levelId: this.currentLevelId, difficulty: this.progressManager.difficulty, characterId: this.player.characterDefinition.id };
   }
 
   /** Boss finale sconfitto (E5): l'unica fonte dei Mitici. La partita finisce: l'oggetto è il trofeo mostrato. */
@@ -751,10 +767,11 @@ export class GameEngine {
       // l'arma del forziere con una rarità estratta (fonte "chest") e, a volte, anche un pezzo d'armatura
       const context = this.getLootContext("chest");
       const centerX = chest.positionX + chest.width / 2;
-      this.dropWeapon(rollLootWeapon(weaponId, context, this.lootRandom), centerX, chest.positionY);
+      this.dropWeapon(rollLootWeapon(this.resolveLootWeapon(weaponId), context, this.lootRandom), centerX, chest.positionY);
       if (rollArmorDrop("chest", this.lootRandom)) {
         this.dropWeapon(rollLootArmor(context, this.lootRandom), centerX + 18, chest.positionY + chest.height);
       }
+      this.dropManaPotionIfRolled("chest", centerX - 18, chest.positionY + chest.height);
     }
   }
 
@@ -821,8 +838,8 @@ export class GameEngine {
       this.equipFromInventory();
       this.effects.addPopup(`${getItemName(drop.item)} A TERRA`, centerX, popupY, PALETTE.lightGray);
     } else if (drop.kind === "potion") {
-      this.itemManager.addItem("healthPotion", Math.round(centerX - ITEM_SIZE / 2), feetY - ITEM_SIZE);
-      this.effects.addPopup("POZIONE A TERRA", centerX, popupY, PALETTE.lightGray);
+      this.itemManager.addItem(drop.potionId, Math.round(centerX - ITEM_SIZE / 2), feetY - ITEM_SIZE);
+      this.effects.addPopup(`${ITEM_CONFIG[drop.potionId].name.toUpperCase()} A TERRA`, centerX, popupY, PALETTE.lightGray);
     } else if (drop.kind === "lastWeapon") {
       this.effects.addPopup("È L'ULTIMA ARMA", centerX, popupY, PALETTE.lightGray);
     }
@@ -925,7 +942,7 @@ export class GameEngine {
       return;
     }
     const centerX = item.positionX + item.width / 2;
-    if (!this.inventory.addPotion()) {
+    if (!this.inventory.addPotion(GameEngine.toPotionId(item.definition.id))) {
       this.effects.addPopup("BORSA PIENA", centerX, item.positionY - 4, PALETTE.lightGray);
       return;
     }
@@ -1031,12 +1048,27 @@ export class GameEngine {
     }
   }
 
-  /** Tasto numerico: impugna l'arma del posto o beve una pozione (non a salute piena). */
+  /** Oggetto da borsa raccolto: il suo tipo di pozione (POTION_IDS); un oggetto da borsa sconosciuto vale come pozione di salute. */
+  private static toPotionId(itemType: string): PotionId {
+    return POTION_IDS.find((potionId) => potionId === itemType) ?? "healthPotion";
+  }
+
+  /** Tasto numerico: impugna l'arma del posto o beve una pozione (non a salute piena, o a mana pieno). */
   private useBagSlot(slotIndex: number): void {
     const selection = this.inventory.selectSlot(slotIndex);
     const centerX = this.player.positionX + this.player.width / 2;
     if (selection.kind === "equip") {
       this.equipFromInventory();
+    } else if (selection.kind === "potion" && selection.potionId === "manaPotion") {
+      if (this.player.mana >= this.player.maxMana) {
+        this.effects.addPopup("MANA PIENO", centerX, this.player.positionY - 6, PALETTE.lightGray);
+        return;
+      }
+      this.inventory.consumePotion(slotIndex);
+      const manaAmount = ITEM_CONFIG.manaPotion.manaAmount ?? 0;
+      this.player.restoreMana(manaAmount);
+      this.effects.spawnSparkle(centerX, this.player.positionY + this.player.height / 2);
+      this.effects.addPopup(`+${manaAmount} MANA`, centerX, this.player.positionY - 6, PALETTE.lightBlue);
     } else if (selection.kind === "potion") {
       if (this.player.currentHealth >= this.player.maxHealth) {
         this.effects.addPopup("SALUTE PIENA", centerX, this.player.positionY - 6, PALETTE.lightGray);
@@ -1116,6 +1148,9 @@ export class GameEngine {
     const abilityName = this.player.drainStartedAbilityName();
     if (abilityName !== null) {
       this.effects.addPopup(abilityName, centerX, popupY, PALETTE.cyan);
+    }
+    if (this.player.drainNoMana()) {
+      this.effects.addPopup("SENZA MANA", centerX, popupY, PALETTE.lightBlue);
     }
     if (this.player.drainTired() && (this.levelElapsedSeconds - this.lastTiredPopupSeconds >= 0.5 || this.levelElapsedSeconds < this.lastTiredPopupSeconds)) {
       this.lastTiredPopupSeconds = this.levelElapsedSeconds;
@@ -1247,6 +1282,7 @@ export class GameEngine {
       this.shop = Shop.open([...this.discoveredWeaponIds], this.inventory, this.lootRandom, {
         levelId: nextLevelId,
         difficulty: this.progressManager.difficulty,
+        characterId: this.player.characterDefinition.id,
       });
       // E6: la stanza camminabile; con SHOP_ROOM_CONFIG.isEnabled = false, la bottega a menu della Fase 6
       if (SHOP_ROOM_CONFIG.isEnabled) {
@@ -1289,12 +1325,15 @@ export class GameEngine {
       maxHealth: this.player.maxHealth,
       stamina: this.player.stamina,
       maxStamina: this.player.maxStamina,
-      ability: {
-        slotNumber: this.player.activeAbilitySlotIndex,
-        cooldownFraction: this.player.abilityCooldownFraction,
-        isReady: this.player.isAbilityReady,
-        isActive: this.player.isGuarding,
-      },
+      mana: this.player.mana,
+      maxMana: this.player.maxMana,
+      abilities: this.player.abilitySlots.map((slot) => ({
+        cooldownFraction: slot.cooldownFraction,
+        isReady: slot.isReady,
+        isAffordable: slot.isAffordable,
+        isSelected: slot.isSelected,
+        isActive: slot.isActive,
+      })),
       lives: this.livesManager.remainingLives,
       score: this.scoreManager.currentScore,
       coins: this.scoreManager.coins,
@@ -1312,7 +1351,7 @@ export class GameEngine {
               count: slot.ammo ?? null,
               isEquipped: slotIndex === this.inventory.equippedSlotIndex,
             }
-          : { iconSpriteId: ITEM_CONFIG.healthPotion.spriteId, iconVariant: null, rarityColor: null, iconSize: 8, count: slot.count, isEquipped: false };
+          : { iconSpriteId: ITEM_CONFIG[slot.potionId].spriteId, iconVariant: null, rarityColor: null, iconSize: 8, count: slot.count, isEquipped: false };
       }),
       powerUps: this.player.modifiers.activePowerUps.map((powerUp) => ({
         iconSpriteId: powerUp.definition.iconSpriteId,
@@ -1377,7 +1416,7 @@ export class GameEngine {
         }
         return slot.kind === "weapon"
           ? { kind: "weapon", item: slot.item, ammo: slot.ammo ?? null, isEquipped: index === this.inventory.equippedSlotIndex }
-          : { kind: "potion", count: slot.count };
+          : { kind: "potion", iconSpriteId: ITEM_CONFIG[slot.potionId].spriteId, count: slot.count };
       }),
       backpack: this.inventory.backpackItems,
       backpackCapacity: this.inventory.backpackCapacity,
@@ -1389,6 +1428,7 @@ export class GameEngine {
   /** Icona (8x8) di ogni voce della bottega; l'arma usa la propria icona. */
   private static readonly SHOP_ICONS: Record<ShopOfferId, string> = {
     potion: "itemPotion",
+    manaPotion: "itemManaPotion",
     heal: "hudHeart",
     ammo: "itemQuiver",
     weapon: "itemCoin",

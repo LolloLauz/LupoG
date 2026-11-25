@@ -1,5 +1,11 @@
 import type { GameAction } from "../types/GameTypes";
 
+/** Pozioni che vanno nella borsa (Classi Fase 2: salute e mana), ognuna con i propri posti. */
+export type PotionId = "healthPotion" | "manaPotion";
+
+/** Tutti i tipi di pozione (ognuno è anche un oggetto di ITEM_CONFIG). */
+export const POTION_IDS: readonly PotionId[] = ["healthPotion", "manaPotion"];
+
 /** La borsa del giocatore: pozioni e armi, scelte con i tasti numerici (vedi Inventory). */
 export const INVENTORY_CONFIG = {
   /** Posti nella borsa (uno per tasto numerico). */
@@ -7,8 +13,9 @@ export const INVENTORY_CONFIG = {
   /** Pozioni che stanno in un solo posto. */
   maxPotionsPerSlot: 2,
   /**
-   * Posti che possono contenere pozioni. Con 1 posto da 2 si portano al massimo 2 pozioni: conservarle per i boss
-   * aiuta molto (vedi BALANCE.md), quindi la scorta resta piccola.
+   * Posti che possono contenere pozioni, per ogni tipo di pozione. Con 1 posto da 2 si portano al massimo 2 pozioni di
+   * salute: conservarle per i boss aiuta molto (vedi BALANCE.md), quindi la scorta resta piccola. Le pozioni di mana
+   * (Classi Fase 2) hanno un posto proprio, con lo stesso limite.
    */
   maxPotionSlots: 1,
   /** Posti dello zaino (equipaggiamento, E4): armi e armature di riserva, nella schermata dell'equipaggiamento. */

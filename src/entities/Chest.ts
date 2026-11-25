@@ -23,6 +23,9 @@ export class Chest extends GameObject implements Damageable {
   }
 
   /** Un forziere chiuso si può colpire (come un nemico vivo); aperto, no. */
+  /** Il forziere è scena, non un avversario (vedi Damageable.isScenery). */
+  public readonly isScenery = true;
+
   public get isAlive(): boolean {
     return !this.isOpen;
   }

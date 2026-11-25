@@ -1,5 +1,5 @@
 import { ARMOR_CONFIG, ARMOR_SLOTS } from "../config/armorConfig";
-import { INVENTORY_CONFIG } from "../config/inventoryConfig";
+import { INVENTORY_CONFIG, type PotionId } from "../config/inventoryConfig";
 import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
 import type { WeaponId } from "../types/EntityTypes";
 import type { ArmorItem, ArmorSlot, EquippedArmor, ItemInstance, WeaponItem } from "../types/ItemTypes";
@@ -10,7 +10,7 @@ import { areItemsEqual, cloneItem, toWeaponItem } from "./ItemFactory";
  * Contenuto di un posto della borsa. Per le armi: l'oggetto (rarità e modificatori, E1) e, per comodità,
  * il suo tipo (weaponId, sempre uguale a item.baseId).
  */
-export type BagSlot = { kind: "weapon"; weaponId: WeaponId; item: WeaponItem; ammo?: number } | { kind: "potion"; count: number };
+export type BagSlot = { kind: "weapon"; weaponId: WeaponId; item: WeaponItem; ammo?: number } | { kind: "potion"; potionId: PotionId; count: number };
 
 /** Copia della borsa, dello zaino e delle armature (per ripristinarli quando si ricomincia un livello). */
 export interface InventorySnapshot {
@@ -40,12 +40,12 @@ export interface WeaponAddResult {
  */
 export type SlotDrop =
   | { kind: "weapon"; weaponId: WeaponId; item: WeaponItem; ammo: number | null }
-  | { kind: "potion" }
+  | { kind: "potion"; potionId: PotionId }
   | { kind: "lastWeapon" }
   | { kind: "empty" };
 
 /** Cosa comporta la scelta di un posto con il tasto numerico. */
-export type SlotSelection = { kind: "equip"; weaponId: WeaponId } | { kind: "potion" } | { kind: "empty" };
+export type SlotSelection = { kind: "equip"; weaponId: WeaponId } | { kind: "potion"; potionId: PotionId } | { kind: "empty" };
 
 /** Esito di un'armatura raccolta: indossata (posto libero), nello zaino, oppure zaino pieno. */
 export type ArmorPickupOutcome = "equipped" | "stored" | "full";
@@ -101,8 +101,14 @@ export class Inventory {
     return this.slots.flatMap((slot) => (slot?.kind === "weapon" ? [slot.item] : []));
   }
 
+  /** Pozioni nella borsa, di tutti i tipi. */
   public get potionCount(): number {
     return this.slots.reduce((total, slot) => total + (slot?.kind === "potion" ? slot.count : 0), 0);
+  }
+
+  /** Pozioni di un tipo (salute o mana). */
+  public getPotionCount(potionId: PotionId): number {
+    return this.slots.reduce((total, slot) => total + (slot?.kind === "potion" && slot.potionId === potionId ? slot.count : 0), 0);
   }
 
   // --- armature e zaino (E2, E4) ---
@@ -324,7 +330,7 @@ export class Inventory {
     }
     if (slot.kind === "potion") {
       this.consumePotion(slotIndex);
-      return { kind: "potion" };
+      return { kind: "potion", potionId: slot.potionId };
     }
     if (this.weaponIds.length <= 1) {
       return { kind: "lastWeapon" };
@@ -393,29 +399,40 @@ export class Inventory {
     return { outcome: "swapped", droppedWeaponId: droppedItem.baseId, droppedItem, droppedAmmo };
   }
 
-  /** Aggiunge una pozione: nel gruppo di pozioni non pieno, altrimenti in un posto libero. false se non c'è spazio. */
-  public addPotion(): boolean {
-    const stack = this.slots.find((slot) => slot?.kind === "potion" && slot.count < INVENTORY_CONFIG.maxPotionsPerSlot);
-    if (stack !== undefined && stack !== null && stack.kind === "potion") {
+  /**
+   * Aggiunge una pozione del tipo indicato: nel gruppo di quel tipo non pieno, altrimenti in un posto libero (ogni tipo
+   * ha i suoi posti, Classi Fase 2). false se non c'è spazio.
+   */
+  public addPotion(potionId: PotionId = "healthPotion"): boolean {
+    const stack = this.findPotionStackWithRoom(potionId);
+    if (stack !== null) {
       stack.count += 1;
       return true;
     }
     const freeIndex = this.slots.indexOf(null);
-    if (freeIndex < 0 || this.potionSlotCount >= INVENTORY_CONFIG.maxPotionSlots) {
+    if (freeIndex < 0 || this.getPotionSlotCount(potionId) >= INVENTORY_CONFIG.maxPotionSlots) {
       return false;
     }
-    this.slots[freeIndex] = { kind: "potion", count: 1 };
+    this.slots[freeIndex] = { kind: "potion", potionId, count: 1 };
     return true;
   }
 
-  /** Vero se una pozione entrerebbe nella borsa. */
-  public canAddPotion(): boolean {
-    const hasRoomInStack = this.slots.some((slot) => slot?.kind === "potion" && slot.count < INVENTORY_CONFIG.maxPotionsPerSlot);
-    return hasRoomInStack || (this.slots.includes(null) && this.potionSlotCount < INVENTORY_CONFIG.maxPotionSlots);
+  /** Vero se una pozione di quel tipo entrerebbe nella borsa. */
+  public canAddPotion(potionId: PotionId = "healthPotion"): boolean {
+    return this.findPotionStackWithRoom(potionId) !== null || (this.slots.includes(null) && this.getPotionSlotCount(potionId) < INVENTORY_CONFIG.maxPotionSlots);
   }
 
-  private get potionSlotCount(): number {
-    return this.slots.filter((slot) => slot?.kind === "potion").length;
+  private findPotionStackWithRoom(potionId: PotionId): Extract<BagSlot, { kind: "potion" }> | null {
+    for (const slot of this.slots) {
+      if (slot?.kind === "potion" && slot.potionId === potionId && slot.count < INVENTORY_CONFIG.maxPotionsPerSlot) {
+        return slot;
+      }
+    }
+    return null;
+  }
+
+  private getPotionSlotCount(potionId: PotionId): number {
+    return this.slots.filter((slot) => slot?.kind === "potion" && slot.potionId === potionId).length;
   }
 
   /** Scelta di un posto (0 = tasto 1). Un'arma diventa quella in mano; per le pozioni decide il motore (consumePotion). */
@@ -428,7 +445,7 @@ export class Inventory {
       this.equippedIndex = slotIndex;
       return { kind: "equip", weaponId: slot.weaponId };
     }
-    return { kind: "potion" };
+    return { kind: "potion", potionId: slot.potionId };
   }
 
   /** Toglie una pozione dal posto indicato (il posto si libera quando finiscono). false se lì non ci sono pozioni. */

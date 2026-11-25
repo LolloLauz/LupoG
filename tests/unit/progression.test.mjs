@@ -27,7 +27,7 @@ export default async function (t, load) {
   // --- configurazione ---
   t("economia: monete per nemico, élite e boss", P.ECONOMY_CONFIG.coinsPerEnemy > 0 && P.ECONOMY_CONFIG.eliteCoinMultiplier > 1 && P.ECONOMY_CONFIG.coinsPerBoss > P.ECONOMY_CONFIG.coinsPerEnemy);
   t("la moneta dei livelli dà monete oltre ai punti", ITEM_CONFIG.scoreCoin.coins === 10 && ITEM_CONFIG.scoreCoin.scoreBonus === 50);
-  t("bottega: cinque voci con prezzo positivo (E5: anche l'armatura)", Object.values(P.SHOP_OFFERS).length === 5 && Object.values(P.SHOP_OFFERS).every((o) => o.price > 0 && o.name.length > 0));
+  t("bottega: sei voci con prezzo positivo (E5: anche l'armatura; Classi Fase 2: la pozione di mana)", Object.values(P.SHOP_OFFERS).length === 6 && Object.values(P.SHOP_OFFERS).every((o) => o.price > 0 && o.name.length > 0));
   t("sblocchi: il cavaliere subito, gli altri a livelli crescenti che esistono", CHARACTER_CONFIG.knight.unlockLevel === 1 && CHARACTER_ORDER.slice(1).every((id, i, rest) => CHARACTER_CONFIG[id].unlockLevel > 1 && LEVEL_CONFIG.some((l) => l.id === CHARACTER_CONFIG[id].unlockLevel) && (i === 0 || CHARACTER_CONFIG[id].unlockLevel >= CHARACTER_CONFIG[rest[i - 1]].unlockLevel) && CHARACTER_CONFIG[id].unlockText.length > 0));
 
   // --- monete ---
@@ -181,7 +181,7 @@ export default async function (t, load) {
   // --- motore ---
   t("motore: monete da nemici (élite x3) e boss; ricominciando un livello tornano quelle di inizio livello", /addCoins\(ECONOMY_CONFIG\.coinsPerBoss\)/.test(engineSource) && /addCoins\(ECONOMY_CONFIG\.coinsPerEnemy \* \(enemy\.isElite \? ECONOMY_CONFIG\.eliteCoinMultiplier : 1\)\)/.test(engineSource) && engineSource.includes("this.scoreManager.restore(this.levelStartScore, this.levelStartCoins);"));
   t("motore: a fine livello si sblocca il livello successivo (e i personaggi)", /const lockedBefore[\s\S]{0,200}this\.progressManager\.unlockLevel\(nextLevelId\)/.test(engineSource));
-  t("motore: dopo il riquadro di fine livello la bottega (o la vittoria); PROSEGUI avvia il livello successivo", /private advanceToNextLevel[\s\S]{0,300}Shop\.open\(\[\.\.\.this\.discoveredWeaponIds\], this\.inventory, this\.lootRandom, \{[\s\S]{0,120}\}\);[\s\S]{0,300}this\.gameState\.change\("shop"\)/.test(engineSource) && /private leaveShop[\s\S]{0,120}this\.startLevel\(this\.currentLevelId \+ 1\);\s*this\.gameState\.change\("playing"\)/.test(engineSource));
+  t("motore: dopo il riquadro di fine livello la bottega (o la vittoria); PROSEGUI avvia il livello successivo", /private advanceToNextLevel[\s\S]{0,300}Shop\.open\(\[\.\.\.this\.discoveredWeaponIds\], this\.inventory, this\.lootRandom, \{[\s\S]{0,200}\}\);[\s\S]{0,300}this\.gameState\.change\("shop"\)/.test(engineSource) && /private leaveShop[\s\S]{0,120}this\.startLevel\(this\.currentLevelId \+ 1\);\s*this\.gameState\.change\("playing"\)/.test(engineSource));
   t("motore: ogni partita azzera monete, equipaggiamento e armi trovate; le armi raccolte si aggiungono a quelle trovate", /private startNewGame[\s\S]{0,200}this\.scoreManager\.reset\(\)[\s\S]{0,600}this\.resetRunEquipment\(\)/.test(engineSource) && /private resetRunEquipment[\s\S]{0,500}this\.discoveredWeaponIds\.clear\(\);\s*for \(const weaponId of \[\.\.\.ALWAYS_DISCOVERED_WEAPONS, startingWeaponId\]\)/.test(engineSource) && /this\.weaponPickups\.take\(pickup\);\s*this\.discoveredWeaponIds\.add\(item\.baseId\)/.test(engineSource));
   t("motore: niente più salvataggio di armi, armature o gemme", !/saveBagWeapons|addGems|setUpgrades|discoverWeapon|setBagWeapons/.test(engineSource));
 }

@@ -9,6 +9,7 @@
  *        npm run balance -- --quick (meno ripetizioni, più veloce e meno preciso)
  *        npm run balance -- --characters (solo le partite complete di ogni personaggio, Fase 4)
  *        npm run balance -- --equipment  (solo le partite complete con e senza equipaggiamento, piano E1-E6)
+ *        npm run balance -- --mage       (solo il Mago, Classi Fase 2)
  *
  * IMPORTANTE: il bot è un giocatore semplice. "rusher" attacca sempre senza mai schivare;
  * "medio" prova a schivare in modo imperfetto. Non sostituisce una prova con persone reali:
@@ -25,6 +26,7 @@ const outputDirectory = mkdtempSync(join(tmpdir(), "iron-balance-"));
 const isQuick = process.argv.includes("--quick");
 const isCharactersOnly = process.argv.includes("--characters");
 const isEquipmentOnly = process.argv.includes("--equipment");
+const isMageOnly = process.argv.includes("--mage");
 const repetitions = isQuick ? 15 : 40;
 const runRepetitions = isQuick ? 20 : 60;
 
@@ -93,7 +95,8 @@ function createRandom(seed) {
 function playLevel(levelId, options = {}) {
   // character: le statistiche del personaggio (il bot usa sempre la spada, quindi misura solo quelle)
   // useAbility: il bot usa anche l'abilità del personaggio (tasto L; lo scudo al posto della schivata)
-  // armor, weaponItem: equipaggiamento (piano E1-E6): armature indossate e la spada con la sua rarità
+  // armor, weaponItem: equipaggiamento (piano E1-E6): armature indossate e l'arma con la sua rarità
+  // il Mago (Classi Fase 2) ha un bot suo: bastone e incantesimi (7 dardo, 8 nova, 9 balzo, 0 barriera)
   const { character = CHARACTER_CONFIG.knight, useAbility = false, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false, armor = EMPTY_ARMOR, weaponItem = null } = options;
   const level = LEVEL_CONFIG.find((candidate) => candidate.id === levelId);
   const random = createRandom(seed);
@@ -105,7 +108,9 @@ function playLevel(levelId, options = {}) {
   let platforms = levelManager.platforms;
   const player = new Player(level.playerStart.x, level.playerStart.y, character);
   player.setArmor(armor);
-  if (weaponItem !== null) player.equipWeapon(WEAPON_CONFIG.sword, null, weaponItem);
+  const isMage = character.id === "mage";
+  if (weaponItem !== null) player.equipWeapon(WEAPON_CONFIG[weaponItem.baseId], null, weaponItem);
+  else if (isMage) player.equipWeapon(WEAPON_CONFIG.staff);
   player.currentHealth = Math.min(player.maxHealth, startHealth);
   // come nel gioco: nemici d'élite compresi
   const enemies = (enemyOverride ?? level.enemies).map(
@@ -176,6 +181,9 @@ function playLevel(levelId, options = {}) {
         : nearest.definition.attackWindupMs;
       const attackElapsedMs = (time - (attackStartTimes.get(nearest) ?? time)) * 1000;
       const wantsToDodge = isTargetAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);
+      if (isMage) {
+        playMageTurn({ player, nearest, boss, direction, gap, wantsToDodge, attackElapsedMs, windupMs, held, pressed, dodgeDecisions, isSolidWallAhead, isGroundAt });
+      } else {
       const ability = player.ability;
       const isAbilityReady = player.isAbilityReady;
       // scudo (paladino): al posto della schivata lo alza poco prima del colpo e lo tiene finché l'attacco dura
@@ -208,6 +216,7 @@ function playLevel(levelId, options = {}) {
         const edgeX = direction > 0 ? player.positionX + player.width + 6 : player.positionX - 6;
         if (player.isOnGround && (isSolidWallAhead(aheadX) || !isGroundAt(edgeX)) && !player.activeAttack) pressed.push("jump");
       }
+      }
     } else if (!player.isDead) {
       held.push("moveRight");
       const aheadX = player.positionX + player.width + 10;
@@ -219,6 +228,8 @@ function playLevel(levelId, options = {}) {
     levelManager.updateMovingPlatforms(time * 1000, [player, ...enemies.filter((enemy) => !enemy.isFlying)]);
     player.environment = hazardSystem.computePlayerEnvironment(player, hazards);
     player.update(FRAME, input, collisionSystem, platforms, level.width);
+    // i proiettili del giocatore entrano in gioco solo per il Mago (gli altri bot usano la spada; così i loro numeri non cambiano)
+    if (isMage) player.drainProjectileLaunches().forEach((launch) => projectileSystem.spawn(launch));
     hazardSystem.applyContactDamage(player, hazards);
     if (level.bossArenaStartX !== undefined && !isArenaLocked && player.positionX > level.bossArenaStartX + 24) {
       isArenaLocked = true;
@@ -255,7 +266,7 @@ function playLevel(levelId, options = {}) {
         enemies.push(minion);
       }
     }
-    projectileSystem.update(FRAME, player, platforms, level.width, level.height);
+    projectileSystem.update(FRAME, player, platforms, level.width, level.height, isMage ? [...enemies, ...(boss !== null ? [boss] : [])] : []);
     itemManager.update(FRAME);
     itemManager.collectItems(player, scoreManager);
     const potion = itemManager.findReachableBagItem(player);
@@ -282,6 +293,43 @@ function playLevel(levelId, options = {}) {
   return { outcome: "timeout", time: maxSeconds, healthLost, health: player.currentHealth, potions: inventory.potionCount };
 }
 
+/**
+ * Bot del Mago (Classi Fase 2): barriera (0) contro i colpi dei boss, balzo arcano (9) o schivata al momento del colpo,
+ * nova di gelo (8) quando il bersaglio è vicino, dardo di fuoco (7) appena è a tiro; per il resto colpisce con il
+ * bastone (che ridà mana). Come gli altri bot non bada al mana: un incantesimo senza mana semplicemente non parte.
+ */
+function playMageTurn({ player, nearest, boss, direction, gap, wantsToDodge, attackElapsedMs, windupMs, held, pressed, dodgeDecisions, isSolidWallAhead, isGroundAt }) {
+  const slots = player.abilitySlots;
+  const isFree = player.isOnGround && !player.activeAttack && !player.isGuarding;
+  const isFacingTarget = (direction > 0) === (player.facingDirection === "right");
+  const wantsBarrier = nearest === boss && wantsToDodge && attackElapsedMs >= windupMs - 150;
+  if (wantsBarrier && (player.isGuarding || slots[3].isReady)) {
+    held.length = 0;
+    held.push("ability4");
+    if (!player.isGuarding) pressed.push("ability4");
+    return;
+  }
+  const isDodgeMoment = wantsToDodge && attackElapsedMs >= windupMs - 100 && attackElapsedMs <= windupMs - 30 && isFree;
+  if (isDodgeMoment) {
+    pressed.push(slots[2].isReady && isFacingTarget ? "ability3" : "dodge");
+    dodgeDecisions.set(nearest, false);
+  } else if (isFree && isFacingTarget && gap <= 30 && slots[1].isReady) {
+    pressed.push("ability2");
+  } else if (isFree && isFacingTarget && gap > PLAYER_REACH && slots[0].isReady) {
+    pressed.push("ability1");
+  }
+  const holdAttack = wantsToDodge && attackElapsedMs >= windupMs - 520;
+  if (gap <= PLAYER_REACH) {
+    if (isFacingTarget) held.length = 0;
+    if (!holdAttack) pressed.push("attack");
+  } else {
+    if (gap < PLAYER_REACH + 6 && !holdAttack) pressed.push("attack");
+    const aheadX = direction > 0 ? player.positionX + player.width + 10 : player.positionX - 10;
+    const edgeX = direction > 0 ? player.positionX + player.width + 6 : player.positionX - 6;
+    if (player.isOnGround && (isSolidWallAhead(aheadX) || !isGroundAt(edgeX)) && !player.activeAttack) pressed.push("jump");
+  }
+}
+
 /** Punteggio semplice di un pezzo d'armatura per il bot: difesa, salute e stamina (la velocità conta poco). */
 const armorScore = (item) => {
   const totals = getItemTotals(item);
@@ -292,15 +340,15 @@ const armorScore = (item) => {
  * Bottino di fine livello (E5) per il bot: forziere ed élite (se il livello ne ha), boss; ogni pezzo d'armatura
  * migliore di quello indossato si indossa, la spada si cambia se esce di rarità più alta.
  */
-function collectLoot(level, gear, random) {
+function collectLoot(level, gear, random, weaponId = "sword") {
   const context = (source) => ({ source, levelId: level.id, difficulty: "normal" });
   const sources = [...((level.chests ?? []).length > 0 ? ["chest"] : []), ...(level.enemies.some((enemy) => enemy.elite) ? ["elite"] : []), ...(level.hasBoss ? ["boss"] : [])];
   for (const source of sources) {
     const armorPiece = rollLootArmor(context(source), random);
     const slot = ARMOR_CONFIG[armorPiece.baseId].slot;
     if (gear.armor[slot] === null || armorScore(armorPiece) > armorScore(gear.armor[slot])) gear.armor = { ...gear.armor, [slot]: armorPiece };
-    const sword = rollLootWeapon("sword", context(source), random);
-    if (RARITY_ORDER.indexOf(sword.rarity) > RARITY_ORDER.indexOf(gear.weaponItem.rarity)) gear.weaponItem = sword;
+    const weapon = rollLootWeapon(weaponId, context(source), random);
+    if (RARITY_ORDER.indexOf(weapon.rarity) > RARITY_ORDER.indexOf(gear.weaponItem.rarity)) gear.weaponItem = weapon;
   }
 }
 
@@ -313,7 +361,9 @@ function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight, useA
   let lives = GAME_CONFIG.startingLives;
   let health = character.maxHealth;
   const lootRandom = createRandom(seed * 7919);
-  const gear = { armor: { ...EMPTY_ARMOR }, weaponItem: createWeaponItem("sword") };
+  // tutti con la spada, tranne il Mago (bastone)
+  const botWeaponId = character.id === "mage" ? "staff" : "sword";
+  const gear = { armor: { ...EMPTY_ARMOR }, weaponItem: createWeaponItem(botWeaponId) };
   if (gearMode === "max") {
     gear.armor = { helmet: createArmorItem("steelHelmet", "epic", [{ id: "defense", value: 8 }]), chest: createArmorItem("steelChest", "epic", [{ id: "defense", value: 8 }]), boots: createArmorItem("steelBoots", "epic", [{ id: "defense", value: 8 }]) };
     gear.weaponItem = createWeaponItem("sword", "legendary", [{ id: "damage", value: 16 }, { id: "lifeSteal", value: 3 }]);
@@ -327,7 +377,7 @@ function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight, useA
       if (result.outcome === "win") {
         potions = result.potions;
         const hasNextLevel = LEVEL_CONFIG.some((other) => other.id === level.id + 1);
-        if (gearMode === "loot") collectLoot(level, gear, lootRandom);
+        if (gearMode === "loot") collectLoot(level, gear, lootRandom, botWeaponId);
         health = Math.min(result.maxHealth, result.health + (hasNextLevel ? GAME_CONFIG.levelCompleteHeal : 0));
         break;
       }
@@ -344,7 +394,7 @@ const average = (values) => (values.length === 0 ? NaN : values.reduce((a, b) =>
 const skills = [["rusher (non schiva)", 0], ["medio (schiva a volte)", 0.5]];
 const pad = (text, width) => String(text).padEnd(width);
 
-if (!isCharactersOnly && !isEquipmentOnly) {
+if (!isCharactersOnly && !isEquipmentOnly && !isMageOnly) {
 console.log("=== DUELLI (un gruppo di nemici su terreno piano, giocatore a 100 HP) ===");
 const duels = {
   "scheletro": [{ type: "skeleton", position: { x: 150, y: 176 } }],
@@ -395,6 +445,7 @@ for (const [label, skill] of skills) {
 }
 }
 
+if (!isMageOnly) {
 console.log(`\n=== EQUIPAGGIAMENTO (E5): PARTITE COMPLETE DEL CAVALIERE, SENZA, CON IL BOTTINO DI FINE LIVELLO, AL MASSIMO ===`);
 for (const [label, skill] of skills) for (const gearMode of ["none", "loot", "max"]) {
   const runs = Array.from({ length: runRepetitions }, (_, i) => playFullRun(skill, i + 1, CHARACTER_CONFIG.knight, false, gearMode));
@@ -403,9 +454,12 @@ for (const [label, skill] of skills) for (const gearMode of ["none", "loot", "ma
   console.log(`${pad(label, 24)} ${pad({ none: "senza", loot: "bottino", max: "massimo" }[gearMode], 8)} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)}`);
 }
 
-if (!isEquipmentOnly) {
+}
+
+if (!isEquipmentOnly && !isMageOnly) {
 console.log(`\n=== PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, stamina, cura; con e senza l'abilità L) ===`);
-for (const characterId of CHARACTER_ORDER) {
+// il Mago ha la sua sezione (bastone e incantesimi)
+for (const characterId of CHARACTER_ORDER.filter((id) => id !== "mage")) {
   const character = CHARACTER_CONFIG[characterId];
   for (const [label, skill] of skills) for (const useAbility of [false, true]) {
     const runs = Array.from({ length: runRepetitions }, (_, i) => playFullRun(skill, i + 1, character, useAbility));
@@ -413,6 +467,25 @@ for (const characterId of CHARACTER_ORDER) {
     const totalDeaths = average(runs.map((r) => r.deathsPerLevel.reduce((a, b) => a + b, 0)));
     console.log(`${pad(character.name, 10)} ${pad(label, 24)} ${useAbility ? "con abilità  " : "senza abilità"} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)}`);
   }
+}
+}
+if (!isEquipmentOnly) {
+const mage = CHARACTER_CONFIG.mage;
+console.log(`\n=== MAGO (Classi Fase 2): BASTONE E INCANTESIMI (7 dardo, 8 nova, 9 balzo, 0 barriera contro i boss) ===`);
+for (const bossLevel of LEVEL_CONFIG.filter((l) => l.hasBoss)) {
+  const bossName = BOSS_CATALOG[bossLevel.bossId ?? BOSS_CONFIG.id].name;
+  for (const [label, skill] of skills) {
+    const results = Array.from({ length: repetitions }, (_, i) => playLevel(bossLevel.id, { character: mage, dodgeSkill: skill, seed: i + 1, enemyOverride: [], stopWhenClear: true, maxSeconds: 180 }));
+    const wins = results.filter((r) => r.outcome === "win").length;
+    console.log(`MAGO contro ${pad(bossName, 20)} ${pad(label, 24)} vittorie ${((wins / repetitions) * 100).toFixed(0).padStart(3)}%   HP persi ${average(results.map((r) => r.healthLost)).toFixed(0)}   tempo ${average(results.map((r) => r.time)).toFixed(0)}s`);
+  }
+}
+for (const [label, skill] of skills) for (const gearMode of ["none", "loot"]) {
+  const runs = Array.from({ length: runRepetitions }, (_, i) => playFullRun(skill, i + 1, mage, true, gearMode));
+  const won = runs.filter((r) => r.won);
+  const totalDeaths = average(runs.map((r) => r.deathsPerLevel.reduce((a, b) => a + b, 0)));
+  const deaths = LEVEL_CONFIG.map((_, index) => average(runs.map((r) => r.deathsPerLevel[index])).toFixed(2));
+  console.log(`MAGO ${pad(label, 24)} ${pad({ none: "senza", loot: "bottino" }[gearMode], 8)} partite vinte ${((won.length / runRepetitions) * 100).toFixed(0).padStart(3)}%   vite rimaste (se vinta) ${average(won.map((r) => r.livesLeft)).toFixed(2)}   morti medie ${totalDeaths.toFixed(2)} (${deaths.join(" / ")})`);
 }
 }
 console.log("\n(rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)");
