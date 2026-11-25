@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.0.1**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.1.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -92,9 +92,11 @@ senza aggiornare il mondo né consumare gli input: un tasto premuto in quell'int
 
 | Da | A (transizioni ammesse) |
 |---|---|
-| `title` | `controls`, `levelSelect`, `playing` |
+| `title` | `controls`, `levelSelect`, `characterSelect`, `confirmReset`, `playing` |
 | `controls` | `title` |
 | `levelSelect` (2.0) | `title`, `playing` |
+| `characterSelect`, `confirmReset` | `title` |
+| `shop` (bottega a menu) | `playing` |
 | `playing` | `paused`, `gameOver`, `victory`, `shop`, `equipment` |
 | `paused` | `playing`, `title`, `equipment` |
 | `equipment` (E4) | `playing`, `paused` (si torna da dove si era) |
@@ -116,6 +118,11 @@ l'altro; la bottega a menu (`shop`) resta come ripiego.
   (W è sia *salto* sia *menu su*).
 - **Eventi per frame.** `wasPressed` e `wasReleased` valgono per **un solo frame** (`endFrame()` li azzera); `isHeld` vale finché il tasto è premuto.
   L'auto-repeat del sistema operativo viene ignorato.
+- **Comandi (2.1).** `attack` = J, `heavyAttack` = K, `dodge` = Shift sinistro; Spazio non è assegnato. Le mosse speciali sono quattro azioni,
+  `ability1`-`ability4` (tasti 5-8, anche del tastierino numerico; L è un alias di `ability1`). `ABILITY_SLOT_ACTIONS` (`controlsConfig.ts`) dice quale
+  azione comanda ogni slot: `Player.handleInput` cerca il tasto premuto, sceglie lo slot con `selectAbilitySlot` (non durante un attacco o una
+  schivata; uno slot vuoto non fa niente) e avvia l'abilità; lo scudo resta alzato finché è tenuto il tasto del suo slot. L'HUD mostra il numero
+  del tasto dello slot attivo.
 - **Contesti.** `INPUT_CONTEXT_ACTIONS` indica quali azioni sono ammesse in `gameplay` e in `menu`: in pausa e nei menu salto e attacco semplicemente
   non esistono, quindi non serve controllarlo altrove.
 - **Robustezza.** Alla perdita del focus tutti i tasti vengono rilasciati (altrimenti resterebbero "incastrati").
@@ -221,8 +228,18 @@ indulgente senza cambiare le regole.
 Si sceglie nel menu del titolo; `GameEngine` la passa a `LevelManager.createEnemies/createBoss` e ai nemici evocati o nati da una divisione, e
 `LivesManager.reset` usa le sue vite. La scelta è salvata da `ProgressManager`.
 
-**Progressi (2.0).** `ProgressManager` ricorda nel browser il livello più avanzato raggiunto (aggiornato da `startLevel`) e la difficoltà. La schermata
-`levelSelect` permette una partita nuova da uno qualsiasi dei livelli raggiunti. Come il record, è tollerante: senza archivio si riparte dal livello 1.
+**Progressi e salvataggio (2.0, ridotto nella 2.1).** `ProgressManager` salva nel browser solo `{ version: 2, unlockedLevelId, difficulty, characterId }`
+(chiave `ironAndShadow.progress`, costante `SAVE_VERSION`). Le classi sbloccate non si salvano: `isCharacterUnlocked` le ricava dal livello più avanzato
+raggiunto (aggiornato a fine livello e da `startLevel`). Il record è a parte, in `HighScoreManager`. La schermata `levelSelect` permette una partita nuova da
+uno qualsiasi dei livelli raggiunti. La lettura è tollerante, campo per campo: senza archivio si riparte dal livello 1.
+
+**Migrazione dal formato 2.0.** Un salvataggio senza `version: 2` conserva livello, difficoltà e personaggio e viene **riscritto subito** al caricamento,
+così armi, armature, zaino, gemme, potenziamenti e armi trovate non restano nell'archivio. Se l'archivio non è scrivibile, i progressi letti valgono lo stesso.
+
+**Partite scollegate (2.1).** Tutto l'equipaggiamento vive solo in memoria. `GameEngine.resetRunEquipment` (avvio, nuova partita, "Cancella dati") mette nella borsa
+la sola arma iniziale della classe, svuota armature e zaino e riporta le armi trovate (`GameEngine.discoveredWeaponIds`) a spada più arma iniziale; monete e
+punteggio si azzerano con `ScoreManager.reset`. Scegliere il personaggio salva solo la scelta (`chooseCharacter`): la partita in corso non cambia, la classe si applica
+in `startNewGame`.
 
 ---
 
@@ -318,7 +335,7 @@ d'aggancio elencati, volutamente minimi.
 | Power-up temporanei | implementato (2.0) | `POWER_UP_CONFIG`, `PlayerModifiers` | nuovi power-up: solo dati (effetti su statistiche esistenti) e uno sprite; una statistica nuova richiede di leggerla dove serve |
 | Power-up permanenti | punto di estensione | `PowerUpDefinition.type = "permanent"` (non scade) | oggi la partita li toglierebbe a ogni livello (`modifiers.clear()` in `startLevel`): servirebbe conservarli |
 | Elementi ed effetti di stato | implementato (Fase 7 del piano espansioni) | `ELEMENT_CONFIG`, `StatusEffects`, `HitProperties.elements`, `PowerUpDefinition.element`, `elementModifiers` di nemici e boss, `renderStatusAuras`/`renderStatusPips` | un elemento nuovo: un id in `ElementId`, una voce in `ELEMENT_CONFIG` ed `ELEMENT_ORDER` (danno nel tempo, rallentamento o stordimento si ottengono con i dati); un effetto di tipo nuovo richiede un caso in `StatusEffects` e in chi lo subisce (`Enemy`, `Boss`) |
-| Abilità speciali e stamina | implementato (Fase 5 del piano espansioni) | `ABILITY_CONFIG`, `AbilityDefinition`, `CharacterDefinition.abilityIds`, `Player` (`spendStamina`, `tryStartAbility`, `updateGuard`, `selectAbilitySlot`), `AttackDefinition.dash` | un'abilità d'attacco nuova: un id in `AbilityId`, una voce in `ABILITY_CONFIG` con il suo attacco e un'animazione in `PLAYER_ANIMATIONS` con le pose comuni (`ABILITY_POSES`); un tipo nuovo (oltre ad attacco e scudo) richiede un caso in `Player` |
+| Abilità speciali e stamina | implementato (Fase 5 del piano espansioni) | `ABILITY_CONFIG`, `AbilityDefinition`, `CharacterDefinition.abilityIds`, `Player` (`spendStamina`, `tryStartAbility`, `updateGuard`, `selectAbilitySlot`), `ABILITY_SLOT_ACTIONS` (tasto di ogni slot), `AttackDefinition.dash` | un'abilità d'attacco nuova: un id in `AbilityId`, una voce in `ABILITY_CONFIG` con il suo attacco e un'animazione in `PLAYER_ANIMATIONS` con le pose comuni (`ABILITY_POSES`); un tipo nuovo (oltre ad attacco e scudo) richiede un caso in `Player` |
 | Classi: mana, affinità delle armi, attributi (Classi Fase 0, tutto neutro) | punti d'innesto pronti, valori neutri (il gioco non cambia) | `ResourcePool` (stamina e mana di `Player`), `AbilityDefinition.cost` (`ResourceCost`) e `modifiers`, `CharacterDefinition.abilityIds`/`maxMana`/`manaRegenPerSecond`/`baseAttributes`, `WeaponDefinition.category`/`weight`/`scalingAttribute`, `WEAPON_AFFINITY_CONFIG`, `ATTRIBUTE_CONFIG`, `computeAttributeEffects`, `PlayerModifiers.setSourceEffects` | un costo in mana: un valore in `cost.mana` e `maxMana` della classe; un bonus o un malus d'arma: la cella classe × categoria in `WEAPON_AFFINITY_CONFIG`; un effetto di attributo: una voce in `effectsPerPoint` (poi `Player.setAttributes`); un modificatore di incantesimo: una voce in `AbilityDefinition.modifiers` (oggi il campo è vuoto e non letto) |
 | Nuove armi | implementato (Fasi 0-1 del piano espansioni: 5 armi corpo a corpo) | `WeaponDefinition`, `WEAPON_CONFIG`, `WEAPON_VISUALS` (`knightSprites.ts`), `Player.equipWeapon`, `WeaponPickupManager`, forzieri (`LevelDefinition.chests`), `EnemySpawnDefinition.weaponDrop`, `BossDefinition.weaponReward` | un'arma corpo a corpo nuova: un id in `WeaponId`, una voce in `WEAPON_CONFIG`, le animazioni dei suoi attacchi, una voce in `WEAPON_VISUALS` (forma ed eventuali pose proprie); effetti nuovi sul bersaglio richiedono un campo in `AttackDefinition`/`HitProperties` letto in `Enemy.receiveHit`. Armi a distanza (Fase 2): attacchi con `projectile` (e `charge` per l'arco), proiettili con `owner: "player"` in `ProjectileSystem`, munizioni in `WeaponDefinition.ammo` e nella borsa |
 | Boss con più fasi o attacchi diversi | già possibile (2.0) | `BossDefinition.attacks` e `phases[].attackWeights` | solo dati per i 4 tipi esistenti; un **tipo** di attacco nuovo richiede un caso in `Boss.ts` (`canPerform`, `onActivePhaseStart`, `getAttackHitbox`) e le animazioni in `BOSS_ATTACK_ANIMATIONS` |
@@ -326,7 +343,7 @@ d'aggancio elencati, volutamente minimi.
 | Boss con una silhouette nuova | già possibile (2.0) | `BOSS_SPRITE_SHAPES` (`knight`, `witch`, `sorcerer`, `beast`) | una forma nuova richiede una funzione che componga i frame in `bossSprites.ts` e la sua hitbox in `SHAPE_HITBOX` |
 | Nuove ambientazioni | già possibile (2.0: sei; Fase 8 del piano espansioni: sette, con le Lande Desolate) | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer`, `TerrainRenderer` | un caso in `BackgroundRenderer.buildTheme` (livelli di parallasse) e i colori del terreno; una tessitura nuova richiede un caso in `TerrainRenderer` |
 | Personaggi alternativi | implementato (Fase 4 del piano espansioni: cavaliere, ranger, berserker, paladino) | `CharacterDefinition`, `CHARACTER_CONFIG`, `CHARACTER_VISUALS` (`knightSprites.ts`), `Player.setCharacter`, `ProgressManager.characterId`, schermata `characterSelect` | un personaggio nuovo: un id in `CharacterId`, una voce in `CHARACTER_CONFIG` e in `CHARACTER_ORDER`, una voce in `CHARACTER_VISUALS` (colori e, se serve, le 12 righe della testa). Un tratto che non è una statistica (es. la parata del paladino, Fase 5) richiede un campo in `CharacterDefinition` letto da `Player` |
-| Progressione: monete, bottega, potenziamenti permanenti, sblocchi | implementato (Fase 6 del piano espansioni) | `progressionConfig.ts`, `Shop`, `ScoreManager.coins`, `ProgressManager` (gemme, potenziamenti, armi trovate, `isCharacterUnlocked`), `Player.setUpgrades` | una voce nuova della bottega: un id in `ShopOfferId`, una voce in `SHOP_OFFERS` e il suo caso in `Shop.buy`/`findRefusal`; un potenziamento nuovo: una voce in `UPGRADE_CONFIG` e `UPGRADE_ORDER` e il suo effetto in `computeUpgradeBonuses` |
+| Progressione: monete, bottega, sblocchi | implementato (Fase 6 del piano espansioni; nella 2.1 rimossi i potenziamenti permanenti) | `progressionConfig.ts`, `Shop`, `ScoreManager.coins`, `ProgressManager` (`unlockLevel`, `isCharacterUnlocked`) | una voce nuova della bottega: un id in `ShopOfferId`, una voce in `SHOP_OFFERS` e il suo caso in `Shop.buy`/`findRefusal` |
 | Equipaggiamento: rarità, modificatori, armature, zaino, bottino, negozio camminabile | implementato (piano dell'equipaggiamento, E1-E6) | `RARITY_CONFIG`, `AFFIX_CONFIG`, `ARMOR_CONFIG`, `LEGENDARY_ITEMS`/`MYTHIC_ITEMS`, `LOOT_SOURCES`, `ItemFactory`, `EquipmentStats`, `LootSystem`, `Inventory` (zaino e armature), `Player.equipWeapon(..., item)`/`setArmor`, `SpriteColorVariant` | un modificatore nuovo: un id in `AffixId`, una voce in `AFFIX_CONFIG` e il suo effetto in `EquipmentStats` (e, se è una statistica nuova, in `Player`); un pezzo d'armatura o un Leggendario: solo dati; uno sprite su misura per un Mitico: vedi `PIANO_EQUIPAGGIAMENTO.md` |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |
 | Selettore di difficoltà | implementato (2.0) | `DIFFICULTY_CONFIG`, menu del titolo, `ProgressManager` | - |
@@ -347,7 +364,7 @@ frame, scarta quelli scaduti: il valore effettivo (`getValue`) si ricalcola dall
 velocità (in `Player.applyHorizontalInput`), danni subiti (in `Player.takeDamage`), rigenerazione (in `Player.updateTimers`). Lo stesso power-up raccolto
 di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni nuovo livello e alla perdita di una vita (scelta di bilanciamento).
 
-**Fonti permanenti (Classi Fase 0).** Accanto ai power-up, `PlayerModifiers` tiene fonti che non scadono (`setSourceEffects`, oggi solo `"attributes"`): i loro effetti entrano nella stessa formula, e `clear()` toglie solo i power-up. `Player.setAttributes` calcola gli effetti con `computeAttributeEffects` (da `ATTRIBUTE_CONFIG`, oggi vuoti) e li registra; `maxHealth`, `maxStamina` e `maxMana` leggono le statistiche `maxHealthBonus`, `maxStaminaBonus`, `maxManaBonus`. Stamina e mana sono due `ResourcePool`; le abilità pagano un `ResourceCost` (`stamina`, `mana`, `health`) e stanno in un elenco con uno slot attivo. L'affinità classe × categoria d'arma (`WEAPON_AFFINITY_CONFIG`) moltiplica danno e recupero. Con i valori neutri della 2.0.1 niente di questo cambia il gioco.
+**Fonti permanenti (Classi Fase 0).** Accanto ai power-up, `PlayerModifiers` tiene fonti che non scadono (`setSourceEffects`, oggi solo `"attributes"`): i loro effetti entrano nella stessa formula, e `clear()` toglie solo i power-up. `Player.setAttributes` calcola gli effetti con `computeAttributeEffects` (da `ATTRIBUTE_CONFIG`, oggi vuoti) e li registra; `maxHealth`, `maxStamina` e `maxMana` leggono le statistiche `maxHealthBonus`, `maxStaminaBonus`, `maxManaBonus`. Stamina e mana sono due `ResourcePool`; le abilità pagano un `ResourceCost` (`stamina`, `mana`, `health`) e stanno in un elenco con uno slot attivo. L'affinità classe × categoria d'arma (`WEAPON_AFFINITY_CONFIG`) moltiplica danno e recupero. Con i valori neutri introdotti dalla Fase 0 (2.0.1) niente di questo cambia il gioco.
 
 ---
 
@@ -357,8 +374,8 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 |---|---|
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
-| `npm test` | 308 controlli unitari in Node (meno di 1 secondo) |
-| `npm run test:browser` | 174 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
+| `npm test` | 1090 controlli unitari in Node (meno di 1 secondo) |
+| `npm run test:browser` | 176 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |
 

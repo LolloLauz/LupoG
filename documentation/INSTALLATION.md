@@ -1,6 +1,6 @@
 # Manuale di installazione
 
-Versione descritta: **2.0.1**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
+Versione descritta: **2.1.0**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
 **modificare il codice** (serve Node.js).
 
 ---

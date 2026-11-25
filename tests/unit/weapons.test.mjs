@@ -3,14 +3,13 @@
 import { projectRoot } from "../helpers.mjs";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-export const description = "Armi: WeaponDefinition, spada come prima arma, cambio d'arma, arma salvata nei progressi";
+export const description = "Armi: WeaponDefinition, spada come prima arma, cambio d'arma, arma iniziale a ogni partita";
 
 export default async function (t, load) {
 const {WEAPON_CONFIG,DEFAULT_WEAPON_ID,getAllWeaponAttacks,isWeaponId}=await load('config/weaponConfig');
 const {ATTACK_DEFINITIONS,COMBO_DEFINITIONS,DEFAULT_ATTACK_BY_INPUT,PLAYER_CONFIG}=await load('config/playerConfig');
 const {PLAYER_ANIMATIONS}=await load('config/animationConfig');
 const {Player}=await load('entities/Player');const {CollisionSystem}=await load('systems/CollisionSystem');
-const {ProgressManager}=await load('systems/ProgressManager');
 
 // --- definizioni
 const weapons=Object.entries(WEAPON_CONFIG);
@@ -65,23 +64,7 @@ const testWeapon={id:'sword',name:'Prova',attacks:{testStab:{...a1,id:'testStab'
  p.update(1/60,input(['attack']),cs,P,1024);
  t("dopo un cambio d'arma la combo riparte dal primo colpo",p.activeAttack?.id==='swordLight1',p.activeAttack?.id);}
 
-// --- progressi
-const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};};
-{const m=memory();const pm=new ProgressManager(m);
- t("senza progressi salvati si parte con la spada",pm.equippedWeaponId==='sword');
- pm.setEquippedWeapon('sword');
- t("l'arma non scrive nulla se non cambia",m.data.size===0);}
-{const m=memory();m.data.set('ironAndShadow.progress',JSON.stringify({unlockedLevelId:4,difficulty:'hard',equippedWeaponId:'sword'}));
- const pm=new ProgressManager(m);t("l'arma salvata viene letta",pm.equippedWeaponId==='sword'&&pm.unlockedLevelId===4);}
-{const m=memory();m.data.set('ironAndShadow.progress',JSON.stringify({unlockedLevelId:3,difficulty:'easy'}));
- const pm=new ProgressManager(m);t("un salvataggio della 2.0.0 (senza arma) tiene livello e difficoltà e dà la spada",pm.equippedWeaponId==='sword'&&pm.unlockedLevelId===3&&pm.difficulty==='easy');}
-{const m=memory();m.data.set('ironAndShadow.progress',JSON.stringify({unlockedLevelId:2,difficulty:'normal',equippedWeaponId:'bazooka'}));
- const pm=new ProgressManager(m);t("un'arma sconosciuta nei progressi torna alla spada",pm.equippedWeaponId==='sword'&&pm.unlockedLevelId===2);
- pm.unlockLevel(3);t("salvando di nuovo si scrive un'arma valida",JSON.parse(m.data.get('ironAndShadow.progress')).equippedWeaponId==='sword');}
-
-// --- motore: a ogni partita si impugna l'arma salvata
+// --- motore: a ogni partita si impugna l'arma iniziale della classe
 {const src=readFileSync(join(projectRoot,'src/core/GameEngine.ts'),'utf8');
- const m=src.match(/private startNewGame\([^)]*\): void \{([\s\S]*?)\n  \}/);
- const resetBag='this.loadSavedEquipment();\n    this.equipFromInventory();';
- t("GameEngine dà al giocatore la borsa e l'arma salvate all'avvio e a ogni nuova partita",m!==null&&m[1].includes(resetBag)&&src.split(resetBag).length===3&&/private loadSavedEquipment[\s\S]{0,200}this\.inventory\.reset\(this\.progressManager\.bagWeaponItems, this\.progressManager\.equippedWeaponId\)/.test(src)&&/private equipFromInventory[\s\S]{0,200}this\.player\.equipWeapon\(WEAPON_CONFIG\[this\.inventory\.equippedWeaponId\], this\.inventory\.equippedAmmo, this\.inventory\.equippedWeaponItem\)/.test(src));}
+ t("GameEngine dà al giocatore la sola arma iniziale della classe all'avvio, a ogni nuova partita e cancellando i dati",src.split('this.resetRunEquipment();').length===4&&/private resetRunEquipment[\s\S]{0,200}CHARACTER_CONFIG\[this\.progressManager\.characterId\]\.startingWeaponId;\s*this\.inventory\.reset\(\[startingWeaponId\], startingWeaponId\);\s*this\.inventory\.setArmorAndBackpack\(EMPTY_ARMOR, \[\]\)/.test(src)&&/private equipFromInventory[\s\S]{0,200}this\.player\.equipWeapon\(WEAPON_CONFIG\[this\.inventory\.equippedWeaponId\], this\.inventory\.equippedAmmo, this\.inventory\.equippedWeaponItem\)/.test(src));}
 }

@@ -1,9 +1,9 @@
-// Fase 6: monete e bottega, gemme e potenziamenti permanenti, sblocchi di personaggi e armi
+// Fase 6 e Classi Fase 1: monete e bottega, gemme in monete, partite scollegate, salvataggio, sblocchi
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FakeSpriteManager, projectRoot } from "../helpers.mjs";
 
-export const description = "Monete e bottega, gemme e potenziamenti permanenti, personaggi e armi da sbloccare";
+export const description = "Monete e bottega, gemme in monete, partite scollegate, salvataggio e migrazione, sblocchi";
 
 export default async function (t, load) {
   const P = await load("config/progressionConfig");
@@ -15,7 +15,9 @@ export default async function (t, load) {
   const { ItemManager } = await load("systems/ItemManager");
   const { Inventory } = await load("systems/Inventory");
   const { Shop } = await load("systems/Shop");
-  const { ProgressManager } = await load("systems/ProgressManager");
+  const { ProgressManager, SAVE_VERSION } = await load("systems/ProgressManager");
+  const { InputManager } = await load("core/InputManager");
+  const { CONTROLS_CONFIG } = await load("config/controlsConfig");
   const { Player } = await load("entities/Player");
   const { GameState } = await load("core/GameState");
   const { ScreenManager } = await load("ui/ScreenManager");
@@ -26,12 +28,6 @@ export default async function (t, load) {
   t("economia: monete per nemico, élite e boss", P.ECONOMY_CONFIG.coinsPerEnemy > 0 && P.ECONOMY_CONFIG.eliteCoinMultiplier > 1 && P.ECONOMY_CONFIG.coinsPerBoss > P.ECONOMY_CONFIG.coinsPerEnemy);
   t("la moneta dei livelli dà monete oltre ai punti", ITEM_CONFIG.scoreCoin.coins === 10 && ITEM_CONFIG.scoreCoin.scoreBonus === 50);
   t("bottega: cinque voci con prezzo positivo (E5: anche l'armatura)", Object.values(P.SHOP_OFFERS).length === 5 && Object.values(P.SHOP_OFFERS).every((o) => o.price > 0 && o.name.length > 0));
-  t("potenziamenti: quattro, ognuno con costi crescenti", P.UPGRADE_ORDER.length === 4 && P.UPGRADE_ORDER.every((id) => { const c = P.UPGRADE_CONFIG[id].costs; return c.length > 0 && c.every((cost, i) => cost > 0 && (i === 0 || cost >= c[i - 1])); }));
-  {
-    const bonus = P.computeUpgradeBonuses({ vitality: 2, endurance: 1, strength: 3, supplies: 1 });
-    const none = P.computeUpgradeBonuses(P.NO_UPGRADES);
-    t("bonus dei potenziamenti: +20 salute, +15 stamina, danno x1,15, 1 pozione; senza: nessun bonus", bonus.maxHealth === 20 && bonus.maxStamina === 15 && Math.abs(bonus.damageMultiplier - 1.15) < 1e-9 && bonus.startingPotions === 1 && none.maxHealth === 0 && none.damageMultiplier === 1 && none.startingPotions === 0);
-  }
   t("sblocchi: il cavaliere subito, gli altri a livelli crescenti che esistono", CHARACTER_CONFIG.knight.unlockLevel === 1 && CHARACTER_ORDER.slice(1).every((id, i, rest) => CHARACTER_CONFIG[id].unlockLevel > 1 && LEVEL_CONFIG.some((l) => l.id === CHARACTER_CONFIG[id].unlockLevel) && (i === 0 || CHARACTER_CONFIG[id].unlockLevel >= CHARACTER_CONFIG[rest[i - 1]].unlockLevel) && CHARACTER_CONFIG[id].unlockText.length > 0));
 
   // --- monete ---
@@ -39,9 +35,9 @@ export default async function (t, load) {
     const score = new ScoreManager();
     score.addCoins(30);
     t("monete: si sommano e si spendono solo se bastano", score.coins === 30 && !score.spendCoins(40) && score.coins === 30 && score.spendCoins(25) && score.coins === 5);
-    score.restore(100, 2);
+    score.restore(100);
     t("ripristino senza monete: restano quelle attuali (compatibile con i vecchi usi)", score.coins === 5 && score.currentScore === 100);
-    score.restore(0, 0, 12);
+    score.restore(0, 12);
     t("ripristino con monete (ricominciando un livello) e azzeramento a ogni partita", score.coins === 12 && (score.reset(), score.coins === 0));
     const items = new ItemManager();
     items.loadItems([{ type: "scoreCoin", position: { x: 100, y: 192 } }]);
@@ -93,84 +89,99 @@ export default async function (t, load) {
     t("borsa e zaino pieni: l'arma non si compra", fullShop2.buy(3, full) === "bagFull" && !full.inventory.hasWeapon("dagger"));
   }
 
-  // --- progressi: gemme, potenziamenti, armi trovate, sblocchi ---
+  // --- gemme in monete ---
   {
-    const store = memory();
-    const progress = new ProgressManager(store);
-    t("progressi nuovi: nessuna gemma, nessun potenziamento, trovata solo la spada", progress.gems === 0 && P.UPGRADE_ORDER.every((id) => progress.upgradeLevels[id] === 0) && progress.discoveredWeaponIds.join() === "sword");
-    progress.addGems(5);
-    t("le gemme si mettono da parte e si salvano", new ProgressManager(store).gems === 5);
-    t("comprare un potenziamento costa gemme e sale di livello", progress.buyUpgrade("vitality") && progress.gems === 3 && progress.upgradeLevels.vitality === 1 && progress.getNextUpgradeCost("vitality") === 3);
-    progress.buyUpgrade("endurance"); // 2 gemme: ne resta 1
-    t("gemme insufficienti: niente acquisto", progress.gems === 1 && !progress.buyUpgrade("strength") && progress.gems === 1 && progress.upgradeLevels.strength === 0);
-    progress.addGems(100);
-    progress.buyUpgrade("supplies");
-    progress.buyUpgrade("supplies");
-    t("al livello massimo non si compra più", progress.getNextUpgradeCost("supplies") === null && !progress.buyUpgrade("supplies") && progress.upgradeLevels.supplies === 2);
-    t("potenziamenti salvati", new ProgressManager(store).upgradeLevels.supplies === 2 && new ProgressManager(store).upgradeLevels.vitality === 1);
-    progress.discoverWeapon("bow");
-    progress.discoverWeapon("bow");
-    t("un'arma trovata resta sbloccata (senza doppioni)", new ProgressManager(store).discoveredWeaponIds.join() === "sword,bow");
-    t("personaggi: all'inizio solo il cavaliere", CHARACTER_ORDER.filter((id) => progress.isCharacterUnlocked(id)).join() === "knight");
-    progress.setCharacter("paladin");
-    t("un personaggio bloccato salvato si gioca come cavaliere", progress.characterId === "knight");
-    progress.unlockLevel(3);
-    t("raggiunto il livello 3 si sblocca il ranger", progress.isCharacterUnlocked("ranger") && !progress.isCharacterUnlocked("berserker"));
-    progress.unlockLevel(6);
-    t("raggiunto il livello 6 tutti sbloccati, e il paladino salvato torna valido", CHARACTER_ORDER.every((id) => progress.isCharacterUnlocked(id)) && progress.characterId === "paladin");
-    progress.reset();
-    t("cancella dati: gemme, potenziamenti e armi trovate azzerati", progress.gems === 0 && progress.upgradeLevels.supplies === 0 && progress.discoveredWeaponIds.join() === "sword");
-    const odd = memory();
-    odd.setItem("ironAndShadow.progress", JSON.stringify({ unlockedLevelId: 2, gems: -4, upgradeLevels: { vitality: 99, strength: "x", magic: 2 }, discoveredWeaponIds: ["axe", "bazooka"], bagWeaponIds: ["mace"], equippedWeaponId: "mace" }));
-    const loaded = new ProgressManager(odd);
-    t("dati strani: gemme negative a 0, livelli entro il massimo, armi sconosciute ignorate, armi della borsa trovate", loaded.gems === 0 && loaded.upgradeLevels.vitality === 3 && loaded.upgradeLevels.strength === 0 && !("magic" in loaded.upgradeLevels) && loaded.discoveredWeaponIds.join() === "sword,axe,mace");
-    const old = memory();
-    old.setItem("ironAndShadow.progress", JSON.stringify({ unlockedLevelId: 4, difficulty: "normal", characterId: "berserker" }));
-    t("salvataggio di prima della Fase 6: nessuna gemma, personaggio valido se il livello lo sblocca", new ProgressManager(old).gems === 0 && new ProgressManager(old).characterId === "berserker");
+    const items = new ItemManager();
+    items.loadItems([{ type: "collectible", position: { x: 100, y: 192 } }]);
+    const score = new ScoreManager();
+    items.collectItems(new Player(96, 176), score);
+    t("raccogliendo una gemma: +30 monete e +200 punti", ITEM_CONFIG.collectible.coins === 30 && score.coins === 30 && score.currentScore === 200);
   }
 
-  // --- giocatore con i potenziamenti ---
+  // --- salvataggio: solo livelli, classi, difficoltà; migrazione dal formato 2.0 ---
+  {
+    const KEY = "ironAndShadow.progress";
+    const keys = (store) => Object.keys(JSON.parse(store.data.get(KEY))).sort().join();
+    const store = memory();
+    const progress = new ProgressManager(store);
+    t("senza salvataggio non si scrive niente", store.data.size === 0);
+    progress.unlockLevel(3);
+    t("si salvano solo versione, livello raggiunto, difficoltà e personaggio", keys(store) === "characterId,difficulty,unlockedLevelId,version" && JSON.parse(store.data.get(KEY)).version === SAVE_VERSION);
+    t("personaggi: sbloccati dal livello raggiunto (al 3 il ranger, non ancora il berserker)", progress.isCharacterUnlocked("ranger") && !progress.isCharacterUnlocked("berserker"));
+    progress.setCharacter("paladin");
+    t("un personaggio bloccato salvato si gioca come cavaliere", progress.characterId === "knight");
+    progress.unlockLevel(6);
+    t("raggiunto il livello 6 tutti sbloccati, e il paladino salvato torna valido", CHARACTER_ORDER.every((id) => progress.isCharacterUnlocked(id)) && progress.characterId === "paladin");
+
+    const old = memory();
+    old.setItem(KEY, JSON.stringify({ unlockedLevelId: 4, difficulty: "hard", characterId: "berserker", equippedWeaponId: "axe", bagWeaponIds: ["sword", "axe"], bagItems: [], armor: {}, backpack: [], gems: 12, upgradeLevels: { vitality: 2 }, discoveredWeaponIds: ["axe"] }));
+    const migrated = new ProgressManager(old);
+    t("migrazione 2.0: restano livello, difficoltà e personaggio", migrated.unlockedLevelId === 4 && migrated.difficulty === "hard" && migrated.characterId === "berserker");
+    t("migrazione 2.0: armi, armature, zaino, gemme e potenziamenti si tolgono subito dall'archivio", keys(old) === "characterId,difficulty,unlockedLevelId,version");
+    let writes = 0;
+    new ProgressManager({ getItem: old.getItem, setItem: () => writes++ });
+    t("un salvataggio già migrato non si riscrive", writes === 0);
+    const readOnly = { getItem: () => JSON.stringify({ unlockedLevelId: 5 }), setItem() { throw new Error("pieno"); } };
+    t("migrazione con l'archivio non scrivibile: i progressi si leggono comunque", new ProgressManager(readOnly).unlockedLevelId === 5);
+    migrated.reset();
+    t("cancella dati: livello 1, normale, cavaliere", migrated.unlockedLevelId === 1 && migrated.difficulty === "normal" && migrated.characterId === "knight");
+  }
+
+  // --- classe fissata per la partita, giocatore senza bonus permanenti ---
   {
     const p = new Player(0, 0, CHARACTER_CONFIG.knight);
-    p.setUpgrades(P.computeUpgradeBonuses({ vitality: 3, endurance: 2, strength: 2, supplies: 0 }));
-    t("potenziamenti sul giocatore: salute 130, stamina 130, danno x1,1 (piene)", p.maxHealth === 130 && p.currentHealth === 130 && p.maxStamina === 130 && p.stamina === 130 && Math.abs(p.getDamageMultiplier() - 1.1) < 1e-9);
-    p.setCharacter(CHARACTER_CONFIG.ranger);
-    t("cambiando personaggio i potenziamenti restano", p.maxHealth === 105 && p.currentHealth === 105);
-    p.takeDamage(30, 100);
-    p.revive();
-    t("dopo la morte salute e stamina tornano al massimo potenziato", p.currentHealth === 105 && p.stamina === 130);
+    t("il giocatore parte con i soli valori della classe (nessun potenziamento permanente)", p.maxHealth === CHARACTER_CONFIG.knight.maxHealth && p.maxStamina === CHARACTER_CONFIG.knight.maxStamina && p.getDamageMultiplier() === CHARACTER_CONFIG.knight.damageMultiplier && !("setUpgrades" in p) && P.UPGRADE_CONFIG === undefined);
+    t("motore: scegliere il personaggio non cambia il giocatore in corso né l'equipaggiamento", /private chooseCharacter[\s\S]*?\n  }/.exec(engineSource)[0].includes("setCharacter(characterId)") && !/private chooseCharacter[\s\S]*?\n  }/.exec(engineSource)[0].match(/this\.(player|inventory)\./));
+  }
+
+  // --- comandi ---
+  {
+    const listeners = {};
+    globalThis.window = { addEventListener: (type, handler) => (listeners[type] = handler), removeEventListener() {} };
+    const manager = new InputManager();
+    manager.attach();
+    delete globalThis.window;
+    manager.setContext("gameplay");
+    const actionsOf = (code) => {
+      manager.endFrame();
+      listeners.keydown({ code, preventDefault() {}, repeat: false });
+      const pressed = Object.keys(CONTROLS_CONFIG).filter((action) => manager.wasPressed(action));
+      listeners.keyup({ code, preventDefault() {} });
+      return pressed.join();
+    };
+    t("comandi: J attacco, K attacco pesante, Shift sinistro schivata", actionsOf("KeyJ") === "attack" && actionsOf("KeyK") === "heavyAttack" && actionsOf("ShiftLeft") === "dodge");
+    t("comandi: 5-8 le quattro mosse, L vale come il 5, Spazio non fa niente", ["Digit5", "Digit6", "Digit7", "Digit8"].map(actionsOf).join() === "ability1,ability2,ability3,ability4" && actionsOf("KeyL") === "ability1" && actionsOf("Space") === "");
   }
 
   // --- schermate e stati ---
   {
     const state = new GameState();
-    t("titolo -> potenziamenti -> titolo", state.change("upgrades") && !state.change("playing") && state.change("title"));
+    t("lo stato dei potenziamenti non esiste più", !state.change("upgrades"));
     state.change("playing");
     t("gioco -> bottega -> gioco; dalla bottega non si torna al titolo", state.change("shop") && !state.change("title") && !state.change("paused") && state.change("playing"));
     const screens = new ScreenManager(new FakeSpriteManager());
     const data = {
-      score: 0, bestScore: 0, collectibles: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "knight", levels: [],
-      unlockedCharacterIds: ["knight"], gems: 3, coins: 50,
+      score: 0, bestScore: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "knight", levels: [],
+      unlockedCharacterIds: ["knight"], coins: 50,
       shopOffers: [{ name: "POZIONE", description: "", price: 40, isSoldOut: false, iconSpriteId: "itemPotion", iconSize: 8 }, { name: "CURA", description: "", price: 25, isSoldOut: false, iconSpriteId: "hudHeart", iconSize: 8 }],
-      upgrades: [{ name: "VITALITÀ", description: "", level: 0, maxLevel: 3, nextCost: 2 }],
     };
     const press = (stateName, action) => screens.update(stateName, { wasPressed: (a) => a === action, isHeld: () => false, wasReleased: () => false }, data);
     t("bottega: Invio sulla prima voce compra", press("shop", "confirm") === "buyShopOffer" && screens.selectedShopIndex === 0);
     press("shop", "menuUp");
     t("bottega: W dalla prima voce porta a PROSEGUI, che esce", screens.selectedShopIndex === 2 && press("shop", "confirm") === "leaveShop");
     t("bottega: Esc non fa uscire (si esce solo con PROSEGUI)", press("shop", "pause") === null);
-    t("potenziamenti: Invio compra, INDIETRO ed Esc tornano al titolo", press("upgrades", "confirm") === "buyUpgrade" && (press("upgrades", "menuDown"), press("upgrades", "confirm")) === "backToTitle" && press("upgrades", "pause") === "backToTitle");
     screens.resetSelection();
     for (let i = 0; i < 3; i++) press("title", "menuDown");
-    t("la quarta voce del titolo apre i potenziamenti", press("title", "confirm") === "showUpgrades");
+    t("la quarta voce del titolo è la difficoltà (niente più potenziamenti)", press("title", "confirm") === "cycleDifficulty");
     screens.resetSelection();
     press("characterSelect", "menuRight");
     t("un personaggio bloccato non si conferma", screens.selectedCharacterId === "ranger" && press("characterSelect", "confirm") === null);
   }
 
   // --- motore ---
-  t("motore: monete da nemici (élite x3) e boss; ricominciando un livello tornano quelle di inizio livello", /addCoins\(ECONOMY_CONFIG\.coinsPerBoss\)/.test(engineSource) && /addCoins\(ECONOMY_CONFIG\.coinsPerEnemy \* \(enemy\.isElite \? ECONOMY_CONFIG\.eliteCoinMultiplier : 1\)\)/.test(engineSource) && engineSource.includes("this.scoreManager.restore(this.levelStartScore, this.levelStartCollectibles, this.levelStartCoins);"));
-  t("motore: a fine livello si mettono da parte le gemme e si sblocca il livello successivo (e i personaggi)", /this\.gemsBankedThisLevel = this\.scoreManager\.collectiblesFound - this\.levelStartCollectibles;\s*this\.progressManager\.addGems\(this\.gemsBankedThisLevel\);[\s\S]{0,300}this\.progressManager\.unlockLevel\(nextLevelId\)/.test(engineSource));
-  t("motore: dopo il riquadro di fine livello la bottega (o la vittoria); PROSEGUI avvia il livello successivo", /private advanceToNextLevel[\s\S]{0,300}Shop\.open\(this\.progressManager\.discoveredWeaponIds, this\.inventory, this\.lootRandom, \{[\s\S]{0,120}\}\);[\s\S]{0,300}this\.gameState\.change\("shop"\)/.test(engineSource) && /private leaveShop[\s\S]{0,120}this\.startLevel\(this\.currentLevelId \+ 1\);\s*this\.gameState\.change\("playing"\)/.test(engineSource));
-  t("motore: a ogni partita potenziamenti e pozioni della Scorta; le armi raccolte diventano trovate", /private startNewGame[\s\S]{0,800}computeUpgradeBonuses\(this\.progressManager\.upgradeLevels\)[\s\S]{0,80}this\.player\.setUpgrades\(upgrades\)[\s\S]{0,600}upgrades\.startingPotions/.test(engineSource) && /this\.weaponPickups\.take\(pickup\);\s*this\.progressManager\.discoverWeapon\(item\.baseId\)/.test(engineSource));
+  t("motore: monete da nemici (élite x3) e boss; ricominciando un livello tornano quelle di inizio livello", /addCoins\(ECONOMY_CONFIG\.coinsPerBoss\)/.test(engineSource) && /addCoins\(ECONOMY_CONFIG\.coinsPerEnemy \* \(enemy\.isElite \? ECONOMY_CONFIG\.eliteCoinMultiplier : 1\)\)/.test(engineSource) && engineSource.includes("this.scoreManager.restore(this.levelStartScore, this.levelStartCoins);"));
+  t("motore: a fine livello si sblocca il livello successivo (e i personaggi)", /const lockedBefore[\s\S]{0,200}this\.progressManager\.unlockLevel\(nextLevelId\)/.test(engineSource));
+  t("motore: dopo il riquadro di fine livello la bottega (o la vittoria); PROSEGUI avvia il livello successivo", /private advanceToNextLevel[\s\S]{0,300}Shop\.open\(\[\.\.\.this\.discoveredWeaponIds\], this\.inventory, this\.lootRandom, \{[\s\S]{0,120}\}\);[\s\S]{0,300}this\.gameState\.change\("shop"\)/.test(engineSource) && /private leaveShop[\s\S]{0,120}this\.startLevel\(this\.currentLevelId \+ 1\);\s*this\.gameState\.change\("playing"\)/.test(engineSource));
+  t("motore: ogni partita azzera monete, equipaggiamento e armi trovate; le armi raccolte si aggiungono a quelle trovate", /private startNewGame[\s\S]{0,200}this\.scoreManager\.reset\(\)[\s\S]{0,600}this\.resetRunEquipment\(\)/.test(engineSource) && /private resetRunEquipment[\s\S]{0,500}this\.discoveredWeaponIds\.clear\(\);\s*for \(const weaponId of \[\.\.\.ALWAYS_DISCOVERED_WEAPONS, startingWeaponId\]\)/.test(engineSource) && /this\.weaponPickups\.take\(pickup\);\s*this\.discoveredWeaponIds\.add\(item\.baseId\)/.test(engineSource));
+  t("motore: niente più salvataggio di armi, armature o gemme", !/saveBagWeapons|addGems|setUpgrades|discoverWeapon|setBagWeapons/.test(engineSource));
 }

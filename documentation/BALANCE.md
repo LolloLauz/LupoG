@@ -154,11 +154,12 @@ d'armatura, che indossa se è migliore, e una spada, che prende se è di rarità
   in `affixConfig.ts`, le statistiche in `armorConfig.ts`, i pesi delle fonti in `lootConfig.ts` (meno armature: `armorChance`) e la difficoltà.
 - Il bot non usa elementi e furto di vita in modo diverso da una persona: li riceve dalla spada estratta, come il gioco.
 
-### Fase 6: bottega e potenziamenti
+### Fase 6: bottega
 
-Il bot di `tools/balance.mjs` **non usa la bottega né i potenziamenti**, quindi le misure qui sopra valgono per una partita senza acquisti.
-Entrambi rendono il gioco più facile: raccogliendo tutto e sconfiggendo tutti i nemici si guadagnano da 44 monete (livello 1) a circa 100 (livelli 3-6, con boss o élite);
-una pozione costa 40. Una partita completa dà 7 gemme; tutti i potenziamenti insieme ne costano 38. Prezzi e costi sono in `progressionConfig.ts`; vanno provati con persone, soprattutto
+Il bot di `tools/balance.mjs` **non usa la bottega**, quindi le misure qui sopra valgono per una partita senza acquisti, che la renderebbero più facile.
+Dalla 2.1 le gemme valgono 30 monete (8 gemme in tutto il gioco: 240 monete) e i potenziamenti permanenti non ci sono più (il bot non li usava).
+Raccogliendo tutto e sconfiggendo tutti i nemici del livello si guadagnano da 74 monete (livello 1) a 154 (livello 7), boss ed élite compresi;
+una pozione costa 40. Il valore della gemma è provvisorio. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
 perché il gioco sembrava già facile per il bot.
 
 ## Versione 2.0 con i power-up (2.0.0-alpha.5)

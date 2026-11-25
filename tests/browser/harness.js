@@ -69,7 +69,7 @@ function readCanvasColors() {
   return colors;
 }
 
-const VALID_STATES = ["title", "controls", "levelSelect", "characterSelect", "confirmReset", "upgrades", "shop", "equipment", "playing", "paused", "gameOver", "victory"];
+const VALID_STATES = ["title", "controls", "levelSelect", "characterSelect", "confirmReset", "shop", "equipment", "playing", "paused", "gameOver", "victory"];
 /** Le vite iniziali dipendono dalla difficoltà (facile ne ha di più). */
 const MAX_LIVES = Math.max(...Object.values(DIFFICULTY_CONFIG).map((difficulty) => difficulty.startingLives));
 
@@ -122,7 +122,7 @@ function createBot(skill, seed) {
     }
     // bottega tra un livello e l'altro (Fase 6): W porta su "PROSEGUI" (l'ultima voce), Invio continua
     if (state === "shop") {
-      for (const code of ["KeyA", "KeyD", "KeyW", "Space", "KeyJ", "KeyK"]) setKey(code, false);
+      for (const code of ["KeyA", "KeyD", "KeyW", "KeyJ", "KeyK", "ShiftLeft"]) setKey(code, false);
       if (frameCount % 20 === 0) {
         tap("KeyW");
         tap("Enter");
@@ -183,8 +183,8 @@ function createBot(skill, seed) {
     // se serve un altro salto (es. bloccato contro un bordo dall'acqua) si rilascia e si ripreme il tasto
     if (wantsJump && !isJumpKeyHeld) { setKey("KeyW", true); isJumpKeyHeld = true; jumpHeldUntil = frameCount + 26; }
     if (isJumpKeyHeld && frameCount >= jumpHeldUntil) { setKey("KeyW", false); isJumpKeyHeld = false; }
-    if (wantsAttack) tap("Space");
-    if (wantsDodge) tap("KeyK");
+    if (wantsAttack) tap("KeyJ");
+    if (wantsDodge) tap("ShiftLeft");
     // borsa: prende le pozioni con E e ne beve una (tasto del suo posto) quando ha perso almeno quanto cura
     if (!player.isDead && engine.itemManager.findReachableBagItem(player) !== null && engine.inventory.canAddPotion()) tap("KeyE");
     if (!player.isDead && player.currentHealth <= player.maxHealth - 30) {
@@ -250,7 +250,7 @@ function playGame({ skill, seed, maxFrames, renderEvery = 3, paletteColors, stop
 function fuzz({ frames, seed, paletteColors }) {
   releaseAll();
   const random = createRandom(seed);
-  const codes = ["KeyA", "KeyD", "KeyW", "KeyS", "Space", "KeyJ", "KeyK", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyQ", "Tab"];
+  const codes = ["KeyA", "KeyD", "KeyW", "KeyS", "KeyJ", "KeyK", "KeyL", "ShiftLeft", "Digit5", "Digit6", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "KeyQ", "Tab"];
   const deltas = [1 / 30, 1 / 60, 1 / 120, 1 / 144, 0.05];
   const problems = new Set();
   const badColors = new Set();

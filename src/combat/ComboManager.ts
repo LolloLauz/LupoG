@@ -5,7 +5,7 @@ import type { AttackDefinition, ComboDefinition } from "../types/EntityTypes";
  * Le combo sono statiche (vedi COMBO_DEFINITIONS e WEAPON_CONFIG): ogni input fa avanzare
  * la combo corrente se continua una sequenza valida, altrimenti la sequenza
  * riparte da questo input. Gli input senza combo usano l'attacco predefinito.
- * Le sequenze possono mescolare attacco leggero e pesante e ramificarsi: dopo "Spazio, Spazio"
+ * Le sequenze possono mescolare attacco leggero e pesante e ramificarsi: dopo "J, J"
  * il terzo tasto sceglie la combo. Combo con lo stesso inizio devono usare gli stessi attacchi
  * per quell'inizio (lo verificano i test). Quando l'ultimo colpo di una combo parte, la combo
  * risulta completata (drainCompletedCombo), anche se una combo più lunga può ancora continuarla.

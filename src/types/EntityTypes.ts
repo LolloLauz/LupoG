@@ -437,7 +437,7 @@ interface AbilityBase {
 }
 
 /**
- * Abilità speciale (tasto L): ha un costo (ResourceCost) e un tempo di ricarica.
+ * Abilità speciale (tasti 5-8): ha un costo (ResourceCost) e un tempo di ricarica.
  * - attack: un attacco speciale (area d'urto, scatto, proiettile), usato solo a terra;
  *   impactEffect = effetto del motore quando il colpo diventa attivo (onda d'urto: tremolio e polvere).
  * - guard: si tiene premuto per alzare lo scudo (para i colpi davanti); alzato da meno di perfectWindowMs, la
@@ -479,7 +479,7 @@ export interface CharacterDefinition {
   trait: string;
   /** Suffisso degli sprite del personaggio ("" per il cavaliere, vedi knightSprites.ts). */
   spriteSuffix: string;
-  /** Arma impugnata a ogni nuova partita (resta nella borsa insieme alle armi salvate). */
+  /** Arma impugnata a ogni nuova partita (l'unica arma all'inizio della partita). */
   startingWeaponId: WeaponId;
   maxHealth: number;
   /** Velocità di camminata (pixel/secondo), prima dei moltiplicatori di arma, ambiente e power-up. */
@@ -504,7 +504,7 @@ export interface CharacterDefinition {
   manaRegenPerSecond: number;
   /** Attributi di partenza (Classi Fase 0: tutti a zero). */
   baseAttributes: Readonly<Attributes>;
-  /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto L). Player ne tiene attivo uno. */
+  /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto 5 o L). Player ne tiene attivo uno. */
   abilityIds: readonly AbilityId[];
   /**
    * Sblocco (Fase 6): il personaggio si sceglie solo dopo aver raggiunto questo livello (1 = subito disponibile).

@@ -155,10 +155,9 @@ export default async function (t, load) {
     progress.unlockLevel(5);
     progress.setDifficulty("hard");
     progress.setCharacter("ranger");
-    progress.setBagWeapons(["bow", "axe"], "bow");
     progress.reset();
     const reloaded = new ProgressManager(store);
-    t("cancella dati: livello 1, normale, cavaliere, sola spada (anche dopo aver ricaricato)", [progress, reloaded].every((pm) => pm.unlockedLevelId === 1 && pm.difficulty === "normal" && pm.characterId === "knight" && pm.equippedWeaponId === "sword" && pm.bagWeaponIds.join() === "sword"));
+    t("cancella dati: livello 1, normale, cavaliere (anche dopo aver ricaricato)", [progress, reloaded].every((pm) => pm.unlockedLevelId === 1 && pm.difficulty === "normal" && pm.characterId === "knight"));
     const scores = memory();
     const high = new HighScoreManager(scores);
     high.submitScore(5000);
@@ -175,7 +174,7 @@ export default async function (t, load) {
     const state = new GameState();
     t("titolo -> conferma -> titolo; dalla conferma non si va in gioco", state.change("confirmReset") && !state.change("playing") && state.change("title"));
     const screens = new ScreenManager(new FakeSpriteManager());
-    const data = { score: 0, bestScore: 0, collectibles: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "knight", levels: [], unlockedCharacterIds: ["knight", "ranger", "berserker", "paladin"], gems: 0, coins: 0, shopOffers: [], upgrades: [] };
+    const data = { score: 0, bestScore: 0, isNewRecord: false, difficultyName: "NORMALE", characterId: "knight", levels: [], unlockedCharacterIds: ["knight", "ranger", "berserker", "paladin"], coins: 0, shopOffers: [] };
     const press = (stateName, action) => screens.update(stateName, { wasPressed: (a) => a === action, isHeld: () => false, wasReleased: () => false }, data);
     press("title", "menuUp");
     t("l'ultima voce del titolo è CANCELLA DATI e apre la conferma", press("title", "confirm") === "showResetConfirm");
@@ -183,6 +182,6 @@ export default async function (t, load) {
     t("conferma: la voce predefinita è NO (Invio torna al titolo senza cancellare)", press("confirmReset", "confirm") === "backToTitle");
     press("confirmReset", "menuDown");
     t("conferma: scendendo su SÌ si cancella; ESC torna indietro", press("confirmReset", "confirm") === "resetAllData" && press("confirmReset", "pause") === "backToTitle");
-    t("motore: cancella progressi e record e rimette cavaliere, borsa con la spada e avviso", /case "resetAllData":[\s\S]{0,60}this\.resetAllData\(\);[\s\S]{0,120}showNotice/.test(engineSource) && /private resetAllData\(\): void \{[\s\S]{0,80}this\.progressManager\.reset\(\);[\s\S]{0,20}this\.highScoreManager\.reset\(\);[\s\S]{0,400}loadSavedEquipment\(\)[\s\S]{0,200}setCharacter[\s\S]{0,200}equipFromInventory\(\)/.test(engineSource));
+    t("motore: cancella progressi e record e rimette cavaliere, borsa con la spada e avviso", /case "resetAllData":[\s\S]{0,60}this\.resetAllData\(\);[\s\S]{0,120}showNotice/.test(engineSource) && /private resetAllData\(\): void \{[\s\S]{0,80}this\.progressManager\.reset\(\);[\s\S]{0,20}this\.highScoreManager\.reset\(\);[\s\S]{0,200}setCharacter[\s\S]{0,200}resetRunEquipment\(\)/.test(engineSource));
   }
 }

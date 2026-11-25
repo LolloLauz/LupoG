@@ -139,7 +139,7 @@ export default async function (t, load) {
   t("titolo -> selezione -> titolo, selezione -> gioco; dalla selezione non si va al Game Over", state.change("levelSelect") && state.change("title") && state.change("levelSelect") && !state.change("gameOver") && state.change("playing"));
   const screens = new ScreenManager({ drawSprite() {}, getSpriteSize: () => ({ width: 8, height: 8 }) });
   const levels = [1, 2, 3, 4, 5, 6].map((id) => ({ id, name: `L${id}`, theme: "forest", isUnlocked: id <= 3, bossName: null }));
-  const data = { score: 0, bestScore: 0, collectibles: 0, isNewRecord: false, difficultyName: "NORMALE", levels, unlockedCharacterIds: ["knight", "ranger", "berserker", "paladin"], gems: 0, coins: 0, shopOffers: [], upgrades: [] };
+  const data = { score: 0, bestScore: 0, isNewRecord: false, difficultyName: "NORMALE", levels, unlockedCharacterIds: ["knight", "ranger", "berserker", "paladin"], coins: 0, shopOffers: [] };
   const press = (action) => screens.update("levelSelect", { wasPressed: (a) => a === action, isHeld: () => false, wasReleased: () => false }, data);
   press("menuDown");
   press("menuDown");

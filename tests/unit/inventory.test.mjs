@@ -8,7 +8,7 @@ export const description = "Borsa: tasti E e 1-4, posti, pozioni impilate, armi,
 export default async function (t, load) {
 const {CONTROLS_CONFIG,INPUT_CONTEXT_ACTIONS}=await load('config/controlsConfig');
 const {INVENTORY_CONFIG,BAG_SLOT_ACTIONS}=await load('config/inventoryConfig');
-const {Inventory}=await load('systems/Inventory');const {ProgressManager}=await load('systems/ProgressManager');
+const {Inventory}=await load('systems/Inventory');
 const {ItemManager}=await load('systems/ItemManager');const {ScoreManager}=await load('systems/ScoreManager');
 const {Player}=await load('entities/Player');const {CollisionSystem}=await load('systems/CollisionSystem');
 const {ITEM_CONFIG}=await load('config/itemConfig');
@@ -45,19 +45,6 @@ t("la schermata dei controlli mostra E e 1-4 e la tabella non tocca le scritte s
  t("reset: armi senza doppioni, nessuna pozione, l'arma in mano scelta",b.weaponIds.join()==='spear,sword'&&b.potionCount===0&&b.equippedWeaponId==='sword'&&b.equippedSlotIndex===1);
  b.reset([],'axe');t("reset senza armi: la spada",b.weaponIds.join()==='sword'&&b.equippedWeaponId==='sword');}
 
-// --- progressi
-const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};};
-{const pm=new ProgressManager(memory());t("senza salvataggio la borsa ha solo la spada",pm.bagWeaponIds.join()==='sword');}
-{const m=memory();const pm=new ProgressManager(m);pm.setBagWeapons(['sword','axe'],'axe');
- const saved=JSON.parse(m.data.get('ironAndShadow.progress'));
- t("si salvano le armi della borsa e quella in mano (non le pozioni)",saved.bagWeaponIds.join()==='sword,axe'&&saved.equippedWeaponId==='axe'&&new ProgressManager(m).bagWeaponIds.join()==='sword,axe');
- const before=m.data.get('ironAndShadow.progress');m.data.set('ironAndShadow.progress',before);pm.setBagWeapons(['sword','axe'],'axe');
- t("se non cambia nulla non si riscrive",m.data.get('ironAndShadow.progress')===before);}
-{const m=memory();m.data.set('ironAndShadow.progress',JSON.stringify({unlockedLevelId:3,difficulty:'easy',equippedWeaponId:'mace'}));
- const pm=new ProgressManager(m);t("un salvataggio senza borsa (2.0.0 o Fase 1) dà una borsa con l'arma in mano",pm.bagWeaponIds.join()==='mace'&&pm.equippedWeaponId==='mace'&&pm.unlockedLevelId===3);}
-{const m=memory();m.data.set('ironAndShadow.progress',JSON.stringify({unlockedLevelId:2,difficulty:'normal',equippedWeaponId:'spear',bagWeaponIds:['sword','bazooka','axe','axe',7,'dagger','mace']}));
- const pm=new ProgressManager(m);t("borsa salvata non valida: niente armi sconosciute o doppie, l'arma in mano sempre presente, al massimo 4",pm.bagWeaponIds.length<=4&&pm.bagWeaponIds.includes('spear')&&new Set(pm.bagWeaponIds).size===pm.bagWeaponIds.length&&pm.bagWeaponIds.every(id=>['sword','dagger','spear','axe','mace'].includes(id)),pm.bagWeaponIds.join());}
-
 // --- oggetti: pozioni da borsa, il resto (power-up compresi) come prima
 {const cs=new CollisionSystem();const P=[{x:0,y:200,width:400,height:40}];const p=new Player(100,176);for(let i=0;i<5;i++)p.update(1/60,{isHeld:()=>false,wasPressed:()=>false,wasReleased:()=>false},cs,P,400);
  p.takeDamage(40,0);const hp=p.currentHealth;const im=new ItemManager();const sm=new ScoreManager();
@@ -72,5 +59,5 @@ const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null
  t("borsa piena: l'arma vecchia va nello zaino; se è pieno resta a terra, non prendibile finché non ci si allontana",/result\.droppedItem !== undefined\)[\s\S]{0,300}this\.inventory\.addToBackpack\(result\.droppedItem\)[\s\S]{0,200}weaponPickups\.spawn\(result\.droppedItem, centerX, pickup\.positionY \+ pickup\.height, false, result\.droppedAmmo \?\? null\)/.test(src));
  t("i tasti numerici usano il posto: arma in mano o pozione (non a salute piena)",/BAG_SLOT_ACTIONS\.forEach[\s\S]{0,400}useBagSlot\(slotIndex\)/.test(src)&&/currentHealth >= this\.player\.maxHealth\)[\s\S]{0,200}SALUTE PIENA[\s\S]{0,80}return;[\s\S]{0,80}consumePotion\(slotIndex\)/.test(src));
  t("ricominciando il livello la borsa torna com'era all'inizio del livello",/private restartCurrentLevel[\s\S]{0,500}this\.inventory\.restore\(this\.levelStartInventory\)/.test(src)&&src.includes('this.levelStartInventory = this.inventory.snapshot();'));
- t("a ogni nuova partita la borsa riparte dalle armi salvate, senza pozioni",/private startNewGame[\s\S]{0,600}this\.loadSavedEquipment\(\)/.test(src)&&/private loadSavedEquipment[\s\S]{0,120}this\.inventory\.reset\(this\.progressManager\.bagWeaponItems/.test(src));}
+ t("a ogni nuova partita la borsa riparte dalla sola arma iniziale, senza pozioni",/private startNewGame[\s\S]{0,600}this\.resetRunEquipment\(\)/.test(src));}
 }

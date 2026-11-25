@@ -177,10 +177,10 @@ try {
     await page.waitForTimeout(500);
     const pausedHash2 = await canvasHash(page);
     check("tasto Esc: la pausa congela l'immagine", pausedHash1 === pausedHash2 && pausedHash1 !== movingHash);
-    await page.keyboard.down("KeyD"); await page.keyboard.press("Space"); await page.keyboard.press("KeyK");
+    await page.keyboard.down("KeyD"); await page.keyboard.press("KeyJ"); await page.keyboard.press("ShiftLeft"); await page.keyboard.press("Digit5");
     await page.waitForTimeout(300);
     await page.keyboard.up("KeyD");
-    check("in pausa i comandi di gioco (D, Spazio, K) non hanno effetto", (await canvasHash(page)) === pausedHash1);
+    check("in pausa i comandi di gioco (D, J, Shift, 5) non hanno effetto", (await canvasHash(page)) === pausedHash1);
     await page.keyboard.press("Escape");
     await page.waitForTimeout(800);
     check("Esc di nuovo: il gioco riprende", (await canvasHash(page)) !== pausedHash1);
@@ -190,7 +190,7 @@ try {
     check(`il browser di prova mantiene un ritmo di disegno fluido (${fps.toFixed(0)} FPS con il gioco in esecuzione)`, fps >= 30);
 
     // tasti a caso sulla build reale
-    const keyNames = ["KeyA", "KeyD", "KeyW", "KeyS", "Space", "KeyJ", "KeyK", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
+    const keyNames = ["KeyA", "KeyD", "KeyW", "KeyS", "KeyJ", "KeyK", "KeyL", "ShiftLeft", "Digit5", "Escape", "Enter", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"];
     const keyCount = isQuick ? 400 : 1500;
     for (let i = 0; i < keyCount; i++) {
       const key = keyNames[Math.floor(Math.random() * keyNames.length)];
@@ -336,7 +336,7 @@ try {
     }
     iron.tap("Escape"); iron.step(); iron.step(); result.escState = e.gameState.current;
     // il resto delle prove parte come un giocatore nuovo: cavaliere con la sola spada
-    e.progressManager.setCharacter("knight"); e.progressManager.setBagWeapons(["sword"], "sword");
+    e.progressManager.setCharacter("knight");
     return result;
   })()`);
   const expectedStart = { ranger: "bow", berserker: "axe", paladin: "mace", knight: "sword" };
@@ -345,14 +345,10 @@ try {
   check("ogni personaggio scelto entra in gioco con la propria classe, salute piena e arma iniziale", characterRuns.runs.length === 4 && characterRuns.runs.every((r) => r.state === "playing" && r.character === r.id && r.weapon === expectedStart[r.id] && r.maxHealth > 0 && r.health === r.maxHealth), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.state, r.character, r.weapon, r.health])));
   check("ogni personaggio: gli sprite disegnati esistono (anche col fuoco) e il gioco usa solo colori della palette", characterRuns.runs.every((r) => r.hasFrame && r.colors), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.hasFrame, r.colors])));
 
-  // --- Fase 6: potenziamenti dal titolo, bottega tra un livello e l'altro
+  // --- Fase 6: bottega tra un livello e l'altro
   const progression = await evaluate(page, `(() => {
     const palette = ${colorsArg}; const e = iron.engine; const result = {};
     const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
-    for (let i = 0; i < 3; i++) { iron.tap("KeyS"); iron.step(); }
-    iron.tap("Enter"); iron.step(); iron.step();
-    result.upgradesState = e.gameState.current; result.upgradesColors = colorsOk();
-    iron.tap("Escape"); iron.step(); iron.step(); result.afterUpgrades = e.gameState.current;
     iron.tap("Enter"); for (let i = 0; i < 5; i++) iron.step();
     e.bannerRemainingMs = 0; e.scoreManager.addCoins(100);
     e.levelPhase = "completed"; e.bannerRemainingMs = 1; iron.step(); iron.step();
@@ -370,10 +366,18 @@ try {
     // la porta in fondo alla stanza porta al livello 2
     iron.setKey("KeyD", true); for (let i = 0; i < 600 && e.isInShopRoom; i++) iron.step(); iron.setKey("KeyD", false); iron.step();
     result.afterShop = e.gameState.current; result.level = e.currentLevelId; result.leftShopRoom = !e.isInShopRoom;
+    // partite scollegate: con pozioni, armi, armature, zaino e monete, la partita dopo riparte da zero
+    e.inventory.addWeapon("axe"); e.inventory.addToBackpack({ kind: "armor", baseId: "clothHelmet", rarity: "common", affixes: [] });
+    e.inventory.equipArmor({ kind: "armor", baseId: "clothBoots", rarity: "common", affixes: [] }); e.scoreManager.addCoins(50);
+    iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
+    iron.tap("Enter"); for (let i = 0; i < 5; i++) iron.step();
+    result.newRun = [e.currentLevelId, e.inventory.weaponIds.join(), e.inventory.potionCount, e.inventory.backpackItems.length, Object.values(e.inventory.equippedArmor).filter(Boolean).length, e.scoreManager.coins].join("/");
+    result.savedKeys = Object.keys(JSON.parse(localStorage.getItem("ironAndShadow.progress"))).sort().join();
     iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
     return result;
   })()`);
-  check("potenziamenti: si aprono dal titolo (solo colori della palette) ed Esc torna al titolo", progression.upgradesState === "upgrades" && progression.upgradesColors === true && progression.afterUpgrades === "title", JSON.stringify(progression));
+  check("partite scollegate: la nuova partita ha la sola arma iniziale, niente pozioni, zaino, armature o monete", progression.newRun === "1/sword/0/0/0/0", JSON.stringify(progression));
+  check("il salvataggio contiene solo versione, livello raggiunto, difficoltà e personaggio", progression.savedKeys === "characterId,difficulty,unlockedLevelId,version", JSON.stringify(progression));
   check("bottega (E6): a fine livello si entra nella stanza del negozio (solo colori della palette), E sul piedistallo compra una pozione, la porta porta al livello 2", progression.shopState === "playing" && progression.inShopRoom === true && progression.shopColors === true && progression.bought === 40 && progression.potions === 1 && progression.afterShop === "playing" && progression.level === 2 && progression.leftShopRoom === true, JSON.stringify(progression));
   check("equipaggiamento (E4): I apre la schermata (solo colori della palette) e la richiude", progression.equipmentState === "equipment" && progression.equipmentColors === true && progression.afterEquipment === "playing", JSON.stringify(progression));
 
@@ -467,7 +471,7 @@ try {
     iron.tap("KeyW"); iron.step(); iron.tap("Enter"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
     result.afterYes = e.gameState.current;
     result.scoreAfterYes = e.highScoreManager.bestScore;
-    result.progress = [e.progressManager.unlockedLevelId, e.progressManager.characterId, e.progressManager.bagWeaponIds.join()].join("/");
+    result.progress = [e.progressManager.unlockedLevelId, e.progressManager.characterId, e.inventory.weaponIds.join()].join("/");
     result.player = [e.player.characterDefinition.id, e.player.equippedWeapon.id].join("/");
     return result;
   })()`);

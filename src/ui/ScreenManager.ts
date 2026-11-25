@@ -32,8 +32,6 @@ export type MenuCommand =
   | "confirmCharacter"
   | "showResetConfirm"
   | "resetAllData"
-  | "showUpgrades"
-  | "buyUpgrade"
   | "buyShopOffer"
   | "leaveShop"
   | "cycleDifficulty"
@@ -89,7 +87,6 @@ export interface LevelSummary {
 export interface ScreenData {
   score: number;
   bestScore: number;
-  collectibles: number;
   isNewRecord: boolean;
   /** Nome della difficoltà scelta (mostrato nel menu del titolo). */
   difficultyName: string;
@@ -97,12 +94,10 @@ export interface ScreenData {
   characterId: CharacterId;
   /** Tutti i livelli, con quelli già raggiunti sbloccati. */
   levels: LevelSummary[];
-  /** Fase 6: personaggi sbloccati, gemme da spendere, monete della partita, voci della bottega e dei potenziamenti. */
+  /** Fase 6: personaggi sbloccati, monete della partita e voci della bottega. */
   unlockedCharacterIds: CharacterId[];
-  gems: number;
   coins: number;
   shopOffers: ShopOfferView[];
-  upgrades: UpgradeView[];
   /** Equipaggiamento (E4): solo quando serve la sua schermata. */
   equipment?: EquipmentView;
 }
@@ -120,16 +115,6 @@ export interface ShopOfferView {
   nameColor?: string | null;
   /** Lato dell'icona (16 le armi, 8 gli oggetti). */
   iconSize: 8 | 16;
-}
-
-/** Un potenziamento permanente come appare sullo schermo. */
-export interface UpgradeView {
-  name: string;
-  description: string;
-  level: number;
-  maxLevel: number;
-  /** Costo in gemme del prossimo livello (null = al massimo). */
-  nextCost: number | null;
 }
 
 /** Colore rappresentativo di ogni ambientazione (riquadro nella selezione dei livelli). */
@@ -158,10 +143,10 @@ export interface ControlsRow {
 export const CONTROLS_ROWS: ControlsRow[] = [
   { keyGroups: [["A", "D"], ["<", ">"]], description: "MUOVI" },
   { keyGroups: [["W"], ["^"]], description: "SALTA" },
-  { keyGroups: [["SPAZIO"]], description: "ATTACCO" },
-  { keyGroups: [["J"]], description: "ATTACCO PESANTE" },
-  { keyGroups: [["K"]], description: "SCHIVATA (COSTA STAMINA)" },
-  { keyGroups: [["L"]], description: "ABILITÀ DEL PERSONAGGIO" },
+  { keyGroups: [["J"]], description: "ATTACCO" },
+  { keyGroups: [["K"]], description: "ATTACCO PESANTE" },
+  { keyGroups: [["SHIFT SX"]], description: "SCHIVATA (COSTA STAMINA)" },
+  { keyGroups: [["5", "6", "7", "8"], ["L"]], description: "MOSSE (L = 5)" },
   { keyGroups: [["S"], ["↓"]], description: "ABBASSATI" },
   { keyGroups: [["E"], ["Q"]], description: "E PRENDI, Q LASCIA (Q+1-4)" },
   { keyGroups: [["1", "2", "3", "4"]], description: "BORSA: USA IL POSTO" },
@@ -201,7 +186,6 @@ export class ScreenManager {
       { label: "NUOVA PARTITA", command: "newGame" },
       { label: (): string => `PERSONAGGIO: ${CHARACTER_CONFIG[this.latestData?.characterId ?? "knight"].name}`, command: "showCharacterSelect" },
       { label: "SCEGLI LIVELLO", command: "showLevelSelect" },
-      { label: (): string => `POTENZIAMENTI (GEMME ${this.latestData?.gems ?? 0})`, command: "showUpgrades" },
       { label: (): string => `DIFFICOLTÀ: ${this.latestData?.difficultyName ?? ""}`, command: "cycleDifficulty" },
       { label: "CONTROLLI", command: "showControls" },
       { label: "CANCELLA DATI", command: "showResetConfirm" },
@@ -237,9 +221,8 @@ export class ScreenManager {
   /** Personaggio evidenziato nella schermata di scelta (null = parte da quello salvato). */
   private selectedCharacterIndex: number | null = null;
 
-  /** Voce evidenziata nella bottega (l'ultima è "PROSEGUI") e nei potenziamenti (l'ultima è "INDIETRO"). */
+  /** Voce evidenziata nella bottega (l'ultima è "PROSEGUI"). */
   private shopIndex = 0;
-  private upgradeIndex = 0;
   /** Cursore della schermata dell'equipaggiamento: riga 0 = armature e borsa, righe 1-2 = zaino. */
   private equipmentRow = 0;
   private equipmentColumn = 0;
@@ -256,10 +239,6 @@ export class ScreenManager {
 
   public get selectedShopIndex(): number {
     return this.shopIndex;
-  }
-
-  public get selectedUpgradeIndex(): number {
-    return this.upgradeIndex;
   }
 
   /** Personaggio evidenziato nella schermata di scelta. */
@@ -296,7 +275,6 @@ export class ScreenManager {
     this.selectedLevelIndex = 0;
     this.selectedCharacterIndex = null;
     this.shopIndex = 0;
-    this.upgradeIndex = 0;
     this.equipmentRow = 0;
     this.equipmentColumn = 0;
   }
@@ -326,13 +304,6 @@ export class ScreenManager {
     }
     if (state === "equipment") {
       return this.updateEquipment(input, data);
-    }
-    if (state === "upgrades") {
-      this.upgradeIndex = ScreenManager.moveCursor(input, this.upgradeIndex, data.upgrades.length + 1);
-      if (input.wasPressed("confirm")) {
-        return this.upgradeIndex < data.upgrades.length ? "buyUpgrade" : "backToTitle";
-      }
-      return input.wasPressed("pause") ? "backToTitle" : null;
     }
     return this.menus[state]?.update(input) ?? null;
   }
@@ -445,9 +416,6 @@ export class ScreenManager {
       case "shop":
         this.renderShop(renderer, data);
         break;
-      case "upgrades":
-        this.renderUpgrades(renderer, data);
-        break;
       case "equipment":
         this.renderEquipment(renderer, data);
         break;
@@ -481,7 +449,7 @@ export class ScreenManager {
     drawOrnateFrame(renderer, centerX - 92, 68, 184, 34);
     renderer.drawText("Medieval Action Arcade", centerX, 74, PALETTE.stonePale, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText(`RECORD ${String(data.bestScore).padStart(6, "0")}`, centerX, 87, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
-    drawOrnateFrame(renderer, centerX - 84, 106, 168, 78);
+    drawOrnateFrame(renderer, centerX - 84, 106, 168, 68);
     this.menus.title?.render(renderer, centerX, 112, 10);
     this.renderNotice(renderer, 190);
     renderer.drawText("W/S: scegli   INVIO: conferma", centerX, 222, PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
@@ -593,7 +561,7 @@ export class ScreenManager {
     }
   }
 
-  /** Riga di un elenco con cursore (bottega, potenziamenti): riquadro dorato sulla voce scelta. */
+  /** Riga di un elenco con cursore (bottega): riquadro dorato sulla voce scelta. */
   private drawListRow(renderer: Renderer, rowY: number, isSelected: boolean): void {
     if (isSelected) {
       drawOrnateFrame(renderer, 30, rowY - 3, renderer.width - 60, 22);
@@ -637,44 +605,6 @@ export class ScreenManager {
     });
     this.renderNotice(renderer, 206);
     renderer.drawText("W/S: scegli   INVIO: compra o prosegui", centerX, 222, PALETTE.gray, { align: "center" });
-  }
-
-  /** Potenziamenti permanenti (Fase 6): gemme in alto, ogni potenziamento con le tacche dei livelli e il costo. */
-  private renderUpgrades(renderer: Renderer, data: ScreenData): void {
-    const centerX = renderer.width / 2;
-    renderer.fillVerticalGradient(0, 0, renderer.width, renderer.height, [PALETTE.deepNavy, PALETTE.violetDark, PALETTE.black]);
-    this.drawGradientTitle(renderer, "POTENZIAMENTI", centerX, 10, 2, TITLE_GOLD_ROWS);
-    this.drawDivider(renderer, 32);
-    this.spriteManager.drawSprite(renderer, "itemGem", centerX - 30, 40, false);
-    renderer.drawText(`GEMME ${data.gems}`, centerX - 18, 41, PALETTE.cyan, { shadowColor: PALETTE.black });
-    data.upgrades.forEach((upgrade, index) => {
-      const rowY = 58 + index * 26;
-      this.drawListRow(renderer, rowY, index === this.upgradeIndex);
-      renderer.drawText(upgrade.name, 40, rowY, PALETTE.white, { shadowColor: PALETTE.black });
-      renderer.drawText(upgrade.description, 40, rowY + 9, PALETTE.lightGray, { shadowColor: PALETTE.black });
-      for (let pip = 0; pip < upgrade.maxLevel; pip++) {
-        const pipX = 190 + pip * 10;
-        renderer.fillRect(pipX, rowY + 3, 8, 6, PALETTE.black);
-        renderer.fillRect(pipX + 1, rowY + 4, 6, 4, pip < upgrade.level ? PALETTE.cyan : PALETTE.slate);
-      }
-      if (upgrade.nextCost === null) {
-        renderer.drawText("MAX", renderer.width - 38, rowY + 4, PALETTE.lightGreen, { align: "right", shadowColor: PALETTE.black });
-      } else {
-        const costColor = upgrade.nextCost <= data.gems ? PALETTE.cyan : PALETTE.red;
-        renderer.drawText(String(upgrade.nextCost), renderer.width - 50, rowY + 4, costColor, { align: "right", shadowColor: PALETTE.black });
-        this.spriteManager.drawSprite(renderer, "itemGem", renderer.width - 46, rowY + 3, false);
-      }
-    });
-    const backY = 58 + data.upgrades.length * 26 + 4;
-    const isBackSelected = this.upgradeIndex === data.upgrades.length;
-    this.drawListRow(renderer, backY, isBackSelected);
-    renderer.drawText("INDIETRO", centerX, backY + 4, isBackSelected ? PALETTE.white : PALETTE.gray, {
-      align: "center",
-      shadowColor: PALETTE.black,
-      rowColors: isBackSelected ? TITLE_GOLD_ROWS : undefined,
-    });
-    this.renderNotice(renderer, 206);
-    renderer.drawText("W/S: scegli   INVIO: compra   ESC: indietro", centerX, 222, PALETTE.gray, { align: "center" });
   }
 
   /**
@@ -838,8 +768,8 @@ export class ScreenManager {
     const centerX = renderer.width / 2;
     drawOrnateFrame(renderer, centerX - 110, 60, 220, 120);
     this.drawGradientTitle(renderer, "CANCELLA DATI", centerX, 70, 2, TITLE_GOLD_ROWS);
-    renderer.drawText("Record, livelli raggiunti, personaggio,", centerX, 98, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
-    renderer.drawText("difficoltà e armi salvate.", centerX, 109, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+    renderer.drawText("Record, livelli raggiunti,", centerX, 98, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+    renderer.drawText("personaggio e difficoltà.", centerX, 109, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText("Non si può annullare.", centerX, 122, PALETTE.orange, { align: "center", shadowColor: PALETTE.black });
     this.menus.confirmReset?.render(renderer, centerX, 142, 14);
   }
@@ -864,8 +794,8 @@ export class ScreenManager {
       });
       renderer.drawText(row.description, tableLeft + 142, rowY + 3, PALETTE.white, { shadowColor: PALETTE.black });
     });
-    renderer.drawText("COMBO: SPAZIO x3 o SPAZIO, J (secondo l'arma)", renderer.width / 2, CONTROLS_NOTES_Y[0], PALETTE.orange, { align: "center", shadowColor: PALETTE.wine });
-    renderer.drawText("In aria: J = colpo in picchiata (rimbalza)", renderer.width / 2, CONTROLS_NOTES_Y[1], PALETTE.orange, { align: "center", shadowColor: PALETTE.wine });
+    renderer.drawText("COMBO: J x3 o J, K (secondo l'arma)", renderer.width / 2, CONTROLS_NOTES_Y[0], PALETTE.orange, { align: "center", shadowColor: PALETTE.wine });
+    renderer.drawText("In aria: K = colpo in picchiata (rimbalza)", renderer.width / 2, CONTROLS_NOTES_Y[1], PALETTE.orange, { align: "center", shadowColor: PALETTE.wine });
     renderer.drawText("Tieni premuto SALTA: salto più alto", renderer.width / 2, CONTROLS_NOTES_Y[2], PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText("INVIO: indietro", renderer.width / 2, 225, PALETTE.gray, { align: "center" });
   }
@@ -909,16 +839,15 @@ export class ScreenManager {
     this.menus.victory?.render(renderer, renderer.width / 2, 164);
   }
 
-  /** Punteggio, gemme e record (con scritta lampeggiante se nuovo). */
+  /** Punteggio e record (con scritta lampeggiante se nuovo). */
   private renderResults(renderer: Renderer, data: ScreenData, startY: number): void {
     const centerX = renderer.width / 2;
     renderer.drawText(`PUNTI ${String(data.score).padStart(6, "0")}`, centerX, startY, PALETTE.goldLight, { align: "center", shadowColor: PALETTE.black });
-    renderer.drawText(`GEMME ${data.collectibles}`, centerX, startY + 12, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
     if (data.isNewRecord) {
       const recordColor = cycleRampColor(PALETTE_RAMPS.fire.slice(2), this.animationTimeSeconds, 10, 0, "pingPong");
-      renderer.drawText("NUOVO RECORD!", centerX, startY + 26, recordColor, { align: "center", shadowColor: PALETTE.black });
+      renderer.drawText("NUOVO RECORD!", centerX, startY + 18, recordColor, { align: "center", shadowColor: PALETTE.black });
     } else {
-      renderer.drawText(`RECORD ${String(data.bestScore).padStart(6, "0")}`, centerX, startY + 26, PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
+      renderer.drawText(`RECORD ${String(data.bestScore).padStart(6, "0")}`, centerX, startY + 18, PALETTE.lightGray, { align: "center", shadowColor: PALETTE.black });
     }
   }
 

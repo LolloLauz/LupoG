@@ -19,7 +19,7 @@ const PLUNGE_HITBOX = { x: 0, y: 14, width: 12, height: 16 } as const;
 /** Durata massima della picchiata (finisce prima toccando terra o colpendo) e recupero all'atterraggio. */
 const PLUNGE_TIMING = { durationMs: 1000, hitStartMs: 80, hitEndMs: 1000, cooldownMs: 250 } as const;
 
-/** Spada: oltre agli attacchi della 2.0, il fendente montante (combo Spazio, J) e il colpo in picchiata. */
+/** Spada: oltre agli attacchi della 2.0, il fendente montante (combo J, K) e il colpo in picchiata. */
 const SWORD_EXTRA_ATTACKS: Record<string, AttackDefinition> = {
   swordRising: { id: "swordRising", damage: 28, durationMs: 380, hitStartMs: 140, hitEndMs: 260, cooldownMs: 400, hitbox: { x: 6, y: -6, width: 22, height: 26 }, animation: "swordRising" },
   swordPlunge: { id: "swordPlunge", damage: 24, ...PLUNGE_TIMING, hitbox: PLUNGE_HITBOX, animation: "swordPlunge", plunge: PLUNGE },
@@ -86,7 +86,7 @@ const GREATSWORD_ATTACKS: Record<string, AttackDefinition> = {
 /** Area d'urto nulla: le armi a distanza feriscono solo con i proiettili. */
 const NO_HITBOX = { x: 0, y: 0, width: 0, height: 0 } as const;
 
-/** Arco: Spazio = tiro rapido; J tenuto premuto = tiro caricato (danno e velocità secondo la carica). Frecce infinite. */
+/** Arco: J = tiro rapido; K tenuto premuto = tiro caricato (danno e velocità secondo la carica). */
 const BOW_ATTACKS: Record<string, AttackDefinition> = {
   bowShot: { id: "bowShot", damage: 8, durationMs: 300, hitStartMs: 0, hitEndMs: 0, cooldownMs: 150, hitbox: NO_HITBOX, animation: "bowShot", projectile: { projectileId: "playerArrow", launchAtMs: 150, originX: 20, originY: 9, aimY: 0 } },
   bowCharge: {
@@ -120,8 +120,8 @@ const JAVELIN_ATTACKS: Record<string, AttackDefinition> = {
 };
 
 /**
- * Attacchi in aria (Fase 3): Spazio fa una combo di due colpi (i primi due leggeri dell'arma),
- * J il colpo in picchiata.
+ * Attacchi in aria (Fase 3): J fa una combo di due colpi (i primi due leggeri dell'arma),
+ * K il colpo in picchiata.
  */
 function airSet(
   weaponName: string,

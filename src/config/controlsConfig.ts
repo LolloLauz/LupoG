@@ -1,5 +1,8 @@
 import type { GameAction, InputContext } from "../types/GameTypes";
 
+/** Azione di ogni slot delle mosse speciali, nell'ordine (slot 0 = tasto 5). */
+export const ABILITY_SLOT_ACTIONS: readonly GameAction[] = ["ability1", "ability2", "ability3", "ability4"];
+
 /**
  * Mappa azione -> tasti (valori di KeyboardEvent.code).
  * Per cambiare i controlli basta modificare questa tabella.
@@ -9,11 +12,14 @@ export const CONTROLS_CONFIG: Record<GameAction, string[]> = {
   moveLeft: ["KeyA", "ArrowLeft"],
   moveRight: ["KeyD", "ArrowRight"],
   jump: ["KeyW", "ArrowUp"],
-  attack: ["Space"],
-  heavyAttack: ["KeyJ"],
-  dodge: ["KeyK"],
-  /** Abilità speciale del personaggio (Fase 5); lo scudo del Paladino si tiene premuto. */
-  ability: ["KeyL"],
+  attack: ["KeyJ"],
+  heavyAttack: ["KeyK"],
+  dodge: ["ShiftLeft"],
+  /** Mosse speciali, una per slot (tasti 5-8; L vale come il 5). Lo scudo del Paladino si tiene premuto. */
+  ability1: ["Digit5", "Numpad5", "KeyL"],
+  ability2: ["Digit6", "Numpad6"],
+  ability3: ["Digit7", "Numpad7"],
+  ability4: ["Digit8", "Numpad8"],
   crouch: ["KeyS", "ArrowDown"],
   pickUp: ["KeyE"],
   /** Q: lascia a terra l'arma in mano; Q tenuto + 1-4: lascia il contenuto di quel posto (anche una pozione). */
@@ -44,7 +50,10 @@ export const INPUT_CONTEXT_ACTIONS: Record<InputContext, GameAction[]> = {
     "attack",
     "heavyAttack",
     "dodge",
-    "ability",
+    "ability1",
+    "ability2",
+    "ability3",
+    "ability4",
     "crouch",
     "pickUp",
     "dropItem",

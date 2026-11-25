@@ -182,12 +182,12 @@ function playLevel(levelId, options = {}) {
       const wantsToGuard = useAbility && ability.kind === "guard" && wantsToDodge && attackElapsedMs >= windupMs - 150;
       if (wantsToGuard && (player.isGuarding || isAbilityReady)) {
         held.length = 0;
-        held.push("ability");
-        if (!player.isGuarding) pressed.push("ability");
+        held.push("ability1");
+        if (!player.isGuarding) pressed.push("ability1");
       }
       // abilità d'attacco: appena il bersaglio è a portata e l'abilità è pronta
       if (useAbility && ability.kind === "attack" && isAbilityReady && gap <= PLAYER_REACH && player.isOnGround && !player.activeAttack) {
-        pressed.push("ability");
+        pressed.push("ability1");
       }
       // schiva poco prima del colpo; smette di attaccare in tempo per essere libero
       if (!wantsToGuard && wantsToDodge && attackElapsedMs >= windupMs - 100 && attackElapsedMs <= windupMs - 30 && player.isOnGround && !player.activeAttack) {
