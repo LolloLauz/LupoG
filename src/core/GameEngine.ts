@@ -1345,7 +1345,7 @@ export class GameEngine {
       maxStamina: this.player.maxStamina,
       ability: {
         cooldownFraction: this.player.abilityCooldownFraction,
-        isReady: this.player.abilityCooldownFraction === 0 && this.player.stamina >= this.player.ability.staminaCost,
+        isReady: this.player.isAbilityReady,
         isActive: this.player.isGuarding,
       },
       lives: this.livesManager.remainingLives,

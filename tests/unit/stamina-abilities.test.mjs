@@ -35,9 +35,9 @@ export default async function (t, load) {
   };
 
   // --- configurazione ---
-  t("ogni personaggio ha stamina, recupero, costo della schivata e un'abilità esistente", CHARACTER_ORDER.every((id) => { const c = CHARACTER_CONFIG[id]; return c.maxStamina > 0 && c.staminaRegenPerSecond > 0 && c.dodgeStaminaCost > 0 && c.dodgeStaminaCost < c.maxStamina && ABILITY_CONFIG[c.abilityId]?.id === c.abilityId; }));
-  t("abilità diverse per ogni personaggio (onda d'urto, tiro in ritirata, carica furiosa, scudo)", CHARACTER_ORDER.map((id) => CHARACTER_CONFIG[id].abilityId).join() === "shockwave,backstepShot,furiousCharge,shieldGuard");
-  t("ogni abilità costa stamina (meno del massimo di chi la usa)", CHARACTER_ORDER.every((id) => { const a = ABILITY_CONFIG[CHARACTER_CONFIG[id].abilityId]; return a.staminaCost > 0 && a.staminaCost <= CHARACTER_CONFIG[id].maxStamina && a.cooldownMs >= 0 && a.name.length > 0; }));
+  t("ogni personaggio ha stamina, recupero, costo della schivata e un'abilità esistente", CHARACTER_ORDER.every((id) => { const c = CHARACTER_CONFIG[id]; return c.maxStamina > 0 && c.staminaRegenPerSecond > 0 && c.dodgeStaminaCost > 0 && c.dodgeStaminaCost < c.maxStamina && c.abilityIds.length === 1 && ABILITY_CONFIG[c.abilityIds[0]]?.id === c.abilityIds[0]; }));
+  t("abilità diverse per ogni personaggio (onda d'urto, tiro in ritirata, carica furiosa, scudo)", CHARACTER_ORDER.map((id) => CHARACTER_CONFIG[id].abilityIds.join("+")).join() === "shockwave,backstepShot,furiousCharge,shieldGuard");
+  t("ogni abilità costa stamina (meno del massimo di chi la usa)", CHARACTER_ORDER.every((id) => { const a = ABILITY_CONFIG[CHARACTER_CONFIG[id].abilityIds[0]]; return a.cost.stamina > 0 && a.cost.stamina <= CHARACTER_CONFIG[id].maxStamina && a.cooldownMs >= 0 && a.name.length > 0; }));
   t("tasto L per l'abilità, solo in gioco; riga nella schermata dei controlli", CONTROLS_CONFIG.ability?.includes("KeyL") && INPUT_CONTEXT_ACTIONS.gameplay.includes("ability") && !INPUT_CONTEXT_ACTIONS.menu.includes("ability") && CONTROLS_ROWS.some((r) => r.keyGroups.flat().includes("L")));
   {
     const abilityAttacks = Object.values(ABILITY_CONFIG).filter((a) => a.kind === "attack");
@@ -68,7 +68,7 @@ export default async function (t, load) {
   }
   {
     const p = grounded("berserker");
-    p.staminaValue = 30; // stamina già consumata (campo privato, solo nel test)
+    p.staminaPool.currentValue = 30; // stamina già consumata (campo privato, solo nel test)
     const before = p.stamina;
     step(p, [], ["dodge"]);
     t("senza stamina sufficiente non si schiva e compare \"stanco\"", before < CHARACTER_CONFIG.berserker.dodgeStaminaCost && !p.isDodging && p.drainTired() && !p.drainTired(), `${before.toFixed(1)}`);
@@ -81,7 +81,7 @@ export default async function (t, load) {
     step(q, [], ["attack"]);
     t("l'attacco leggero non costa stamina", q.activeAttack !== null && q.stamina === 100);
     const tired = grounded("knight");
-    tired.staminaValue = 10; // stamina già consumata (campo privato, solo nel test)
+    tired.staminaPool.currentValue = 10; // stamina già consumata (campo privato, solo nel test)
     step(tired, [], ["heavyAttack"]);
     t("senza stamina l'attacco pesante non parte", tired.stamina < 15 && tired.activeAttack === null && tired.drainTired(), tired.stamina.toFixed(1));
   }

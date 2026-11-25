@@ -1,4 +1,5 @@
 import type { CharacterDefinition, CharacterId } from "../types/EntityTypes";
+import { ZERO_ATTRIBUTES } from "./attributeConfig";
 import { PLAYER_CONFIG } from "./playerConfig";
 
 /**
@@ -7,6 +8,7 @@ import { PLAYER_CONFIG } from "./playerConfig";
  * Gli altri personaggi hanno valori propri. Salto, hitbox e tempi sono comuni (PLAYER_CONFIG).
  * Fase 5: stamina (massimo, recupero, costo della schivata) e abilità speciale (ABILITY_CONFIG).
  * Fase 6: i personaggi si sbloccano raggiungendo un livello (unlockLevel); il cavaliere è sempre disponibile.
+ * Classi Fase 0: mana (per ora 0 per tutti), attributi di partenza (a zero) e abilità come elenco (una per classe).
  */
 export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
   knight: {
@@ -26,7 +28,10 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxStamina: 100,
     staminaRegenPerSecond: 30,
     dodgeStaminaCost: 25,
-    abilityId: "shockwave",
+    maxMana: 0,
+    manaRegenPerSecond: 0,
+    baseAttributes: ZERO_ATTRIBUTES,
+    abilityIds: ["shockwave"],
     unlockLevel: 1,
     unlockText: "SEMPRE DISPONIBILE",
   },
@@ -47,7 +52,10 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxStamina: 100,
     staminaRegenPerSecond: 40,
     dodgeStaminaCost: 20,
-    abilityId: "backstepShot",
+    maxMana: 0,
+    manaRegenPerSecond: 0,
+    baseAttributes: ZERO_ATTRIBUTES,
+    abilityIds: ["backstepShot"],
     unlockLevel: 3,
     unlockText: "COMPLETA IL LIVELLO 2",
   },
@@ -68,7 +76,10 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxStamina: 100,
     staminaRegenPerSecond: 25,
     dodgeStaminaCost: 40,
-    abilityId: "furiousCharge",
+    maxMana: 0,
+    manaRegenPerSecond: 0,
+    baseAttributes: ZERO_ATTRIBUTES,
+    abilityIds: ["furiousCharge"],
     unlockLevel: 4,
     unlockText: "SCONFIGGI IL CAVALIERE NERO",
   },
@@ -90,7 +101,10 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxStamina: 120,
     staminaRegenPerSecond: 25,
     dodgeStaminaCost: 30,
-    abilityId: "shieldGuard",
+    maxMana: 0,
+    manaRegenPerSecond: 0,
+    baseAttributes: ZERO_ATTRIBUTES,
+    abilityIds: ["shieldGuard"],
     unlockLevel: 6,
     unlockText: "SCONFIGGI IL RE DEI LUPI",
   },

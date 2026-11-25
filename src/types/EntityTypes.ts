@@ -56,7 +56,42 @@ export type PlayerStatName =
   | "movementSpeedMultiplier"
   | "damageTakenMultiplier"
   | "bonusDamage"
-  | "healthRegenPerSecond";
+  | "healthRegenPerSecond"
+  /** Punti in più sui massimi di salute, stamina e mana (Classi Fase 0: li useranno attributi e power-up). */
+  | "maxHealthBonus"
+  | "maxStaminaBonus"
+  | "maxManaBonus";
+
+/**
+ * Fonti permanenti dei modificatori, accanto ai power-up (Classi Fase 0): restano finché la fonte non le cambia
+ * e la morte non le toglie. "attributes" = i cinque attributi del personaggio (vedi AttributeStats).
+ */
+export type ModifierSourceId = "attributes";
+
+/**
+ * Attributi del personaggio (Classi Fase 0, effetti dalla Fase 4): Forza, Destrezza, Intelligenza, Vitalità, Tempra.
+ * Ogni punto dà gli effetti indicati in ATTRIBUTE_CONFIG.
+ */
+export type AttributeId = "strength" | "dexterity" | "intelligence" | "vitality" | "endurance";
+
+/** Valore di ogni attributo (punti). */
+export type Attributes = Record<AttributeId, number>;
+
+/** Effetto di un punto di attributo su una statistica: si somma (operazione "add") valuePerPoint x punti. */
+export interface AttributeEffectPerPoint {
+  stat: PlayerStatName;
+  valuePerPoint: number;
+}
+
+/** Definizione di un attributo (dati, nessuna logica). */
+export interface AttributeDefinition {
+  id: AttributeId;
+  /** Nome mostrato al giocatore (es. "FORZA") e sigla per il pentagono (es. "FOR"). */
+  name: string;
+  shortName: string;
+  /** Effetti di ogni punto (Classi Fase 0: nessuno, l'attributo non cambia niente). */
+  effectsPerPoint: readonly AttributeEffectPerPoint[];
+}
 
 /** Effetto di un power-up su una statistica. */
 export interface StatModifierEffect {
@@ -306,6 +341,24 @@ export interface ComboDefinition {
 /** Armi del giocatore: corpo a corpo (Fase 1) e a distanza (Fase 2). */
 export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace" | "bow" | "crossbow" | "throwingKnives" | "javelin" | "greatsword";
 
+/**
+ * Categorie delle armi (Classi Fase 0): la tabella di compatibilità classe x categoria (WEAPON_AFFINITY_CONFIG)
+ * decide bonus, malus e divieti. blade = spada e pugnale; heavy = ascia, mazza e spadone; polearm = lancia;
+ * ranged = arco e balestra; thrown = coltelli e giavellotto.
+ */
+export type WeaponCategoryId = "blade" | "heavy" | "polearm" | "ranged" | "thrown";
+
+/**
+ * Compatibilità di una classe con una categoria di armi (Classi Fase 0: tutte neutre, valori dalla Fase 3).
+ * isAllowed = false: la classe non può impugnarla. I moltiplicatori valgono sul danno inflitto e sul recupero
+ * tra un attacco e l'altro (meno di 1 = più rapido).
+ */
+export interface WeaponAffinity {
+  isAllowed: boolean;
+  damageMultiplier: number;
+  recoveryMultiplier: number;
+}
+
 /** Input che fanno partire un attacco. */
 export type AttackInputAction = "attack" | "heavyAttack";
 
@@ -334,6 +387,12 @@ export interface WeaponDefinition {
   air?: { combos: ComboDefinition[]; defaultAttackByInput: Record<AttackInputAction, string> };
   /** Moltiplicatore della velocità di camminata con quest'arma in mano (1 = normale). */
   movementSpeedMultiplier: number;
+  /** Categoria (Classi Fase 0): la usa la tabella di compatibilità con le classi. */
+  category: WeaponCategoryId;
+  /** Peso (unità astratte, 1 = leggerissima): dalla Fase 3 rallenta, dalla Fase 4 richiede Forza. */
+  weight: number;
+  /** Attributo che dalla Fase 4 fa crescere il danno dell'arma. */
+  scalingAttribute: AttributeId;
   /** Munizioni (coltelli, giavellotti): senza, l'arma non attacca. Se omesso: munizioni infinite. */
   ammo?: {
     max: number;
@@ -346,7 +405,39 @@ export interface WeaponDefinition {
 export type AbilityId = "shockwave" | "backstepShot" | "furiousCharge" | "shieldGuard";
 
 /**
- * Abilità speciale (tasto L): costa stamina e ha un tempo di ricarica.
+ * Costo di un'abilità (Classi Fase 0): stamina, mana e salute, ognuno facoltativo (omesso = 0).
+ * La salute si paga solo se ne resta almeno un punto.
+ */
+export interface ResourceCost {
+  stamina?: number;
+  mana?: number;
+  health?: number;
+}
+
+/**
+ * Modificatore di un'abilità o di un incantesimo (punto di estensione, previsto dopo la 2.6): per ora nessuna
+ * abilità ne ha e nessuno li legge.
+ */
+export interface AbilityModifier {
+  id: string;
+  value: number;
+}
+
+/** Parte comune di ogni abilità. */
+interface AbilityBase {
+  id: AbilityId;
+  name: string;
+  description: string;
+  /** Costo per usarla (lo scudo: per alzarlo). */
+  cost: ResourceCost;
+  /** Ricarica (ms) dopo l'uso (lo scudo: dopo averlo abbassato). */
+  cooldownMs: number;
+  /** Modificatori (punto di estensione): vuoto. */
+  modifiers: readonly AbilityModifier[];
+}
+
+/**
+ * Abilità speciale (tasto L): ha un costo (ResourceCost) e un tempo di ricarica.
  * - attack: un attacco speciale (area d'urto, scatto, proiettile), usato solo a terra;
  *   impactEffect = effetto del motore quando il colpo diventa attivo (onda d'urto: tremolio e polvere).
  * - guard: si tiene premuto per alzare lo scudo (para i colpi davanti); alzato da meno di perfectWindowMs, la
@@ -354,30 +445,19 @@ export type AbilityId = "shockwave" | "backstepShot" | "furiousCharge" | "shield
  *   staminaPerBlockedDamage per punto di danno parato, e se la stamina non basta la guardia si rompe.
  */
 export type AbilityDefinition =
-  | {
-      id: AbilityId;
+  | (AbilityBase & {
       kind: "attack";
-      name: string;
-      description: string;
-      staminaCost: number;
-      cooldownMs: number;
       attack: AttackDefinition;
       impactEffect?: "shockwave";
-    }
-  | {
-      id: AbilityId;
+    })
+  | (AbilityBase & {
       kind: "guard";
-      name: string;
-      description: string;
-      /** Stamina per alzare lo scudo. */
-      staminaCost: number;
-      /** Attesa (ms) dopo aver abbassato lo scudo. */
-      cooldownMs: number;
+      /** Stamina consumata al secondo con lo scudo alzato. */
       drainPerSecond: number;
       perfectWindowMs: number;
       staminaPerBlockedDamage: number;
       parryStunMs: number;
-    };
+    });
 
 /** Esito di un colpo ricevuto con lo scudo alzato (abilità del Paladino). */
 export type GuardOutcome = "perfect" | "blocked" | "broken";
@@ -419,8 +499,13 @@ export interface CharacterDefinition {
   staminaRegenPerSecond: number;
   /** Stamina consumata da una schivata. */
   dodgeStaminaCost: number;
-  /** Abilità speciale (tasto L). */
-  abilityId: AbilityId;
+  /** Mana (Classi Fase 0): massimo e recupero al secondo (dopo PLAYER_CONFIG.manaRegenDelayMs). 0 = nessun mana. */
+  maxMana: number;
+  manaRegenPerSecond: number;
+  /** Attributi di partenza (Classi Fase 0: tutti a zero). */
+  baseAttributes: Readonly<Attributes>;
+  /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto L). Player ne tiene attivo uno. */
+  abilityIds: readonly AbilityId[];
   /**
    * Sblocco (Fase 6): il personaggio si sceglie solo dopo aver raggiunto questo livello (1 = subito disponibile).
    * unlockText descrive l'obiettivo nella schermata di scelta.

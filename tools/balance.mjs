@@ -177,7 +177,7 @@ function playLevel(levelId, options = {}) {
       const attackElapsedMs = (time - (attackStartTimes.get(nearest) ?? time)) * 1000;
       const wantsToDodge = isTargetAttacking && dodgeDecisions.get(nearest) && gap < (nearest === boss ? 90 : 40);
       const ability = player.ability;
-      const isAbilityReady = player.abilityCooldownFraction === 0 && player.stamina >= ability.staminaCost;
+      const isAbilityReady = player.isAbilityReady;
       // scudo (paladino): al posto della schivata lo alza poco prima del colpo e lo tiene finché l'attacco dura
       const wantsToGuard = useAbility && ability.kind === "guard" && wantsToDodge && attackElapsedMs >= windupMs - 150;
       if (wantsToGuard && (player.isGuarding || isAbilityReady)) {

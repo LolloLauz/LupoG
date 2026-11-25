@@ -1,7 +1,8 @@
 import type { AbilityDefinition, AbilityId, AttackDefinition } from "../types/EntityTypes";
 
 /**
- * Abilità speciali dei personaggi (Fase 5, tasto L). Ognuna costa stamina e ha un tempo di ricarica.
+ * Abilità speciali dei personaggi (Fase 5, tasto L). Ognuna ha un costo (stamina, mana o salute: Classi Fase 0)
+ * e un tempo di ricarica.
  * Le abilità d'attacco sono attacchi come quelli delle armi (area d'urto, durata, animazione con lo stesso id),
  * più eventuali scatti (dash) e proiettili; l'arma in mano cambia solo l'aspetto.
  */
@@ -55,8 +56,9 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     kind: "attack",
     name: "ONDA D'URTO",
     description: "Colpisce tutti intorno",
-    staminaCost: 40,
+    cost: { stamina: 40 },
     cooldownMs: 6000,
+    modifiers: [],
     attack: SHOCKWAVE_ATTACK,
     impactEffect: "shockwave",
   },
@@ -65,8 +67,9 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     kind: "attack",
     name: "TIRO IN RITIRATA",
     description: "Balzo indietro e freccia",
-    staminaCost: 30,
+    cost: { stamina: 30 },
     cooldownMs: 4000,
+    modifiers: [],
     attack: BACKSTEP_SHOT_ATTACK,
   },
   furiousCharge: {
@@ -74,8 +77,9 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     kind: "attack",
     name: "CARICA FURIOSA",
     description: "Travolge chi incontra",
-    staminaCost: 40,
+    cost: { stamina: 40 },
     cooldownMs: 5000,
+    modifiers: [],
     attack: FURIOUS_CHARGE_ATTACK,
   },
   shieldGuard: {
@@ -83,8 +87,9 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     kind: "guard",
     name: "SCUDO",
     description: "Tieni L: para davanti",
-    staminaCost: 10,
+    cost: { stamina: 10 },
     cooldownMs: 300,
+    modifiers: [],
     drainPerSecond: 12,
     perfectWindowMs: 250,
     staminaPerBlockedDamage: 1.5,

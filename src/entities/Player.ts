@@ -2,9 +2,11 @@ import { getAttackWorldHitbox } from "../combat/AttackDefinition";
 import { CombatSystem } from "../combat/CombatSystem";
 import { ComboManager } from "../combat/ComboManager";
 import { PlayerModifiers } from "../combat/PlayerModifiers";
+import { ResourcePool } from "../combat/ResourcePool";
 import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
 import { buildEquipmentVariant } from "../rendering/sprites/equipmentVisuals";
 import type { SpriteColorVariant } from "../rendering/SpriteManager";
+import { computeAttributeEffects } from "../systems/AttributeStats";
 import { EMPTY_ARMOR, NO_EQUIPMENT_BONUSES, computeEquipmentBonuses } from "../systems/EquipmentStats";
 import { createWeaponItem } from "../systems/ItemFactory";
 import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
@@ -13,12 +15,13 @@ import { ABILITY_CONFIG } from "../config/abilityConfig";
 import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
 import { NO_UPGRADES, computeUpgradeBonuses, type UpgradeBonuses } from "../config/progressionConfig";
 import { PLAYER_CONFIG } from "../config/playerConfig";
+import { getWeaponAffinity } from "../config/weaponAffinityConfig";
 import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import { CollisionSystem } from "../systems/CollisionSystem";
-import type { AbilityDefinition, AttackDefinition, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, WeaponDefinition } from "../types/EntityTypes";
+import type { AbilityDefinition, AttackDefinition, Attributes, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, ResourceCost, WeaponAffinity, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import type { EquipmentBonuses, EquippedArmor, WeaponItem } from "../types/ItemTypes";
@@ -74,10 +77,19 @@ export class Player extends GameObject {
   private lifeStealAccumulator = 0;
   public currentHealth: number = this.character.maxHealth;
 
-  // --- stamina e abilità (Fase 5) ---
-  private staminaValue: number = this.character.maxStamina;
-  private staminaRegenDelayRemainingMs = 0;
-  private abilityCooldownRemainingMs = 0;
+  /** Attributi attuali (Classi Fase 0: quelli di partenza della classe, tutti a zero). */
+  private attributeValues: Readonly<Attributes> = this.character.baseAttributes;
+
+  // --- risorse (stamina: Fase 5; mana: Classi Fase 0) e abilità ---
+  private readonly staminaPool = new ResourcePool(
+    () => this.maxStamina,
+    () => this.character.staminaRegenPerSecond,
+    PLAYER_CONFIG.staminaRegenDelayMs
+  );
+  private readonly manaPool = new ResourcePool(() => this.maxMana, () => this.character.manaRegenPerSecond, PLAYER_CONFIG.manaRegenDelayMs);
+  /** Slot dell'abilità attiva (indice in character.abilityIds) e ricarica che manca a ogni slot (ms). */
+  private activeAbilitySlot = 0;
+  private abilityCooldownsMs: number[] = this.character.abilityIds.map(() => 0);
   /** Scudo alzato (abilità del Paladino) e da quanto tempo (per la parata perfetta). */
   private isGuardUp = false;
   private guardElapsedMs = 0;
@@ -151,7 +163,7 @@ export class Player extends GameObject {
 
   /** Salute massima del personaggio (più i potenziamenti). */
   public get maxHealth(): number {
-    return this.character.maxHealth + this.upgrades.maxHealth + this.equipment.maxHealth;
+    return this.character.maxHealth + this.upgrades.maxHealth + this.equipment.maxHealth + this.modifiers.getValue("maxHealthBonus");
   }
 
   /**
@@ -161,7 +173,8 @@ export class Player extends GameObject {
   public setUpgrades(upgrades: UpgradeBonuses): void {
     this.upgrades = upgrades;
     this.currentHealth = this.maxHealth;
-    this.staminaValue = this.maxStamina;
+    this.staminaPool.refill();
+    this.manaPool.refill();
   }
 
   public get characterDefinition(): CharacterDefinition {
@@ -170,22 +183,88 @@ export class Player extends GameObject {
 
   /** Stamina attuale (Fase 5): la consumano schivata, attacchi pesanti e abilità. */
   public get stamina(): number {
-    return this.staminaValue;
+    return this.staminaPool.value;
   }
 
   public get maxStamina(): number {
-    return this.character.maxStamina + this.upgrades.maxStamina + this.equipment.maxStamina;
+    return this.character.maxStamina + this.upgrades.maxStamina + this.equipment.maxStamina + this.modifiers.getValue("maxStaminaBonus");
   }
 
-  /** Abilità speciale del personaggio (tasto L). */
+  /** Mana attuale (Classi Fase 0): lo consumano le abilità che lo costano. Senza mana nella classe resta 0. */
+  public get mana(): number {
+    return this.manaPool.value;
+  }
+
+  public get maxMana(): number {
+    return this.character.maxMana + this.modifiers.getValue("maxManaBonus");
+  }
+
+  /** Attributi attuali del personaggio (Classi Fase 0). */
+  public get attributes(): Readonly<Attributes> {
+    return this.attributeValues;
+  }
+
+  /** Cambia gli attributi: i loro effetti entrano nei modificatori (fonte "attributes"); i massimi si aggiornano. */
+  public setAttributes(attributes: Readonly<Attributes>): void {
+    this.attributeValues = { ...attributes };
+    this.modifiers.setSourceEffects("attributes", computeAttributeEffects(this.attributeValues));
+    this.clampResourcesToMax();
+  }
+
+  /** Abilità del personaggio, una per slot (Classi Fase 0). */
+  public get abilities(): AbilityDefinition[] {
+    return this.character.abilityIds.map((abilityId) => ABILITY_CONFIG[abilityId]);
+  }
+
+  /** Indice dello slot attivo in abilities. */
+  public get activeAbilitySlotIndex(): number {
+    return this.activeAbilitySlot;
+  }
+
+  /**
+   * Sceglie lo slot attivo (Classi Fase 0). Uno slot che non esiste viene rifiutato (false).
+   * Cambiando slot con lo scudo alzato, lo scudo si abbassa (e parte la sua ricarica).
+   */
+  public selectAbilitySlot(slotIndex: number): boolean {
+    if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= this.character.abilityIds.length) {
+      return false;
+    }
+    if (slotIndex !== this.activeAbilitySlot) {
+      this.lowerGuard();
+      this.activeAbilitySlot = slotIndex;
+    }
+    return true;
+  }
+
+  /** Abilità speciale attiva (tasto L). */
   public get ability(): AbilityDefinition {
-    return ABILITY_CONFIG[this.character.abilityId];
+    return ABILITY_CONFIG[this.character.abilityIds[this.activeAbilitySlot]];
   }
 
-  /** Ricarica dell'abilità che manca (1 = appena usata, 0 = pronta). */
+  /** Ricarica dell'abilità attiva che manca (1 = appena usata, 0 = pronta). */
   public get abilityCooldownFraction(): number {
     const cooldownMs = this.ability.cooldownMs;
-    return cooldownMs <= 0 ? 0 : Math.min(1, this.abilityCooldownRemainingMs / cooldownMs);
+    return cooldownMs <= 0 ? 0 : Math.min(1, this.abilityCooldownsMs[this.activeAbilitySlot] / cooldownMs);
+  }
+
+  /** Vero se le risorse bastano per il costo (la salute deve restare almeno a 1). */
+  public canAfford(cost: Readonly<ResourceCost>): boolean {
+    const healthCost = cost.health ?? 0;
+    return (
+      this.staminaPool.canSpend(cost.stamina ?? 0) &&
+      this.manaPool.canSpend(cost.mana ?? 0) &&
+      (healthCost <= 0 || this.currentHealth > healthCost)
+    );
+  }
+
+  /** Vero se l'abilità attiva è pronta: niente ricarica e risorse sufficienti. */
+  public get isAbilityReady(): boolean {
+    return this.abilityCooldownFraction === 0 && this.canAfford(this.ability.cost);
+  }
+
+  /** Compatibilità della classe con l'arma in mano (Classi Fase 0: sempre neutra). */
+  public get weaponAffinity(): Readonly<WeaponAffinity> {
+    return getWeaponAffinity(this.character.id, this.weapon.id);
   }
 
   /** Vero con lo scudo alzato (abilità del Paladino). */
@@ -224,6 +303,9 @@ export class Player extends GameObject {
   /** Cambia personaggio (inizio partita): la salute torna al massimo della nuova classe. */
   public setCharacter(character: CharacterDefinition): void {
     this.character = character;
+    this.activeAbilitySlot = 0;
+    this.abilityCooldownsMs = character.abilityIds.map(() => 0);
+    this.setAttributes(character.baseAttributes);
     this.currentHealth = this.maxHealth;
     this.resetStaminaAndAbility();
     this.regenerationAccumulator = 0;
@@ -312,8 +394,14 @@ export class Player extends GameObject {
     this.equipment = computeEquipmentBonuses(this.weaponItem, this.armor);
     this.equipmentVariant = buildEquipmentVariant(this.weaponItem, this.armor, true);
     this.armorOnlyVariant = buildEquipmentVariant(this.weaponItem, this.armor, false);
+    this.clampResourcesToMax();
+  }
+
+  /** Salute, stamina e mana restano, ma non oltre i nuovi massimi. */
+  private clampResourcesToMax(): void {
     this.currentHealth = Math.min(this.currentHealth, this.maxHealth);
-    this.staminaValue = Math.min(this.staminaValue, this.maxStamina);
+    this.staminaPool.clampToMax();
+    this.manaPool.clampToMax();
   }
 
   /**
@@ -427,7 +515,13 @@ export class Player extends GameObject {
 
   /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
   public getDamageMultiplier(): number {
-    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.upgrades.damageMultiplier * this.equipment.damageMultiplier;
+    return (
+      this.modifiers.getValue("damageMultiplier") *
+      this.character.damageMultiplier *
+      this.upgrades.damageMultiplier *
+      this.equipment.damageMultiplier *
+      this.weaponAffinity.damageMultiplier
+    );
   }
 
   /**
@@ -570,15 +664,13 @@ export class Player extends GameObject {
     let outcome: GuardOutcome = "perfect";
     if (this.guardElapsedMs > ability.perfectWindowMs) {
       const cost = damage * ability.staminaPerBlockedDamage;
-      if (this.staminaValue < cost) {
-        this.staminaValue = 0;
+      if (!this.staminaPool.trySpend(cost)) {
+        this.staminaPool.empty();
         this.lowerGuard();
         this.lastGuardOutcome = "broken";
         this.guardEvents.push("broken");
         return false;
       }
-      this.staminaValue -= cost;
-      this.staminaRegenDelayRemainingMs = PLAYER_CONFIG.staminaRegenDelayMs;
       outcome = "blocked";
     }
     this.lastGuardOutcome = outcome;
@@ -928,7 +1020,7 @@ export class Player extends GameObject {
     }
     // l'attacco pesante costa stamina: senza, non parte
     const staminaCost = attackInput === "heavyAttack" ? PLAYER_CONFIG.heavyAttackStaminaCost : 0;
-    if (this.staminaValue < staminaCost) {
+    if (!this.staminaPool.canSpend(staminaCost)) {
       this.hasPendingTired = true;
       return;
     }
@@ -1038,45 +1130,67 @@ export class Player extends GameObject {
 
   /** Recupero dopo un attacco, accorciato dai modificatori "recupero" dell'arma. */
   private getAttackCooldownMs(attack: AttackDefinition): number {
-    return attack.cooldownMs * this.equipment.recoveryMultiplier;
+    return attack.cooldownMs * this.equipment.recoveryMultiplier * this.weaponAffinity.recoveryMultiplier;
   }
 
   /** Consuma stamina; se non basta non consuma niente, segnala "stanco" e restituisce false. */
   private spendStamina(cost: number): boolean {
-    if (this.staminaValue < cost) {
+    if (!this.staminaPool.trySpend(cost)) {
       this.hasPendingTired = true;
       return false;
     }
-    this.staminaValue -= cost;
-    this.staminaRegenDelayRemainingMs = PLAYER_CONFIG.staminaRegenDelayMs;
     return true;
   }
 
-  /** Recupero della stamina (dopo una pausa dall'ultimo consumo); lo scudo alzato la consuma. */
+  /**
+   * Paga il costo di un'abilità (Classi Fase 0): tutto o niente. Se una risorsa non basta non consuma niente
+   * e restituisce false ("stanco" se manca la stamina). Le risorse con costo 0 non si toccano.
+   */
+  private payCost(cost: Readonly<ResourceCost>): boolean {
+    if (!this.canAfford(cost)) {
+      if (!this.staminaPool.canSpend(cost.stamina ?? 0)) {
+        this.hasPendingTired = true;
+      }
+      return false;
+    }
+    if ((cost.stamina ?? 0) > 0) {
+      this.staminaPool.trySpend(cost.stamina ?? 0);
+    }
+    if ((cost.mana ?? 0) > 0) {
+      this.manaPool.trySpend(cost.mana ?? 0);
+    }
+    if ((cost.health ?? 0) > 0) {
+      this.currentHealth -= cost.health ?? 0;
+    }
+    return true;
+  }
+
+  /**
+   * Ricariche delle abilità e recupero delle risorse (dopo una pausa dall'ultimo consumo);
+   * lo scudo alzato consuma stamina e ne ferma il recupero.
+   */
   private updateStamina(deltaTimeMs: number): void {
-    this.abilityCooldownRemainingMs = Math.max(0, this.abilityCooldownRemainingMs - deltaTimeMs);
+    for (let slotIndex = 0; slotIndex < this.abilityCooldownsMs.length; slotIndex++) {
+      this.abilityCooldownsMs[slotIndex] = Math.max(0, this.abilityCooldownsMs[slotIndex] - deltaTimeMs);
+    }
     this.guardGraceRemainingMs = Math.max(0, this.guardGraceRemainingMs - deltaTimeMs);
+    this.manaPool.update(deltaTimeMs);
     const ability = this.ability;
     if (this.isGuardUp && ability.kind === "guard") {
       this.guardElapsedMs += deltaTimeMs;
-      this.staminaValue = Math.max(0, this.staminaValue - (ability.drainPerSecond * deltaTimeMs) / 1000);
-      this.staminaRegenDelayRemainingMs = PLAYER_CONFIG.staminaRegenDelayMs;
-      if (this.staminaValue <= 0) {
+      this.staminaPool.drain((ability.drainPerSecond * deltaTimeMs) / 1000);
+      if (this.staminaPool.value <= 0) {
         this.lowerGuard();
       }
       return;
     }
-    if (this.staminaRegenDelayRemainingMs > 0) {
-      this.staminaRegenDelayRemainingMs = Math.max(0, this.staminaRegenDelayRemainingMs - deltaTimeMs);
-      return;
-    }
-    this.staminaValue = Math.min(this.maxStamina, this.staminaValue + (this.character.staminaRegenPerSecond * deltaTimeMs) / 1000);
+    this.staminaPool.update(deltaTimeMs);
   }
 
   private resetStaminaAndAbility(): void {
-    this.staminaValue = this.maxStamina;
-    this.staminaRegenDelayRemainingMs = 0;
-    this.abilityCooldownRemainingMs = 0;
+    this.staminaPool.refill();
+    this.manaPool.refill();
+    this.abilityCooldownsMs.fill(0);
     this.isGuardUp = false;
     this.guardGraceRemainingMs = 0;
   }
@@ -1090,12 +1204,12 @@ export class Player extends GameObject {
       this.isCrouching ||
       this.currentAttack !== null ||
       this.dodgeRemainingMs > 0 ||
-      this.abilityCooldownRemainingMs > 0 ||
-      !this.spendStamina(ability.staminaCost)
+      this.abilityCooldownsMs[this.activeAbilitySlot] > 0 ||
+      !this.payCost(ability.cost)
     ) {
       return;
     }
-    this.abilityCooldownRemainingMs = ability.cooldownMs;
+    this.abilityCooldownsMs[this.activeAbilitySlot] = ability.cooldownMs;
     this.groundComboManager.reset();
     this.airComboManager.reset();
     this.bufferedAttackInput = null;
@@ -1127,8 +1241,8 @@ export class Player extends GameObject {
       !this.isCrouching &&
       this.currentAttack === null &&
       this.dodgeRemainingMs <= 0 &&
-      this.abilityCooldownRemainingMs <= 0;
-    if (canRaise && this.spendStamina(ability.staminaCost)) {
+      this.abilityCooldownsMs[this.activeAbilitySlot] <= 0;
+    if (canRaise && this.payCost(ability.cost)) {
       this.isGuardUp = true;
       this.guardElapsedMs = 0;
       this.guardGraceRemainingMs = 0;
@@ -1139,7 +1253,7 @@ export class Player extends GameObject {
   private lowerGuard(): void {
     if (this.isGuardUp) {
       this.isGuardUp = false;
-      this.abilityCooldownRemainingMs = this.ability.cooldownMs;
+      this.abilityCooldownsMs[this.activeAbilitySlot] = this.ability.cooldownMs;
     }
   }
 
