@@ -59,6 +59,10 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
   // abilità (Fase 5): pose comuni a tutte le armi
   abilityShockwave: createAttackAnimation("abilityShockwave", ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"]),
   abilityBackstepShot: createAttackAnimation("abilityBackstepShot", ["knightDodge1", "knightDodge2", "knightAbilityThrust"]),
+  // incantesimi del Mago (Classi Fase 2): pose comuni (braccio alzato e teso, colpo a terra, schivata)
+  abilityFirebolt: createAttackAnimation("abilityFirebolt", ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust"]),
+  abilityFrostNova: createAttackAnimation("abilityFrostNova", ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"]),
+  abilityArcaneLeap: createAttackAnimation("abilityArcaneLeap", ["knightDodge1", "knightDodge2", "knightDodge2"]),
   abilityFuriousCharge: createAttackAnimation("abilityFuriousCharge", ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust", "knightAbilityThrust", "knightAbilitySlam"]),
   dead: { frameIds: ["knightDeadFall", "knightDeadLie"], frameDurationMs: 300, loop: false },
   attack1: createAttackAnimation("swordLight1", ["knightAttack1A", "knightAttack1B", "knightAttack1C"]),
@@ -111,6 +115,13 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
     greatswordPlunge: PLUNGE_FRAMES,
     axePlunge: PLUNGE_FRAMES,
     macePlunge: PLUNGE_FRAMES,
+    // bastone (Classi Fase 2): pose della spada
+    staffStrike1: SLASH_DOWN_FRAMES,
+    staffStrike2: SLASH_UP_FRAMES,
+    staffSpin: FINISHER_FRAMES,
+    staffHeavy: HEAVY_FRAMES,
+    staffSweep: HEAVY_FRAMES,
+    staffPlunge: PLUNGE_FRAMES,
     // Fase 2: armi a distanza (mira e rinculo, lancio da dietro la testa)
     bowShot: AIM_FRAMES,
     bowCharge: ["knightAimA"],

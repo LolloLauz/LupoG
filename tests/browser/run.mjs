@@ -323,13 +323,19 @@ try {
     e.progressManager.unlockLevel(6); // tutti i personaggi sbloccati (Fase 6)
     openSelect();
     result.selectState = e.gameState.current; result.selectColors = colorsOk();
-    for (const id of ["ranger", "berserker", "paladin", "knight"]) {
+    for (const id of ["ranger", "berserker", "mage", "paladin", "knight"]) {
       let guard = 0;
       while (e.screens.selectedCharacterId !== id && guard++ < 8) { iron.tap("KeyD"); iron.step(); }
       iron.tap("Enter"); iron.step(); iron.step();
       const titleAfterConfirm = e.gameState.current;
       iron.tap("Enter"); for (let i = 0; i < 40; i++) iron.step();
       const frameId = e.player.getRenderedFrameId();
+      if (id === "mage") {
+        // Classi Fase 2: 7 lancia il dardo di fuoco (costa mana); HUD con barra del mana e 4 riquadri, colori della palette
+        const manaBefore = e.player.mana;
+        iron.tap("Digit7"); for (let i = 0; i < 20; i++) iron.step();
+        result.mageCast = { spent: e.player.mana < manaBefore, slots: e.player.abilitySlots.length, colors: colorsOk() };
+      }
       result.runs.push({ id, titleAfterConfirm, state: e.gameState.current, character: e.player.characterDefinition.id, weapon: e.player.equippedWeapon.id, health: e.player.currentHealth, maxHealth: e.player.maxHealth, hasFrame: e.spriteManager.sprites.has(frameId) && e.spriteManager.sprites.has(frameId + "Fire"), colors: colorsOk() });
       iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
       openSelect();
@@ -339,10 +345,11 @@ try {
     e.progressManager.setCharacter("knight");
     return result;
   })()`);
-  const expectedStart = { ranger: "bow", berserker: "axe", paladin: "mace", knight: "sword" };
+  const expectedStart = { ranger: "bow", berserker: "axe", mage: "staff", paladin: "mace", knight: "sword" };
   check("la seconda voce del titolo apre la scelta del personaggio, che usa solo colori della palette", characterRuns.selectState === "characterSelect" && characterRuns.selectColors === true, characterRuns.selectState);
   check("confermando si torna al titolo; ESC chiude la scelta", characterRuns.runs.every((r) => r.titleAfterConfirm === "title") && characterRuns.escState === "title");
-  check("ogni personaggio scelto entra in gioco con la propria classe, salute piena e arma iniziale", characterRuns.runs.length === 4 && characterRuns.runs.every((r) => r.state === "playing" && r.character === r.id && r.weapon === expectedStart[r.id] && r.maxHealth > 0 && r.health === r.maxHealth), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.state, r.character, r.weapon, r.health])));
+  check("ogni personaggio scelto entra in gioco con la propria classe, salute piena e arma iniziale", characterRuns.runs.length === 5 && characterRuns.runs.every((r) => r.state === "playing" && r.character === r.id && r.weapon === expectedStart[r.id] && r.maxHealth > 0 && r.health === r.maxHealth), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.state, r.character, r.weapon, r.health])));
+  check("Mago (Classi Fase 2): il tasto 7 lancia il dardo pagando mana; HUD con 4 mosse e barra del mana nei colori della palette", characterRuns.mageCast?.spent === true && characterRuns.mageCast?.slots === 4 && characterRuns.mageCast?.colors === true, JSON.stringify(characterRuns.mageCast));
   check("ogni personaggio: gli sprite disegnati esistono (anche col fuoco) e il gioco usa solo colori della palette", characterRuns.runs.every((r) => r.hasFrame && r.colors), JSON.stringify(characterRuns.runs.map((r) => [r.id, r.hasFrame, r.colors])));
 
   // --- Fase 6: bottega tra un livello e l'altro

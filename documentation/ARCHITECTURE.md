@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.1.1**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.2.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -121,8 +121,8 @@ l'altro; la bottega a menu (`shop`) resta come ripiego.
 - **Comandi (2.1).** `attack` = J, `heavyAttack` = K, `dodge` = Shift sinistro; Spazio non è assegnato. Le mosse speciali sono quattro azioni,
   `ability1`-`ability4` (tasti 7, 8, 9 e 0, anche del tastierino numerico; L è un alias di `ability1`; 5 e 6 non sono assegnati). `ABILITY_SLOT_ACTIONS` (`controlsConfig.ts`) dice quale
   azione comanda ogni slot: `Player.handleInput` cerca il tasto premuto, sceglie lo slot con `selectAbilitySlot` (non durante un attacco o una
-  schivata; uno slot vuoto non fa niente) e avvia l'abilità; lo scudo resta alzato finché è tenuto il tasto del suo slot. L'HUD mostra la cifra
-  del tasto dello slot attivo, presa da `ABILITY_SLOT_KEY_LABELS` (`controlsConfig.ts`).
+  schivata; uno slot vuoto non fa niente) e avvia l'abilità; lo scudo resta alzato finché è tenuto il tasto del suo slot. L'HUD mostra un riquadro per ogni slot (`HUDData.abilities`), con la cifra
+  del tasto presa da `ABILITY_SLOT_KEY_LABELS` (`controlsConfig.ts`).
 - **Contesti.** `INPUT_CONTEXT_ACTIONS` indica quali azioni sono ammesse in `gameplay` e in `menu`: in pausa e nei menu salto e attacco semplicemente
   non esistono, quindi non serve controllarlo altrove.
 - **Robustezza.** Alla perdita del focus tutti i tasti vengono rilasciati (altrimenti resterebbero "incastrati").
@@ -174,7 +174,7 @@ Per cambiare i tasti basta modificare `CONTROLS_CONFIG`.
   con sassi, piastrelle di pietra smussate, mattoni del dungeon; piattaforme sospese come assi con giunti e ombra a retino; porta d'uscita con arco
   di pietra e luce calda; cancello a saracinesca. Tessiture aggiunte nella Fase 4: fango e muschio con canne palustri e bolle (`swampMud`), neve e roccia con
   ghiaccioli (`snowAndRock`), pietra con rune luminose a ciclo dei colori (`runeStone`). L'acqua prende i colori dell'ambientazione (`waterColors`). I motivi sono ancorati alle coordinate del mondo e si disegna solo la parte visibile.
-- **Interfaccia (2.0).** HUD su pannello metallico a fasce con bordo dorato; salute a segmenti ombreggiati; titoli con riempimento a fasce
+- **Interfaccia (2.0).** HUD su pannello metallico a fasce con bordo dorato; salute a segmenti ombreggiati; con il mana (2.2.0) stamina e mana su due barre da 3 px (`STAMINA_BAR_WITH_MANA_GEOMETRY`, `MANA_BAR_GEOMETRY`), mentre senza mana la barra è quella di prima; titoli con riempimento a fasce
   (`rowColors` di `drawText`); riquadri decorati (`drawOrnateFrame`) per messaggi, menu e schermate.
 - **Pausa.** Oscuramento con un retino a scacchi di pixel (un'immagine creata una volta sola): niente trasparenze.
 
@@ -342,7 +342,7 @@ d'aggancio elencati, volutamente minimi.
 | Nemici a distanza e volanti, balzo, divisione, corazza, proiettili, pericoli, piattaforme mobili | già possibile (2.0) | `ENEMY_CONFIG` (`ranged`, `flight`, `lunge`, `splitInto`, `armor`), `PROJECTILE_CONFIG`, `LevelDefinition.hazards` e `movingPlatforms` | solo dati e sprite |
 | Boss con una silhouette nuova | già possibile (2.0) | `BOSS_SPRITE_SHAPES` (`knight`, `witch`, `sorcerer`, `beast`) | una forma nuova richiede una funzione che componga i frame in `bossSprites.ts` e la sua hitbox in `SHAPE_HITBOX` |
 | Nuove ambientazioni | già possibile (2.0: sei; Fase 8 del piano espansioni: sette, con le Lande Desolate) | `ThemeId`, `THEME_STYLES`, `BackgroundRenderer`, `TerrainRenderer` | un caso in `BackgroundRenderer.buildTheme` (livelli di parallasse) e i colori del terreno; una tessitura nuova richiede un caso in `TerrainRenderer` |
-| Personaggi alternativi | implementato (Fase 4 del piano espansioni: cavaliere, ranger, berserker, paladino) | `CharacterDefinition`, `CHARACTER_CONFIG`, `CHARACTER_VISUALS` (`knightSprites.ts`), `Player.setCharacter`, `ProgressManager.characterId`, schermata `characterSelect` | un personaggio nuovo: un id in `CharacterId`, una voce in `CHARACTER_CONFIG` e in `CHARACTER_ORDER`, una voce in `CHARACTER_VISUALS` (colori e, se serve, le 12 righe della testa). Un tratto che non è una statistica (es. la parata del paladino, Fase 5) richiede un campo in `CharacterDefinition` letto da `Player`. La ricarica delle munizioni è già solo un dato (`ammoRegeneration`, letto da `GameEngine`) |
+| Personaggi alternativi | implementato (Fase 4 del piano espansioni: cavaliere, ranger, berserker, paladino; Classi Fase 2: mago) | `CharacterDefinition`, `CHARACTER_CONFIG`, `CHARACTER_VISUALS` (`knightSprites.ts`), `Player.setCharacter`, `ProgressManager.characterId`, schermata `characterSelect` | un personaggio nuovo: un id in `CharacterId`, una voce in `CHARACTER_CONFIG` e in `CHARACTER_ORDER`, una voce in `CHARACTER_VISUALS` (colori e, se serve, le 12 righe della testa). Un tratto che non è una statistica (es. la parata del paladino, Fase 5) richiede un campo in `CharacterDefinition` letto da `Player`. La ricarica delle munizioni è già solo un dato (`ammoRegeneration`, letto da `GameEngine`) |
 | Progressione: monete, bottega, sblocchi | implementato (Fase 6 del piano espansioni; nella 2.1 rimossi i potenziamenti permanenti) | `progressionConfig.ts`, `Shop`, `ScoreManager.coins`, `ProgressManager` (`unlockLevel`, `isCharacterUnlocked`) | una voce nuova della bottega: un id in `ShopOfferId`, una voce in `SHOP_OFFERS` e il suo caso in `Shop.buy`/`findRefusal` |
 | Equipaggiamento: rarità, modificatori, armature, zaino, bottino, negozio camminabile | implementato (piano dell'equipaggiamento, E1-E6) | `RARITY_CONFIG`, `AFFIX_CONFIG`, `ARMOR_CONFIG`, `LEGENDARY_ITEMS`/`MYTHIC_ITEMS`, `LOOT_SOURCES`, `ItemFactory`, `EquipmentStats`, `LootSystem`, `Inventory` (zaino e armature), `Player.equipWeapon(..., item)`/`setArmor`, `SpriteColorVariant` | un modificatore nuovo: un id in `AffixId`, una voce in `AFFIX_CONFIG` e il suo effetto in `EquipmentStats` (e, se è una statistica nuova, in `Player`); un pezzo d'armatura o un Leggendario: solo dati; uno sprite su misura per un Mitico: vedi `PIANO_EQUIPAGGIAMENTO.md` |
 | Classifica di punteggi | pianificata | `HighScoreManager` | salvare un elenco invece di un solo valore |
@@ -368,6 +368,14 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 
 **Ricarica passiva delle munizioni (2.1.1).** È un dato della classe, `CharacterDefinition.ammoRegeneration` (`weaponId`, `intervalMs`; oggi solo il Ranger: arco, 3000 ms). La logica è in `systems/AmmoRegeneration.ts`, che tiene il tempo trascorso e aggiunge una munizione con `Inventory.addAmmo`. Il tempo scorre solo se `Inventory.isMissingAmmo` è vero, cioè se l'arma è nella borsa (non nello zaino) e non è piena; altrimenti si azzera. `GameEngine.regenerateAmmo` la chiama dentro `updatePickupsAndBag` (quindi solo in gioco e con il giocatore vivo) e, se l'arma è quella in mano, aggiorna anche `Player.setAmmo`. `startLevel` azzera il conteggio.
 
+**Mana e incantesimi (Classi Fase 2, 2.2.0).** Il mana è la seconda `ResourcePool` del giocatore (massimo e recupero letti da `CharacterDefinition.maxMana` e `manaRegenPerSecond`; il recupero riparte `PLAYER_CONFIG.manaRegenDelayMs` dopo l'ultimo consumo). Un incantesimo è una normale abilità (`ABILITY_CONFIG`) con `cost: { mana }`: per questo usa le stesse regole di slot, ricarica e `canAfford`. Il Mago ne ha quattro (tasti 7-0) e ogni slot ha il suo stato in `Player.abilitySlots`, letto dall'HUD. `AttackDefinition.elements` aggiunge elementi propri all'attacco (bruciatura del dardo, gelo della nova) accanto a quelli di power-up e arma. La guardia (`kind: "guard"`) ha ora `resource: "stamina" | "mana"` e `costPerBlockedDamage`: lo scudo del Paladino consuma stamina, la barriera del Mago consuma mana, con la stessa parata perfetta. Se manca il mana l'incantesimo non parte e compare "SENZA MANA" (`Player.drainNoMana`).
+
+**Catalizzatore.** `WeaponDefinition.spellFocus` (`powerMultiplier`, `manaCostMultiplier`, `manaPerHit`) descrive cosa dà un'arma agli incantesimi; vale solo se la classe ha `usesSpellFocus` (`Player.activeSpellFocus`). Tre punti lo leggono: `Player.getAbilityCost` (costo in mana, arrotondato), `Player.getDamageMultiplierFor(attack)` (moltiplica solo il danno degli incantesimi; lo usano `CombatSystem` e i proiettili) e `Player.registerHit` (ogni bersaglio colpito con un attacco dell'arma ridà `manaPerHit`, tramite `restoreMana` e `ResourcePool.restore`). Le altre classi con il bastone non ottengono niente: il bonus è della classe, non dell'arma.
+
+**Compatibilità arma-classe e filtro del bottino.** `weaponAffinityConfig.ts` ha una tabella classe per categoria: il Mago può usare solo la categoria `staff`, le altre classi tutto tranne il bastone (`FORBIDDEN_WEAPON_AFFINITY`). In 2.2.0 i divieti li legge solo `resolveLootWeaponId` (`LootSystem`), che sostituisce un'arma vietata con l'arma iniziale della classe (o la prima permessa): è applicato a forzieri, élite, trofei dei boss e bottega. `Player.equipWeapon` non li controlla ancora (arriva nella Fase 3).
+
+**Pozioni per tipo.** `BagSlot` di tipo pozione ha `potionId` (`PotionId`: salute o mana). Ogni tipo ha i suoi posti (`INVENTORY_CONFIG.maxPotionSlots`, `maxPotionsPerSlot`), quindi due pozioni di mana non tolgono posto a quelle di salute; `addPotion`, `canAddPotion` e `getPotionCount` prendono il tipo. Il bottino estrae la pozione di mana con `rollManaPotionDrop`, solo per le classi con mana, così per le altre il generatore casuale resta lo stesso di prima. La bottega, per chi ha mana, vende la pozione di mana al posto della faretra e offre sempre un bastone (che prende il posto del suo, mandandolo nello zaino).
+
 ---
 
 ## 11. Testabilità e strumenti
@@ -376,8 +384,8 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 |---|---|
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
-| `npm test` | 1097 controlli unitari in Node (meno di 1 secondo) |
-| `npm run test:browser` | 176 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
+| `npm test` | 1166 controlli unitari in Node (meno di 1 secondo) |
+| `npm run test:browser` | 177 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |
 

@@ -62,7 +62,7 @@ export default async function (t, load) {
     const pieces = Array.from({ length: 200 }, () => L.rollLootArmor({ source: "elite", levelId: 4, difficulty: "normal" }, random));
     t("pezzi d'armatura estratti: tutti e tre i posti", new Set(pieces.map((p) => p.baseId.replace(/^(cloth|leather|iron|steel)/, ""))).size === 3);
   }
-  t("motore: forzieri, élite e boss danno oggetti con rarità; il boss finale dà il trofeo Mitico", /private openChest[\s\S]{0,600}rollLootWeapon\(weaponId, context, this\.lootRandom\)[\s\S]{0,200}rollArmorDrop\("chest"/.test(engineSource) && /awardFinalBossReward\(\);/.test(engineSource) && /this\.finalBossRewardName = getItemName\(rollFinalBossReward\(/.test(engineSource));
+  t("motore: forzieri, élite e boss danno oggetti con rarità; il boss finale dà il trofeo Mitico", /private openChest[\s\S]{0,600}rollLootWeapon\(this\.resolveLootWeapon\(weaponId\), context, this\.lootRandom\)[\s\S]{0,200}rollArmorDrop\("chest"/.test(engineSource) && /awardFinalBossReward\(\);/.test(engineSource) && /this\.finalBossRewardName = getItemName\(rollFinalBossReward\(/.test(engineSource));
   t("motore: il furto di vita conta i colpi andati a segno", /this\.player\.registerDamageDealt\(damage\)/.test(engineSource));
 
   // --- bottega: rarità, prezzi crescenti, offerta ripetibile ---

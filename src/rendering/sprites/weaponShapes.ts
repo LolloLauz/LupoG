@@ -54,6 +54,25 @@ export const drawSpear: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
   setPixel(grid, Math.round(wingX - side.x), Math.round(wingY - side.y), "b", true);
 };
 
+/**
+ * Bastone del Mago (Classi Fase 2): asta di legno che sporge un poco dietro la mano e una gemma in cima (chiavi "c" e "v",
+ * come le scie: con il power-up del fuoco la gemma si accende).
+ */
+export const drawStaff: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
+  const direction = getDirection(handX, handY, tipX, tipY);
+  for (const point of linePoints(Math.round(handX - direction.unitX * 3), Math.round(handY - direction.unitY * 3), handX, handY)) {
+    setPixel(grid, point.x, point.y, "l", false);
+  }
+  drawShaft(grid, handX, handY, Math.round(tipX - direction.unitX * 2), Math.round(tipY - direction.unitY * 2));
+  const side = { x: -direction.unitY, y: direction.unitX };
+  const gemX = Math.round(tipX - direction.unitX);
+  const gemY = Math.round(tipY - direction.unitY);
+  setPixel(grid, gemX, gemY, "c", true);
+  setPixel(grid, Math.round(gemX + side.x), Math.round(gemY + side.y), "c", true);
+  setPixel(grid, Math.round(gemX - side.x), Math.round(gemY - side.y), "c", true);
+  setPixel(grid, tipX, tipY, "v", true);
+};
+
 /** Ascia: asta di legno e lama larga tre pixel verso il davanti, con un dente di ferro dietro. */
 export const drawAxe: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
   const direction = getDirection(handX, handY, tipX, tipY);

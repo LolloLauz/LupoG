@@ -44,7 +44,7 @@ export type MenuCommand =
   | "closeEquipment";
 
 /** Un posto della borsa nella schermata dell'equipaggiamento (E4). */
-export type EquipmentBagView = { kind: "weapon"; item: WeaponItem; ammo: number | null; isEquipped: boolean } | { kind: "potion"; count: number } | null;
+export type EquipmentBagView = { kind: "weapon"; item: WeaponItem; ammo: number | null; isEquipped: boolean } | { kind: "potion"; iconSpriteId: string; count: number } | null;
 
 /** Dati della schermata dell'equipaggiamento (E4). */
 export interface EquipmentView {
@@ -507,7 +507,9 @@ export class ScreenManager {
       const isSelected = index === selectedIndex;
       const isLocked = !data.unlockedCharacterIds.includes(characterId);
       if (isSelected) {
-        drawOrnateFrame(renderer, columnCenterX - 34, 38, 68, 58);
+        // la cornice resta dentro la colonna (5 personaggi: colonne di 64 px)
+        const frameWidth = Math.min(68, Math.floor(columnWidth) - 2);
+        drawOrnateFrame(renderer, columnCenterX - Math.floor(frameWidth / 2), 38, frameWidth, 58);
       }
       const previewId = getCharacterPreviewFrameId(characterId, isSelected && !isLocked ? idleFrame : 1);
       if (isLocked) {
@@ -545,6 +547,9 @@ export class ScreenManager {
     this.spriteManager.drawSprite(renderer, weapon.iconSpriteId, 196, 126, false);
     renderer.drawText(weapon.name.toUpperCase(), 222, 131, PALETTE.goldLight, { shadowColor: PALETTE.black });
     renderer.drawText(`${character.maxHealth} HP`, 222, 145, PALETTE.lightGray, { shadowColor: PALETTE.black });
+    if (character.maxMana > 0) {
+      renderer.drawText(`${character.maxMana} MANA`, 222, 157, PALETTE.lightBlue, { shadowColor: PALETTE.black });
+    }
     if (data.unlockedCharacterIds.includes(character.id)) {
       renderer.drawText(character.trait, centerX, 184, PALETTE.cyan, { align: "center", shadowColor: PALETTE.black });
     } else {
@@ -638,7 +643,7 @@ export class ScreenManager {
       const isSelected = selected.section === "bag" && selected.index === index;
       if (slot?.kind === "potion") {
         this.drawEquipmentCell(renderer, x, layout.topRowY, null, isSelected, false);
-        this.spriteManager.drawSprite(renderer, "itemPotion", x + 6, layout.topRowY + 6, false);
+        this.spriteManager.drawSprite(renderer, slot.iconSpriteId, x + 6, layout.topRowY + 6, false);
         renderer.drawText(String(slot.count), x + layout.cellSize - 2, layout.topRowY + layout.cellSize - 8, PALETTE.white, { align: "right", shadowColor: PALETTE.black });
       } else {
         this.drawEquipmentCell(renderer, x, layout.topRowY, slot?.item ?? null, isSelected, slot?.isEquipped === true);

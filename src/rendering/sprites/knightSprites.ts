@@ -3,7 +3,7 @@ import { PALETTE } from "../../config/gameConfig";
 import { WEAPON_CONFIG, WEAPON_ICON_SIZE } from "../../config/weaponConfig";
 import type { CharacterId, WeaponId } from "../../types/EntityTypes";
 import type { SpriteManager } from "../SpriteManager";
-import { drawAxe, drawBow, drawCrossbow, drawGreatsword, drawMace, drawSpear, type WeaponDrawer } from "./weaponShapes";
+import { drawAxe, drawBow, drawCrossbow, drawGreatsword, drawMace, drawSpear, drawStaff, type WeaponDrawer } from "./weaponShapes";
 import { addOutline, createGrid, drawSlashArc, drawSword, remapSpriteKeys, setPixel, stampRows, type BladeKeys, type PixelGrid } from "./spriteTools";
 
 /**
@@ -422,6 +422,8 @@ const WEAPON_VISUALS: Record<WeaponId, WeaponVisual> = {
   crossbow: { lengthScale: 1, draw: drawCrossbow, attackPoses: RANGED_POSES, icon: { handX: 2, handY: 10, tipX: 13, tipY: 6 } },
   throwingKnives: { lengthScale: 0.45, draw: drawKnightSword, attackPoses: RANGED_POSES, icon: { handX: 5, handY: 11, tipX: 11, tipY: 5 } },
   javelin: { lengthScale: 1.1, draw: drawSpear, attackPoses: RANGED_POSES, icon: { handX: 6, handY: 10, tipX: 14, tipY: 2 } },
+  // Classi Fase 2: bastone del Mago, con le pose della spada (aspetto provvisorio, arte rifinita nella Fase 6)
+  staff: { lengthScale: 1.15, draw: drawStaff, attackPoses: ATTACK_POSES, icon: { handX: 4, handY: 13, tipX: 12, tipY: 3 } },
   greatsword: { lengthScale: 1.3, draw: drawGreatsword, attackPoses: GREATSWORD_POSES, icon: { handX: 3, handY: 13, tipX: 14, tipY: 2 }, restTip: { offsetX: 2, offsetY: -17 } },
 };
 
@@ -481,6 +483,25 @@ const BERSERKER_HEAD_ROWS: string[] = [
   "........kdgsPPPPPPpk....",
   ".........kdgkPPPPpk.....",
 ]
+
+/**
+ * Mago (Classi Fase 2, aspetto provvisorio): cappello a punta piegato all'indietro (h, H, i), volto (f, F) e barba
+ * bianca (x, X). La veste viola ricolora l'armatura del busto e lo scudo diventa il mantello.
+ */
+const MAGE_HEAD_ROWS: string[] = [
+  "........................",
+  ".......kk...............",
+  "......khHk..............",
+  ".......khHk.............",
+  "........khHHk...........",
+  ".......khhHHik..........",
+  "......khhhHHHik.........",
+  ".....kkhhhhhhhhkk.......",
+  "...khhhhhhhhhhhhhhik....",
+  "....kkkkkfFFFFkkkk......",
+  "........kfFFFkFk........",
+  "........kxxFFFFFxk......",
+];
 
 const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
   knight: { colors: {} },
@@ -544,6 +565,31 @@ const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
       X: PALETTE.iceWhite,
     },
     headRows: remapSpriteKeys(BODY_ROWS.slice(0, HEAD_ROW_COUNT), { m: "u", r: "x", o: "X" }),
+  },
+  mage: {
+    // veste viola con fascia blu, mantello viola al posto dello scudo
+    colors: {
+      d: PALETTE.violetDark,
+      g: PALETTE.violet,
+      s: PALETTE.amethyst,
+      w: PALETTE.lilac,
+      m: PALETTE.navy,
+      r: PALETTE.blue,
+      o: PALETTE.lightBlue,
+      N: PALETTE.violetDark,
+      B: PALETTE.violet,
+      L: PALETTE.amethyst,
+      h: PALETTE.violet,
+      H: PALETTE.amethyst,
+      i: PALETTE.lilac,
+      f: PALETTE.skinDark,
+      F: PALETTE.skin,
+      x: PALETTE.white,
+      X: PALETTE.lightGray,
+    },
+    headRows: MAGE_HEAD_ROWS,
+    // con un elmo, il cappello prende i toni del materiale
+    helmetKeyMap: { h: "2", H: "3", i: "4" },
   },
 };
 

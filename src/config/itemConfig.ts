@@ -8,6 +8,8 @@ export interface ItemDefinition {
   spriteId: string;
   /** Salute recuperata. */
   healAmount: number;
+  /** Mana recuperato bevendo l'oggetto (pozione di mana, Classi Fase 2). */
+  manaAmount?: number;
   /** Punti bonus. */
   scoreBonus: number;
   /** Monete (Fase 6) date raccogliendo l'oggetto: si spendono nella bottega tra un livello e l'altro. */
@@ -34,6 +36,16 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     name: "Pozione",
     spriteId: "itemPotion",
     healAmount: 30,
+    scoreBonus: 0,
+    storedInBag: true,
+  },
+  // Classi Fase 2: pozione di mana, con un posto proprio nella borsa (vedi Inventory)
+  manaPotion: {
+    id: "manaPotion",
+    name: "Pozione di mana",
+    spriteId: "itemManaPotion",
+    healAmount: 0,
+    manaAmount: 40,
     scoreBonus: 0,
     storedInBag: true,
   },

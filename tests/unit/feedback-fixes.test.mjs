@@ -138,7 +138,7 @@ export default async function (t, load) {
     t("lasciando un'arma che non è in mano, quella in mano resta", other.dropSlot(2).kind === "weapon" && other.equippedWeaponId === "sword");
   }
   t("motore: Q tenuto + 1-4 lascia quel posto, Q da solo (al rilascio) l'arma in mano; 1-4 senza Q usa il posto", /if \(isDropHeld\) \{[\s\S]{0,80}this\.dropFromBag\(slotIndex\);[\s\S]{0,40}\} else \{[\s\S]{0,20}this\.useBagSlot\(slotIndex\)/.test(engineSource) && /wasReleased\("dropItem"\) && !this\.hasDroppedWithSlotKey\)[\s\S]{0,40}this\.dropFromBag\(this\.inventory\.equippedSlotIndex\)/.test(engineSource));
-  t("motore: si lascia solo stando a terra; l'arma diventa un'arma a terra con le munizioni, la pozione un oggetto", /private dropFromBag[\s\S]{0,300}!this\.player\.isOnGround[\s\S]{0,300}this\.weaponPickups\.spawn\(drop\.item, centerX, feetY, false, drop\.ammo\)[\s\S]{0,600}this\.itemManager\.addItem\("healthPotion"/.test(engineSource));
+  t("motore: si lascia solo stando a terra; l'arma diventa un'arma a terra con le munizioni, la pozione un oggetto", /private dropFromBag[\s\S]{0,300}!this\.player\.isOnGround[\s\S]{0,300}this\.weaponPickups\.spawn\(drop\.item, centerX, feetY, false, drop\.ammo\)[\s\S]{0,600}this\.itemManager\.addItem\(drop\.potionId/.test(engineSource));
   {
     const items = new ItemManager();
     items.loadItems([]);

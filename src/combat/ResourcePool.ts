@@ -44,6 +44,11 @@ export class ResourcePool {
     this.regenDelayRemainingMs = this.regenDelayMs;
   }
 
+  /** Recupera amount (pozione, colpo del bastone) senza superare il massimo e senza fermare il recupero. */
+  public restore(amount: number): void {
+    this.currentValue = Math.min(this.getMax(), this.currentValue + Math.max(0, amount));
+  }
+
   /** Azzera la risorsa (es. guardia rotta), senza toccare l'attesa del recupero. */
   public empty(): void {
     this.currentValue = 0;

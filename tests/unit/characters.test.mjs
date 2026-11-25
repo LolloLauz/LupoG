@@ -33,10 +33,10 @@ export default async function (t, load) {
   const { knight, ranger, berserker, paladin } = CHARACTER_CONFIG;
 
   // --- configurazione ---
-  t("quattro personaggi, nello stesso ordine della schermata di scelta", CHARACTER_ORDER.length === 4 && CHARACTER_ORDER.every((id) => CHARACTER_CONFIG[id]?.id === id) && Object.keys(CHARACTER_CONFIG).length === 4);
+  t("cinque personaggi (il Mago dalla Classi Fase 2), nell'ordine in cui si sbloccano", CHARACTER_ORDER.join() === "knight,ranger,berserker,mage,paladin" && CHARACTER_ORDER.every((id) => CHARACTER_CONFIG[id]?.id === id) && Object.keys(CHARACTER_CONFIG).length === 5);
   t("il personaggio predefinito è il cavaliere", DEFAULT_CHARACTER_ID === "knight" && isCharacterId("ranger") && !isCharacterId("mago") && !isCharacterId("toString"));
   t("il cavaliere legge salute, velocità e schivata da PLAYER_CONFIG (e usa la spada)", knight.maxHealth === PLAYER_CONFIG.maxHealth && knight.movementSpeed === PLAYER_CONFIG.movementSpeed && knight.dodgeCooldownMs === PLAYER_CONFIG.dodgeCooldownMs && knight.dodgeSpeed === PLAYER_CONFIG.dodgeSpeed && knight.startingWeaponId === "sword" && knight.spriteSuffix === "");
-  t("ogni personaggio ha un'arma iniziale esistente, valori positivi e un suffisso degli sprite unico", CHARACTER_ORDER.every((id) => { const c = CHARACTER_CONFIG[id]; return WEAPON_CONFIG[c.startingWeaponId] !== undefined && c.maxHealth > 0 && c.movementSpeed > 0 && c.damageMultiplier > 0 && c.damageTakenMultiplier > 0 && c.dodgeDurationMs > 0 && c.name.length > 0 && c.description.length > 0 && c.trait.length > 0; }) && new Set(CHARACTER_ORDER.map((id) => CHARACTER_CONFIG[id].spriteSuffix)).size === 4);
+  t("ogni personaggio ha un'arma iniziale esistente, valori positivi e un suffisso degli sprite unico", CHARACTER_ORDER.every((id) => { const c = CHARACTER_CONFIG[id]; return WEAPON_CONFIG[c.startingWeaponId] !== undefined && c.maxHealth > 0 && c.movementSpeed > 0 && c.damageMultiplier > 0 && c.damageTakenMultiplier > 0 && c.dodgeDurationMs > 0 && c.name.length > 0 && c.description.length > 0 && c.trait.length > 0; }) && new Set(CHARACTER_ORDER.map((id) => CHARACTER_CONFIG[id].spriteSuffix)).size === CHARACTER_ORDER.length);
   t("ranger: più veloce, meno salute, arco come arma base", ranger.movementSpeed > knight.movementSpeed && ranger.maxHealth < knight.maxHealth && ranger.startingWeaponId === "bow");
   t("berserker: più danno, più salute, nessuna schivata economica (costa molta più stamina e si ripete più tardi)", berserker.damageMultiplier > 1 && berserker.maxHealth > knight.maxHealth && berserker.dodgeStaminaCost >= 1.5 * knight.dodgeStaminaCost && berserker.dodgeCooldownMs > knight.dodgeCooldownMs);
   t("paladino: lo scudo riduce il danno e si cura piano", paladin.damageTakenMultiplier < 1 && paladin.regeneration !== undefined && paladin.regeneration.healthPerSecond > 0 && paladin.regeneration.delayAfterHitMs > 0);
@@ -193,7 +193,7 @@ export default async function (t, load) {
     t("registrare un personaggio non cambia le icone delle armi del cavaliere", JSON.stringify(sm.sprites.get(WEAPON_CONFIG.bow.iconSpriteId).rows) === JSON.stringify(knightSm.sprites.get(WEAPON_CONFIG.bow.iconSpriteId).rows));
     const previews = new FakeSpriteManager();
     registerCharacterPreviews(previews);
-    t("anteprime: due frame d'attesa per personaggio, con l'arma iniziale", CHARACTER_ORDER.every((id) => previews.sprites.has(getCharacterPreviewFrameId(id, 1)) && previews.sprites.has(getCharacterPreviewFrameId(id, 2))) && previews.sprites.size === 8 && getCharacterPreviewFrameId("ranger", 1) === "knightIdle1BowRanger");
+    t("anteprime: due frame d'attesa per personaggio, con l'arma iniziale", CHARACTER_ORDER.every((id) => previews.sprites.has(getCharacterPreviewFrameId(id, 1)) && previews.sprites.has(getCharacterPreviewFrameId(id, 2))) && previews.sprites.size === 2 * CHARACTER_ORDER.length && getCharacterPreviewFrameId("ranger", 1) === "knightIdle1BowRanger");
     t("anteprima e serie completa coincidono (stesso id, stesse righe)", JSON.stringify(previews.sprites.get("knightIdle2BowRanger").rows) === JSON.stringify(sm.sprites.get("knightIdle2BowRanger").rows));
     t("le varianti accovacciate restano basse anche con la testa del personaggio", sm.sprites.get(`knightAttack1A${KNIGHT_CROUCH_SUFFIX}Ranger`).rows.findIndex((r) => /[^.]/.test(r.slice(0, 15))) >= 6);
   }
@@ -227,11 +227,12 @@ export default async function (t, load) {
     press("menuRight");
     const afterRight = screens.selectedCharacterId;
     press("menuRight");
+    press("menuRight");
     const wrapped = screens.selectedCharacterId;
     press("menuLeft");
     press("menuLeft");
     press("menuLeft");
-    t("D va avanti, A indietro, in modo circolare", afterRight === "paladin" && wrapped === "knight" && screens.selectedCharacterId === "ranger", `${afterRight} ${wrapped} ${screens.selectedCharacterId}`);
+    t("D va avanti, A indietro, in modo circolare", afterRight === "mage" && wrapped === "knight" && screens.selectedCharacterId === "berserker", `${afterRight} ${wrapped} ${screens.selectedCharacterId}`);
     t("Invio conferma, ESC torna al titolo", press("confirm") === "confirmCharacter" && press("pause") === "backToTitle");
     screens.resetSelection();
     press(null);

@@ -156,7 +156,7 @@ export type EnemyTypeId =
   | "vulture";
 
 /** Identificatori dei tipi di proiettile (vedi projectileConfig.ts). */
-export type ProjectileTypeId = "arrow" | "magicBolt" | "fireball" | "playerArrow" | "crossbowBolt" | "throwingKnife" | "javelin" | "hatchet";
+export type ProjectileTypeId = "arrow" | "magicBolt" | "fireball" | "playerArrow" | "crossbowBolt" | "throwingKnife" | "javelin" | "hatchet" | "arcaneFireball";
 
 /** Attacco a distanza di un nemico: alla fine della preparazione lancia un proiettile invece di colpire davanti a sé. */
 export interface RangedAttackDefinition {
@@ -317,6 +317,8 @@ export interface AttackDefinition {
    * tira da solo); rilasciando parte releaseAttackId, con danno e velocità tra il minimo e il massimo secondo la carica.
    */
   charge?: { maxChargeMs: number; releaseAttackId: string; minDamage: number; maxDamage: number; minSpeedMultiplier: number; maxSpeedMultiplier: number };
+  /** Elementi propri dell'attacco (incantesimi, Classi Fase 2): si aggiungono a quelli dei power-up e dell'arma. */
+  elements?: readonly ElementId[];
 }
 
 /** Proprietà del colpo che il bersaglio deve conoscere (vedi Damageable.receiveHit). */
@@ -339,14 +341,14 @@ export interface ComboDefinition {
 }
 
 /** Armi del giocatore: corpo a corpo (Fase 1) e a distanza (Fase 2). */
-export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace" | "bow" | "crossbow" | "throwingKnives" | "javelin" | "greatsword";
+export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace" | "bow" | "crossbow" | "throwingKnives" | "javelin" | "greatsword" | "staff";
 
 /**
  * Categorie delle armi (Classi Fase 0): la tabella di compatibilità classe x categoria (WEAPON_AFFINITY_CONFIG)
  * decide bonus, malus e divieti. blade = spada e pugnale; heavy = ascia, mazza e spadone; polearm = lancia;
- * ranged = arco e balestra; thrown = coltelli e giavellotto.
+ * ranged = arco e balestra; thrown = coltelli e giavellotto; staff = bastone (Classi Fase 2, il catalizzatore del Mago).
  */
-export type WeaponCategoryId = "blade" | "heavy" | "polearm" | "ranged" | "thrown";
+export type WeaponCategoryId = "blade" | "heavy" | "polearm" | "ranged" | "thrown" | "staff";
 
 /**
  * Compatibilità di una classe con una categoria di armi (Classi Fase 0: tutte neutre, valori dalla Fase 3).
@@ -357,6 +359,13 @@ export interface WeaponAffinity {
   isAllowed: boolean;
   damageMultiplier: number;
   recoveryMultiplier: number;
+}
+
+/** Bonus di un catalizzatore (vedi WeaponDefinition.spellFocus). */
+export interface SpellFocusDefinition {
+  powerMultiplier: number;
+  manaCostMultiplier: number;
+  manaPerHit: number;
 }
 
 /** Input che fanno partire un attacco. */
@@ -393,6 +402,12 @@ export interface WeaponDefinition {
   weight: number;
   /** Attributo che dalla Fase 4 fa crescere il danno dell'arma. */
   scalingAttribute: AttributeId;
+  /**
+   * Catalizzatore (bastone, Classi Fase 2): vale solo per le classi con usesSpellFocus. powerMultiplier moltiplica il
+   * danno degli incantesimi (abilità che costano mana), manaCostMultiplier il loro costo in mana; manaPerHit = mana
+   * recuperato a ogni bersaglio colpito con gli attacchi dell'arma.
+   */
+  spellFocus?: SpellFocusDefinition;
   /** Munizioni (coltelli, giavellotti): senza, l'arma non attacca. Se omesso: munizioni infinite. */
   ammo?: {
     max: number;
@@ -401,8 +416,16 @@ export interface WeaponDefinition {
   };
 }
 
-/** Abilità speciali dei personaggi (Fase 5). */
-export type AbilityId = "shockwave" | "backstepShot" | "furiousCharge" | "shieldGuard";
+/** Abilità speciali dei personaggi (Fase 5); gli incantesimi del Mago (Classi Fase 2). */
+export type AbilityId =
+  | "shockwave"
+  | "backstepShot"
+  | "furiousCharge"
+  | "shieldGuard"
+  | "firebolt"
+  | "frostNova"
+  | "arcaneLeap"
+  | "arcaneBarrier";
 
 /**
  * Costo di un'abilità (Classi Fase 0): stamina, mana e salute, ognuno facoltativo (omesso = 0).
@@ -442,7 +465,9 @@ interface AbilityBase {
  *   impactEffect = effetto del motore quando il colpo diventa attivo (onda d'urto: tremolio e polvere).
  * - guard: si tiene premuto per alzare lo scudo (para i colpi davanti); alzato da meno di perfectWindowMs, la
  *   parata è perfetta (nessun costo, l'attaccante resta stordito parryStunMs); altrimenti costa
- *   staminaPerBlockedDamage per punto di danno parato, e se la stamina non basta la guardia si rompe.
+ *   costPerBlockedDamage per punto di danno parato, e se la risorsa non basta la guardia si rompe.
+ *   resource = la risorsa consumata tenendo alzata la guardia e parando (stamina per lo scudo, mana per la barriera).
+ * Un'abilità che costa mana è un incantesimo: il catalizzatore in mano (spellFocus) ne cambia costo e danno.
  */
 export type AbilityDefinition =
   | (AbilityBase & {
@@ -452,18 +477,19 @@ export type AbilityDefinition =
     })
   | (AbilityBase & {
       kind: "guard";
-      /** Stamina consumata al secondo con lo scudo alzato. */
+      resource: "stamina" | "mana";
+      /** Risorsa consumata al secondo con la guardia alzata. */
       drainPerSecond: number;
       perfectWindowMs: number;
-      staminaPerBlockedDamage: number;
+      costPerBlockedDamage: number;
       parryStunMs: number;
     });
 
 /** Esito di un colpo ricevuto con lo scudo alzato (abilità del Paladino). */
 export type GuardOutcome = "perfect" | "blocked" | "broken";
 
-/** Personaggi giocabili (Fase 4). */
-export type CharacterId = "knight" | "ranger" | "berserker" | "paladin";
+/** Personaggi giocabili (Fase 4; il Mago dalla Classi Fase 2). */
+export type CharacterId = "knight" | "ranger" | "berserker" | "paladin" | "mage";
 
 /** Ricarica passiva delle munizioni (vedi AmmoRegeneration). */
 export interface AmmoRegenerationDefinition {
@@ -510,6 +536,8 @@ export interface CharacterDefinition {
   /** Mana (Classi Fase 0): massimo e recupero al secondo (dopo PLAYER_CONFIG.manaRegenDelayMs). 0 = nessun mana. */
   maxMana: number;
   manaRegenPerSecond: number;
+  /** Vero se la classe sfrutta i bonus dei catalizzatori (spellFocus del bastone): solo il Mago. */
+  usesSpellFocus?: boolean;
   /** Attributi di partenza (Classi Fase 0: tutti a zero). */
   baseAttributes: Readonly<Attributes>;
   /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto 7 o L). Player ne tiene attivo uno. */
@@ -525,6 +553,8 @@ export interface CharacterDefinition {
 /** Qualsiasi cosa possa essere colpita dagli attacchi (nemici, boss, bersagli di prova). */
 export interface Damageable {
   readonly isAlive: boolean;
+  /** Oggetto di scena (forziere): si colpisce, ma non conta come avversario (niente mana dal bastone). */
+  readonly isScenery?: boolean;
   getBounds(): Rectangle;
   /** Chiamata dal CombatSystem quando l'attacco va a segno. */
   receiveHit(damage: number, hitDirection: FacingDirection, hit?: HitProperties): void;

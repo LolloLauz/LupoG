@@ -21,7 +21,7 @@ import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import { CollisionSystem } from "../systems/CollisionSystem";
-import type { AbilityDefinition, AttackDefinition, Attributes, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, ResourceCost, WeaponAffinity, WeaponDefinition } from "../types/EntityTypes";
+import type { AbilityDefinition, AttackDefinition, Attributes, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, ResourceCost, SpellFocusDefinition, WeaponAffinity, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import type { EquipmentBonuses, EquippedArmor, WeaponItem } from "../types/ItemTypes";
@@ -37,6 +37,21 @@ const GUARD_BLOCK_GRACE_MS = 300;
 
 /** Negli ultimi ms di un power-up l'alone lampeggia (sta per scadere). */
 const POWER_UP_WARNING_MS = 2000;
+
+/** Stato di uno slot delle mosse speciali (per l'HUD, Classi Fase 2). */
+export interface AbilitySlotStatus {
+  ability: AbilityDefinition;
+  /** Ricarica che manca (1 = appena usata, 0 = pronta). */
+  cooldownFraction: number;
+  /** Le risorse bastano per il costo (con lo sconto del catalizzatore). */
+  isAffordable: boolean;
+  /** Ricarica finita e risorse sufficienti. */
+  isReady: boolean;
+  /** Slot attivo (l'ultimo scelto con 7-0). */
+  isSelected: boolean;
+  /** In uso: guardia alzata. */
+  isActive: boolean;
+}
 
 /** Ambiente normale: nessun modificatore. */
 export const NORMAL_PLAYER_ENVIRONMENT: PlayerEnvironment = {
@@ -96,6 +111,8 @@ export class Player extends GameObject {
   public lastGuardOutcome: GuardOutcome | null = null;
   private guardEvents: GuardOutcome[] = [];
   private hasPendingTired = false;
+  /** Vero dopo un incantesimo rifiutato per mancanza di mana (il motore mostra "SENZA MANA"). */
+  private hasPendingNoMana = false;
   private pendingAbilityName: string | null = null;
   private hasPendingAbilityImpact = false;
 
@@ -230,8 +247,70 @@ export class Player extends GameObject {
 
   /** Ricarica dell'abilità attiva che manca (1 = appena usata, 0 = pronta). */
   public get abilityCooldownFraction(): number {
-    const cooldownMs = this.ability.cooldownMs;
-    return cooldownMs <= 0 ? 0 : Math.min(1, this.abilityCooldownsMs[this.activeAbilitySlot] / cooldownMs);
+    return this.getSlotCooldownFraction(this.activeAbilitySlot);
+  }
+
+  private getSlotCooldownFraction(slotIndex: number): number {
+    const cooldownMs = ABILITY_CONFIG[this.character.abilityIds[slotIndex]!].cooldownMs;
+    return cooldownMs <= 0 ? 0 : Math.min(1, (this.abilityCooldownsMs[slotIndex] ?? 0) / cooldownMs);
+  }
+
+  /** Stato di ogni slot delle mosse (Classi Fase 2: l'HUD mostra tutti gli slot della classe). */
+  public get abilitySlots(): AbilitySlotStatus[] {
+    return this.abilities.map((ability, slotIndex) => {
+      const cooldownFraction = this.getSlotCooldownFraction(slotIndex);
+      const isAffordable = this.canAfford(this.getAbilityCost(ability));
+      const isSelected = slotIndex === this.activeAbilitySlot;
+      return {
+        ability,
+        cooldownFraction,
+        isAffordable,
+        isReady: cooldownFraction === 0 && isAffordable,
+        isSelected,
+        isActive: isSelected && this.isGuardUp,
+      };
+    });
+  }
+
+  /**
+   * Catalizzatore attivo (Classi Fase 2): lo spellFocus dell'arma in mano, ma solo per le classi che lo sfruttano
+   * (il Mago). null = nessun bonus agli incantesimi.
+   */
+  public get activeSpellFocus(): Readonly<SpellFocusDefinition> | null {
+    return this.character.usesSpellFocus === true ? (this.weapon.spellFocus ?? null) : null;
+  }
+
+  /** Un incantesimo è un'abilità che costa mana. */
+  public static isSpell(ability: AbilityDefinition): boolean {
+    return (ability.cost.mana ?? 0) > 0;
+  }
+
+  /** Costo effettivo di un'abilità: il mana scende con il catalizzatore in mano (a punti interi, arrotondato). */
+  public getAbilityCost(ability: AbilityDefinition): ResourceCost {
+    const focus = this.activeSpellFocus;
+    const mana = ability.cost.mana ?? 0;
+    if (focus === null || mana <= 0) {
+      return ability.cost;
+    }
+    return { ...ability.cost, mana: Math.round(mana * focus.manaCostMultiplier) };
+  }
+
+  /**
+   * Moltiplicatore del danno di un attacco: quello generale (getDamageMultiplier) e, per gli attacchi degli incantesimi,
+   * la potenza del catalizzatore in mano.
+   */
+  public getDamageMultiplierFor(attack: AttackDefinition): number {
+    const focus = this.activeSpellFocus;
+    const spell = this.abilities.find((ability) => ability.kind === "attack" && ability.attack.id === attack.id);
+    const spellPower = focus !== null && spell !== undefined && Player.isSpell(spell) ? focus.powerMultiplier : 1;
+    return this.getDamageMultiplier() * spellPower;
+  }
+
+  /** Recupera mana (pozione di mana): non oltre il massimo. */
+  public restoreMana(amount: number): void {
+    if (!this.isDead) {
+      this.manaPool.restore(amount);
+    }
   }
 
   /** Vero se le risorse bastano per il costo (la salute deve restare almeno a 1). */
@@ -246,7 +325,7 @@ export class Player extends GameObject {
 
   /** Vero se l'abilità attiva è pronta: niente ricarica e risorse sufficienti. */
   public get isAbilityReady(): boolean {
-    return this.abilityCooldownFraction === 0 && this.canAfford(this.ability.cost);
+    return this.abilityCooldownFraction === 0 && this.canAfford(this.getAbilityCost(this.ability));
   }
 
   /** Compatibilità della classe con l'arma in mano (Classi Fase 0: sempre neutra). */
@@ -264,6 +343,13 @@ export class Player extends GameObject {
     const isTired = this.hasPendingTired;
     this.hasPendingTired = false;
     return isTired;
+  }
+
+  /** Vero una volta sola dopo un'azione rifiutata per mancanza di mana. */
+  public drainNoMana(): boolean {
+    const isOut = this.hasPendingNoMana;
+    this.hasPendingNoMana = false;
+    return isOut;
   }
 
   /** Nome dell'abilità appena usata (una volta sola), oppure null. */
@@ -521,7 +607,7 @@ export class Player extends GameObject {
 
   /** Proprietà del colpo per il bersaglio: quelle dell'attacco (ascia, mazza) e dell'arma, più gli elementi attivi. */
   public getHitProperties(attack: AttackDefinition): HitProperties {
-    const elements = this.getAttackElements();
+    const elements = [...new Set([...this.getAttackElements(), ...(attack.elements ?? [])])];
     const breaksGuard = attack.breaksGuard === true || this.equipment.breaksGuard ? true : attack.breaksGuard;
     return { breaksGuard, crushesArmor: attack.crushesArmor, ...(elements.length > 0 ? { elements } : {}) };
   }
@@ -649,9 +735,10 @@ export class Player extends GameObject {
     }
     let outcome: GuardOutcome = "perfect";
     if (this.guardElapsedMs > ability.perfectWindowMs) {
-      const cost = damage * ability.staminaPerBlockedDamage;
-      if (!this.staminaPool.trySpend(cost)) {
-        this.staminaPool.empty();
+      const pool = this.getPool(ability.resource);
+      const cost = damage * ability.costPerBlockedDamage;
+      if (!pool.trySpend(cost)) {
+        pool.empty();
         this.lowerGuard();
         this.lastGuardOutcome = "broken";
         this.guardEvents.push("broken");
@@ -674,6 +761,9 @@ export class Player extends GameObject {
     if (attack.projectile !== undefined || attack.charge !== undefined) {
       return null; // le armi a distanza feriscono solo con i proiettili
     }
+    if (attack.hitbox.width <= 0 || attack.hitbox.height <= 0) {
+      return null; // area vuota (balzo arcano): l'attacco non colpisce niente
+    }
     return getAttackWorldHitbox(attack, this.getBounds(), this.facingDirection);
   }
 
@@ -681,8 +771,18 @@ export class Player extends GameObject {
     return this.targetsHitByCurrentAttack.has(target);
   }
 
+  /**
+   * Il colpo in corso ha preso target. Con un attacco dell'arma (non di un'abilità) e un catalizzatore attivo, il
+   * bastone ridà manaPerHit mana (Classi Fase 2).
+   */
   public registerHit(target: Damageable): void {
     this.targetsHitByCurrentAttack.add(target);
+    const focus = this.activeSpellFocus;
+    const attack = this.currentAttack;
+    // i forzieri sono scena: colpirli non ridà mana
+    if (focus !== null && attack !== null && target.isScenery !== true && this.weapon.attacks[attack.id] === attack) {
+      this.manaPool.restore(focus.manaPerHit);
+    }
   }
 
   /** Un frame di gioco: timer, input, gravità, collisioni, stato e animazione. */
@@ -765,12 +865,13 @@ export class Player extends GameObject {
       null,
       fireSuffix === "" ? this.equipmentVariant : this.armorOnlyVariant
     );
-    // scudo alzato: una barriera di luce davanti (bianca finché la parata è perfetta)
+    // scudo alzato: una barriera di luce davanti (bianca finché la parata è perfetta; lilla la barriera del Mago)
     if (this.isGuardUp) {
       const ability = this.ability;
       const isPerfectWindow = ability.kind === "guard" && this.guardElapsedMs <= ability.perfectWindowMs;
       const barrierX = (this.facingDirection === "right" ? this.positionX + this.width + 3 : this.positionX - 5) - cameraX;
-      const barrierColor = isPerfectWindow ? PALETTE.white : PALETTE.cyan;
+      const guardColor = ability.kind === "guard" && ability.resource === "mana" ? PALETTE.lilac : PALETTE.cyan;
+      const barrierColor = isPerfectWindow ? PALETTE.white : guardColor;
       renderer.fillGlow(barrierX + 1, this.positionY + this.height / 2 - cameraY, 9, barrierColor, 2, 4);
       renderer.fillRect(barrierX, this.positionY + 1 - cameraY, 2, this.height - 2, barrierColor);
     }
@@ -1102,7 +1203,7 @@ export class Player extends GameObject {
         y: bounds.y + spec.originY,
       },
       direction: { x: direction, y: spec.aimY },
-      damage: CombatSystem.calculateDamage(baseDamage + this.getBonusDamage(), this.getDamageMultiplier()),
+      damage: CombatSystem.calculateDamage(baseDamage + this.getBonusDamage(), this.getDamageMultiplierFor(attack)),
       speedMultiplier,
       hit: this.getHitProperties(attack),
     });
@@ -1126,6 +1227,11 @@ export class Player extends GameObject {
     return attack.cooldownMs * this.equipment.recoveryMultiplier * this.weaponAffinity.recoveryMultiplier;
   }
 
+  /** La risorsa indicata (guardia: stamina per lo scudo, mana per la barriera). */
+  private getPool(resource: "stamina" | "mana"): ResourcePool {
+    return resource === "mana" ? this.manaPool : this.staminaPool;
+  }
+
   /** Consuma stamina; se non basta non consuma niente, segnala "stanco" e restituisce false. */
   private spendStamina(cost: number): boolean {
     if (!this.staminaPool.trySpend(cost)) {
@@ -1143,6 +1249,9 @@ export class Player extends GameObject {
     if (!this.canAfford(cost)) {
       if (!this.staminaPool.canSpend(cost.stamina ?? 0)) {
         this.hasPendingTired = true;
+      }
+      if (!this.manaPool.canSpend(cost.mana ?? 0)) {
+        this.hasPendingNoMana = true;
       }
       return false;
     }
@@ -1167,17 +1276,22 @@ export class Player extends GameObject {
       this.abilityCooldownsMs[slotIndex] = Math.max(0, this.abilityCooldownsMs[slotIndex] - deltaTimeMs);
     }
     this.guardGraceRemainingMs = Math.max(0, this.guardGraceRemainingMs - deltaTimeMs);
-    this.manaPool.update(deltaTimeMs);
     const ability = this.ability;
-    if (this.isGuardUp && ability.kind === "guard") {
+    // la guardia alzata consuma la sua risorsa e ne ferma il recupero; l'altra recupera normalmente
+    const guardPool = this.isGuardUp && ability.kind === "guard" ? this.getPool(ability.resource) : null;
+    if (guardPool !== null && ability.kind === "guard") {
       this.guardElapsedMs += deltaTimeMs;
-      this.staminaPool.drain((ability.drainPerSecond * deltaTimeMs) / 1000);
-      if (this.staminaPool.value <= 0) {
+      guardPool.drain((ability.drainPerSecond * deltaTimeMs) / 1000);
+      if (guardPool.value <= 0) {
         this.lowerGuard();
       }
-      return;
     }
-    this.staminaPool.update(deltaTimeMs);
+    if (guardPool !== this.manaPool) {
+      this.manaPool.update(deltaTimeMs);
+    }
+    if (guardPool !== this.staminaPool) {
+      this.staminaPool.update(deltaTimeMs);
+    }
   }
 
   private resetStaminaAndAbility(): void {
@@ -1198,7 +1312,7 @@ export class Player extends GameObject {
       this.currentAttack !== null ||
       this.dodgeRemainingMs > 0 ||
       this.abilityCooldownsMs[this.activeAbilitySlot] > 0 ||
-      !this.payCost(ability.cost)
+      !this.payCost(this.getAbilityCost(ability))
     ) {
       return;
     }
@@ -1235,7 +1349,7 @@ export class Player extends GameObject {
       this.currentAttack === null &&
       this.dodgeRemainingMs <= 0 &&
       this.abilityCooldownsMs[this.activeAbilitySlot] <= 0;
-    if (canRaise && this.payCost(ability.cost)) {
+    if (canRaise && this.payCost(this.getAbilityCost(ability))) {
       this.isGuardUp = true;
       this.guardElapsedMs = 0;
       this.guardGraceRemainingMs = 0;

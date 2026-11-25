@@ -39,6 +39,9 @@ const POTION_ROWS = [
   "..kkkkk.",
 ];
 
+/** Pozione di mana (Classi Fase 2): la stessa ampolla con il liquido blu. */
+const MANA_POTION_COLORS: Record<string, string> = { ...ITEM_COLORS, m: PALETTE.navy, r: PALETTE.blue, o: PALETTE.lightBlue };
+
 /** Faretra: astuccio di cuoio con fascia d'oro e due frecce. */
 const QUIVER_ROWS = [
   ".w..w...",
@@ -316,6 +319,7 @@ export function registerItemSprites(spriteManager: SpriteManager): void {
   spriteManager.registerSprite("itemFrost", FROST_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemShock", SHOCK_ROWS, POWER_UP_COLORS);
   spriteManager.registerSprite("itemPotion", POTION_ROWS, ITEM_COLORS);
+  spriteManager.registerSprite("itemManaPotion", POTION_ROWS, MANA_POTION_COLORS);
   spriteManager.registerSprite("itemCoin", COIN_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemGem", GEM_ROWS, ITEM_COLORS);
   spriteManager.registerSprite("itemQuiver", QUIVER_ROWS, ITEM_COLORS);

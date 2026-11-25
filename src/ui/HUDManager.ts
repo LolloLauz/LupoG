@@ -10,8 +10,14 @@ export interface HUDData {
   /** Stamina (Fase 5): barra verde sotto la salute. */
   stamina: number;
   maxStamina: number;
-  /** Mossa dello slot attivo (slotNumber 0 = tasto 7): ricarica che manca (1 = appena usata), pronta (ricarica finita e stamina sufficiente), in uso (scudo alzato). */
-  ability: { slotNumber: number; cooldownFraction: number; isReady: boolean; isActive: boolean };
+  /** Mana (Classi Fase 2): con maxMana > 0 una barra blu sotto la stamina; senza mana la barra non c'è. */
+  mana: number;
+  maxMana: number;
+  /**
+   * Mosse della classe, una per slot (indice 0 = tasto 7): ricarica che manca (1 = appena usata), pronta (ricarica
+   * finita e risorse sufficienti), risorse sufficienti, slot attivo (l'ultimo scelto), in uso (scudo alzato).
+   */
+  abilities: Array<{ cooldownFraction: number; isReady: boolean; isAffordable: boolean; isSelected: boolean; isActive: boolean }>;
   lives: number;
   score: number;
   /** Monete della partita (Fase 6), da spendere nella bottega. */
@@ -43,9 +49,15 @@ export const HEALTH_SEGMENT_COUNT = 10;
 /** Geometria di ogni segmento della salute (il rettangolo principale, nel colore di riempimento). */
 export const HEALTH_SEGMENT_GEOMETRY = { firstX: 19, stepX: 6, y: 4, width: 5, height: 7 } as const;
 const LOW_HEALTH_PERCENT = 30;
-/** Barra della stamina (a destra delle vite) e riquadro della mossa speciale subito dopo. */
+/** Barra della stamina (a destra delle vite) e riquadri delle mosse speciali subito dopo (uno per slot, a passo step). */
 export const STAMINA_BAR_GEOMETRY = { x: 36, y: 15, width: 40, height: 4 } as const;
-export const ABILITY_BOX_GEOMETRY = { x: 80, y: 12, size: 10 } as const;
+export const ABILITY_BOX_GEOMETRY = { x: 80, y: 12, size: 10, step: 11 } as const;
+/**
+ * Classi con mana (Classi Fase 2): stamina e mana su due barre più sottili, una sopra l'altra, nello spazio della
+ * barra della stamina.
+ */
+export const STAMINA_BAR_WITH_MANA_GEOMETRY = { x: 36, y: 13, width: 40, height: 3 } as const;
+export const MANA_BAR_GEOMETRY = { x: 36, y: 18, width: 40, height: 3 } as const;
 /** Riquadri della borsa sotto il pannello, a destra: lato (cornice compresa) e distanza tra i riquadri. */
 export const BAG_SLOT_GEOMETRY = { size: 20, step: 22, rightMargin: 4, y: HUD_HEIGHT + 3 } as const;
 
@@ -142,33 +154,64 @@ export class HUDManager {
   }
 
   /**
-   * Stamina: barra verde con il contorno (gialla quando è sotto un terzo). Mossa: riquadro con il numero del suo tasto, dorato
-   * quando è pronta, grigia con il riempimento che scende durante la ricarica, azzurra con lo scudo alzato.
+   * Stamina: barra verde con il contorno (gialla quando è sotto un terzo); con il mana, sotto c'è la barra blu del mana.
+   * Mosse: un riquadro per slot con il numero del suo tasto, dorato quando è pronta, grigio con il riempimento che
+   * scende durante la ricarica, azzurro con lo scudo alzato; numero rosso se le risorse non bastano. Lo slot attivo ha
+   * il bordo dorato quando la classe ha più di una mossa.
    */
   private renderStaminaAndAbility(renderer: Renderer, data: HUDData, timeSeconds: number): void {
-    const staminaBar = STAMINA_BAR_GEOMETRY;
-    const fraction = data.maxStamina <= 0 ? 0 : Math.max(0, Math.min(1, data.stamina / data.maxStamina));
-    renderer.fillRect(staminaBar.x - 1, staminaBar.y - 1, staminaBar.width + 2, staminaBar.height + 2, PALETTE.black);
-    renderer.fillRect(staminaBar.x, staminaBar.y, staminaBar.width, staminaBar.height, PALETTE.deepForest);
-    const filledWidth = Math.round(staminaBar.width * fraction);
-    if (filledWidth > 0) {
-      const isLow = fraction < 1 / 3;
-      renderer.fillRect(staminaBar.x, staminaBar.y, filledWidth, staminaBar.height, isLow ? PALETTE.goldLight : PALETTE.green);
-      renderer.fillRect(staminaBar.x, staminaBar.y, filledWidth, 1, isLow ? PALETTE.yellow : PALETTE.lightGreen);
+    const hasMana = data.maxMana > 0;
+    const staminaFraction = data.maxStamina <= 0 ? 0 : data.stamina / data.maxStamina;
+    const isStaminaLow = staminaFraction < 1 / 3;
+    this.renderResourceBar(
+      renderer,
+      hasMana ? STAMINA_BAR_WITH_MANA_GEOMETRY : STAMINA_BAR_GEOMETRY,
+      staminaFraction,
+      PALETTE.deepForest,
+      isStaminaLow ? PALETTE.goldLight : PALETTE.green,
+      isStaminaLow ? PALETTE.yellow : PALETTE.lightGreen
+    );
+    if (hasMana) {
+      this.renderResourceBar(renderer, MANA_BAR_GEOMETRY, data.mana / data.maxMana, PALETTE.deepNavy, PALETTE.blue, PALETTE.lightBlue);
     }
     const abilityBox = ABILITY_BOX_GEOMETRY;
-    const ability = data.ability;
-    renderer.fillRect(abilityBox.x, abilityBox.y, abilityBox.size, abilityBox.size, PALETTE.black);
-    const innerSize = abilityBox.size - 2;
-    const background = ability.isActive ? PALETTE.blue : ability.isReady ? PALETTE.bronze : PALETTE.slate;
-    renderer.fillRect(abilityBox.x + 1, abilityBox.y + 1, innerSize, innerSize, background);
-    if (ability.cooldownFraction > 0) {
-      const coveredHeight = Math.ceil(innerSize * ability.cooldownFraction);
-      renderer.fillRect(abilityBox.x + 1, abilityBox.y + 1, innerSize, coveredHeight, PALETTE.darkBlue);
+    const hasSeveralSlots = data.abilities.length > 1;
+    data.abilities.forEach((ability, slotIndex) => {
+      const boxX = abilityBox.x + slotIndex * abilityBox.step;
+      const frameColor = hasSeveralSlots && ability.isSelected ? PALETTE.goldLight : PALETTE.black;
+      renderer.fillRect(boxX, abilityBox.y, abilityBox.size, abilityBox.size, frameColor);
+      const innerSize = abilityBox.size - 2;
+      const background = ability.isActive ? PALETTE.blue : ability.isReady ? PALETTE.bronze : PALETTE.slate;
+      renderer.fillRect(boxX + 1, abilityBox.y + 1, innerSize, innerSize, background);
+      if (ability.cooldownFraction > 0) {
+        const coveredHeight = Math.ceil(innerSize * ability.cooldownFraction);
+        renderer.fillRect(boxX + 1, abilityBox.y + 1, innerSize, coveredHeight, PALETTE.darkBlue);
+      }
+      const isPulsing = ability.isReady && !ability.isActive && Math.floor(timeSeconds * 2) % 2 === 0;
+      let letterColor: string = ability.isActive ? PALETTE.white : ability.isReady ? (isPulsing ? PALETTE.cream : PALETTE.goldLight) : PALETTE.gray;
+      if (!ability.isAffordable && !ability.isActive) {
+        letterColor = PALETTE.red;
+      }
+      renderer.drawText(ABILITY_SLOT_KEY_LABELS[slotIndex] ?? "", boxX + 3, abilityBox.y + 2, letterColor);
+    });
+  }
+
+  /** Barra di una risorsa con il contorno nero: fondo, riempimento e riflesso di 1 px in alto. */
+  private renderResourceBar(
+    renderer: Renderer,
+    geometry: { x: number; y: number; width: number; height: number },
+    fraction: number,
+    emptyColor: string,
+    fillColor: string,
+    highlightColor: string
+  ): void {
+    renderer.fillRect(geometry.x - 1, geometry.y - 1, geometry.width + 2, geometry.height + 2, PALETTE.black);
+    renderer.fillRect(geometry.x, geometry.y, geometry.width, geometry.height, emptyColor);
+    const filledWidth = Math.round(geometry.width * Math.max(0, Math.min(1, fraction)));
+    if (filledWidth > 0) {
+      renderer.fillRect(geometry.x, geometry.y, filledWidth, geometry.height, fillColor);
+      renderer.fillRect(geometry.x, geometry.y, filledWidth, 1, highlightColor);
     }
-    const isPulsing = ability.isReady && !ability.isActive && Math.floor(timeSeconds * 2) % 2 === 0;
-    const letterColor = ability.isActive ? PALETTE.white : ability.isReady ? (isPulsing ? PALETTE.cream : PALETTE.goldLight) : PALETTE.gray;
-    renderer.drawText(ABILITY_SLOT_KEY_LABELS[ability.slotNumber] ?? "", abilityBox.x + 3, abilityBox.y + 2, letterColor);
   }
 
   /** X del riquadro della borsa numero slotIndex (0 = tasto 1). */

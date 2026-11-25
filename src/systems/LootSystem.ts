@@ -1,9 +1,12 @@
 import { ARMOR_CONFIG, ARMOR_MATERIAL_ORDER, ARMOR_SLOTS } from "../config/armorConfig";
 import type { DifficultyId } from "../config/gameConfig";
+import { CHARACTER_CONFIG } from "../config/characterConfig";
+import { getWeaponAffinity } from "../config/weaponAffinityConfig";
+import { WEAPON_CONFIG } from "../config/weaponConfig";
 import { LOOT_DIFFICULTY_LEVEL_BONUS, LOOT_LEVEL_SCALE, LOOT_SOURCES, type LootSourceId } from "../config/lootConfig";
 import { RARITY_ORDER, getRarityRank } from "../config/rarityConfig";
-import { LEGENDARY_ITEMS, MYTHIC_ITEMS } from "../config/uniqueItemConfig";
-import type { WeaponId } from "../types/EntityTypes";
+import { LEGENDARY_ITEMS, MYTHIC_ITEMS, type UniqueItemDefinition } from "../config/uniqueItemConfig";
+import type { CharacterId, WeaponId } from "../types/EntityTypes";
 import type { ArmorId, ArmorItem, ArmorMaterialId, ItemInstance, RarityId, WeaponItem } from "../types/ItemTypes";
 import { createUniqueItem, pickRandom, rollArmorItem, rollRarity, rollWeaponItem, type RandomSource } from "./ItemFactory";
 
@@ -12,6 +15,8 @@ export interface LootContext {
   source: LootSourceId;
   levelId: number;
   difficulty: DifficultyId;
+  /** Classe che riceve il bottino (Classi Fase 2): filtra il trofeo del boss finale. Se omessa: nessun filtro. */
+  characterId?: CharacterId;
 }
 
 /** Pesi di rarità di una fonte al livello indicato (le rarità alte crescono con il livello e la difficoltà). */
@@ -69,6 +74,34 @@ export function rollLootArmor(context: LootContext, random: RandomSource): Armor
   return rollArmorItem(baseId, rollLootRarity(context, random), random);
 }
 
+/**
+ * Filtro del bottino (Classi Fase 2, anticipo della Fase 3): un'arma vietata alla classe dalla tabella di compatibilità
+ * diventa un'arma permessa. Prima l'arma iniziale della classe, se permessa; altrimenti la prima permessa di
+ * WEAPON_CONFIG. Per il Mago ogni arma diventa un bastone; le altre classi oggi non hanno armi vietate a terra.
+ */
+export function resolveLootWeaponId(characterId: CharacterId, weaponId: WeaponId): WeaponId {
+  if (getWeaponAffinity(characterId, weaponId).isAllowed) {
+    return weaponId;
+  }
+  const startingWeaponId = CHARACTER_CONFIG[characterId].startingWeaponId;
+  if (getWeaponAffinity(characterId, startingWeaponId).isAllowed) {
+    return startingWeaponId;
+  }
+  return (Object.keys(WEAPON_CONFIG) as WeaponId[]).find((candidate) => getWeaponAffinity(characterId, candidate).isAllowed) ?? weaponId;
+}
+
+/**
+ * Pozione di mana nel bottino (Classi Fase 2): solo per le classi con mana. Per le altre non si estrae niente, così il
+ * generatore casuale del bottino resta quello di prima.
+ */
+export function rollManaPotionDrop(source: LootSourceId, characterId: CharacterId, random: RandomSource): boolean {
+  const chance = LOOT_SOURCES[source].manaPotionChance;
+  if (CHARACTER_CONFIG[characterId].maxMana <= 0 || chance <= 0) {
+    return false;
+  }
+  return random() < chance;
+}
+
 /** Vero se la fonte lascia anche (o, per i nemici normali, solo) un pezzo d'armatura. */
 export function rollArmorDrop(source: LootSourceId, random: RandomSource): boolean {
   return random() < LOOT_SOURCES[source].armorChance;
@@ -80,6 +113,13 @@ export function rollArmorDrop(source: LootSourceId, random: RandomSource): boole
  */
 export function rollFinalBossReward(context: LootContext, random: RandomSource): ItemInstance {
   const rarity = rollLootRarity({ ...context, source: "finalBoss" }, random);
-  const catalog = rarity === "mythic" ? MYTHIC_ITEMS : LEGENDARY_ITEMS;
-  return createUniqueItem(pickRandom(Object.keys(catalog), random))!;
+  // solo oggetti che la classe può usare (armature sempre; armi permesse dalla tabella di compatibilità)
+  const usableIds = (catalog: Record<string, UniqueItemDefinition>): string[] =>
+    Object.keys(catalog).filter((id) => {
+      const item = catalog[id]!;
+      return item.kind === "armor" || context.characterId === undefined || getWeaponAffinity(context.characterId, item.baseId).isAllowed;
+    });
+  const mythicIds = usableIds(MYTHIC_ITEMS);
+  const ids = rarity === "mythic" && mythicIds.length > 0 ? mythicIds : usableIds(LEGENDARY_ITEMS);
+  return createUniqueItem(pickRandom(ids, random))!;
 }

@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.1.1.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.2.0.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -51,11 +51,11 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Attacco leggero | **J** |
 | Attacco pesante | **K** |
 | Schivata | **Shift sinistro** (costa stamina) |
-| Mosse speciali | **7**, **8**, **9**, **0** (sopra le lettere o sul tastierino numerico); **L** vale come il **7**. Oggi ogni personaggio ha una sola mossa, sul **7** (lo scudo del Paladino si tiene premuto) |
+| Mosse speciali | **7**, **8**, **9**, **0** (sopra le lettere o sul tastierino numerico); **L** vale come il **7**. Quattro personaggi hanno una sola mossa, sul **7** (lo scudo del Paladino si tiene premuto); il **Mago** ne ha quattro, una per tasto (vedi "Mosse speciali") |
 | Accovacciarsi | **S** oppure **↓** (solo a terra: non ci si muove e non ci si rialza sotto un soffitto; si può attaccare restando accovacciati, con un colpo più basso) |
 | Prendere un'arma, un'armatura o una pozione | **E** stando sopra (vedi "La borsa" ed "Equipaggiamento"); nella bottega, **E** vicino a un piedistallo compra |
 | Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa); nella schermata dell'equipaggiamento, **Q** sull'oggetto scelto |
-| Usare un posto della borsa | **1**, **2**, **3**, **4** (arma: la impugni; pozione: la bevi) |
+| Usare un posto della borsa | **1**, **2**, **3**, **4** (arma: la impugni; pozione di salute o di mana: la bevi) |
 | Equipaggiamento (armature, borsa, zaino) | **I** (anche dalla pausa); **I** o **Esc** la richiude |
 | Pausa / riprendi | **Esc** |
 | Menu: scegliere | **W** / **S** oppure **↑** / **↓** (scelta del personaggio: anche **A** / **D** oppure **←** / **→**) |
@@ -98,7 +98,7 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 | **Titolo** | logo, record, il personaggio scelto, menu *Nuova partita*, *Personaggio*, *Scegli livello*, *Difficoltà* (Invio la cambia: Facile → Normale → Difficile), *Controlli* e *Cancella dati* |
 | **Cancella dati** | chiede conferma (la voce già scelta è *No*): con *Sì* cancella record, livelli raggiunti, difficoltà e personaggio, e si riparte come alla prima partita (cavaliere con la spada) |
 | **Bottega** | tra un livello e l'altro: si comprano pozioni, cure, munizioni, armi e armature con le monete (vedi sezione 11b) |
-| **Personaggio** | i quattro personaggi in fila (quelli non ancora sbloccati sono sagome con il lucchetto) e la scheda di quello evidenziato (statistiche in tacche da 1 a 5, arma iniziale, salute, tratto); A/D (o W/S) per scegliere, Invio per confermare, Esc per tornare senza cambiare |
+| **Personaggio** | i cinque personaggi in fila (quelli non ancora sbloccati sono sagome con il lucchetto) e la scheda di quello evidenziato (statistiche in tacche da 1 a 5, arma iniziale, salute, mana (riga "100 MANA", solo per il Mago), tratto); A/D (o W/S) per scegliere, Invio per confermare, Esc per tornare senza cambiare |
 | **Scegli livello** | i sette livelli: quelli già raggiunti si possono giocare (partita nuova da quel livello), gli altri sono chiusi da un lucchetto; W/S per scegliere, Invio per giocare, Esc per tornare |
 | **Controlli** | l'elenco dei tasti |
 | **Gioco** | il livello con la barra in alto (HUD) |
@@ -116,14 +116,17 @@ cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale e ab
 | **Cavaliere** | 100 | 80 | ×1 | ×1 | 100 (30) | 25, 0,7 s | spada | **Onda d'urto** |
 | **Ranger** | 75 | 96 | ×1 | ×1 | 100 (40) | 20, 0,45 s (più lunga) | arco | **Tiro in ritirata** |
 | **Berserker** | 130 | 80 | ×1,3 | ×1 | 100 (25) | 40, 1 s (più corta) | ascia | **Carica furiosa** |
+| **Mago** | 70 | 84 | ×1 | ×1 | 80 (30), più 100 di mana | 25, 0,7 s | bastone | **Dardo di fuoco**, **Nova di gelo**, **Balzo arcano**, **Barriera** (tasti 7-0) |
 | **Paladino** | 110 | 72 | ×1 | ×0,75 | 120 (25) | 30, 0,8 s | mazza | **Scudo** (e cura lenta: 1 HP/s dopo 4 s senza colpi) |
 
 - Ogni nuova partita inizia con la **sola arma iniziale** del personaggio scelto. Durante la partita puoi cambiare arma: il personaggio non limita
-  le armi, cambia solo le statistiche.
+  le armi, cambia solo le statistiche. Il **Mago** è l'eccezione: usa solo il **bastone**, e il bastone è solo suo (vedi "Le armi").
 - Velocità: la velocità dell'arma in mano si moltiplica con quella del personaggio (es. Paladino con l'ascia: 72 × 0,85).
 - I power-up si sommano ai tratti: la Furia moltiplica anche il danno del Berserker, lo Scudo anche la difesa del Paladino.
 - **Passiva del Ranger:** le frecce dell'**arco** si ricaricano da sole, **una ogni 3 secondi** (vedi "Le armi"). Nella scheda del
   personaggio compare "PASSIVA: LE FRECCE SI RICARICANO". La sua schivata resta più lunga e più frequente.
+
+- **Mago:** fragile, ma gli incantesimi colpiscono da lontano e a mana. Ha **100 di mana** (barra blu sotto la stamina; scheda del personaggio: "100 MANA"). Il mana si recupera piano, **6 al secondo** dopo 0,6 secondi senza spese, e **5 per ogni bersaglio colpito con il bastone**. Si sblocca sconfiggendo la **Strega della Palude** (livello 4). Sprite provvisori: cappello a punta e veste viola.
 
 ### Stamina
 
@@ -138,10 +141,11 @@ Se non basta l'azione non parte e compare "STANCO".
 
 ### Mosse speciali (tasti 7, 8, 9, 0)
 
-Ogni personaggio ha un'abilità propria. I tasti **7**, **8**, **9** e **0** sono i quattro posti delle mosse; oggi è occupato solo il primo (tasto **7**, o **L**).
+Ogni personaggio ha un'abilità propria. I tasti **7**, **8**, **9** e **0** sono i quattro posti delle mosse; quattro personaggi usano solo il primo (tasto **7**, o **L**), il Mago li usa tutti.
 Un posto vuoto non fa niente. Durante un attacco o una schivata la mossa attiva non cambia. L'abilità costa stamina e poi va ricaricata:
 nel riquadro accanto alla barra della stamina c'è il **numero del tasto**; la parte scura scende mentre si ricarica; il numero è dorato
 quando l'abilità è pronta (ricaricata e con abbastanza stamina).
+Quando un personaggio ha più mosse, il riquadro dell'ultima scelta ha il **bordo dorato**; il numero diventa **rosso** se stamina o mana non bastano.
 Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma cambia solo l'aspetto).
 
 | Abilità | Personaggio | Costo | Ricarica | Effetto |
@@ -149,12 +153,17 @@ Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma
 | **Onda d'urto** | Cavaliere | 40 | 6 s | colpo a terra da **25** che investe tutti fino a **40 px davanti e dietro**; rompe la guardia; tremolio e polvere |
 | **Tiro in ritirata** | Ranger | 30 | 4 s | **balzo all'indietro** (circa 55 px, invulnerabile) e una **freccia da 20** in avanti che non consuma munizioni |
 | **Carica furiosa** | Berserker | 40 | 5 s | **scatto in avanti** di circa 70 px che **travolge** e attraversa i nemici (35 danni, rompe la guardia); non rende invulnerabili |
+| **Dardo di fuoco** | Mago (7) | 15 mana | 0,9 s | proiettile da **22** che **brucia** il bersaglio; non consuma munizioni |
+| **Nova di gelo** | Mago (8) | 30 mana | 5 s | colpo tutt'intorno da **18** che **gela** chi colpisce (velocità dimezzata per 3 s); tremolio e polvere |
+| **Balzo arcano** | Mago (9) | 20 mana | 3 s | **balzo all'indietro** invulnerabile, per allontanarsi (non fa danno) |
+| **Barriera** | Mago (0) | 10 mana per alzarla | 0,3 s | **tieni premuto 0**: come lo scudo, para i colpi **da davanti**; consuma 10 mana al secondo e **1 mana per ogni punto di danno parato**; parata perfetta come lo scudo |
 | **Scudo** | Paladino | 10 per alzarlo | 0,3 s | **tieni premuto 7** (o L): lo scudo para i colpi **da davanti** (anche le frecce); non ti muovi ma puoi girarti; consuma 12 di stamina al secondo |
 
+- Gli incantesimi del Mago (tutti quelli che costano mana) con il **bastone in mano** fanno **il 20% di danno in più** e costano **il 15% di mana in meno** (arrotondato). Se il mana non basta l'incantesimo non parte e compare "SENZA MANA". Con la guardia rotta (mana finito) la barriera cade come lo scudo.
 - Gli scatti (balzo del Ranger, carica del Berserker) **si fermano sul bordo** di un abisso.
 - **Parata perfetta**: se lo scudo è alzato da **meno di 0,25 secondi** quando arriva il colpo (la barriera davanti al Paladino è
   **bianca**, poi diventa azzurra), il colpo non costa niente e chi ha attaccato resta **stordito per 1 secondo** ("PARATA!"). I boss non vengono storditi.
-- **Parata normale**: costa 1,5 di stamina per ogni punto di danno. Se la stamina non basta la **guardia si rompe** ("GUARDIA ROTTA") e il colpo passa.
+- **Parata normale**: costa 1,5 di stamina per ogni punto di danno (la Barriera: 1 mana). Se la stamina (o il mana) non basta la **guardia si rompe** ("GUARDIA ROTTA") e il colpo passa.
 - I colpi **alle spalle** non si parano.
 
 ### L'HUD (la barra in alto)
@@ -162,8 +171,8 @@ Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma
 | Elemento | Significato |
 |---|---|
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
-| barra verde sotto la salute | stamina (gialla sotto un terzo) |
-| riquadro con il numero del tasto (**7**) | mossa speciale: dorata quando è pronta, scura mentre si ricarica, azzurra con lo scudo alzato |
+| barra verde sotto la salute | stamina (gialla sotto un terzo); per chi ha mana (Mago) le barre sono due, più sottili: stamina sopra, **mana blu** sotto |
+| riquadri con il numero del tasto (**7**; per il Mago **7**, **8**, **9**, **0**, uno ogni 11 px) | mosse speciali: dorate quando sono pronte, scure mentre si ricaricano, azzurre con lo scudo o la barriera alzati; numero rosso se la risorsa non basta; bordo dorato sulla mossa scelta (solo con più mosse) |
 | icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
 | icona dell'elmo **x3** | vite rimaste |
 | 4 riquadri numerati sotto la barra, a destra | la borsa: armi e pozioni (con quante sono); l'arma in mano ha la cornice dorata |
@@ -224,7 +233,7 @@ la sequenza riparte dal primo colpo. Se premi il tasto negli **ultimi 0,2 second
 
 ### Le armi
 
-Oltre alla spada ci sono cinque armi corpo a corpo. Si usano con gli stessi tasti (J, K) e ognuna ha i propri colpi e la propria combo.
+Oltre alla spada ci sono cinque armi corpo a corpo, più il bastone del Mago. Si usano con gli stessi tasti (J, K) e ognuna ha i propri colpi e la propria combo.
 
 | Arma | Colpi leggeri (J) | Combo | Attacco pesante (K) | Passo | Particolarità |
 |---|---|---|---|---|---|
@@ -234,6 +243,10 @@ Oltre alla spada ci sono cinque armi corpo a corpo. Si usano con gli stessi tast
 | **Ascia** | 22 / 26 danni, 400-440 ms | **Doppio taglio** (J ×2): 22 + 26; **Spaccaossa** (J ×2, K): 22 + 26 + 52 | 46 danni, 700 ms | più lento (×0,85) | **rompe la guardia**: interrompe anche un nemico che ha già iniziato il suo colpo |
 | **Mazza** | 17 danni, 340 ms | **Tempesta di colpi** (J ×3): 17 + 17 + 28; **Terremoto** (J, K): 17 + 32, colpisce in basso anche **dietro** di te | 36 danni, 620 ms | più lento (×0,9) | **schiaccia le corazze**: danno pieno al golem, che resta stordito per 0,6 secondi |
 | **Spadone** (a due mani) | 30 / 34 danni, 520-540 ms | **Lama del gigante** (J ×2): 30 + 34; **Turbine** (J ×2, K): 30 + 34 + 48, colpisce anche **dietro** di te | 58 danni, 820 ms | più lento (×0,85) | **portata lunga e rompe la guardia** come l'ascia; il più lento di tutti |
+
+| **Bastone** (solo Mago) | 8 / 8 danni, 320 ms | **Mulinello** (J ×3): 8 + 8 + 14; **Spazzata arcana** (J, K): 8 + 16, colpisce in basso anche **dietro** di te | 18 danni, 560 ms | normale | **catalizzatore**: ridà **5 mana** per ogni bersaglio colpito e rende gli incantesimi più forti (×1,2) e meno cari (×0,85); in picchiata 14 danni; non ha munizioni |
+
+**Compatibilità.** Il Mago usa **solo il bastone**; tutte le altre classi usano ogni arma **tranne il bastone**. Le armi trovate che il Mago non può usare (forzieri, nemici d'élite, trofei dei boss, bottega) diventano **bastoni**, di rarità estratta come per le altre armi; il bastone Leggendario è il **BASTONE DELLE STELLE** (+14 danno, elemento folgore, recupero più rapido). Per ora il divieto vale solo per il bottino: dalla Fase 3 del piano varrà anche al momento di impugnare.
 
 I boss non vengono mai storditi: contro di loro ascia e mazza contano solo per il danno.
 
@@ -293,8 +306,8 @@ premi **E** e la prendi; la impugni subito. Per cambiare arma premi il **numero*
 La borsa ha **4 posti**, mostrati sotto la barra in alto a destra, ognuno con il suo numero. Contiene **armi** e **pozioni**.
 
 - **E** raccoglie l'arma o la pozione che stai toccando. Le **pozioni non curano più al tocco**: le conservi e le bevi quando vuoi.
-- **1-4** usano il posto: un'arma diventa quella in mano (cornice dorata); una pozione cura **30 HP** (a salute piena non viene sprecata).
-- Le pozioni stanno tutte in un posto, **al massimo 2**: conservarle per i boss aiuta molto, quindi la scorta è piccola.
+- **1-4** usano il posto: un'arma diventa quella in mano (cornice dorata); una pozione di salute cura **30 HP** (a salute piena non viene sprecata); una **pozione di mana** ridà **40 mana** (a mana pieno resta, con la scritta "MANA PIENO").
+- Le pozioni di ogni tipo (salute, mana) stanno in un posto proprio, **al massimo 2 per tipo**: conservarle per i boss aiuta molto, quindi la scorta è piccola.
 - **Q** lascia a terra l'**arma in mano** (impugni la prossima della borsa); tenendo **Q** e premendo **1-4** lasci il contenuto di quel posto
   (un'arma, oppure **una** pozione). Solo stando a terra; l'ultima arma non si può lasciare. Un'arma lasciata tiene le sue munizioni e si
   riprende con **E** dopo essersi allontanati un attimo; una pozione si riprende subito.
@@ -526,6 +539,7 @@ Si raccolgono semplicemente toccandoli, tranne la **pozione**, che si prende con
 | Oggetto | Aspetto | Effetto |
 |---|---|---|
 | **Pozione** | boccetta rossa | si prende con **E** e va nella borsa; bevuta (tasto del suo posto) dà **+30 HP** (non oltre il massimo) |
+| **Pozione di mana** | boccetta blu | solo per chi ha mana: si prende con **E** e va nella borsa (un posto a parte, al massimo 2); bevuta dà **+40 mana**. La lasciano forzieri (sempre), nemici d'élite (una volta su due) e boss (sempre); per le classi senza mana non compare |
 | **Moneta** | disco giallo | **+50 punti** e **10 monete** da spendere nella bottega |
 | **Gemma** | cristallo azzurro | **+200 punti** e **30 monete** (almeno 1 per livello, 2 nella torre) |
 | **Faretra** | astuccio di cuoio con due frecce | munizioni piene per tutte le armi della borsa che ne hanno (arco, balestra, coltelli, giavellotto); una per livello, prima dell'arena; se non serve resta a terra |
@@ -634,16 +648,17 @@ per comprarla. Per andare avanti esci dalla **porta in fondo** a destra.
 |---|---|---|
 | Pozione | 40 | una pozione nella borsa (se c'è posto) |
 | Cura | 25 | +40 HP subito (non a salute piena) |
-| Faretra | 20 | munizioni piene per tutte le armi della borsa (se ne mancano) |
+| Faretra | 20 | munizioni piene per tutte le armi della borsa (se ne mancano); non c'è per chi ha mana |
+| Pozione di mana | 35 | una pozione di mana nella borsa (se c'è posto); solo per chi ha mana, al posto della faretra |
 | Un'arma | 60 × rarità | una delle armi **trovate in questa partita** (la spada e l'arma iniziale contano sempre) che non hai nella borsa, scelta a caso, con una rarità; va nella borsa o, se è piena, nello zaino; si compra una volta sola |
 | Un'armatura | 45 × rarità | un pezzo d'armatura con una rarità: lo indossi (posto libero) o va nello zaino; si compra una volta sola |
 
 Il prezzo di arma e armatura cresce con la rarità (Non comune ×1,5 ... Leggendario ×5) e **sale del 25% dopo ogni acquisto di
 equipaggiamento** nella stessa visita. L'offerta cambia a ogni visita e, avanzando, le rarità sono più alte. **Non si rivende niente.**
-Un acquisto che non serve non toglie monete ("NON SERVE", "BORSA PIENA").
+Il Mago trova in vendita un **bastone**, che prende il posto del suo (il vecchio va nello zaino); un bastone identico a quello che ha già non viene messo in vendita. Un acquisto che non serve non toglie monete ("NON SERVE", "BORSA PIENA").
 
 **Sblocchi.** All'inizio si gioca solo il **Cavaliere**. Il **Ranger** si sblocca completando il livello 2, il **Berserker** sconfiggendo il
-Cavaliere Nero (livello 3), il **Paladino** sconfiggendo il Re dei Lupi (livello 5); nella scelta del personaggio quelli bloccati sono
+Cavaliere Nero (livello 3), il **Mago** sconfiggendo la Strega della Palude (livello 4), il **Paladino** sconfiggendo il Re dei Lupi (livello 5); nella scelta del personaggio quelli bloccati sono
 sagome con il lucchetto e l'obiettivo. Gli sblocchi dipendono dal livello più avanzato raggiunto.
 
 **Cosa resta tra una partita e l'altra.** Il browser ricorda solo:

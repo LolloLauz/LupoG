@@ -88,6 +88,18 @@ export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> =
     frameDurationMs: 50,
     recoveredAsAmmoOf: "throwingKnives",
   },
+  // Classi Fase 2: dardo di fuoco del Mago (riusa gli sprite della palla di fuoco; la bruciatura la dà l'incantesimo)
+  arcaneFireball: {
+    id: "arcaneFireball",
+    name: "Dardo di fuoco",
+    speed: 200,
+    gravityScale: 0,
+    lifetimeMs: 1500,
+    hitbox: { width: 8, height: 8 },
+    isDeflectable: false,
+    frameIds: ["projectileFire1", "projectileFire2"],
+    frameDurationMs: 80,
+  },
   javelin: {
     id: "javelin",
     name: "Giavellotto",
