@@ -1,7 +1,7 @@
 // Piano dell'equipaggiamento, fasi E1-E2: rarità, oggetti con modificatori, tetti, salvataggi, armature, set, aspetto
 import { FakeSpriteManager } from "../helpers.mjs";
 
-export const description = "Equipaggiamento (E1-E2): rarità, modificatori e tetti, oggetti fissi, migrazione dei salvataggi, armature, set, resistenze, colori";
+export const description = "Equipaggiamento (E1-E2): rarità, modificatori e tetti, oggetti fissi, armature, set, resistenze, colori";
 
 export default async function (t, load) {
   const { RARITY_CONFIG, RARITY_ORDER } = await load("config/rarityConfig");
@@ -13,7 +13,6 @@ export default async function (t, load) {
   const F = await load("systems/ItemFactory");
   const E = await load("systems/EquipmentStats");
   const { Inventory } = await load("systems/Inventory");
-  const { ProgressManager } = await load("systems/ProgressManager");
   const { Player } = await load("entities/Player");
   const { CHARACTER_CONFIG } = await load("config/characterConfig");
   const V = await load("rendering/sprites/equipmentVisuals");
@@ -103,37 +102,6 @@ export default async function (t, load) {
     const copy = F.cloneItem(fiery);
     copy.affixes[0].value = 1;
     t("la copia di un oggetto è indipendente", fiery.affixes[0].value === 30);
-  }
-
-  // --- salvataggi ---
-  {
-    t("oggetto salvato valido si rilegge uguale", F.areItemsEqual(F.parseStoredItem(JSON.parse(JSON.stringify(F.createArmorItem("steelBoots", "rare", [{ id: "moveSpeed", value: 5 }, { id: "maxHealth", value: 9 }])))), F.createArmorItem("steelBoots", "rare", [{ id: "moveSpeed", value: 5 }, { id: "maxHealth", value: 9 }])));
-    t("oggetti salvati non validi: scartati; modificatori strani tolti, valori entro il tetto", F.parseStoredItem({ kind: "weapon", baseId: "bazooka", rarity: "rare" }) === null && F.parseStoredItem(null) === null && (() => {
-      const item = F.parseStoredItem({ kind: "weapon", baseId: "sword", rarity: "rare", affixes: [{ id: "damage", value: 999 }, { id: "magic", value: 3 }, { id: "element", value: 0 }] });
-      return item.affixes.length === 1 && item.affixes[0].value === AFFIX_CONFIG.damage.cap;
-    })());
-    t("un Leggendario salvato con valori alterati torna come da definizione", F.parseStoredItem({ uniqueId: "dawnBlade", kind: "weapon", baseId: "sword", rarity: "legendary", affixes: [{ id: "damage", value: 50 }] }).affixes[0].value === LEGENDARY_ITEMS.dawnBlade.affixes[0].value);
-    t("un Leggendario finto (rarità senza id) diventa Comune", F.parseStoredItem({ kind: "weapon", baseId: "sword", rarity: "legendary", affixes: [] }).rarity === "common");
-    const old = memory();
-    old.setItem("ironAndShadow.progress", JSON.stringify({ unlockedLevelId: 3, equippedWeaponId: "axe", bagWeaponIds: ["sword", "axe"] }));
-    const migrated = new ProgressManager(old);
-    t("migrazione: le armi di un salvataggio di prima diventano Comuni, nessuna armatura, zaino vuoto", migrated.bagWeaponItems.map((i) => `${i.baseId}:${i.rarity}`).join() === "sword:common,axe:common" && ARMOR_SLOTS.every((s) => migrated.savedArmor[s] === null) && migrated.savedBackpack.length === 0);
-    const store = memory();
-    const pm = new ProgressManager(store);
-    const rareAxe = F.createWeaponItem("axe", "rare", [{ id: "damage", value: 9 }, { id: "lifeSteal", value: 2 }]);
-    pm.setBagWeapons(["sword", rareAxe], "axe");
-    pm.setEquipment({ helmet: F.createArmorItem("ironHelmet", "uncommon", [{ id: "defense", value: 3 }]), chest: null, boots: null }, [F.createArmorItem("clothBoots"), F.createUniqueItem("windBoots")]);
-    const reloaded = new ProgressManager(store);
-    const saved = JSON.parse(store.data.get("ironAndShadow.progress"));
-    t("si salvano rarità e modificatori delle armi, armature e zaino; bagWeaponIds resta per compatibilità", F.areItemsEqual(reloaded.bagWeaponItems[1], rareAxe) && saved.bagWeaponIds.join() === "sword,axe" && reloaded.savedArmor.helmet?.baseId === "ironHelmet" && reloaded.savedBackpack.length === 2 && reloaded.savedBackpack[1].uniqueId === "windBoots");
-    const before = store.data.get("ironAndShadow.progress");
-    store.data.set("ironAndShadow.progress", before);
-    pm.setEquipment(reloaded.savedArmor, reloaded.savedBackpack);
-    t("equipaggiamento invariato: non si riscrive", store.data.get("ironAndShadow.progress") === before);
-    const odd = memory();
-    odd.setItem("ironAndShadow.progress", JSON.stringify({ equippedWeaponId: "sword", bagItems: [{ kind: "armor", baseId: "ironHelmet", rarity: "common", affixes: [] }], armor: { helmet: { kind: "armor", baseId: "steelBoots", rarity: "common", affixes: [] } }, backpack: "x" }));
-    const oddPm = new ProgressManager(odd);
-    t("salvataggio strano: armature nella borsa delle armi o nel posto sbagliato scartate", oddPm.bagWeaponItems.map((i) => i.baseId).join() === "sword" && oddPm.savedArmor.helmet === null && oddPm.savedBackpack.length === 0);
   }
 
   // --- borsa con oggetti, zaino, armature ---

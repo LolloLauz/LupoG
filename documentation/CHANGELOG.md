@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.1.0 – Classi, Fase 1: partite scollegate e nuovi comandi (2026-11-25)
+Ogni nuova partita parte da zero e i comandi cambiano.
+### Modificato
+- **Comandi**: attacco su **J** (prima Spazio), attacco pesante su **K** (prima J), schivata su **Shift sinistro** (prima K). Spazio non è assegnato. Le mosse speciali stanno sui tasti **5-8** (azioni `ability1`-`ability4` al posto di `ability`, `ABILITY_SLOT_ACTIONS`; anche il tastierino numerico), con **L** come alias del 5; oggi ogni classe ha una mossa, sul 5. Il riquadro dell'HUD mostra il numero del tasto. Schermata dei controlli aggiornata.
+- **Partite scollegate**: ogni nuova partita ha la sola arma iniziale della classe, senza pozioni, armature, zaino o monete (`GameEngine.resetRunEquipment`). Le armi "trovate", che la bottega vende (spada sempre inclusa), valgono solo per la partita. Scegliere il personaggio salva la scelta e non tocca la partita.
+- **Salvataggio** ridotto a `{ version: 2, unlockedLevelId, difficulty, characterId }` (`SAVE_VERSION`); le classi sbloccate si ricavano dal livello, i record restano in `HighScoreManager`. **Migrazione dal 2.0**: il vecchio salvataggio si riscrive subito, conservando livello, difficoltà e personaggio e scartando il resto.
+- **Gemme**: danno **30 monete** (valore da bilanciare) oltre ai 200 punti.
+- **Boss finale**: il suo oggetto Leggendario o Mitico è un trofeo mostrato a fine livello ("TROFEO: ..."), non va più nello zaino (`awardFinalBossReward`).
+- Bot dei test del browser e `tools/balance.mjs` con i nuovi comandi.
+- Versione portata a 2.1.0 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Corretto
+- Ricominciando un livello dopo una morte la salute torna piena anche contando le armature di inizio livello.
+- Raccogliendo una gemma (o una moneta) il messaggio mostra anche le monete ricevute.
+### Rimosso
+- Contatore delle gemme (HUD, fine livello, risultati), `ItemDefinition.isCollectible`, `ScoreManager.collectiblesFound` e `registerCollectible`.
+- Potenziamenti permanenti: stato `upgrades`, voce del titolo *Potenziamenti*, `Player.setUpgrades`, `UPGRADE_CONFIG` e funzioni collegate.
+- `ItemFactory.parseStoredItem` e i metodi di `ProgressManager` per armi, armature, zaino, gemme, potenziamenti e armi trovate.
+### Verificato
+- `npm test` (1090 controlli in 29 file), `npm run test:browser` (176/176), `npm run verify-docs`, `npm run balance` (identico al baseline).
+
 ## 2.0.1 – Classi, Fase 0: fondazione senza cambiamenti visibili (2026-11-25)
 Refactor: per chi gioca non cambia niente (`npm run balance` identico al baseline). Prepara i punti d'innesto per mana, affinità delle armi e attributi, tutti con valori neutri.
 ### Aggiunto

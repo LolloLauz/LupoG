@@ -42,17 +42,17 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 **Obiettivo:** ogni nuova partita parte da zero, con le sole eccezioni decise, e i comandi sono quelli nuovi. Cambia il comportamento, quindi è una versione a sé.
 
-- [ ] **Salvataggio:** `ProgressManager` conserva solo livelli già giocati, classi sbloccate, record e difficoltà; aggiungere un campo di versione con migrazione dal formato 2.0, che scarta il resto.
-- [ ] **Azzeramento a nuova partita:** borsa, zaino, armature, monete e gemme ripartono da zero; nessun cambio di classe durante la partita.
-- [ ] **Gemme in monete:** raccogliere una gemma dà 30 monete (valore da bilanciare) oltre ai 200 punti; togliere il contatore gemme dall'HUD.
-- [ ] **Potenziamenti permanenti:** rimuovere i potenziamenti a gemme e la voce Potenziamenti dal titolo; sistemare Cancella dati e la scheda del personaggio.
-- [ ] **Comandi:**
+- [x] **Salvataggio:** `ProgressManager` conserva solo livelli già giocati, classi sbloccate, record e difficoltà; aggiungere un campo di versione con migrazione dal formato 2.0, che scarta il resto. *Fatto: resta salvato anche il personaggio scelto nel menu (una preferenza, come la difficoltà); le classi sbloccate si ricavano dal livello raggiunto.*
+- [x] **Azzeramento a nuova partita:** borsa, zaino, armature, monete e gemme ripartono da zero; nessun cambio di classe durante la partita. *Fatto: anche le armi trovate (vendute in bottega) valgono solo per la partita; il Mitico del boss finale è ora solo un trofeo mostrato.*
+- [x] **Gemme in monete:** raccogliere una gemma dà 30 monete (valore da bilanciare) oltre ai 200 punti; togliere il contatore gemme dall'HUD.
+- [x] **Potenziamenti permanenti:** rimuovere i potenziamenti a gemme e la voce Potenziamenti dal titolo; sistemare Cancella dati e la scheda del personaggio.
+- [x] **Comandi:**
   - schivata su Shift sinistro; K liberato;
   - mosse speciali sui tasti 5-8, con L come alias dello slot 1 (lo scudo del Paladino resta a tasto premuto);
   - l'attacco eseguito con Spazio passa al tasto J; l'attacco pesante eseguito con J passa a K;
   - modificare `controlsConfig.ts` e la schermata Controlli.
-- [ ] **Test:** aggiornare i test su salvataggio, comandi e punteggio; il bot dei test del browser usa i nuovi tasti.
-- [ ] **Documentazione:** sezioni 4, 5, 11b del GAME_MANUAL (controlli, schermate, gemme, sblocchi) e la sezione sull'input di ARCHITECTURE.
+- [x] **Test:** aggiornare i test su salvataggio, comandi e punteggio; il bot dei test del browser usa i nuovi tasti.
+- [x] **Documentazione:** sezioni 4, 5, 11b del GAME_MANUAL (controlli, schermate, gemme, sblocchi) e la sezione sull'input di ARCHITECTURE.
 
 **Criterio di chiusura:** due partite di seguito non condividono nulla tranne livelli raggiunti, classi, record e difficoltà.
 

@@ -56,9 +56,6 @@ export class ItemManager {
       if (definition.coins !== undefined) {
         scoreManager.addCoins(definition.coins);
       }
-      if (definition.isCollectible) {
-        scoreManager.registerCollectible();
-      }
       if (definition.powerUpId !== undefined) {
         player.applyPowerUp(POWER_UP_CONFIG[definition.powerUpId]);
       }

@@ -1,7 +1,7 @@
-import { AFFIX_CONFIG, AFFIX_ORDER, ELEMENT_NAME_SUFFIXES, isAffixId } from "../config/affixConfig";
-import { ARMOR_CONFIG, isArmorId } from "../config/armorConfig";
+import { AFFIX_CONFIG, AFFIX_ORDER, ELEMENT_NAME_SUFFIXES } from "../config/affixConfig";
+import { ARMOR_CONFIG } from "../config/armorConfig";
 import { ELEMENT_ORDER } from "../config/elementConfig";
-import { RARITY_CONFIG, RARITY_ORDER, isRarityId } from "../config/rarityConfig";
+import { RARITY_CONFIG, RARITY_ORDER } from "../config/rarityConfig";
 import { LEGENDARY_ITEMS, MYTHIC_ITEMS, type UniqueItemDefinition } from "../config/uniqueItemConfig";
 import { WEAPON_CONFIG, isWeaponId } from "../config/weaponConfig";
 import type { ElementId, WeaponId } from "../types/EntityTypes";
@@ -235,48 +235,4 @@ export function areItemsEqual(first: ItemInstance, second: ItemInstance): boolea
 /** Prezzo nella bottega: prezzo base del tipo per il moltiplicatore della rarità, arrotondato a 5 monete. */
 export function getItemPrice(item: ItemInstance): number {
   return Math.round((ITEM_BASE_PRICES[item.kind] * RARITY_CONFIG[item.rarity].priceMultiplier) / 5) * 5;
-}
-
-/**
- * Legge un oggetto salvato. Restituisce null se non è valido (tipo o rarità sconosciuti); i modificatori non validi
- * si scartano e i valori restano entro i tetti. Un oggetto fisso si ricrea dalla sua definizione.
- */
-export function parseStoredItem(value: unknown): ItemInstance | null {
-  if (typeof value !== "object" || value === null) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  if (typeof record.uniqueId === "string") {
-    const unique = createUniqueItem(record.uniqueId);
-    if (unique !== null) {
-      return unique;
-    }
-  }
-  const rarity: RarityId = isRarityId(record.rarity) && !RARITY_CONFIG[record.rarity].isFixed ? record.rarity : "common";
-  const affixes = Array.isArray(record.affixes) ? record.affixes.flatMap((entry) => parseStoredAffix(entry)) : [];
-  if (record.kind === "weapon" && isWeaponId(record.baseId)) {
-    return createWeaponItem(record.baseId, rarity, affixes);
-  }
-  if (record.kind === "armor" && isArmorId(record.baseId)) {
-    return createArmorItem(record.baseId, rarity, affixes);
-  }
-  return null;
-}
-
-function parseStoredAffix(entry: unknown): AffixRoll[] {
-  if (typeof entry !== "object" || entry === null) {
-    return [];
-  }
-  const record = entry as Record<string, unknown>;
-  if (!isAffixId(record.id) || typeof record.value !== "number" || !Number.isFinite(record.value)) {
-    return [];
-  }
-  const definition = AFFIX_CONFIG[record.id];
-  const value = definition.format === "flag" ? 0 : Math.max(0, Math.min(definition.cap, Math.round(record.value)));
-  const needsElement = record.id === "element" || record.id === "resistance";
-  const element = ELEMENT_ORDER.find((candidate) => candidate === record.element);
-  if (needsElement && element === undefined) {
-    return [];
-  }
-  return [needsElement ? { id: record.id, value, element } : { id: record.id, value }];
 }

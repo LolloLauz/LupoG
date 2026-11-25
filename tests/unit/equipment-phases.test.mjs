@@ -62,7 +62,7 @@ export default async function (t, load) {
     const pieces = Array.from({ length: 200 }, () => L.rollLootArmor({ source: "elite", levelId: 4, difficulty: "normal" }, random));
     t("pezzi d'armatura estratti: tutti e tre i posti", new Set(pieces.map((p) => p.baseId.replace(/^(cloth|leather|iron|steel)/, ""))).size === 3);
   }
-  t("motore: forzieri, élite e boss danno oggetti con rarità; il boss finale mette l'oggetto nello zaino", /private openChest[\s\S]{0,600}rollLootWeapon\(weaponId, context, this\.lootRandom\)[\s\S]{0,200}rollArmorDrop\("chest"/.test(engineSource) && /storeFinalBossReward\(\)/.test(engineSource) && /rollFinalBossReward\([\s\S]{0,200}this\.inventory\.addToBackpack\(reward\)/.test(engineSource));
+  t("motore: forzieri, élite e boss danno oggetti con rarità; il boss finale dà il trofeo Mitico", /private openChest[\s\S]{0,600}rollLootWeapon\(weaponId, context, this\.lootRandom\)[\s\S]{0,200}rollArmorDrop\("chest"/.test(engineSource) && /awardFinalBossReward\(\);/.test(engineSource) && /this\.finalBossRewardName = getItemName\(rollFinalBossReward\(/.test(engineSource));
   t("motore: il furto di vita conta i colpi andati a segno", /this\.player\.registerDamageDealt\(damage\)/.test(engineSource));
 
   // --- bottega: rarità, prezzi crescenti, offerta ripetibile ---
@@ -99,7 +99,7 @@ export default async function (t, load) {
     t("la schermata dei controlli mostra I e la tabella non tocca le scritte sotto", CONTROLS_ROWS.some((r) => r.keyGroups.flat().includes("I")) && CONTROLS_TABLE.firstRowY + (CONTROLS_ROWS.length - 1) * CONTROLS_TABLE.rowStep + 14 < CONTROLS_NOTES_Y[0]);
     const screens = new ScreenManager(new FakeSpriteManager());
     const equipment = { armor: { helmet: null, chest: null, boots: null }, bag: [null, null, null, null], backpack: [], backpackCapacity: 12, activeSets: [], bonuses: {} };
-    const data = { levels: [], unlockedCharacterIds: ["knight"], shopOffers: [], upgrades: [], equipment, characterId: "knight" };
+    const data = { levels: [], unlockedCharacterIds: ["knight"], shopOffers: [], equipment, characterId: "knight" };
     const press = (stateName, action) => screens.update(stateName, { wasPressed: (a) => a === action, isHeld: () => false, wasReleased: () => false }, data);
     t("cursore: parte dall'elmo", JSON.stringify(screens.selectedEquipmentCell) === JSON.stringify({ section: "armor", slot: "helmet" }));
     press("equipment", "menuRight"); press("equipment", "menuRight"); press("equipment", "menuRight");

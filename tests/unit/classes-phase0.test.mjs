@@ -87,7 +87,7 @@ export default async function (t, load) {
     t("slot: abilities e slot attivo 0", p.abilities.length === 1 && p.abilities[0].id === "shockwave" && p.activeAbilitySlotIndex === 0 && p.ability.id === "shockwave");
     t("slot: uno slot inesistente è rifiutato", !p.selectAbilitySlot(1) && !p.selectAbilitySlot(-1) && !p.selectAbilitySlot(0.5) && p.activeAbilitySlotIndex === 0);
     t("slot: lo slot esistente si sceglie", p.selectAbilitySlot(0));
-    step(p, [], ["ability"]);
+    step(p, [], ["ability1"]);
     t("slot: l'abilità dello slot attivo paga il costo e parte la ricarica", p.stamina === 60 && p.abilityCooldownFraction === 1 && !p.isAbilityReady);
     p.setCharacter(CHARACTER_CONFIG.ranger);
     t("slot: cambiando classe la ricarica riparte da zero", p.abilityCooldownFraction === 0 && p.ability.id === "backstepShot");

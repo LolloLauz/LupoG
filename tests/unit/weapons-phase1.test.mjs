@@ -121,7 +121,7 @@ const settle=e=>{for(let i=0;i<10;i++)e.update(1/60,cs,P,1024);return e};
 // --- motore
 {const src=readFileSync(join(projectRoot,'src/core/GameEngine.ts'),'utf8');
  t("i forzieri chiusi sono bersagli degli attacchi",src.includes('...closedChests];')&&src.includes('target instanceof Chest'));
- t("con E sopra un'arma la si mette nella borsa e la si impugna (salvando i progressi)",/wasPressed\("pickUp"\)/.test(src)&&/private pickUpWithE[\s\S]{0,700}this\.pickUpEquipment\(pickup\)/.test(src)&&/this\.inventory\.addWeapon\(item, pickup\.ammo\)[\s\S]{0,2400}this\.equipFromInventory\(\);\s*this\.saveBagWeapons\(\)/.test(src));
+ t("con E sopra un'arma la si mette nella borsa e la si impugna",/wasPressed\("pickUp"\)/.test(src)&&/private pickUpWithE[\s\S]{0,700}this\.pickUpEquipment\(pickup\)/.test(src)&&/this\.inventory\.addWeapon\(item, pickup\.ammo\)[\s\S]{0,2400}this\.equipFromInventory\(\);/.test(src));
  t("i nemici d'élite lasciano la loro arma morendo",/enemy\.weaponDrop !== null\)[\s\S]{0,80}this\.dropWeapon\(rollLootWeapon\(enemy\.weaponDrop/.test(src));
  t("il trofeo del boss vale per il livello successivo e si azzera a ogni nuova partita",/rollLootWeapon\(reward, context, this\.lootRandom\)[\s\S]{0,200}this\.weaponReward = \{ levelId: this\.currentLevelId \+ 1, items \}/.test(src)&&/private startNewGame[\s\S]{0,1400}?this\.weaponReward = null;\n    this\.finalBossRewardName = null;\n    this\.startLevel/.test(src)&&src.includes('TROFEO: '));}
 }

@@ -13,7 +13,7 @@ import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
 import { ABILITY_CONFIG } from "../config/abilityConfig";
 import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
-import { NO_UPGRADES, computeUpgradeBonuses, type UpgradeBonuses } from "../config/progressionConfig";
+import { ABILITY_SLOT_ACTIONS } from "../config/controlsConfig";
 import { PLAYER_CONFIG } from "../config/playerConfig";
 import { getWeaponAffinity } from "../config/weaponAffinityConfig";
 import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
@@ -60,11 +60,9 @@ export class Player extends GameObject {
   public readonly modifiers = new PlayerModifiers();
   /** Classe del personaggio (Fase 4): salute, velocità, danno, schivata, cura lenta e sprite. */
   private character: CharacterDefinition = CHARACTER_CONFIG[DEFAULT_CHARACTER_ID];
-  /** Potenziamenti permanenti (Fase 6): salute e stamina in più, danno moltiplicato. */
-  private upgrades: UpgradeBonuses = computeUpgradeBonuses(NO_UPGRADES);
   /**
    * Equipaggiamento (piano E1-E4): l'oggetto dell'arma in mano (rarità e modificatori) e le armature indossate.
-   * I bonus si calcolano in un punto solo (refreshEquipment) e valgono come i potenziamenti.
+   * I bonus si calcolano in un punto solo (refreshEquipment).
    */
   private weaponItem: WeaponItem = createWeaponItem(DEFAULT_WEAPON_ID);
   private armor: EquippedArmor = { ...EMPTY_ARMOR };
@@ -161,20 +159,9 @@ export class Player extends GameObject {
     }
   }
 
-  /** Salute massima del personaggio (più i potenziamenti). */
+  /** Salute massima del personaggio. */
   public get maxHealth(): number {
-    return this.character.maxHealth + this.upgrades.maxHealth + this.equipment.maxHealth + this.modifiers.getValue("maxHealthBonus");
-  }
-
-  /**
-   * Potenziamenti permanenti (inizio partita): salute e stamina tornano al nuovo massimo.
-   * startingPotions riguarda la borsa: lo applica il motore.
-   */
-  public setUpgrades(upgrades: UpgradeBonuses): void {
-    this.upgrades = upgrades;
-    this.currentHealth = this.maxHealth;
-    this.staminaPool.refill();
-    this.manaPool.refill();
+    return this.character.maxHealth + this.equipment.maxHealth + this.modifiers.getValue("maxHealthBonus");
   }
 
   public get characterDefinition(): CharacterDefinition {
@@ -187,7 +174,7 @@ export class Player extends GameObject {
   }
 
   public get maxStamina(): number {
-    return this.character.maxStamina + this.upgrades.maxStamina + this.equipment.maxStamina + this.modifiers.getValue("maxStaminaBonus");
+    return this.character.maxStamina + this.equipment.maxStamina + this.modifiers.getValue("maxStaminaBonus");
   }
 
   /** Mana attuale (Classi Fase 0): lo consumano le abilità che lo costano. Senza mana nella classe resta 0. */
@@ -236,7 +223,7 @@ export class Player extends GameObject {
     return true;
   }
 
-  /** Abilità speciale attiva (tasto L). */
+  /** Abilità speciale dello slot attivo. */
   public get ability(): AbilityDefinition {
     return ABILITY_CONFIG[this.character.abilityIds[this.activeAbilitySlot]];
   }
@@ -518,7 +505,6 @@ export class Player extends GameObject {
     return (
       this.modifiers.getValue("damageMultiplier") *
       this.character.damageMultiplier *
-      this.upgrades.damageMultiplier *
       this.equipment.damageMultiplier *
       this.weaponAffinity.damageMultiplier
     );
@@ -924,7 +910,10 @@ export class Player extends GameObject {
   private handleInput(input: InputSource): void {
     const isDodging = this.dodgeRemainingMs > 0;
 
-    // abilità (L): lo scudo si tiene premuto, le altre partono alla pressione
+    // mosse speciali (5-8, L = 5): il tasto sceglie lo slot; lo scudo si tiene premuto, le altre partono alla pressione
+    const pressedSlot = ABILITY_SLOT_ACTIONS.findIndex((action) => input.wasPressed(action));
+    // durante un attacco o una schivata lo slot attivo non cambia; uno slot vuoto non fa niente
+    const isSlotChosen = pressedSlot >= 0 && this.currentAttack === null && !isDodging && this.selectAbilitySlot(pressedSlot);
     this.updateGuard(input);
     if (this.isGuardUp) {
       this.bufferedAttackInput = null;
@@ -932,7 +921,7 @@ export class Player extends GameObject {
       this.applyFacingInput(input); // con lo scudo alzato ci si gira ma non ci si muove
       return;
     }
-    if (input.wasPressed("ability")) {
+    if (isSlotChosen) {
       this.tryStartAbility();
     }
     if (input.wasPressed("dodge") && this.canStartDodge() && this.spendStamina(this.character.dodgeStaminaCost)) {
@@ -1199,7 +1188,7 @@ export class Player extends GameObject {
     this.guardGraceRemainingMs = 0;
   }
 
-  /** Abilità d'attacco (L): solo a terra, in piedi, senza un altro attacco o una schivata in corso. */
+  /** Abilità d'attacco: solo a terra, in piedi, senza un altro attacco o una schivata in corso. */
   private tryStartAbility(): void {
     const ability = this.ability;
     if (
@@ -1227,20 +1216,20 @@ export class Player extends GameObject {
     this.pendingAbilityName = ability.name;
   }
 
-  /** Scudo (abilità del Paladino): si alza premendo L, resta alzato finché lo si tiene e c'è stamina. */
+  /** Scudo (abilità del Paladino): si alza premendo il tasto del suo slot, resta alzato finché lo si tiene e c'è stamina. */
   private updateGuard(input: InputSource): void {
     const ability = this.ability;
     if (ability.kind !== "guard") {
       return;
     }
     if (this.isGuardUp) {
-      if (!input.isHeld("ability") || !this.isOnGround) {
+      if (!input.isHeld(ABILITY_SLOT_ACTIONS[this.activeAbilitySlot]!) || !this.isOnGround) {
         this.lowerGuard();
       }
       return;
     }
     const canRaise =
-      input.wasPressed("ability") &&
+      input.wasPressed(ABILITY_SLOT_ACTIONS[this.activeAbilitySlot]!) &&
       this.isOnGround &&
       !this.isCrouching &&
       this.currentAttack === null &&

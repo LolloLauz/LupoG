@@ -12,8 +12,6 @@ export interface ItemDefinition {
   scoreBonus: number;
   /** Monete (Fase 6) date raccogliendo l'oggetto: si spendono nella bottega tra un livello e l'altro. */
   coins?: number;
-  /** Se vero viene contato tra gli oggetti collezionabili del livello. */
-  isCollectible: boolean;
   /** Power-up attivato raccogliendo l'oggetto (vedi powerUpConfig.ts). */
   powerUpId?: PowerUpId;
   /**
@@ -37,7 +35,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemPotion",
     healAmount: 30,
     scoreBonus: 0,
-    isCollectible: false,
     storedInBag: true,
   },
   scoreCoin: {
@@ -47,7 +44,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     healAmount: 0,
     scoreBonus: 50,
     coins: 10,
-    isCollectible: false,
   },
   collectible: {
     id: "collectible",
@@ -55,7 +51,8 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemGem",
     healAmount: 0,
     scoreBonus: 200,
-    isCollectible: true,
+    // le gemme valgono monete, da spendere nella bottega (valore da bilanciare nella Fase 6)
+    coins: 30,
   },
   powerBerserk: {
     id: "powerBerserk",
@@ -63,7 +60,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemBerserk",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "berserk",
   },
   powerSpeed: {
@@ -72,7 +68,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemSpeed",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "speed",
   },
   powerShield: {
@@ -81,7 +76,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemShield",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "shield",
   },
   powerFire: {
@@ -90,7 +84,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemFire",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "fire",
   },
   powerRegeneration: {
@@ -99,7 +92,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemRegeneration",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "regeneration",
   },
   powerPoison: {
@@ -108,7 +100,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemPoison",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "poison",
   },
   powerFrost: {
@@ -117,7 +108,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemFrost",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "frost",
   },
   powerShock: {
@@ -126,7 +116,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemShock",
     healAmount: 0,
     scoreBonus: 25,
-    isCollectible: false,
     powerUpId: "shock",
   },
   quiver: {
@@ -135,7 +124,6 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemQuiver",
     healAmount: 0,
     scoreBonus: 0,
-    isCollectible: false,
     refillsAmmo: true,
   },
 };

@@ -2,12 +2,11 @@ import type { GameStateName } from "../types/GameTypes";
 
 /** Transizioni consentite tra gli stati del gioco. */
 const ALLOWED_TRANSITIONS: Record<GameStateName, GameStateName[]> = {
-  title: ["controls", "levelSelect", "characterSelect", "confirmReset", "upgrades", "playing"],
+  title: ["controls", "levelSelect", "characterSelect", "confirmReset", "playing"],
   controls: ["title"],
   levelSelect: ["title", "playing"],
   characterSelect: ["title"],
   confirmReset: ["title"],
-  upgrades: ["title"],
   shop: ["playing"],
   // schermata dell'equipaggiamento (E4): dal gioco o dalla pausa, si torna da dove si era
   equipment: ["playing", "paused"],

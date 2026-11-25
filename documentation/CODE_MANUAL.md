@@ -1,6 +1,6 @@
 # Manuale del codice
 
-Versione del gioco descritta: **2.0.1**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
+Versione del gioco descritta: **2.1.0**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
 per le regole di gioco `GAME_MANUAL.md`.
 
 Questo manuale spiega **cosa c'è in ogni file**, **come si muove il codice** e, nella parte finale,
@@ -93,7 +93,7 @@ modificare qui, senza toccare la logica.
 | `paletteConfig.ts` | `PALETTE` (colori con nome, al massimo `MAX_PALETTE_COLORS`), `PALETTE_RAMPS` (rampe dallo scuro al chiaro), tipi `PaletteColor`, `PaletteRampName` |
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere e valori comuni a tutti i personaggi: salto, hitbox, tempi), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
 | `elementConfig.ts` (Fase 7) | `ELEMENT_CONFIG` (bruciatura, veleno, gelo, shock: nome, colore, durata, danno nel tempo, rallentamento, stordimento con il tempo senza stordimento, danno ai boss), `ELEMENT_ORDER` |
-| `progressionConfig.ts` (Fase 6) | `ECONOMY_CONFIG` (monete per nemico, moltiplicatore delle élite, monete per boss), `SHOP_OFFERS` (E5: anche `armor`), `SHOP_HEAL_AMOUNT` e `SHOP_PRICE_INCREASE_PER_PURCHASE` (bottega), `UPGRADE_CONFIG`, `UPGRADE_ORDER`, `UPGRADE_EFFECT_PER_LEVEL`, `computeUpgradeBonuses()`, `NO_UPGRADES`, `isUpgradeId()` (potenziamenti permanenti), `ALWAYS_DISCOVERED_WEAPONS` |
+| `progressionConfig.ts` (Fase 6) | `ECONOMY_CONFIG` (monete per nemico, moltiplicatore delle élite, monete per boss), `SHOP_OFFERS` (E5: anche `armor`), `SHOP_HEAL_AMOUNT` e `SHOP_PRICE_INCREASE_PER_PURCHASE` (bottega), `ALWAYS_DISCOVERED_WEAPONS` (la spada: sempre tra le armi che la bottega può vendere) |
 | `abilityConfig.ts` (Fase 5) | `ABILITY_CONFIG` (ogni voce ha `cost: ResourceCost` = `{ stamina?, mana?, health? }` al posto di `staminaCost`, e `modifiers: []` per i modificatori degli incantesimi; base comune `AbilityBase`) (onda d'urto, tiro in ritirata, carica furiosa: abilità d'attacco con il loro `AttackDefinition`; scudo: abilità di guardia con consumo al secondo, finestra della parata perfetta, costo per punto di danno, stordimento), `getAbilityAttacks()` (usata dalle animazioni) |
 | `characterConfig.ts` (Fase 4) | `CHARACTER_CONFIG` (cavaliere, ranger, berserker, paladino: nome, descrizione, tratto, suffisso degli sprite, arma iniziale, salute, velocità, moltiplicatori del danno inflitto e subito, schivata, `regeneration` facoltativa; Fase 5: `maxStamina`, `staminaRegenPerSecond`, `dodgeStaminaCost`, `abilityIds` (elenco, un elemento per classe); Classi Fase 0: `maxMana`, `manaRegenPerSecond` (0), `baseAttributes` (`ZERO_ATTRIBUTES`); Fase 6: `unlockLevel`, `unlockText`), `CHARACTER_ORDER`, `DEFAULT_CHARACTER_ID`, `isCharacterId()`. Il cavaliere legge salute, velocità e schivata da `PLAYER_CONFIG` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG` (anche `armorCrushStunMs` e i moltiplicatori dei nemici d'élite), `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss; `weaponReward` = trofeo) Fase 8: `raider` (Predone, a distanza con le accette), `scorpion` (corazzato, scatto), `vulture` (volante), `LANDS_LORD_CONFIG` (Signore delle Lande). |
@@ -101,7 +101,7 @@ modificare qui, senza toccare la logica.
 | `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili; quelli con `powerUpId` attivano un power-up, `storedInBag` = pozione da borsa, `refillsAmmo` = faretra, `coins` = monete), `ITEM_SIZE` |
 | `levelConfig.ts` | `LEVEL_CONFIG` (i 7 livelli; il 6 sono le Lande Desolate della Fase 8), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
-| `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti; anche `pickUp` = E, `dropItem` = Q (anche nei menu, per la schermata dell'equipaggiamento), `openEquipment` = I (E4), `ability` = L, `bagSlot1`-`bagSlot4` = 1-4 e, nei menu, `menuLeft`/`menuRight` = A/D e frecce), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco) |
+| `controlsConfig.ts` | `CONTROLS_CONFIG` (tasti; anche `pickUp` = E, `dropItem` = Q (anche nei menu, per la schermata dell'equipaggiamento), `openEquipment` = I (E4), `attack` = J, `heavyAttack` = K, `dodge` = Shift sinistro, `ability1`-`ability4` = 5-8 (anche tastierino numerico; L alias di `ability1`; Spazio non assegnato), `bagSlot1`-`bagSlot4` = 1-4 e, nei menu, `menuLeft`/`menuRight` = A/D e frecce), `INPUT_CONTEXT_ACTIONS` (azioni ammesse nei menu e in gioco), `ABILITY_SLOT_ACTIONS` (azione di ogni slot delle mosse; slot 0 = tasto 5) |
 | `inventoryConfig.ts` | `INVENTORY_CONFIG` (`slotCount` 4, `maxPotionsPerSlot` 2, `maxPotionSlots` 1, `backpackSize` 12), `BAG_SLOT_ACTIONS` (tasto di ogni posto) |
 | `animationConfig.ts` | `PLAYER_ANIMATIONS`, `ENEMY_ANIMATIONS`, `BOSS_ANIMATIONS` |
 | `rarityConfig.ts` (E1) | `RARITY_CONFIG` (sei rarità: nome, colore, colori del metallo delle armi, peso nei drop, moltiplicatore del prezzo, numero di modificatori, oggetto fisso, moltiplicatori del danno delle armi e delle statistiche delle armature), `RARITY_ORDER`, `isRarityId()`, `getRarityRank()` |
@@ -165,7 +165,7 @@ Salute, velocità e schivata qui sotto sono quelle del **cavaliere**; gli altri 
 
 Attacchi esistenti: `swordLight1`, `swordLight2` (250 ms, danno 15), `swordLight3` (350 ms, danno 30),
 `swordHeavy` (500 ms, danno 30). `DEFAULT_ATTACK_BY_INPUT` indica che cosa fare se un input non fa parte
-di nessuna combo. `COMBO_DEFINITIONS` contiene `tripleSlash` (Spazio ×3, finestra 400 ms).
+di nessuna combo. `COMBO_DEFINITIONS` contiene `tripleSlash` (J ×3, finestra 400 ms).
 
 #### `ENEMY_CONFIG` (tipo `EnemyDefinition`)
 
@@ -217,9 +217,9 @@ carica è prima del fendente: con lo stesso numero casuale si ottiene lo stesso 
 | `InputManager.ts` | `InputManager` | tastiera centralizzata (vedi sotto) |
 | `GameEngine.ts` | `GameEngine` | coordina tutto: stati, livelli, combattimento, effetti, disegno |
 
-**`GameState`** – stati: `title`, `controls`, `levelSelect`, `characterSelect`, `confirmReset`, `upgrades`, `shop`, `playing`, `paused`, `gameOver`, `victory`. Transizioni valide:
-`title→controls/levelSelect/characterSelect/confirmReset/upgrades/playing`, `controls→title`, `levelSelect→title/playing`, `characterSelect→title`, `confirmReset→title`, `upgrades→title`, `shop→playing`, `playing→paused/gameOver/victory/shop`,
-`paused→playing/title`, `gameOver→title/playing`, `victory→title`.
+**`GameState`** – stati: `title`, `controls`, `levelSelect`, `characterSelect`, `confirmReset`, `shop`, `equipment`, `playing`, `paused`, `gameOver`, `victory`. Transizioni valide:
+`title→controls/levelSelect/characterSelect/confirmReset/playing`, `controls→title`, `levelSelect→title/playing`, `characterSelect→title`, `confirmReset→title`, `shop→playing`, `equipment→playing/paused`, `playing→paused/gameOver/victory/shop/equipment`,
+`paused→playing/title/equipment`, `gameOver→title/playing`, `victory→title`.
 
 **`InputManager`** – traduce i tasti (`KeyboardEvent.code`) in azioni (`GameAction`) secondo
 `CONTROLS_CONFIG`. Metodi: `isHeld(action)` (tenuto premuto), `wasPressed(action)` (premuto in questo frame,
@@ -239,17 +239,19 @@ Alla perdita del focus rilascia tutti i tasti. Implementa l'interfaccia `InputSo
 | `currentLevelId`, `levelPhase` (`"playing"`/`"completed"`) | avanzamento |
 | `bannerRemainingMs` | tempo restante del messaggio di livello |
 | `lastSafePosition` | ultima posizione sul terreno, per ripartire dopo una caduta |
-| `levelStartScore`, `levelStartCollectibles` | per ripristinare punteggio e gemme se si muore |
+| `levelStartScore`, `levelStartCoins`, `levelStartInventory` | per ripristinare punteggio, monete e borsa se si muore |
+| `discoveredWeaponIds` | armi trovate nella partita in corso (più la spada e l'arma iniziale): la bottega le può vendere |
 
 Funzioni principali: `start()`, `update()` (un frame di logica), `render()`, `startNewGame()`, `startLevel()`,
 `updatePlaying()`, `updateCombatAndEnemies()`, `handlePlayerDeath()`, `finishRun()`, `checkLevelCompletion()`,
-`advanceToNextLevel()`, `getHUDData()`, `getScreenData()`, `chooseCharacter()` (Fase 4: salva il personaggio e, se è
-cambiato, mette in mano e nella borsa la sua arma iniziale), `ensureCharacterSprites()` (registra la serie di sprite di un
-personaggio la prima volta che serve), `resetAllData()` ("Cancella dati": `ProgressManager.reset`, `HighScoreManager.reset`, borsa e
-personaggio iniziali), `dropFromBag()` (tasto Q: Q tenuto + 1-4 lascia quel posto, Q da solo, al rilascio, l'arma in mano; solo a terra),
+`advanceToNextLevel()`, `getHUDData()`, `getScreenData()`, `chooseCharacter()` (Fase 4: salva il personaggio; vale dalla
+prossima partita, il giocatore in corso non cambia), `resetRunEquipment()` (sola arma iniziale della classe, niente armature, zaino o pozioni, armi trovate
+azzerate; all'avvio, a ogni nuova partita e da "Cancella dati"), `awardFinalBossReward()` (il nome del trofeo del boss finale, solo mostrato), `ensureCharacterSprites()` (registra la serie di sprite di un
+personaggio la prima volta che serve), `resetAllData()` ("Cancella dati": `ProgressManager.reset`, `HighScoreManager.reset`, personaggio
+iniziale e `resetRunEquipment`), `dropFromBag()` (tasto Q: Q tenuto + 1-4 lascia quel posto, Q da solo, al rilascio, l'arma in mano; solo a terra),
 `refillAmmoFromQuiver()` (faretra: raccolta solo se `Inventory.refillAllAmmo` ricarica qualcosa), Fase 6: `buyFromShop()`, `leaveShop()`
-(la bottega si apre in `advanceToNextLevel` e PROSEGUI avvia il livello successivo), `buyUpgrade()`; a fine livello (`checkLevelCompletion`)
-si mettono da parte le gemme e si sblocca il livello successivo (e i personaggi), `showStaminaAndAbilityEffects()`
+(la bottega si apre in `advanceToNextLevel` e PROSEGUI avvia il livello successivo); a fine livello (`checkLevelCompletion`)
+si sblocca il livello successivo (e i personaggi), `showStaminaAndAbilityEffects()`
 (Fase 5: nome dell'abilità, "STANCO", polvere e tremolio dell'onda d'urto, scintille e "PARATA!" dello scudo). Le costanti `EFFECT_CONFIG` (in cima al file)
 regolano hit-stop, tremolio e polvere.
 
@@ -281,14 +283,13 @@ regolano hit-stop, tremolio e polvere.
 | `getAttackElements()`, `getHitProperties(attack)` | Fase 7: elementi dei power-up attivi e proprietà del colpo (quelle dell'attacco più gli elementi) passate da `CombatSystem.processPlayerAttack` e messe nei proiettili |
 | `getDamageMultiplier()`, `getBonusDamage()` | moltiplicatore del danno (Furia × quello del personaggio) e danno aggiunto (Fuoco), da `modifiers` |
 | `mana`, `maxMana`, `canAfford(cost)`, `abilities`, `activeAbilitySlotIndex`, `selectAbilitySlot(i)`, `isAbilityReady`, `weaponAffinity`, `attributes`, `setAttributes(attributi)` | Classi Fase 0: stamina e mana sono due `ResourcePool` (mana 0 per tutti, attesa `PLAYER_CONFIG.manaRegenDelayMs` 600 ms). `canAfford` e il privato `payCost` leggono un `ResourceCost` (la salute si paga solo se ne resta almeno 1). Le abilità sono un elenco (`CharacterDefinition.abilityIds`); `selectAbilitySlot` rifiuta slot inesistenti e abbassa lo scudo se lo slot cambia; la ricarica è per slot; `ability` è quella dello slot attivo. `weaponAffinity` (da `getWeaponAffinity`, ×1) entra in `getDamageMultiplier` e nel recupero tra gli attacchi. `setAttributes` scrive la fonte `attributes` di `modifiers`; `maxHealth`, `maxStamina`, `maxMana` leggono `maxHealthBonus`, `maxStaminaBonus`, `maxManaBonus` |
-| `stamina`, `maxStamina`, `ability`, `abilityCooldownFraction`, `isGuarding`, `lastGuardOutcome`, `drainTired()`, `drainStartedAbilityName()`, `drainAbilityImpact()`, `drainGuardEvents()` | Fase 5: la stamina si consuma con `spendStamina` (schivata: `dodgeStaminaCost`; attacco pesante: `PLAYER_CONFIG.heavyAttackStaminaCost`; abilità) e si recupera in `updateStamina` dopo `staminaRegenDelayMs`. L'abilità d'attacco (`tryStartAbility`) diventa l'attacco in corso: area d'urto, proiettile (`usesAmmo: false`) e scatto (`AttackDefinition.dash`: velocità, finestra, invulnerabilità; durante lo scatto `isDodging` è vero e il bordo di un abisso lo ferma). Lo scudo (`updateGuard`, stato `guard`) si tiene con L; `takeDamage` passa da `tryBlockWithShield` (parata perfetta, normale o guardia rotta, solo da davanti) e scrive `lastGuardOutcome`, che `CombatSystem.processEnemyAttacks` usa per stordire l'attaccante (`Enemy.stun`) e `ProjectileSystem` per fermare le frecce. Le abilità non hanno pose accovacciate: durante un'abilità non ci si accovaccia |
-| `setUpgrades(bonus)` | Fase 6: potenziamenti permanenti (`UpgradeBonuses`): salute e stamina massime in più, danno moltiplicato; salute e stamina tornano piene. Restano cambiando personaggio |
+| `stamina`, `maxStamina`, `ability`, `abilityCooldownFraction`, `isGuarding`, `lastGuardOutcome`, `drainTired()`, `drainStartedAbilityName()`, `drainAbilityImpact()`, `drainGuardEvents()` | Fase 5: la stamina si consuma con `spendStamina` (schivata: `dodgeStaminaCost`; attacco pesante: `PLAYER_CONFIG.heavyAttackStaminaCost`; abilità) e si recupera in `updateStamina` dopo `staminaRegenDelayMs`. L'abilità d'attacco (`tryStartAbility`) diventa l'attacco in corso: area d'urto, proiettile (`usesAmmo: false`) e scatto (`AttackDefinition.dash`: velocità, finestra, invulnerabilità; durante lo scatto `isDodging` è vero e il bordo di un abisso lo ferma). `handleInput` sceglie lo slot dal tasto premuto (`ABILITY_SLOT_ACTIONS`, `selectAbilitySlot`; non durante un attacco o una schivata). Lo scudo (`updateGuard`, stato `guard`) si tiene con il tasto del suo slot; `takeDamage` passa da `tryBlockWithShield` (parata perfetta, normale o guardia rotta, solo da davanti) e scrive `lastGuardOutcome`, che `CombatSystem.processEnemyAttacks` usa per stordire l'attaccante (`Enemy.stun`) e `ProjectileSystem` per fermare le frecce. Le abilità non hanno pose accovacciate: durante un'abilità non ci si accovaccia |
 | `characterDefinition`, `setCharacter(definizione)`, `maxHealth` | Fase 4: classe del personaggio (`CharacterDefinition`, terzo parametro facoltativo del costruttore; senza, il cavaliere). Ne vengono salute massima, velocità, danno inflitto e subito, schivata, cura lenta (dopo `delayAfterHitMs` senza colpi subiti, anche ambientali) e suffisso degli sprite. `setCharacter` riporta la salute al massimo; il motore la chiama a ogni nuova partita |
 | `modifiers`, `applyPowerUp(definizione)` | power-up attivi (`PlayerModifiers`); la velocità usa `movementSpeedMultiplier`, `takeDamage` usa `damageTakenMultiplier` (Scudo, almeno 1 danno), la rigenerazione cura a punti interi; `revive` li toglie tutti |
 | `respawnAt(position)`, `revive()` | ripartenza e rianimazione |
 | `currentAmmo`, `setAmmo(n)`, `chargeFraction`, `drainProjectileLaunches()`, `drainOutOfAmmo()` | Fase 2: munizioni dell'arma in mano (`equipWeapon(definizione, ammo)`), carica dell'arco, proiettili da lanciare (il motore li passa a `ProjectileSystem` e tiene la borsa al passo con le munizioni in `updateRangedWeapon`), avviso di munizioni finite. Gli attacchi con `projectile` lanciano a `launchAtMs`, quelli con `charge` si caricano finché si tiene il tasto e poi passano all'attacco di rilascio. Il danno dei proiettili usa i power-up come la spada |
 | `bounceOffTarget()`, `drainCompletedComboName()`, `drainPlungeLanding()` | Fase 3: il colpo in picchiata (`AttackDefinition.plunge`) rimbalza quando colpisce (il motore la chiama dopo `processPlayerAttack`) e finisce toccando terra; nome della combo completata da mostrare. Il cavaliere ha due `ComboManager`, a terra e in aria (`WeaponDefinition.air`): passando dall'uno all'altro la combo riparte |
-| `equippedWeapon`, `equipWeapon(definizione)` | arma in mano (`WeaponDefinition`): attacchi, combo, attacco predefinito per input e velocità di camminata; cambiarla annulla attacco e combo e, a metà attacco, anche l'animazione (la nuova arma potrebbe non averne i frame). Il motore dà l'arma salvata in `ProgressManager` all'avvio e a ogni nuova partita |
+| `equippedWeapon`, `equipWeapon(definizione)` | arma in mano (`WeaponDefinition`): attacchi, combo, attacco predefinito per input e velocità di camminata; cambiarla annulla attacco e combo e, a metà attacco, anche l'animazione (la nuova arma potrebbe non averne i frame). Il motore dà l'arma iniziale della classe all'avvio e a ogni nuova partita |
 | `getRenderedFrameId()` | frame da disegnare: frame dell'animazione + `Crouch` (attacco da accovacciati; guarda l'animazione in corso, non lo stato) + suffisso dell'arma + suffisso del personaggio |
 | `isInvulnerable`, `isDodging`, `isCrouching`, `isDead`, `isReadyToRespawn`, `activeAttack` | stato letto dal motore (`isDodging`: si attraversano i nemici) |
 
@@ -348,17 +349,17 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `ProjectileSystem.ts` (2.0) | `ProjectileSystem` | `spawn`, `update(dt, player, platforms, mapWidth, mapHeight, targets)` (restituisce gli eventi: colpito il giocatore, deviato dalla spada, schianto; per i proiettili del giocatore `hitTarget` e `dropAmmo`), `render`, `clear`. Il proiettile nemico passa attraverso il giocatore invulnerabile (schivata). Quelli del giocatore (Fase 2) colpiscono `targets` (nemici, boss, forzieri chiusi), si fermano al primo o trafiggono (`isPiercing`), e se recuperabili (`recoveredAsAmmoOf`) a fine corsa diventano munizioni a terra |
 | `HazardSystem.ts` (2.0) | `HazardSystem` | `computePlayerEnvironment` (acqua o ghiaccio: modificatori del movimento), `applyContactDamage` (spuntoni) Fase 8: l'ambiente porta anche gli spuntoni come `dashStopZones`, dove gli scatti delle abilità si fermano. |
 | `ItemManager.ts` | `ItemManager` | `loadItems`, `collectItems(player, scoreManager)` (applica gli effetti; salta gli oggetti da borsa, `ItemDefinition.storedInBag`), `findReachableBagItem(player)`, `findTouchedAmmoRefill(player)` (faretra, salta da `collectItems`: la raccoglie il motore), `addItem(tipo, x, y)` (pozione lasciata con Q), `removeItem(item)`, `render(..., player)` (suggerimento "E PRENDI ..." sopra la pozione toccata) |
-| `ItemFactory.ts` (E1) | funzioni, `RandomSource`, `ITEM_BASE_PRICES` | oggetti: `createSeededRandom(seme)` (estrazioni ripetibili), `rollRarity(pesi, random)`, `createWeaponItem`/`createArmorItem`, `toWeaponItem` (un id diventa un'arma Comune), `cloneItem`, `rollAffixes`, `rollWeaponItem`/`rollArmorItem` (Leggendari e Mitici sono gli oggetti fissi del tipo; se non ce ne sono si scende di rarità), `createUniqueItem`, `findUniqueItems`, `getItemName` (tipo + nome del primo modificatore), `getItemBaseName`, `getItemIconSpriteId`, `areItemsEqual`, `getItemPrice`, `parseStoredItem` (salvataggi: scarta i dati non validi, valori entro i tetti, oggetti fissi ricreati dalla definizione) |
+| `ItemFactory.ts` (E1) | funzioni, `RandomSource`, `ITEM_BASE_PRICES` | oggetti: `createSeededRandom(seme)` (estrazioni ripetibili), `rollRarity(pesi, random)`, `createWeaponItem`/`createArmorItem`, `toWeaponItem` (un id diventa un'arma Comune), `cloneItem`, `rollAffixes`, `rollWeaponItem`/`rollArmorItem` (Leggendari e Mitici sono gli oggetti fissi del tipo; se non ce ne sono si scende di rarità), `createUniqueItem`, `findUniqueItems`, `getItemName` (tipo + nome del primo modificatore), `getItemBaseName`, `getItemIconSpriteId`, `areItemsEqual`, `getItemPrice` |
 | `EquipmentStats.ts` (E1-E2) | funzioni, `EMPTY_ARMOR`, `NO_EQUIPMENT_BONUSES`, `StatTotals`, `ItemStatLine` | effetti dell'equipaggiamento: `getArmorBaseStats` (statistiche base per la rarità), `getItemTotals`, `getActiveSets`, `computeEquipmentTotals`, `computeEquipmentBonuses(arma, armature)` (bonus **con i tetti**, per `Player`), `describeItemStats` (righe della scheda), `compareItemStats` (differenze con l'oggetto indossato) |
 | `LootSystem.ts` (E5) | funzioni, `LootContext` | bottino: `getLootRarityWeights(contesto)` (pesi della fonte che crescono con livello e difficoltà), `rollLootRarity`, `rollLootWeapon`, `getArmorMaterialWeights(livello)`, `rollLootArmor`, `rollArmorDrop`, `rollFinalBossReward` (l'unica fonte dei Mitici) |
 | `WeaponPickupManager.ts` | `WeaponPickupManager` | oggetti a terra (armi e, da E2, armature, con la rarità: bagliore e nome colorati): `spawn(oggetto o weaponId, centerX, bottomY, isArmed)`, `update(dt, player)` (rende prendibili le armi lasciate quando il giocatore se ne allontana), `findReachablePickup(player)`, `take(pickup)`, `render` (con il suggerimento "E PRENDI ...") |
-| `Inventory.ts` | `Inventory`, `BagSlot`, `InventorySnapshot`, `WeaponAddResult`, `SlotSelection`, `ArmorPickupOutcome`, `EquipmentActionOutcome` | (E1-E4) ogni arma della borsa è un oggetto (`BagSlot.item`, con `weaponId` per comodità), `equippedWeaponItem`, `weaponItems`; `addWeapon(id o oggetto)` con l'esito `replaced` (stesso tipo, oggetto diverso) e `droppedItem`; armature e **zaino**: `equippedArmor`, `backpackItems`, `addToBackpack`, `removeFromBackpack`, `equipArmor`, `pickUpArmor` (indossa o mette nello zaino), `unequipArmor`, `takeArmor`, `equipFromBackpack`, `moveWeaponToBackpack`, `setArmorAndBackpack`; `snapshot()`/`restore()` comprendono armature e zaino. La borsa, solo logica: `bagSlots`, `equippedSlotIndex`, `equippedWeaponId`, `weaponIds`, `potionCount`, `reset(weaponIds, equipped)`, `addWeapon(id, ammo)` (posto libero, altrimenti al posto dell'arma in mano: `droppedWeaponId`, `droppedAmmo`; `duplicate` se c'è già, `refilled` se è un'arma con munizioni non piene), munizioni (`equippedAmmo`, `setEquippedAmmo`, `addAmmo`), `removeWeapon(id)` (giavellotti finiti; senza armi torna la spada), `dropSlot(i)` (tasto Q: l'arma con le munizioni o una pozione; mai l'ultima arma), `refillAllAmmo()` (faretra), `addPotion()`/`canAddPotion()` (un gruppo, limiti di `INVENTORY_CONFIG`), `selectSlot(i)`, `consumePotion(i)`, `snapshot()`/`restore()`. Il motore (`updatePickupsAndBag`, `pickUpWithE`, `useBagSlot`) applica gli effetti, salva le armi con `ProgressManager.setBagWeapons` e ripristina la borsa di inizio livello quando si ricomincia |
-| `ScoreManager.ts` | `ScoreManager` | `currentScore`, `collectiblesFound`, `addScore`, `registerCollectible`, `restore`, `reset`; Fase 6: `coins`, `addCoins`, `spendCoins` (false se non bastano), `restore(punti, gemme, monete?)` |
-| `Shop.ts` (Fase 6) | `Shop`, `ShopOffer`, `PurchaseOutcome`, `ShopContext` | la bottega, solo logica: `Shop.open(armiTrovate, borsa, random, {levelId, difficulty})` (pozione, cura, faretra, un'arma trovata che non è nella borsa e, E5, un pezzo d'armatura: arma e armatura con rarità della fonte "shop", `ShopOffer.item`), `getPrice(offerta)` (arma e armatura +25% dopo ogni acquisto di equipaggiamento), l'arma comprata va nella borsa o nello zaino, `buy(indice, {inventory, player, scoreManager})` → `bought`/`notEnoughCoins`/`notNeeded`/`bagFull`/`soldOut`; controlla prima di spendere, così un acquisto inutile non costa monete |
+| `Inventory.ts` | `Inventory`, `BagSlot`, `InventorySnapshot`, `WeaponAddResult`, `SlotSelection`, `ArmorPickupOutcome`, `EquipmentActionOutcome` | (E1-E4) ogni arma della borsa è un oggetto (`BagSlot.item`, con `weaponId` per comodità), `equippedWeaponItem`, `weaponItems`; `addWeapon(id o oggetto)` con l'esito `replaced` (stesso tipo, oggetto diverso) e `droppedItem`; armature e **zaino**: `equippedArmor`, `backpackItems`, `addToBackpack`, `removeFromBackpack`, `equipArmor`, `pickUpArmor` (indossa o mette nello zaino), `unequipArmor`, `takeArmor`, `equipFromBackpack`, `moveWeaponToBackpack`, `setArmorAndBackpack`; `snapshot()`/`restore()` comprendono armature e zaino. La borsa, solo logica: `bagSlots`, `equippedSlotIndex`, `equippedWeaponId`, `weaponIds`, `potionCount`, `reset(weaponIds, equipped)`, `addWeapon(id, ammo)` (posto libero, altrimenti al posto dell'arma in mano: `droppedWeaponId`, `droppedAmmo`; `duplicate` se c'è già, `refilled` se è un'arma con munizioni non piene), munizioni (`equippedAmmo`, `setEquippedAmmo`, `addAmmo`), `removeWeapon(id)` (giavellotti finiti; senza armi torna la spada), `dropSlot(i)` (tasto Q: l'arma con le munizioni o una pozione; mai l'ultima arma), `refillAllAmmo()` (faretra), `addPotion()`/`canAddPotion()` (un gruppo, limiti di `INVENTORY_CONFIG`), `selectSlot(i)`, `consumePotion(i)`, `snapshot()`/`restore()`. Il motore (`updatePickupsAndBag`, `pickUpWithE`, `useBagSlot`) applica gli effetti e ripristina la borsa di inizio livello quando si ricomincia |
+| `ScoreManager.ts` | `ScoreManager` | `currentScore`, `addScore`, `restore(punti, monete?)` (senza monete restano quelle attuali), `reset`; Fase 6: `coins`, `addCoins`, `spendCoins` (false se non bastano) |
+| `Shop.ts` (Fase 6) | `Shop`, `ShopOffer`, `PurchaseOutcome`, `ShopContext` | la bottega, solo logica: `Shop.open(armiTrovate, borsa, random, {levelId, difficulty})` (`armiTrovate` = `GameEngine.discoveredWeaponIds`, solo della partita in corso) (pozione, cura, faretra, un'arma trovata che non è nella borsa e, E5, un pezzo d'armatura: arma e armatura con rarità della fonte "shop", `ShopOffer.item`), `getPrice(offerta)` (arma e armatura +25% dopo ogni acquisto di equipaggiamento), l'arma comprata va nella borsa o nello zaino, `buy(indice, {inventory, player, scoreManager})` → `bought`/`notEnoughCoins`/`notNeeded`/`bagFull`/`soldOut`; controlla prima di spendere, così un acquisto inutile non costa monete |
 | `AttributeStats.ts` (Classi Fase 0) | `computeAttributeEffects` | trasforma gli `Attributes` (punti per attributo) negli effetti sulle statistiche (`StatModifierEffect[]`) secondo `effectsPerPoint`; con attributi a zero (e effetti vuoti) non produce niente |
 | `LivesManager.ts` | `LivesManager` | `remainingLives`, `hasLivesLeft`, `loseLife`, `addLife`, `reset` |
 | `HighScoreManager.ts` | `HighScoreManager` | record nel browser (`localStorage`), tollerante agli errori; `bestScore`, `submitScore`, `reset` |
-| `ProgressManager.ts` (2.0) | `ProgressManager` | livello più avanzato raggiunto, difficoltà e personaggio scelti (`characterId`, `setCharacter`; un salvataggio senza personaggio dà il cavaliere) e arma in mano, salvati nel browser (JSON nella chiave `ironAndShadow.progress`); tollerante a dati assenti, corrotti o archivio bloccato; `unlockedLevelId`, `isLevelUnlocked`, `unlockLevel` (non torna indietro), `reset()` (cancella tutto), Fase 6: `isCharacterUnlocked` (`characterId` dà il cavaliere se quello salvato è bloccato), `gems`, `addGems`, `upgradeLevels`, `getNextUpgradeCost`, `buyUpgrade`, `discoveredWeaponIds`, `discoverWeapon` (valori non validi corretti al caricamento), `difficulty`, `setDifficulty`, `equippedWeaponId`, `setEquippedWeapon`, `bagWeaponIds`, `setBagWeapons(weaponIds, equipped)` (armi della borsa senza doppioni, l'arma in mano sempre presente, al massimo 4; un salvataggio senza borsa dà la sola arma in mano, uno senza arma la spada; le pozioni non si salvano). E1-E4: `bagWeaponItems` (oggetti delle armi; `setBagWeapons` accetta id o oggetti e scrive anche `bagWeaponIds` per compatibilità), `savedArmor`, `savedBackpack`, `setEquipment(armature, zaino)`; i salvataggi di prima danno armi Comuni |
+| `ProgressManager.ts` (2.0) | `ProgressManager`, `SAVE_VERSION` | ciò che passa da una partita all'altra: JSON `{ version, unlockedLevelId, difficulty, characterId }` nella chiave `ironAndShadow.progress`; tollerante a dati assenti, corrotti o archivio bloccato (un valore non valido torna a quello iniziale). Un salvataggio senza `version` uguale a `SAVE_VERSION` (2.0) conserva questi dati e si riscrive subito, scartando il resto. `unlockedLevelId`, `isLevelUnlocked`, `unlockLevel` (non torna indietro), `isCharacterUnlocked` (dal livello raggiunto; non si salva), `characterId` (il cavaliere se quello salvato è bloccato), `setCharacter`, `difficulty`, `setDifficulty`, `reset()`. Il record è in `HighScoreManager` |
 
 ### 3.6 `src/rendering/`
 
@@ -409,16 +410,16 @@ sul fondo dell'hitbox: ciò che è più alto dell'hitbox (pennacchio, corna) spo
 
 | File | Classe | Responsabilità |
 |---|---|---|
-| `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `STAMINA_BAR_GEOMETRY`, `ABILITY_BOX_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, monete (Fase 6), barra della stamina e riquadro dell'abilità con la L (Fase 5), livello, punteggio dorato, gemme), borsa sotto il pannello a destra (`BAG_SLOT_GEOMETRY`, `getBagSlotX`: riquadri numerati, arma in mano con la cornice dorata, numero di pozioni), power-up attivi con la barra del tempo, barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
+| `HUDManager.ts` | `HUDManager`, `drawOrnateFrame`, `HEALTH_SEGMENT_GEOMETRY`, `STAMINA_BAR_GEOMETRY`, `ABILITY_BOX_GEOMETRY`, `TITLE_GOLD_ROWS` | pannello superiore (cuore e salute a 10 segmenti, vite, monete (Fase 6), barra della stamina (Fase 5) e riquadro della mossa speciale con il numero del tasto (`HUDData.ability.slotNumber` + 5), livello, punteggio dorato), borsa sotto il pannello a destra (`BAG_SLOT_GEOMETRY`, `getBagSlotX`: riquadri numerati, arma in mano con la cornice dorata, numero di pozioni), power-up attivi con la barra del tempo, barra del boss con teschio e tacche di fase, riquadri decorati dei messaggi |
 | `MenuManager.ts` | `MenuManager<TCommand>` | menu verticale: `update(input)` restituisce il comando confermato, `render(...)` (voce scelta in bianco-oro con frecce); l'etichetta di una voce può essere una funzione (testo che cambia) |
-| `ScreenManager.ts` | `ScreenManager`, `getCharacterRatings` | schermate titolo (con personaggio e difficoltà nel menu), controlli, **selezione dei livelli** (cursore solo sui livelli sbloccati, `selectedLevelId`), **scelta del personaggio** (Fase 4: A/D o W/S circolari, parte dal personaggio salvato, `selectedCharacterId`; comandi `showCharacterSelect`, `confirmCharacter`; **bottega** e **potenziamenti** (Fase 6: elenchi con cursore circolare, `selectedShopIndex`, `selectedUpgradeIndex`, comandi `buyShopOffer`, `leaveShop`, `showUpgrades`, `buyUpgrade`; la scelta del personaggio rifiuta quelli bloccati e li disegna come sagome); **conferma di "Cancella dati"** (`confirmReset`, voce predefinita "no", comandi `showResetConfirm`, `resetAllData`; `showNotice` mostra "DATI CANCELLATI" sul titolo); le tacche da 1 a 5 vengono da `getCharacterRatings`, calcolate dai valori di `CHARACTER_CONFIG`), pausa (E4: ultima voce *Equipaggiamento*, comando `showEquipment`), Game Over, vittoria; **schermata dell'equipaggiamento** (E4: `EquipmentView`, `EquipmentCell`, `EQUIPMENT_LAYOUT`, `selectedEquipmentCell`; frecce tra armature, borsa e zaino, comandi `equipmentUse`, `equipmentDrop`, `closeEquipment`; scheda dell'oggetto con `describeItemStats` e confronto con `compareItemStats`); usa un `MenuManager` per ciascuna; riceve dal motore `ScreenData` (anche `difficultyName`, `characterId`, `levels` ed `equipment`) |
+| `ScreenManager.ts` | `ScreenManager`, `getCharacterRatings` | schermate titolo (con personaggio e difficoltà nel menu), controlli, **selezione dei livelli** (cursore solo sui livelli sbloccati, `selectedLevelId`), **scelta del personaggio** (Fase 4: A/D o W/S circolari, parte dal personaggio salvato, `selectedCharacterId`; comandi `showCharacterSelect`, `confirmCharacter`; **bottega** (Fase 6: elenco con cursore circolare, `selectedShopIndex`, comandi `buyShopOffer`, `leaveShop`; la scelta del personaggio rifiuta quelli bloccati e li disegna come sagome); **conferma di "Cancella dati"** (`confirmReset`, voce predefinita "no", comandi `showResetConfirm`, `resetAllData`; `showNotice` mostra "DATI CANCELLATI" sul titolo); le tacche da 1 a 5 vengono da `getCharacterRatings`, calcolate dai valori di `CHARACTER_CONFIG`), pausa (E4: ultima voce *Equipaggiamento*, comando `showEquipment`), Game Over, vittoria; **schermata dell'equipaggiamento** (E4: `EquipmentView`, `EquipmentCell`, `EQUIPMENT_LAYOUT`, `selectedEquipmentCell`; frecce tra armature, borsa e zaino, comandi `equipmentUse`, `equipmentDrop`, `closeEquipment`; scheda dell'oggetto con `describeItemStats` e confronto con `compareItemStats`); usa un `MenuManager` per ciascuna; riceve dal motore `ScreenData` (anche `difficultyName`, `characterId`, `levels` ed `equipment`) |
 
 ### 3.8 `src/types/`
 
 | File | Tipi |
 |---|---|
 | `ItemTypes.ts` (E1-E2) | `RarityId`, `RolledRarityId`, `ArmorSlot`, `ArmorMaterialId`, `ArmorId`, `AffixId`, `AffixRoll`, `WeaponItem`, `ArmorItem`, `ItemInstance`, `EquippedArmor`, `EquipmentBonuses` |
-| `GameTypes.ts` | `GameStateName` (E4: `equipment`), `GameAction` (E4: `openEquipment`), `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
+| `GameTypes.ts` | `GameStateName` (E4: `equipment`), `GameAction` (E4: `openEquipment`; 2.1: `ability1`-`ability4`), `InputContext`, `Vector2`, `Rectangle`, `FacingDirection`, `InputSource` |
 | `EntityTypes.ts` | `PlayerState`, `PlayerEnvironment`, `PowerUpId`, `PlayerStatName` (anche `maxHealthBonus`, `maxStaminaBonus`, `maxManaBonus`), `ModifierSourceId`, `AttributeId`, `Attributes`, `AttributeDefinition`, `AttributeEffectPerPoint`, `WeaponCategoryId`, `WeaponAffinity`, `StatModifierEffect`, `PowerUpDefinition`, `ActivePowerUp` (e nei nemici `lunge`, `splitInto`, `armor`), `EnemyState`, `EnemyBehavior`, `EnemyTypeId`, `ProjectileTypeId`, `RangedAttackDefinition`, `FlightDefinition`, `ProjectileDefinition`, `ProjectileLaunch`, `SummonRequest`, `EnemyDefinition`, `AttackDefinition` (`breaksGuard`, `crushesArmor`, `plunge`, `projectile`, `charge`), `ProjectileDefinition` (`isPiercing`, `recoveredAsAmmoOf`), `ProjectileLaunch` (`owner`, `speedMultiplier`, `hit`), `WeaponDefinition` (`ammo`), `HitProperties`, `ComboDefinition` (`name`), `WeaponDefinition` (`air`), `WeaponId`, `AttackInputAction`, `WeaponDefinition`, `CharacterId`, `CharacterDefinition` (Fase 4), `ElementId`, `ElementModifiers`, `HitProperties.elements`, `PowerUpDefinition.element` (Fase 7), `AbilityId`, `AbilityDefinition` (`cost`, `modifiers`), `AbilityBase`, `ResourceCost`, `AbilityModifier`, `GuardOutcome`, `AttackDefinition.dash` (Fase 5), `Damageable`, `BossAttackKind`, `BossAttackDefinition` (e i 4 tipi di attacco), `BossPhaseDefinition`, `BossDefinition` |
 | `LevelTypes.ts` | `ThemeId` (8 ambientazioni, con `wasteland` e `shop`), `TerrainTexture` (6 tessiture), `ThemeStyle`, `ItemTypeId`, `PlatformDefinition`, `MovingPlatformDefinition`, `HazardKind`, `HazardDefinition`, `EnemySpawnDefinition` (`elite`, `weaponDrop`), `ChestSpawnDefinition`, `ItemSpawnDefinition`, `CompletionCondition`, `LevelDefinition` (`chests`) |
 
@@ -455,7 +456,7 @@ muore, punti e popup.
 
 ### 4.5 Morte e fine partita
 Salute 0 → stato `dead` → dopo `deathDurationMs` `isReadyToRespawn` → `handlePlayerDeath`: toglie una vita; se ne restano,
-`restartCurrentLevel` (ripristina punteggio e gemme di inizio livello e ricarica il livello); altrimenti `finishRun("gameOver")`
+`restartCurrentLevel` (ripristina punteggio, monete e borsa di inizio livello e ricarica il livello); altrimenti `finishRun("gameOver")`
 registra il record e cambia stato.
 
 ### 4.6 Fine livello
@@ -463,7 +464,7 @@ registra il record e cambia stato.
 dopo il messaggio `advanceToNextLevel`: se c'è un livello successivo apre la bottega (`Shop.open`) e, con `SHOP_ROOM_CONFIG.isEnabled`,
 entra nella **stanza del negozio** (`enterShopRoom`: carica `SHOP_ROOM_LEVEL` con `loadLevelDefinition`, niente nemici, `isInShopRoom`;
 **E** vicino a un piedistallo chiama `buyFromShopRoom`; raggiunta la porta `checkLevelCompletion` chiama `leaveShop`, che avvia `startLevel(id + 1)`);
-altrimenti lo stato `shop` (bottega a menu). Senza livello successivo: `finishRun("victory")` (il boss finale ha già messo la sua ricompensa nello zaino).
+altrimenti lo stato `shop` (bottega a menu). Senza livello successivo: `finishRun("victory")` (la ricompensa del boss finale è solo il trofeo mostrato nel riquadro di fine livello).
 
 ### 4.7 Equipaggiamento (piano E1-E6)
 - **Un solo punto di applicazione**: `GameEngine.equipFromInventory()` passa al giocatore l'arma in mano (`equipWeapon(definizione, munizioni, oggetto)`)
@@ -472,8 +473,7 @@ altrimenti lo stato `shop` (bottega a menu). Senza livello successivo: `finishRu
   velocità, recupero tra gli attacchi e furto di vita (`registerDamageDealt`, chiamato da `handlePlayerHit`).
 - **Bottino**: `handlePlayerHit` e `openChest` usano `LootSystem` con `this.lootRandom` (sostituibile nei test); i trofei dei boss sono
   `weaponReward.items` (arma e armatura) e compaiono all'inizio del livello successivo.
-- **Salvataggio**: `saveBagWeapons()` salva armi della borsa (oggetti), armature e zaino; `loadSavedEquipment()` li rimette nella borsa
-  a ogni nuova partita; il ripristino di inizio livello (`InventorySnapshot`) comprende armature e zaino.
+- **Solo per la partita**: armi, armature e zaino non si salvano; `resetRunEquipment()` li azzera a ogni nuova partita. Il ripristino di inizio livello (`InventorySnapshot`) comprende armature e zaino.
 - **Aggiungere un oggetto Leggendario o Mitico**: una voce in `LEGENDARY_ITEMS` o `MYTHIC_ITEMS` (tipo di base esistente, modificatori
   entro i tetti di `AFFIX_CONFIG`); l'aspetto viene dai colori della rarità. **Aggiungere un pezzo d'armatura**: una voce in `ARMOR_CONFIG`
   (l'id è materiale + posto); un materiale nuovo vuole anche `ARMOR_MATERIALS` (quattro toni della palette) e `ARMOR_SETS`.
@@ -616,7 +616,7 @@ Scheletro (40 HP) e Goblin (25 HP) cadono con meno colpi.
 
 ### Esempio 5 – Modificare le combo
 
-**Obiettivo:** aggiungere una seconda combo: Spazio, Spazio, **J** (due fendenti e un attacco pesante).
+**Obiettivo:** aggiungere una seconda combo: J, J, **K** (due fendenti e un attacco pesante).
 
 #### Passo 1 – `src/config/playerConfig.ts`
 
@@ -645,11 +645,11 @@ Codice aggiornato:
 
 **Spiegazione.** Una combo è una sequenza di azioni (`inputSequence`, valori di `GameAction`) e gli attacchi
 corrispondenti (`attackIds`, chiavi di `ATTACK_DEFINITIONS`). `ComboManager` confronta gli input premuti con l'inizio
-di ogni combo: dopo "Spazio, Spazio" sono possibili entrambe, e la terza pressione decide (Spazio → `tripleSlash`,
-J → `heavyFinisher`). `comboWindowMs` è il tempo massimo tra la fine di un colpo e il successivo. Per rendere più o meno
+di ogni combo: dopo "J, J" sono possibili entrambe, e la terza pressione decide (J → `tripleSlash`,
+K → `heavyFinisher`). `comboWindowMs` è il tempo massimo tra la fine di un colpo e il successivo. Per rendere più o meno
 severa una combo basta cambiare quel numero (es. 600 per concatenare più facilmente).
 
-**Risultato atteso:** Spazio, Spazio, J esegue le animazioni `attack1`, `attack2`, `attackHeavy`; Spazio ×3 funziona come prima.
+**Risultato atteso:** J, J, K esegue le animazioni `attack1`, `attack2`, `attackHeavy`; J ×3 funziona come prima.
 
 ### Esempio 6 – Aggiungere un nuovo nemico
 
@@ -891,7 +891,6 @@ Codice aggiornato:
     spriteId: "itemElixir",
     healAmount: 60,
     scoreBonus: 100,
-    isCollectible: false,
   },
 };
 ```
@@ -935,7 +934,7 @@ Codice aggiornato:
       { type: "elixir", position: { x: 1000, y: 192 } },
 ```
 
-**Spiegazione.** `ItemManager.collectItems` legge `healAmount`, `scoreBonus` e `isCollectible` dalla definizione:
+**Spiegazione.** `ItemManager.collectItems` legge `healAmount`, `scoreBonus` e l'eventuale `coins` dalla definizione:
 non serve scrivere altra logica. Lo sprite è 8×8 e usa le lettere dei colori di `ITEM_COLORS` (`k w r y c b`).
 La posizione `y` è `superficie − 8`: sul terreno (y = 200) l'oggetto sta a 192. Anche il popup "+60 HP" del motore
 funziona da solo perché `healAmount > 0`.

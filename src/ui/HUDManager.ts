@@ -9,11 +9,10 @@ export interface HUDData {
   /** Stamina (Fase 5): barra verde sotto la salute. */
   stamina: number;
   maxStamina: number;
-  /** Abilità (tasto L): ricarica che manca (1 = appena usata), pronta (ricarica finita e stamina sufficiente), in uso (scudo alzato). */
-  ability: { cooldownFraction: number; isReady: boolean; isActive: boolean };
+  /** Mossa dello slot attivo (slotNumber 0 = tasto 5): ricarica che manca (1 = appena usata), pronta (ricarica finita e stamina sufficiente), in uso (scudo alzato). */
+  ability: { slotNumber: number; cooldownFraction: number; isReady: boolean; isActive: boolean };
   lives: number;
   score: number;
-  collectibles: number;
   /** Monete della partita (Fase 6), da spendere nella bottega. */
   coins: number;
   levelNumber: number;
@@ -43,7 +42,7 @@ export const HEALTH_SEGMENT_COUNT = 10;
 /** Geometria di ogni segmento della salute (il rettangolo principale, nel colore di riempimento). */
 export const HEALTH_SEGMENT_GEOMETRY = { firstX: 19, stepX: 6, y: 4, width: 5, height: 7 } as const;
 const LOW_HEALTH_PERCENT = 30;
-/** Barra della stamina (a destra delle vite) e riquadro dell'abilità (tasto L) subito dopo. */
+/** Barra della stamina (a destra delle vite) e riquadro della mossa speciale subito dopo. */
 export const STAMINA_BAR_GEOMETRY = { x: 36, y: 15, width: 40, height: 4 } as const;
 export const ABILITY_BOX_GEOMETRY = { x: 80, y: 12, size: 10 } as const;
 /** Riquadri della borsa sotto il pannello, a destra: lato (cornice compresa) e distanza tra i riquadri. */
@@ -51,7 +50,7 @@ export const BAG_SLOT_GEOMETRY = { size: 20, step: 22, rightMargin: 4, y: HUD_HE
 
 /**
  * HUD di gioco in stile 16 bit: pannello metallico con bordo dorato, cuore e barra della salute
- * a segmenti ombreggiati, vite, livello, punteggio, gemme e barra del boss con teschio.
+ * a segmenti ombreggiati, vite, livello, punteggio, monete e barra del boss con teschio.
  * Contiene anche i riquadri dei messaggi (inizio e fine livello).
  */
 export class HUDManager {
@@ -66,11 +65,9 @@ export class HUDManager {
       shadowColor: PALETTE.black,
       rowColors: [PALETTE.cream, PALETTE.yellow, PALETTE.yellow, PALETTE.goldLight, PALETTE.goldLight, PALETTE.gold, PALETTE.gold],
     });
-    // monete (Fase 6) a sinistra delle gemme
-    spriteManager.drawSprite(renderer, "itemCoin", renderer.width - 80, 13, false);
-    renderer.drawText(`x${data.coins}`, renderer.width - 42, 13, PALETTE.goldLight, { align: "right", shadowColor: PALETTE.black });
-    spriteManager.drawSprite(renderer, "itemGem", renderer.width - 34, 13, false);
-    renderer.drawText(`x${data.collectibles}`, renderer.width - 6, 13, PALETTE.cyan, { align: "right", shadowColor: PALETTE.black });
+    // monete (Fase 6)
+    spriteManager.drawSprite(renderer, "itemCoin", renderer.width - 44, 13, false);
+    renderer.drawText(`x${data.coins}`, renderer.width - 6, 13, PALETTE.goldLight, { align: "right", shadowColor: PALETTE.black });
     this.renderPowerUps(renderer, spriteManager, data.powerUps, timeSeconds);
     this.renderBag(renderer, spriteManager, data.bag);
     if (data.boss !== null) {
@@ -144,7 +141,7 @@ export class HUDManager {
   }
 
   /**
-   * Stamina: barra verde con il contorno (gialla quando è sotto un terzo). Abilità: riquadro con la "L", dorata
+   * Stamina: barra verde con il contorno (gialla quando è sotto un terzo). Mossa: riquadro con il numero del suo tasto, dorato
    * quando è pronta, grigia con il riempimento che scende durante la ricarica, azzurra con lo scudo alzato.
    */
   private renderStaminaAndAbility(renderer: Renderer, data: HUDData, timeSeconds: number): void {
@@ -170,7 +167,7 @@ export class HUDManager {
     }
     const isPulsing = ability.isReady && !ability.isActive && Math.floor(timeSeconds * 2) % 2 === 0;
     const letterColor = ability.isActive ? PALETTE.white : ability.isReady ? (isPulsing ? PALETTE.cream : PALETTE.goldLight) : PALETTE.gray;
-    renderer.drawText("L", abilityBox.x + 3, abilityBox.y + 2, letterColor);
+    renderer.drawText(String(ability.slotNumber + 5), abilityBox.x + 3, abilityBox.y + 2, letterColor);
   }
 
   /** X del riquadro della borsa numero slotIndex (0 = tasto 1). */
