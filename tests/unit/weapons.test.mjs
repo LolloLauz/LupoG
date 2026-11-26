@@ -37,7 +37,7 @@ const input=(pressed=[],held=[])=>({isHeld:a=>held.includes(a),wasPressed:a=>pre
 const grounded=()=>{const p=new Player(100,176);for(let i=0;i<5;i++)p.update(1/60,input(),cs,P,1024);return p};
 // arma di prova: un solo attacco (riusa l'animazione attack1, stessa durata), niente combo, più lenta
 const a1=ATTACK_DEFINITIONS.swordLight1;
-const testWeapon={id:'sword',name:'Prova',attacks:{testStab:{...a1,id:'testStab',damage:7}},combos:[],defaultAttackByInput:{attack:'testStab',heavyAttack:'testStab'},movementSpeedMultiplier:0.5};
+const testWeapon={id:'sword',name:'Prova',attacks:{testStab:{...a1,id:'testStab',damage:7}},combos:[],defaultAttackByInput:{attack:'testStab',heavyAttack:'testStab'},movementSpeedMultiplier:0.5,category:'blade',weight:2,scalingAttribute:'strength'};
 {const p=grounded();
  t("il giocatore parte con la spada",p.equippedWeapon.id==='sword'&&Object.keys(ATTACK_DEFINITIONS).every(id=>p.equippedWeapon.attacks[id]!==undefined));
  p.update(1/60,input(['attack']),cs,P,1024);

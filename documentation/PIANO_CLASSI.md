@@ -114,21 +114,38 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 **Obiettivo:** cinque attributi che cambiano davvero il modo di giocare, con una schermata che li mostra come un pentagono.
 
-- [ ] **Attributi:** Forza, Destrezza, Intelligenza, Vitalità e Tempra; valori base per classe in `CHARACTER_CONFIG`.
-- [ ] **Effetti** (tutti via `PlayerModifiers`, con tetti come quello della difesa al 25%):
+**Decisioni (grilling del 26 nov 2026):** tutti i numeri sono provvisori, la messa a punto è della Fase 6B.
+
+- **Base neutra:** i valori base per classe servono al pentagono e ai requisiti; gli effetti contano solo i punti spesi sopra la base, quindi un personaggio senza punti spesi gioca come nella 2.3 e le sezioni esistenti di `npm run balance` restano identiche al baseline.
+- **Scala:** 0-20 per attributo (raggio pieno del pentagono); il valore effettivo (base + spesi + power-up) non supera mai 20. Requisiti e carico leggono il valore effettivo.
+- **Basi (somma 25):** Cavaliere FOR 6, DES 5, INT 2, VIT 6, TEM 6; Ranger 3, 9, 3, 4, 6; Berserker 9, 4, 1, 8, 3; Paladino 6, 2, 4, 7, 6; Mago 2, 4, 10, 4, 5.
+- **Punti:** 3 a fine livello e 2 per ogni boss (26 spendibili prima del livello 7: i boss stanno nei livelli 3-7), uguali a ogni difficoltà; valgono per la sola partita e stanno nello snapshot di inizio livello. Si spendono solo in bottega, all'altare della stanza, uno alla volta e senza ridistribuzione; si possono tenere da parte. Icona con il numero nell'HUD e promemoria entrando in bottega.
+- **Danno delle armi:** +3% per punto sull'attributo principale (`scalingAttribute`), +1% per punto sul secondario: FOR per le armi corpo a corpo, DES per quelle a distanza e da lancio; se coincidono vale solo il principale.
+- **Effetti per punto speso:** FOR carico +1; DES recupero degli attacchi −1% e costo della schivata −1,5%; INT potenza delle mosse 7-0 +2% (tutte le classi) e, per chi ha mana, mana massimo +4, rigenerazione +3%, costo degli incantesimi −1%; VIT salute +4 e difesa +0,5%; TEM stamina +4, recupero della stamina +3%, resistenze +1%.
+- **Tetti:** difesa (25%), resistenze (60%) e recupero (30%) condivisi con l'equipaggiamento (`AFFIX_CONFIG`).
+- **Requisiti di Forza (morbidi):** solo armi con scaling FOR e peso ≥ 3, FOR richiesta = (peso − 2) × 3 (lancia 3, ascia e mazza 6, spadone 9), −4% danno e +4% recupero per punto mancante; armature, FOR richiesta = peso del pezzo, −3% di velocità per punto mancante; tetto del malus 40%. Le armi iniziali non hanno malus.
+- **Carico:** 8 + FOR, conta l'arma in mano più le armature indossate; −3% di velocità per ogni punto oltre, fino a −30%.
+- **Gradi degli incantesimi:** `grade` 1-3 in `AbilityDefinition`, requisito rigido INT 12 (grado 2) e 16 (grado 3): slot grigio e messaggio "INTELLIGENZA INSUFFICIENTE". Gli incantesimi attuali sono di grado 1.
+- **Power-up:** possono avere effetti sugli attributi; nessun power-up nuovo, il supporto si prova nei test.
+- **Pentagono:** base, punti spesi e bonus dei power-up in tre colori della palette, valori e righe degli effetti accanto; in sola lettura dal tasto I, in modalità spesa dall'altare (frecce su/giù, J assegna un punto).
+- **Altare:** sprite provvisorio con la skill dei pixel sprite, rifinito nella 6A.
+- **Simulatore:** opzione `--build` per il Cavaliere che spende tutti i punti in un attributo; il baseline si aggiorna solo con la sezione nuova.
+
+- [x] **Attributi:** Forza, Destrezza, Intelligenza, Vitalità e Tempra; valori base per classe in `CHARACTER_CONFIG`. *Fatto: basi delle decisioni; effetti per punto in `ATTRIBUTE_CONFIG`, calcoli in `systems/AttributeStats.ts`, punti della partita in `systems/AttributePoints.ts`.*
+- [x] **Effetti** (tutti via `PlayerModifiers`, con tetti come quello della difesa al 25%): *fatto con i valori delle decisioni; otto statistiche nuove in `PlayerStatName`, difesa, resistenze e recupero sotto i tetti di `AFFIX_CONFIG`.*
   - **Forza:** danno corpo a corpo, peso trasportabile e requisiti di armi e armature pesanti.
   - **Destrezza:** danno a distanza, velocità d'attacco, costo della schivata.
   - **Intelligenza:** mana massimo e rigenerazione, potenza e costo degli incantesimi, grado degli incantesimi usabili.
   - **Vitalità:** salute massima e un po' di difesa.
   - **Tempra:** stamina massima e recupero, resistenze agli elementi.
-- [ ] **Scaling delle armi:** ogni arma legge la statistica indicata nei suoi tag (Fase 0).
-- [ ] **Punti:** un numero fisso a fine livello e un bonus per ogni boss, spesi nella bottega camminabile; quantità da decidere.
-- [ ] **Schermata delle statistiche:** pentagono a pixel con i cinque valori, apribile dalla schermata dell'equipaggiamento (tasto I) e dalla bottega; tutti i colori dalla palette.
-- [ ] **Power-up temporanei:** passano dalla stessa pipeline e cambiano le statistiche solo per la loro durata, senza toccare i valori base.
-- [ ] **Requisiti:** armi e armature pesanti richiedono Forza; incantesimi di grado alto richiedono Intelligenza; messaggi chiari quando manca il requisito.
-- [ ] **Test e documentazione:** formule e tetti nei test unitari; sezione nuova nel manuale e in ARCHITECTURE.
+- [x] **Scaling delle armi:** ogni arma legge la statistica indicata nei suoi tag (Fase 0). *Fatto: principale 3%, secondario 1% (`WEAPON_SCALING_CONFIG`), solo sugli attacchi dell'arma.*
+- [x] **Punti:** un numero fisso a fine livello e un bonus per ogni boss, spesi nella bottega camminabile; quantità da decidere. *Fatto: 3 + 2 per il boss, all'altare della stanza del negozio; snapshot a inizio livello, azzerati a nuova partita.*
+- [x] **Schermata delle statistiche:** pentagono a pixel con i cinque valori, apribile dalla schermata dell'equipaggiamento (tasto I) e dalla bottega; tutti i colori dalla palette. *Fatto: stato `attributes`, P dall'equipaggiamento (sola lettura), E all'altare (spesa con J o Invio); `ui/PentagonChart.ts`; indicatore "+N PUNTI" nell'HUD.*
+- [x] **Power-up temporanei:** passano dalla stessa pipeline e cambiano le statistiche solo per la loro durata, senza toccare i valori base. *Fatto: `PowerUpDefinition.attributeBonuses`; nessun power-up nuovo, provato nei test.*
+- [x] **Requisiti:** armi e armature pesanti richiedono Forza; incantesimi di grado alto richiedono Intelligenza; messaggi chiari quando manca il requisito. *Fatto: "FORZA INSUFFICIENTE (-n)" alla raccolta e nell'equipaggiamento, FOR richiesta nella scheda, slot grigio e "INTELLIGENZA INSUFFICIENTE" per i gradi.*
+- [x] **Test e documentazione:** formule e tetti nei test unitari; sezione nuova nel manuale e in ARCHITECTURE. *Fatto: `classes-phase4.test.mjs`, prove nel browser (pentagono e altare), sezione BUILD nel simulatore (`--build`).*
 
-**Criterio di chiusura:** due build molto diverse (ad esempio tutta Forza e tutta Intelligenza) giocano in modo riconoscibilmente diverso nel simulatore.
+**Criterio di chiusura:** due build molto diverse (ad esempio tutta Forza e tutta Intelligenza) giocano in modo riconoscibilmente diverso nel simulatore. *Sezione BUILD: il Cavaliere tutto Forza finisce prima e perde meno salute, tutto Vitalità non muore ma perde più salute, tutto Intelligenza sta in mezzo. Cambiano tre righe esistenti (Cavaliere in acciaio, Mago col bottino) per i malus della Forza: baseline aggiornato (decisione del 26 nov).*
 
 ---
 
@@ -174,7 +191,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 **Decisioni ancora da prendere:**
 
-- [ ] Quanti punti statistica si guadagnano per livello e per boss.
+- [x] Quanti punti statistica si guadagnano per livello e per boss. *Deciso: 3 per livello e 2 per boss (vedi Fase 4).*
 - [ ] Come si ottengono le mosse extra delle classi (note dall'inizio o trovate).
 - [ ] Valore in monete della gemma (proposta: 30).
 

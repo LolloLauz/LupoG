@@ -6,12 +6,25 @@ import { ResourcePool } from "../combat/ResourcePool";
 import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
 import { buildEquipmentVariant } from "../rendering/sprites/equipmentVisuals";
 import type { SpriteColorVariant } from "../rendering/SpriteManager";
-import { computeAttributeEffects } from "../systems/AttributeStats";
+import {
+  NO_STRENGTH_PENALTIES,
+  combineCappedFraction,
+  computeAttributeEffects,
+  computeEffectiveAttributes,
+  computeStrengthPenalties,
+  getPointsAboveBase,
+  getWeaponScalingMultiplier,
+  meetsGradeRequirement,
+  type StrengthPenalties,
+} from "../systems/AttributeStats";
 import { EMPTY_ARMOR, NO_EQUIPMENT_BONUSES, computeEquipmentBonuses } from "../systems/EquipmentStats";
 import { createWeaponItem } from "../systems/ItemFactory";
 import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
 import { ABILITY_CONFIG } from "../config/abilityConfig";
+import { AFFIX_CONFIG } from "../config/affixConfig";
+import { ARMOR_CONFIG, ARMOR_SLOTS } from "../config/armorConfig";
+import { ATTRIBUTE_ORDER, ZERO_ATTRIBUTES } from "../config/attributeConfig";
 import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
 import { ABILITY_SLOT_ACTIONS } from "../config/controlsConfig";
 import { PLAYER_CONFIG } from "../config/playerConfig";
@@ -22,7 +35,7 @@ import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import { canWieldWeapon, getWeaponMaxAmmo } from "../systems/WeaponAffinity";
 import { CollisionSystem } from "../systems/CollisionSystem";
-import type { AbilityDefinition, AttackDefinition, Attributes, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, ResourceCost, SpellFocusDefinition, WeaponAffinity, WeaponDefinition } from "../types/EntityTypes";
+import type { AbilityDefinition, AttackDefinition, AttributeId, Attributes, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PlayerStatName, PowerUpDefinition, ProjectileLaunch, ResourceCost, SpellFocusDefinition, WeaponAffinity, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import type { EquipmentBonuses, EquippedArmor, WeaponItem } from "../types/ItemTypes";
@@ -50,6 +63,8 @@ export interface AbilitySlotStatus {
   isReady: boolean;
   /** Slot attivo (l'ultimo scelto con 7-0). */
   isSelected: boolean;
+  /** Il grado della mossa è alla portata dell'Intelligenza (Classi Fase 4: requisito rigido). */
+  meetsRequirement: boolean;
   /** In uso: guardia alzata. */
   isActive: boolean;
 }
@@ -91,16 +106,27 @@ export class Player extends GameObject {
   private lifeStealAccumulator = 0;
   public currentHealth: number = this.character.maxHealth;
 
-  /** Attributi attuali (Classi Fase 0: quelli di partenza della classe, tutti a zero). */
-  private attributeValues: Readonly<Attributes> = this.character.baseAttributes;
+  /**
+   * Attributi (Classi Fase 4): punti spesi sopra la base della classe, valori effettivi (base + spesi + power-up, entro
+   * il massimo), punti sopra la base che danno gli effetti, e malus della Forza per l'equipaggiamento in uso.
+   * Si ricalcolano insieme in refreshAttributes.
+   */
+  private spentAttributeValues: Readonly<Attributes> = ZERO_ATTRIBUTES;
+  private effectiveAttributeValues: Readonly<Attributes> = this.character.baseAttributes;
+  private attributePointsAboveBase: Readonly<Attributes> = ZERO_ATTRIBUTES;
+  private strengthPenalties: Readonly<StrengthPenalties> = NO_STRENGTH_PENALTIES;
 
   // --- risorse (stamina: Fase 5; mana: Classi Fase 0) e abilità ---
   private readonly staminaPool = new ResourcePool(
     () => this.maxStamina,
-    () => this.character.staminaRegenPerSecond,
+    () => this.character.staminaRegenPerSecond * this.getPercentBonusMultiplier("staminaRegenPercent"),
     PLAYER_CONFIG.staminaRegenDelayMs
   );
-  private readonly manaPool = new ResourcePool(() => this.maxMana, () => this.character.manaRegenPerSecond, PLAYER_CONFIG.manaRegenDelayMs);
+  private readonly manaPool = new ResourcePool(
+    () => this.maxMana,
+    () => this.character.manaRegenPerSecond * this.getPercentBonusMultiplier("manaRegenPercent"),
+    PLAYER_CONFIG.manaRegenDelayMs
+  );
   /** Slot dell'abilità attiva (indice in character.abilityIds) e ricarica che manca a ogni slot (ms). */
   private activeAbilitySlot = 0;
   private abilityCooldownsMs: number[] = this.character.abilityIds.map(() => 0);
@@ -114,6 +140,8 @@ export class Player extends GameObject {
   private hasPendingTired = false;
   /** Vero dopo un incantesimo rifiutato per mancanza di mana (il motore mostra "SENZA MANA"). */
   private hasPendingNoMana = false;
+  /** Vero dopo una mossa rifiutata per il grado troppo alto (il motore mostra "INTELLIGENZA INSUFFICIENTE"). */
+  private hasPendingLowIntelligence = false;
   private pendingAbilityName: string | null = null;
   private hasPendingAbilityImpact = false;
 
@@ -172,8 +200,12 @@ export class Player extends GameObject {
 
   constructor(startX: number, startY: number, character?: CharacterDefinition) {
     super(startX, startY, PLAYER_CONFIG.hitboxWidth, PLAYER_CONFIG.hitboxHeight);
+    // un power-up che dà punti di attributo cambia gli effetti finché è attivo (Classi Fase 4)
+    this.modifiers.onPowerUpsChanged = () => this.refreshAttributes();
     if (character !== undefined) {
       this.setCharacter(character);
+    } else {
+      this.refreshAttributes();
     }
   }
 
@@ -204,16 +236,88 @@ export class Player extends GameObject {
     return this.character.maxMana + this.modifiers.getValue("maxManaBonus");
   }
 
-  /** Attributi attuali del personaggio (Classi Fase 0). */
+  /** Attributi effettivi (Classi Fase 4): base della classe + punti spesi + power-up, entro ATTRIBUTE_MAX_VALUE. */
   public get attributes(): Readonly<Attributes> {
-    return this.attributeValues;
+    return this.effectiveAttributeValues;
   }
 
-  /** Cambia gli attributi: i loro effetti entrano nei modificatori (fonte "attributes"); i massimi si aggiornano. */
-  public setAttributes(attributes: Readonly<Attributes>): void {
-    this.attributeValues = { ...attributes };
-    this.modifiers.setSourceEffects("attributes", computeAttributeEffects(this.attributeValues));
+  /** Attributi di partenza della classe (pentagono e requisiti). */
+  public get baseAttributes(): Readonly<Attributes> {
+    return this.character.baseAttributes;
+  }
+
+  /** Punti spesi sopra la base (dall'altare della bottega). */
+  public get spentAttributes(): Readonly<Attributes> {
+    return this.spentAttributeValues;
+  }
+
+  /** Punti sopra la base che danno gli effetti (spesi + power-up, entro il massimo). */
+  public get attributePointsAboveBaseValues(): Readonly<Attributes> {
+    return this.attributePointsAboveBase;
+  }
+
+  /** Punti di attributo dati ora dai power-up attivi. */
+  public getAttributePowerUpBonus(attributeId: AttributeId): number {
+    return this.modifiers.getAttributeBonus(attributeId);
+  }
+
+  /** Malus della Forza per l'equipaggiamento in uso (requisiti dell'arma e delle armature, carico). */
+  public get strengthStatus(): Readonly<StrengthPenalties> {
+    return this.strengthPenalties;
+  }
+
+  /**
+   * Imposta i punti spesi sopra la base (Classi Fase 4): gli effetti entrano nei modificatori (fonte "attributes"),
+   * requisiti e carico si ricalcolano, i massimi si aggiornano.
+   */
+  public setSpentAttributes(spent: Readonly<Attributes>): void {
+    this.spentAttributeValues = { ...spent };
+    this.refreshAttributes();
+  }
+
+  /** Ricalcola valori effettivi, effetti per punto e malus della Forza (attributi, power-up o equipaggiamento cambiati). */
+  private refreshAttributes(): void {
+    const bonus: Partial<Attributes> = {};
+    for (const attributeId of ATTRIBUTE_ORDER) {
+      bonus[attributeId] = this.modifiers.getAttributeBonus(attributeId);
+    }
+    const base = this.character.baseAttributes;
+    this.effectiveAttributeValues = computeEffectiveAttributes(base, this.spentAttributeValues, bonus);
+    this.attributePointsAboveBase = getPointsAboveBase(this.effectiveAttributeValues, base);
+    this.modifiers.setSourceEffects("attributes", computeAttributeEffects(this.attributePointsAboveBase, this.character.maxMana > 0));
+    this.refreshStrengthPenalties();
     this.clampResourcesToMax();
+  }
+
+  /** Requisiti di Forza di arma e armature e carico, con la Forza effettiva. */
+  private refreshStrengthPenalties(): void {
+    const armorWeights = ARMOR_SLOTS.flatMap((slot) => {
+      const piece = this.armor[slot];
+      return piece === null ? [] : [ARMOR_CONFIG[piece.baseId].weight];
+    });
+    this.strengthPenalties = computeStrengthPenalties(this.effectiveAttributeValues.strength, this.weapon, armorWeights);
+  }
+
+  /** 1 + percentuale/100 di una statistica in percento data dagli attributi (esattamente 1 se è zero). */
+  private getPercentBonusMultiplier(stat: PlayerStatName): number {
+    const percent = this.modifiers.getValue(stat);
+    return percent === 0 ? 1 : 1 + percent / 100;
+  }
+
+  /** 1 - percentuale/100 di una riduzione data dagli attributi (esattamente 1 se è zero). */
+  private getPercentReductionMultiplier(stat: PlayerStatName): number {
+    const percent = this.modifiers.getValue(stat);
+    return percent <= 0 ? 1 : Math.max(0, 1 - percent / 100);
+  }
+
+  /** Stamina consumata da una schivata (Classi Fase 4: la Destrezza la riduce). */
+  public get dodgeStaminaCost(): number {
+    return this.character.dodgeStaminaCost * this.getPercentReductionMultiplier("dodgeCostReductionPercent");
+  }
+
+  /** Vero se la mossa è alla portata dell'Intelligenza effettiva (grado 1 sempre). */
+  public meetsAbilityGrade(ability: AbilityDefinition): boolean {
+    return meetsGradeRequirement(ability.grade, this.effectiveAttributeValues.intelligence);
   }
 
   /** Abilità del personaggio, una per slot (Classi Fase 0). */
@@ -262,12 +366,14 @@ export class Player extends GameObject {
       const cooldownFraction = this.getSlotCooldownFraction(slotIndex);
       const isAffordable = this.canAfford(this.getAbilityCost(ability));
       const isSelected = slotIndex === this.activeAbilitySlot;
+      const meetsRequirement = this.meetsAbilityGrade(ability);
       return {
         ability,
         cooldownFraction,
         isAffordable,
-        isReady: cooldownFraction === 0 && isAffordable,
+        isReady: cooldownFraction === 0 && isAffordable && meetsRequirement,
         isSelected,
+        meetsRequirement,
         isActive: isSelected && this.isGuardUp,
       };
     });
@@ -286,26 +392,34 @@ export class Player extends GameObject {
     return (ability.cost.mana ?? 0) > 0;
   }
 
-  /** Costo effettivo di un'abilità: il mana scende con il catalizzatore in mano (a punti interi, arrotondato). */
+  /**
+   * Costo effettivo di un'abilità: il mana scende con il catalizzatore in mano e con l'Intelligenza (Classi Fase 4),
+   * a punti interi (arrotondato).
+   */
   public getAbilityCost(ability: AbilityDefinition): ResourceCost {
     const focus = this.activeSpellFocus;
     const mana = ability.cost.mana ?? 0;
-    if (focus === null || mana <= 0) {
+    const intelligenceMultiplier = this.getPercentReductionMultiplier("spellCostReductionPercent");
+    if (mana <= 0 || (focus === null && intelligenceMultiplier === 1)) {
       return ability.cost;
     }
-    return { ...ability.cost, mana: Math.round(mana * focus.manaCostMultiplier) };
+    return { ...ability.cost, mana: Math.round(mana * (focus?.manaCostMultiplier ?? 1) * intelligenceMultiplier) };
   }
 
   /**
    * Moltiplicatore del danno di un attacco: quello generale (getDamageMultiplier); per gli attacchi dell'arma in mano
-   * il bonus o malus della classe (Classi Fase 3); per gli attacchi degli incantesimi la potenza del catalizzatore.
+   * il bonus o malus della classe (Classi Fase 3), lo scaling sugli attributi e il malus della Forza mancante
+   * (Classi Fase 4); per le mosse la potenza data dall'Intelligenza e, per gli incantesimi, quella del catalizzatore.
    */
   public getDamageMultiplierFor(attack: AttackDefinition): number {
     const focus = this.activeSpellFocus;
-    const spell = this.abilities.find((ability) => ability.kind === "attack" && ability.attack.id === attack.id);
-    const spellPower = focus !== null && spell !== undefined && Player.isSpell(spell) ? focus.powerMultiplier : 1;
-    const affinity = this.isWeaponAttack(attack) ? this.weaponAffinity.damageMultiplier : 1;
-    return this.getDamageMultiplier() * spellPower * affinity;
+    const abilityAttack = this.abilities.find((ability) => ability.kind === "attack" && ability.attack.id === attack.id);
+    const spellPower = focus !== null && abilityAttack !== undefined && Player.isSpell(abilityAttack) ? focus.powerMultiplier : 1;
+    const abilityPower = abilityAttack !== undefined ? this.getPercentBonusMultiplier("abilityPowerPercent") : 1;
+    const weaponFactor = this.isWeaponAttack(attack)
+      ? this.weaponAffinity.damageMultiplier * getWeaponScalingMultiplier(this.weapon, this.attributePointsAboveBase) * this.strengthPenalties.weaponDamageMultiplier
+      : 1;
+    return this.getDamageMultiplier() * spellPower * abilityPower * weaponFactor;
   }
 
   /** Vero se l'attacco è dell'arma in mano (non un'abilità o un incantesimo): solo questi sentono la tabella di compatibilità. */
@@ -330,9 +444,9 @@ export class Player extends GameObject {
     );
   }
 
-  /** Vero se l'abilità attiva è pronta: niente ricarica e risorse sufficienti. */
+  /** Vero se l'abilità attiva è pronta: niente ricarica, risorse sufficienti e grado alla portata. */
   public get isAbilityReady(): boolean {
-    return this.abilityCooldownFraction === 0 && this.canAfford(this.getAbilityCost(this.ability));
+    return this.abilityCooldownFraction === 0 && this.canAfford(this.getAbilityCost(this.ability)) && this.meetsAbilityGrade(this.ability);
   }
 
   /** Compatibilità della classe con l'arma in mano (Classi Fase 3: bonus e malus della tabella). */
@@ -357,6 +471,13 @@ export class Player extends GameObject {
     const isOut = this.hasPendingNoMana;
     this.hasPendingNoMana = false;
     return isOut;
+  }
+
+  /** Vero una volta sola dopo una mossa rifiutata perché il suo grado richiede più Intelligenza. */
+  public drainLowIntelligence(): boolean {
+    const isLow = this.hasPendingLowIntelligence;
+    this.hasPendingLowIntelligence = false;
+    return isLow;
   }
 
   /** Nome dell'abilità appena usata (una volta sola), oppure null. */
@@ -385,7 +506,9 @@ export class Player extends GameObject {
     this.character = character;
     this.activeAbilitySlot = 0;
     this.abilityCooldownsMs = character.abilityIds.map(() => 0);
-    this.setAttributes(character.baseAttributes);
+    // nuova classe: nessun punto speso (li reimposta chi gestisce la partita, vedi AttributePoints)
+    this.spentAttributeValues = ZERO_ATTRIBUTES;
+    this.refreshAttributes();
     this.currentHealth = this.maxHealth;
     this.resetStaminaAndAbility();
     this.regenerationAccumulator = 0;
@@ -474,6 +597,7 @@ export class Player extends GameObject {
     this.equipment = computeEquipmentBonuses(this.weaponItem, this.armor);
     this.equipmentVariant = buildEquipmentVariant(this.weaponItem, this.armor, true);
     this.armorOnlyVariant = buildEquipmentVariant(this.weaponItem, this.armor, false);
+    this.refreshStrengthPenalties();
     this.clampResourcesToMax();
   }
 
@@ -520,6 +644,7 @@ export class Player extends GameObject {
       const wasAttacking = this.currentAttack !== null;
       this.cancelAttack();
       this.weapon = weapon;
+      this.refreshStrengthPenalties();
       this.groundComboManager = Player.createComboManager(weapon, "ground");
       this.airComboManager = Player.createComboManager(weapon, "air");
       this.comboManager = this.groundComboManager;
@@ -709,9 +834,9 @@ export class Player extends GameObject {
     this.isGuardUp = false;
     // lo scudo (power-up e paladino), la difesa e le resistenze delle armature riducono il danno,
     // ma un colpo toglie sempre almeno 1 HP
-    const resistance = element === undefined ? 0 : (this.equipment.resistances[element] ?? 0);
+    const resistance = this.getResistanceFraction(element);
     const takenMultiplier =
-      this.modifiers.getValue("damageTakenMultiplier") * this.character.damageTakenMultiplier * this.equipment.damageTakenMultiplier * (1 - resistance);
+      this.modifiers.getValue("damageTakenMultiplier") * this.character.damageTakenMultiplier * this.getDefenseMultiplier() * (1 - resistance);
     const reducedDamage = Math.max(1, Math.round(damage * takenMultiplier));
     this.msSinceLastHit = 0;
     this.currentHealth = Math.max(0, this.currentHealth - reducedDamage);
@@ -730,6 +855,25 @@ export class Player extends GameObject {
       this.animationPlayer.restart("hurt");
     }
     return true;
+  }
+
+  /**
+   * Danno subito dopo la difesa: quella delle armature più quella della Vitalità (Classi Fase 4), sotto lo stesso tetto.
+   * Senza punti in Vitalità è esattamente quello delle armature.
+   */
+  public getDefenseMultiplier(): number {
+    const equipmentFraction = 1 - this.equipment.damageTakenMultiplier;
+    const attributePercent = this.modifiers.getValue("defensePercent");
+    return attributePercent <= 0 ? this.equipment.damageTakenMultiplier : 1 - combineCappedFraction(equipmentFraction, attributePercent, AFFIX_CONFIG.defense.cap);
+  }
+
+  /** Resistenza (frazione) a un elemento: armature più Tempra (Classi Fase 4), sotto lo stesso tetto. 0 senza elemento. */
+  public getResistanceFraction(element: ElementId | undefined): number {
+    if (element === undefined) {
+      return 0;
+    }
+    const equipmentFraction = this.equipment.resistances[element] ?? 0;
+    return combineCappedFraction(equipmentFraction, this.modifiers.getValue("resistancePercent"), AFFIX_CONFIG.resistance.cap);
   }
 
   /**
@@ -1042,7 +1186,7 @@ export class Player extends GameObject {
     if (isSlotChosen) {
       this.tryStartAbility();
     }
-    if (input.wasPressed("dodge") && this.canStartDodge() && this.spendStamina(this.character.dodgeStaminaCost)) {
+    if (input.wasPressed("dodge") && this.canStartDodge() && this.spendStamina(this.dodgeStaminaCost)) {
       this.startDodge();
     }
     // arco: rilasciando il tasto parte il tiro caricato
@@ -1240,12 +1384,22 @@ export class Player extends GameObject {
   }
 
   /**
-   * Recupero dopo un attacco, accorciato dai modificatori "recupero" dell'arma; per gli attacchi dell'arma anche il
-   * bonus o malus della classe (Classi Fase 3), che non tocca abilità e incantesimi.
+   * Recupero dopo un attacco, accorciato dai modificatori "recupero" dell'arma e dalla Destrezza (Classi Fase 4, stesso
+   * tetto); per gli attacchi dell'arma anche il bonus o malus della classe (Classi Fase 3) e il malus della Forza
+   * mancante, che non toccano abilità e incantesimi.
    */
   private getAttackCooldownMs(attack: AttackDefinition): number {
-    const affinity = this.isWeaponAttack(attack) ? this.weaponAffinity.recoveryMultiplier : 1;
-    return attack.cooldownMs * this.equipment.recoveryMultiplier * affinity;
+    const weaponFactor = this.isWeaponAttack(attack) ? this.weaponAffinity.recoveryMultiplier * this.strengthPenalties.weaponRecoveryMultiplier : 1;
+    return attack.cooldownMs * this.getRecoveryMultiplier() * weaponFactor;
+  }
+
+  /** Moltiplicatore dei tempi di recupero: equipaggiamento e Destrezza sotto lo stesso tetto. */
+  public getRecoveryMultiplier(): number {
+    const attributePercent = this.modifiers.getValue("attackRecoveryPercent");
+    if (attributePercent <= 0) {
+      return this.equipment.recoveryMultiplier;
+    }
+    return 1 - combineCappedFraction(1 - this.equipment.recoveryMultiplier, attributePercent, AFFIX_CONFIG.recovery.cap);
   }
 
   /** La risorsa indicata (guardia: stamina per lo scudo, mana per la barriera). */
@@ -1326,6 +1480,10 @@ export class Player extends GameObject {
   /** Abilità d'attacco: solo a terra, in piedi, senza un altro attacco o una schivata in corso. */
   private tryStartAbility(): void {
     const ability = this.ability;
+    if (ability.kind === "attack" && !this.meetsAbilityGrade(ability)) {
+      this.hasPendingLowIntelligence = true; // grado troppo alto: la mossa resta visibile ma non parte
+      return;
+    }
     if (
       ability.kind !== "attack" ||
       !this.isOnGround ||
@@ -1370,6 +1528,10 @@ export class Player extends GameObject {
       this.currentAttack === null &&
       this.dodgeRemainingMs <= 0 &&
       this.abilityCooldownsMs[this.activeAbilitySlot] <= 0;
+    if (canRaise && !this.meetsAbilityGrade(ability)) {
+      this.hasPendingLowIntelligence = true;
+      return;
+    }
     if (canRaise && this.payCost(this.getAbilityCost(ability))) {
       this.isGuardUp = true;
       this.guardElapsedMs = 0;
@@ -1427,7 +1589,8 @@ export class Player extends GameObject {
         this.weapon.movementSpeedMultiplier *
         this.environment.speedMultiplier *
         this.modifiers.getValue("movementSpeedMultiplier") *
-        this.equipment.movementSpeedMultiplier
+        this.equipment.movementSpeedMultiplier *
+        this.strengthPenalties.movementSpeedMultiplier
     );
     // la direzione resta bloccata mentre si attacca
     if (direction !== 0 && this.currentAttack === null) {

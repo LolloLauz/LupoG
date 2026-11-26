@@ -107,7 +107,7 @@ export default async function (t, load) {
     t("la tabella non tocca le abilità: l'onda d'urto del Cavaliere con l'arco ha il danno pieno", knightBow.getDamageMultiplierFor(shockwave) === knightBow.getDamageMultiplier() && knightBow.getDamageMultiplier() === grounded("knight").getDamageMultiplier());
     const ranger = grounded("ranger", "crossbow");
     t("né gli incantesimi o le mosse delle altre classi", ranger.getDamageMultiplierFor(ABILITY_CONFIG.backstepShot.attack) === ranger.getDamageMultiplier());
-    t("motore: il recupero sente la tabella solo per gli attacchi dell'arma", /private getAttackCooldownMs[\s\S]{0,200}this\.isWeaponAttack\(attack\) \? this\.weaponAffinity\.recoveryMultiplier : 1/.test(readFileSync(join(projectRoot, "src/entities/Player.ts"), "utf8")));
+    t("motore: il recupero sente la tabella solo per gli attacchi dell'arma", /private getAttackCooldownMs[\s\S]{0,200}this\.isWeaponAttack\(attack\) \? this\.weaponAffinity\.recoveryMultiplier \* this\.strengthPenalties\.weaponRecoveryMultiplier : 1/.test(readFileSync(join(projectRoot, "src/entities/Player.ts"), "utf8")));
   }
 
   // --- munizioni secondo la classe ---
@@ -186,7 +186,7 @@ export default async function (t, load) {
 
   // --- motore ---
   t("motore: a ogni nuova partita l'inventario riceve la classe", /private resetRunEquipment[\s\S]{0,120}this\.inventory\.setCharacter\(this\.progressManager\.characterId\)/.test(engineSource));
-  t("motore: un'arma vietata a terra non si raccoglie (NON PUOI USARLA)", /private pickUpEquipment[\s\S]{0,900}!canWieldWeapon\(this\.player\.characterDefinition\.id, item\.baseId\)[\s\S]{0,120}FORBIDDEN_WEAPON_MESSAGE/.test(engineSource));
+  t("motore: un'arma vietata a terra non si raccoglie (NON PUOI USARLA)", /private pickUpEquipment[\s\S]{0,1200}!canWieldWeapon\(this\.player\.characterDefinition\.id, item\.baseId\)[\s\S]{0,120}FORBIDDEN_WEAPON_MESSAGE/.test(engineSource));
   t("motore: dallo zaino a terra con le munizioni", /removeFromBackpack\(cell\.index\)[\s\S]{0,200}droppedAmmo = entry\?\.ammo \?\? null[\s\S]{0,200}weaponPickups\.spawn\(dropped, centerX, feetY, false, droppedAmmo\)/.test(engineSource));
   t("motore: l'arma che esce dalla borsa piena va nello zaino con le munizioni", /addToBackpack\(result\.droppedItem, result\.droppedAmmo \?\? null\)/.test(engineSource));
 }

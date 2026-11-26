@@ -113,7 +113,7 @@ export default async function (t, load) {
     press("paused", "menuUp");
     t("la pausa ha la voce EQUIPAGGIAMENTO (l'ultima: ESCI AL TITOLO resta la seconda)", press("paused", "confirm") === "showEquipment");
   }
-  t("motore: I apre la schermata solo giocando; chiudendo si torna da dove si era", /wasPressed\("openEquipment"\) && this\.levelPhase === "playing"[\s\S]{0,80}this\.gameState\.change\("equipment"\)/.test(engineSource) && /case "closeEquipment":[\s\S]{0,120}this\.gameState\.previous === "paused" \? "paused" : "playing"/.test(engineSource));
+  t("motore: I apre la schermata solo giocando; chiudendo si torna da dove si era", /wasPressed\("openEquipment"\) && this\.levelPhase === "playing"[\s\S]{0,140}this\.gameState\.change\("equipment"\)/.test(engineSource) && /case "showEquipment":[\s\S]{0,80}this\.equipmentReturnState = "paused"[\s\S]{0,200}case "closeEquipment":[\s\S]{0,60}this\.gameState\.change\(this\.equipmentReturnState\)/.test(engineSource));
   t("motore: nella schermata si usa e si lascia a terra (solo stando a terra)", /private useEquipmentCell[\s\S]{0,900}equipFromBackpack/.test(engineSource) && /private dropEquipmentCell[\s\S]{0,200}!this\.player\.isOnGround[\s\S]{0,100}SOLO A TERRA/.test(engineSource));
   t("motore: il mondo resta disegnato dietro la schermata dell'equipaggiamento", /state === "playing" \|\| state === "paused" \|\| state === "equipment"/.test(engineSource));
 

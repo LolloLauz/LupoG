@@ -9,8 +9,10 @@ const ALLOWED_TRANSITIONS: Record<GameStateName, GameStateName[]> = {
   confirmReset: ["title"],
   shop: ["playing"],
   // schermata dell'equipaggiamento (E4): dal gioco o dalla pausa, si torna da dove si era
-  equipment: ["playing", "paused"],
-  playing: ["paused", "gameOver", "victory", "shop", "equipment"],
+  equipment: ["playing", "paused", "attributes"],
+  // pentagono degli attributi (Classi Fase 4): dall'equipaggiamento (solo lettura) o dall'altare della bottega (spesa)
+  attributes: ["equipment", "playing"],
+  playing: ["paused", "gameOver", "victory", "shop", "equipment", "attributes"],
   paused: ["playing", "title", "equipment"],
   gameOver: ["title", "playing"],
   victory: ["title"],

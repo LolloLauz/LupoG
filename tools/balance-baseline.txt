@@ -51,7 +51,7 @@ rusher (non schiva)      bottino  partite vinte  98%   vite rimaste (se vinta) 3
 rusher (non schiva)      massimo  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie 0.10
 medio (schiva a volte)   bottino  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
-medio (schiva a volte)   massimo  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+medio (schiva a volte)   massimo  partite vinte  95%   vite rimaste (se vinta) 2.53   morti medie 0.60
 
 === PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, stamina, cura; con e senza l'abilità L) ===
 CAVALIERE  rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie 0.90
@@ -83,8 +83,18 @@ MAGO contro SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   HP per
 MAGO contro SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   HP persi 35   tempo 34s
 MAGO contro SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   HP persi 27   tempo 37s
 MAGO rusher (non schiva)      senza    partite vinte  13%   vite rimaste (se vinta) 1.25   morti medie 2.83 (0.00 / 0.00 / 0.60 / 0.00 / 0.03 / 1.80 / 0.40)
-MAGO rusher (non schiva)      bottino  partite vinte  95%   vite rimaste (se vinta) 3.00   morti medie 0.15 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.15)
+MAGO rusher (non schiva)      bottino  partite vinte  83%   vite rimaste (se vinta) 3.00   morti medie 0.50 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.45)
 MAGO medio (schiva a volte)   senza    partite vinte  93%   vite rimaste (se vinta) 2.48   morti medie 0.68 (0.00 / 0.00 / 0.03 / 0.00 / 0.03 / 0.20 / 0.42)
-MAGO medio (schiva a volte)   bottino  partite vinte  95%   vite rimaste (se vinta) 2.77   morti medie 0.37 (0.00 / 0.00 / 0.23 / 0.00 / 0.00 / 0.03 / 0.10)
+MAGO medio (schiva a volte)   bottino  partite vinte  88%   vite rimaste (se vinta) 2.77   morti medie 0.55 (0.00 / 0.00 / 0.20 / 0.00 / 0.00 / 0.05 / 0.30)
+
+=== BUILD (Classi Fase 4): PARTITE COMPLETE DEL CAVALIERE CON L'ONDA D'URTO, TUTTI I PUNTI IN UN ATTRIBUTO ===
+rusher (non schiva)      nessuna       partite vinte 100%   vite rimaste (se vinta) 2.15   morti medie 0.85   tempo 378s   HP persi 798
+rusher (non schiva)      forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 311s   HP persi 551
+rusher (non schiva)      intelligenza  partite vinte 100%   vite rimaste (se vinta) 2.43   morti medie 0.57   tempo 356s   HP persi 719
+rusher (non schiva)      vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 331s   HP persi 731
+medio (schiva a volte)   nessuna       partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03   tempo 332s   HP persi 448
+medio (schiva a volte)   forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 311s   HP persi 396
+medio (schiva a volte)   intelligenza  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 324s   HP persi 425
+medio (schiva a volte)   vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 330s   HP persi 455
 
 (rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)

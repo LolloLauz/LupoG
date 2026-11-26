@@ -111,13 +111,12 @@ export default async function (t, load) {
 
   // --- attributi nella pipeline dei modificatori ---
   t("cinque attributi, nell'ordine del pentagono", ATTRIBUTE_ORDER.join() === "strength,dexterity,intelligence,vitality,endurance" && ATTRIBUTE_ORDER.every((id) => ATTRIBUTE_CONFIG[id].id === id && ATTRIBUTE_CONFIG[id].name.length > 0));
-  t("Fase 0: nessun attributo ha effetti", ATTRIBUTE_ORDER.every((id) => ATTRIBUTE_CONFIG[id].effectsPerPoint.length === 0));
-  t("tutte le classi partono con gli attributi a zero", CHARACTER_ORDER.every((id) => ATTRIBUTE_ORDER.every((a) => CHARACTER_CONFIG[id].baseAttributes[a] === 0)));
+  // Classi Fase 4: gli attributi hanno effetti e basi per classe (vedi classes-phase4.test.mjs); qui resta la pipeline
   t("attributi a zero: nessun effetto", computeAttributeEffects(ZERO_ATTRIBUTES).length === 0);
   {
     const fake = { strength: 3, dexterity: 0, intelligence: 0, vitality: 0, endurance: 0 };
-    const definitions = { ...ATTRIBUTE_CONFIG, strength: { ...ATTRIBUTE_CONFIG.strength, effectsPerPoint: [{ stat: "damageMultiplier", valuePerPoint: 0.05 }] } };
-    const effects = computeAttributeEffects(fake, definitions);
+    const definitions = { ...ATTRIBUTE_CONFIG, strength: { ...ATTRIBUTE_CONFIG.strength, effectsPerPoint: [{ stat: "damageMultiplier", valuePerPoint: 0.05, label: "DANNO", percent: false }] } };
+    const effects = computeAttributeEffects(fake, false, definitions);
     t("un effetto per punto si moltiplica per i punti (operazione add)", effects.length === 1 && effects[0].stat === "damageMultiplier" && effects[0].operation === "add" && Math.abs(effects[0].value - 0.15) < 1e-9);
   }
   {
@@ -133,10 +132,9 @@ export default async function (t, load) {
   {
     const p = grounded("knight");
     const before = { health: p.maxHealth, stamina: p.maxStamina, damage: p.getDamageMultiplier() };
-    p.setAttributes({ strength: 9, dexterity: 9, intelligence: 9, vitality: 9, endurance: 9 });
-    t("Fase 0: alzare gli attributi non cambia niente", p.maxHealth === before.health && p.maxStamina === before.stamina && p.getDamageMultiplier() === before.damage && p.attributes.strength === 9);
-    p.modifiers.setSourceEffects("attributes", [{ stat: "maxHealthBonus", operation: "add", value: 20 }, { stat: "maxStaminaBonus", operation: "add", value: 5 }]);
-    t("i bonus della pipeline entrano nei massimi di salute e stamina", p.maxHealth === before.health + 20 && p.maxStamina === before.stamina + 5);
+    // Classi Fase 4: 5 punti in Vitalità (+4 salute ciascuno) e 2 in Tempra (+4 stamina ciascuno), sopra la base
+    p.setSpentAttributes({ strength: 0, dexterity: 0, intelligence: 0, vitality: 5, endurance: 2 });
+    t("i bonus della pipeline entrano nei massimi di salute e stamina", p.maxHealth === before.health + 20 && p.maxStamina === before.stamina + 8 && p.attributes.vitality === CHARACTER_CONFIG.knight.baseAttributes.vitality + 5);
     p.modifiers.add({ ...POWER_UP_CONFIG.speed, id: "speed", effects: [{ stat: "maxHealthBonus", operation: "add", value: 30 }], durationMs: 100 });
     p.heal(1000);
     const boosted = p.currentHealth;
@@ -145,6 +143,6 @@ export default async function (t, load) {
     p.revive();
     t("la morte non toglie le fonti permanenti", p.maxHealth === before.health + 20);
     p.setCharacter(CHARACTER_CONFIG.knight);
-    t("cambiando classe gli attributi tornano a quelli di partenza", p.maxHealth === before.health && p.attributes.strength === 0);
+    t("cambiando classe gli attributi tornano a quelli di partenza", p.maxHealth === before.health && p.attributes.vitality === CHARACTER_CONFIG.knight.baseAttributes.vitality && p.spentAttributes.vitality === 0);
   }
 }

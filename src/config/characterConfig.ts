@@ -1,5 +1,4 @@
 import type { CharacterDefinition, CharacterId } from "../types/EntityTypes";
-import { ZERO_ATTRIBUTES } from "./attributeConfig";
 import { PLAYER_CONFIG } from "./playerConfig";
 
 /**
@@ -10,6 +9,8 @@ import { PLAYER_CONFIG } from "./playerConfig";
  * Fase 6: i personaggi si sbloccano raggiungendo un livello (unlockLevel); il cavaliere è sempre disponibile.
  * Classi Fase 0: mana (0 per le classi senza incantesimi), attributi di partenza (a zero) e abilità come elenco.
  * Classi Fase 2: il Mago, con mana, bastone e quattro incantesimi (tasti 7-0).
+ * Classi Fase 4: attributi di partenza (somma 25, massimo ATTRIBUTE_MAX_VALUE): pentagono e requisiti, gli effetti
+ * contano solo i punti spesi sopra questi valori.
  */
 export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
   knight: {
@@ -31,7 +32,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     dodgeStaminaCost: 25,
     maxMana: 0,
     manaRegenPerSecond: 0,
-    baseAttributes: ZERO_ATTRIBUTES,
+    baseAttributes: { strength: 6, dexterity: 5, intelligence: 2, vitality: 6, endurance: 6 },
     abilityIds: ["shockwave"],
     unlockLevel: 1,
     unlockText: "SEMPRE DISPONIBILE",
@@ -57,7 +58,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     dodgeStaminaCost: 20,
     maxMana: 0,
     manaRegenPerSecond: 0,
-    baseAttributes: ZERO_ATTRIBUTES,
+    baseAttributes: { strength: 3, dexterity: 9, intelligence: 3, vitality: 4, endurance: 6 },
     abilityIds: ["backstepShot"],
     unlockLevel: 3,
     unlockText: "COMPLETA IL LIVELLO 2",
@@ -81,7 +82,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     dodgeStaminaCost: 40,
     maxMana: 0,
     manaRegenPerSecond: 0,
-    baseAttributes: ZERO_ATTRIBUTES,
+    baseAttributes: { strength: 9, dexterity: 4, intelligence: 1, vitality: 8, endurance: 3 },
     abilityIds: ["furiousCharge"],
     unlockLevel: 4,
     unlockText: "SCONFIGGI IL CAVALIERE NERO",
@@ -106,7 +107,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     dodgeStaminaCost: 30,
     maxMana: 0,
     manaRegenPerSecond: 0,
-    baseAttributes: ZERO_ATTRIBUTES,
+    baseAttributes: { strength: 6, dexterity: 2, intelligence: 4, vitality: 7, endurance: 6 },
     abilityIds: ["shieldGuard"],
     unlockLevel: 6,
     unlockText: "SCONFIGGI IL RE DEI LUPI",
@@ -132,7 +133,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxMana: 100,
     manaRegenPerSecond: 6,
     usesSpellFocus: true,
-    baseAttributes: ZERO_ATTRIBUTES,
+    baseAttributes: { strength: 2, dexterity: 4, intelligence: 10, vitality: 4, endurance: 5 },
     abilityIds: ["firebolt", "frostNova", "arcaneLeap", "arcaneBarrier"],
     unlockLevel: 5,
     unlockText: "SCONFIGGI LA STREGA DELLA PALUDE",
