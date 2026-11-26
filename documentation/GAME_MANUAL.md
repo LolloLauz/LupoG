@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.5.1.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.6.0.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -138,7 +138,7 @@ cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale, pas
 | **Mago** | ogni **nemico o boss sconfitto** da un suo colpo diretto (arma o incantesimo) ridà **10 di mana** | "PASSIVA: MANA DAI NEMICI VINTI" |
 | **Paladino** | si cura di **1 HP al secondo** dopo 4 s senza colpi | "SI CURA PIANO FUORI DAI COLPI" |
 
-- **Mago:** fragile, ma gli incantesimi colpiscono da lontano e a mana. Ha **100 di mana** (barra blu sotto la stamina; scheda del personaggio: "100 MANA"). Il mana si recupera piano, **6 al secondo** dopo 0,6 secondi senza spese, e **5 per ogni bersaglio colpito con il bastone**. Si sblocca sconfiggendo la **Strega della Palude** (livello 4). Sprite provvisori: cappello a punta e veste viola.
+- **Mago:** fragile, ma gli incantesimi colpiscono da lontano e a mana. Ha **100 di mana** (barra blu sotto la stamina; scheda del personaggio: "100 MANA"). Il mana si recupera piano, **6 al secondo** dopo 0,6 secondi senza spese, e **5 per ogni bersaglio colpito con il bastone**. Si sblocca sconfiggendo la **Strega della Palude** (livello 4). Veste viola lunga fino ai piedi (l'orlo ondeggia quando cammina), barba bianca sul petto, cappello a punta con fascia e stella, mantello e bastone con le punte d'oro.
 
 ### Attributi (Forza, Destrezza, Intelligenza, Vitalità, Tempra)
 
@@ -204,7 +204,7 @@ Se non basta l'azione non parte e compare "STANCO".
 
 Ogni personaggio ha **quattro mosse** proprie, una per ciascuno dei tasti **7**, **8**, **9** e **0** (**L** vale come il **7**).
 Durante un attacco o una schivata la mossa attiva non cambia. Una mossa ha un costo (stamina, mana o salute) e poi va ricaricata:
-accanto alla barra della stamina ogni mossa ha un riquadro con il **numero del tasto**; la parte scura scende mentre si ricarica; il numero è dorato
+accanto alla barra della stamina ogni mossa ha un riquadro con la sua **icona**; il **numero del tasto** sta sopra il riquadro; un retino scuro copre l'icona e scende mentre la mossa si ricarica; il numero è dorato
 quando la mossa è pronta (ricaricata e con abbastanza risorse). Il riquadro dell'ultima mossa scelta ha il **bordo dorato**; il numero diventa **rosso** se la risorsa non basta.
 Le mosse si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma cambia solo l'aspetto).
 
@@ -239,7 +239,20 @@ Le mosse imparate valgono **solo per la partita in corso** (anche partendo da **
 | **Balzo arcano** | Mago (9) | 20 mana | 3 s | **balzo all'indietro** invulnerabile, per allontanarsi (non fa danno) |
 | **Barriera** | Mago (0) | 10 mana per alzarla | 0,3 s | **tieni premuto 0**: come lo scudo, para i colpi **da davanti**; consuma 10 mana al secondo e **1 mana per ogni punto di danno parato**; parata perfetta come lo scudo |
 
-Le mosse "tutt'intorno" arrivano fino a **40 px davanti e dietro**. Le frecce e il dardo non consumano munizioni. Le animazioni delle mosse sono provvisorie (riusano pose comuni).
+Le mosse "tutt'intorno" arrivano fino a **40 px davanti e dietro**. Le frecce e il dardo non consumano munizioni. 
+
+**Come si vedono.** Ogni mossa ha pose del corpo e **effetti** propri. Le pose sono otto in tutto, comuni a tutte le armi: arma alzata, colpo a terra, affondo, lancio a mano aperta, arco teso, carica dietro la testa, colpo di scudo e ginocchio a terra. Il resto lo fanno gli effetti.
+
+| Effetto | Dove si vede |
+|---|---|
+| anelli d'area (polvere, fuoco, gelo, shock) | onda d'urto, terremoto (anello di shock e di polvere), nova di gelo, consacrazione, giudizio gelido: partono ai piedi e si allargano |
+| lampi di lancio (fuoco, gelo, arcano, veleno, shock, sacro) | davanti alla mano all'inizio di incantesimi e frecce |
+| fulmine, fiamme, schegge | colpo di scudo, lama ardente, ascia rovente, martello sacro |
+| scie di velocità e **sagome** colorate (grigio, verde, brace, lilla) lasciate indietro | affondo, tiro in ritirata, carica furiosa, balzo arcano |
+| aura e fendente rossi | colpo di sangue |
+| **lama tinta** | durante la mossa la lama prende i colori dell'elemento (fuoco, gelo, shock...), anche sopra le armature |
+
+Il dardo di fuoco è una **cometa** e le tre frecce del Ranger hanno la punta dell'elemento. Lo scudo del Paladino e la barriera del Mago sono due **barriere** disegnate davanti: la barriera è bianca nella finestra della parata perfetta.
 
 - Gli incantesimi del Mago (tutti quelli che costano mana) con il **bastone in mano** fanno **il 20% di danno in più** e costano **il 15% di mana in meno** (arrotondato). Se il mana non basta l'incantesimo non parte e compare "SENZA MANA". Con la guardia rotta (mana finito) la barriera cade come lo scudo.
 - Gli scatti delle mosse (affondo, tiro in ritirata, carica furiosa, balzo arcano) **si fermano sul bordo** di un abisso.
@@ -254,7 +267,7 @@ Le mosse "tutt'intorno" arrivano fino a **40 px davanti e dietro**. Le frecce e 
 |---|---|
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
 | barra verde sotto la salute | stamina (gialla sotto un terzo); per chi ha mana (Mago) le barre sono due, più sottili: stamina sopra, **mana blu** sotto |
-| riquadri con il numero del tasto (**7**, **8**, **9**, **0**, uno ogni 11 px) | mosse speciali: **lucchetto** su riquadro scuro se non ancora imparata; dorate quando sono pronte, scure mentre si ricaricano, azzurre con lo scudo o la barriera alzati; numero rosso se la risorsa non basta; riquadro **grigio scuro** con la cifra grigia se la mossa richiede più Intelligenza di quella che hai; bordo dorato sulla mossa scelta |
+| riquadri con l'icona della mossa (uno ogni 11 px) e il numero del tasto (**7**, **8**, **9**, **0**) sopra | mosse speciali: **lucchetto** su riquadro scuro se non ancora imparata; icona a colori quando è pronta, coperta da un retino scuro mentre si ricarica, riquadro azzurro con lo scudo o la barriera alzati; numero rosso se la risorsa non basta; riquadro **grigio scuro** con l'icona a sagoma grigia se la mossa richiede più Intelligenza di quella che hai; bordo dorato sulla mossa scelta |
 | icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
 | **+N PUNTI** sotto il pannello, a sinistra (dopo le icone dei power-up) | punti attributo ancora da spendere; lampeggia piano; sparisce quando sono finiti |
 | icona dell'elmo **x3** | vite rimaste |

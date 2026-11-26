@@ -56,28 +56,32 @@ export const PLAYER_ANIMATIONS: Record<string, AnimationDefinition> = {
   crouch: { frameIds: ["knightCrouch"], frameDurationMs: 100, loop: true },
   // scudo alzato (abilità del Paladino): il cavaliere si raccoglie dietro lo scudo, come nella schivata
   guard: { frameIds: ["knightDodge1"], frameDurationMs: 100, loop: true },
-  // abilità (Fase 5): pose comuni a tutte le armi
-  abilityShockwave: createAttackAnimation("abilityShockwave", ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"]),
-  abilityBackstepShot: createAttackAnimation("abilityBackstepShot", ["knightDodge1", "knightDodge2", "knightAbilityThrust"]),
-  // incantesimi del Mago (Classi Fase 2): pose comuni (braccio alzato e teso, colpo a terra, schivata)
-  abilityFirebolt: createAttackAnimation("abilityFirebolt", ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust"]),
-  abilityFrostNova: createAttackAnimation("abilityFrostNova", ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"]),
-  abilityArcaneLeap: createAttackAnimation("abilityArcaneLeap", ["knightDodge1", "knightDodge2", "knightDodge2"]),
-  abilityFuriousCharge: createAttackAnimation("abilityFuriousCharge", ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust", "knightAbilityThrust", "knightAbilitySlam"]),
-  // Classi Fase 5: le mosse extra riusano le pose comuni (l'arte dedicata è della Fase 6)
+  // Mosse delle classi (Fase 5, Classi Fase 2 e 5; pose dedicate dalla Classi Fase 6A): pose comuni a tutte le armi.
+  // Gli effetti di ogni mossa (anelli, lampi, sagome) sono in abilityVisualConfig.ts.
   ...weaponAttackAnimations({
-    abilityLunge: ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust", "knightAbilityThrust"],
-    abilityShieldBash: ["knightDodge1", "knightAbilityThrust", "knightAbilityThrust"],
-    abilityFlameBlade: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam"],
-    abilityPoisonArrow: ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust"],
-    abilityFrostArrow: ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust"],
-    abilityFireArrow: ["knightAbilityRaise", "knightAbilityThrust", "knightAbilityThrust"],
-    abilityHotAxe: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam"],
-    abilityEarthquake: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"],
-    abilityBloodStrike: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam"],
+    // Cavaliere
+    abilityShockwave: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilityKneel", "knightAbilityKneel", "knightAbilityKneel"],
+    abilityLunge: ["knightAbilityDraw", "knightAbilityThrust", "knightAbilityThrust", "knightAbilityThrust"],
+    abilityShieldBash: ["knightDodge1", "knightAbilityBash", "knightAbilityBash"],
+    abilityFlameBlade: ["knightAbilityWindup", "knightAbilityWindup", "knightAbilitySlam", "knightAbilitySlam"],
+    // Ranger
+    abilityBackstepShot: ["knightDodge1", "knightDodge2", "knightAbilityDraw"],
+    abilityPoisonArrow: ["knightAbilityDraw", "knightAbilityDraw", "knightAbilityThrust"],
+    abilityFrostArrow: ["knightAbilityDraw", "knightAbilityDraw", "knightAbilityThrust"],
+    abilityFireArrow: ["knightAbilityDraw", "knightAbilityDraw", "knightAbilityThrust"],
+    // Berserker
+    abilityFuriousCharge: ["knightAbilityWindup", "knightAbilityBash", "knightAbilityBash", "knightAbilityBash", "knightAbilitySlam"],
+    abilityHotAxe: ["knightAbilityWindup", "knightAbilityWindup", "knightAbilitySlam", "knightAbilitySlam"],
+    abilityEarthquake: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilityKneel", "knightAbilityKneel", "knightAbilityKneel"],
+    abilityBloodStrike: ["knightAbilityWindup", "knightAbilityWindup", "knightAbilityWindup", "knightAbilitySlam", "knightAbilitySlam"],
+    // Paladino
     abilityHolyHammer: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam"],
-    abilityConsecration: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"],
-    abilityFrozenJudgement: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilitySlam", "knightAbilitySlam", "knightAbilitySlam"],
+    abilityConsecration: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilityKneel", "knightAbilityKneel", "knightAbilityKneel"],
+    abilityFrozenJudgement: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilityKneel", "knightAbilityKneel", "knightAbilityKneel"],
+    // Mago: il bastone si alza, poi si tende verso il bersaglio; la nova pianta il bastone a terra
+    abilityFirebolt: ["knightAbilityRaise", "knightAbilityCast", "knightAbilityCast"],
+    abilityFrostNova: ["knightAbilityRaise", "knightAbilityRaise", "knightAbilityKneel", "knightAbilityKneel", "knightAbilityKneel"],
+    abilityArcaneLeap: ["knightDodge1", "knightDodge2", "knightDodge2"],
   }),
   dead: { frameIds: ["knightDeadFall", "knightDeadLie"], frameDurationMs: 300, loop: false },
   attack1: createAttackAnimation("swordLight1", ["knightAttack1A", "knightAttack1B", "knightAttack1C"]),

@@ -17,9 +17,10 @@ export interface HUDData {
   /**
    * Mosse della classe, una per slot (indice 0 = tasto 7): ricarica che manca (1 = appena usata), pronta (ricarica
    * finita e risorse sufficienti), risorse sufficienti, slot attivo (l'ultimo scelto), in uso (scudo alzato), grado alla
-   * portata dell'Intelligenza (Classi Fase 4: se no il riquadro è grigio scuro con la cifra grigia).
+   * portata dell'Intelligenza (Classi Fase 4: se no il riquadro è grigio scuro con la cifra grigia) e icona 8x8 della
+   * mossa (Classi Fase 6A).
    */
-  abilities: Array<{ cooldownFraction: number; isReady: boolean; isAffordable: boolean; isSelected: boolean; isActive: boolean; meetsRequirement: boolean; isKnown: boolean }>;
+  abilities: Array<{ cooldownFraction: number; isReady: boolean; isAffordable: boolean; isSelected: boolean; isActive: boolean; meetsRequirement: boolean; isKnown: boolean; iconSpriteId: string }>;
   /** Punti attributo non spesi (Classi Fase 4): se ce ne sono, un indicatore sotto il pannello, a sinistra. */
   unspentAttributePoints: number;
   lives: number;
@@ -56,6 +57,8 @@ const LOW_HEALTH_PERCENT = 30;
 /** Barra della stamina (a destra delle vite) e riquadri delle mosse speciali subito dopo (uno per slot, a passo step). */
 export const STAMINA_BAR_GEOMETRY = { x: 36, y: 15, width: 40, height: 4 } as const;
 export const ABILITY_BOX_GEOMETRY = { x: 80, y: 12, size: 10, step: 11 } as const;
+/** Riga del numero del tasto di ogni mossa (Classi Fase 6A): sopra il riquadro, accanto alla barra della salute. */
+export const ABILITY_KEY_LABEL_Y = 3;
 /**
  * Classi con mana (Classi Fase 2): stamina e mana su due barre più sottili, una sopra l'altra, nello spazio della
  * barra della stamina.
@@ -75,7 +78,7 @@ export class HUDManager {
     this.renderPanel(renderer);
     this.renderHealth(renderer, spriteManager, data, timeSeconds);
     this.renderLives(renderer, spriteManager, data.lives);
-    this.renderStaminaAndAbility(renderer, data, timeSeconds);
+    this.renderStaminaAndAbility(renderer, spriteManager, data, timeSeconds);
     renderer.drawText(`LIVELLO ${data.levelNumber}`, renderer.width / 2, 8, PALETTE.stonePale, { align: "center", shadowColor: PALETTE.black });
     renderer.drawText(String(data.score).padStart(6, "0"), renderer.width - 6, 3, PALETTE.goldLight, {
       align: "right",
@@ -177,11 +180,12 @@ export class HUDManager {
 
   /**
    * Stamina: barra verde con il contorno (gialla quando è sotto un terzo); con il mana, sotto c'è la barra blu del mana.
-   * Mosse: uno slot non ancora imparato mostra un lucchetto. Un riquadro per slot con il numero del suo tasto, dorato quando è pronta, grigio con il riempimento che
-   * scende durante la ricarica, azzurro con lo scudo alzato; numero rosso se le risorse non bastano. Lo slot attivo ha
-   * il bordo dorato quando la classe ha più di una mossa.
+   * Mosse: uno slot non ancora imparato mostra un lucchetto. Un riquadro per slot con l'icona della mossa (Classi Fase 6A)
+   * e il numero del suo tasto sopra: fondo dorato quando è pronta, grigio con un retino scuro che scende durante la
+   * ricarica, azzurro con lo scudo alzato; numero rosso se le risorse non bastano; icona grigia se manca il requisito.
+   * Lo slot attivo ha il bordo dorato quando la classe ha più di una mossa.
    */
-  private renderStaminaAndAbility(renderer: Renderer, data: HUDData, timeSeconds: number): void {
+  private renderStaminaAndAbility(renderer: Renderer, spriteManager: SpriteManager, data: HUDData, timeSeconds: number): void {
     const hasMana = data.maxMana > 0;
     const staminaFraction = data.maxStamina <= 0 ? 0 : data.stamina / data.maxStamina;
     const isStaminaLow = staminaFraction < 1 / 3;
@@ -213,9 +217,14 @@ export class HUDManager {
       }
       const background = !ability.meetsRequirement ? PALETTE.stoneDark : ability.isActive ? PALETTE.blue : ability.isReady ? PALETTE.bronze : PALETTE.slate;
       renderer.fillRect(boxX + 1, abilityBox.y + 1, innerSize, innerSize, background);
+      if (ability.meetsRequirement) {
+        spriteManager.drawSprite(renderer, ability.iconSpriteId, boxX + 1, abilityBox.y + 1, false);
+      } else {
+        spriteManager.drawSpriteSilhouette(renderer, ability.iconSpriteId, boxX + 1, abilityBox.y + 1, false, PALETTE.gray);
+      }
       if (ability.cooldownFraction > 0) {
         const coveredHeight = Math.ceil(innerSize * ability.cooldownFraction);
-        renderer.fillRect(boxX + 1, abilityBox.y + 1, innerSize, coveredHeight, PALETTE.darkBlue);
+        renderer.fillDitheredOverlay(boxX + 1, abilityBox.y + 1, innerSize, coveredHeight, PALETTE.black, 10);
       }
       const isPulsing = ability.isReady && !ability.isActive && Math.floor(timeSeconds * 2) % 2 === 0;
       let letterColor: string = ability.isActive ? PALETTE.white : ability.isReady ? (isPulsing ? PALETTE.cream : PALETTE.goldLight) : PALETTE.gray;
@@ -225,7 +234,7 @@ export class HUDManager {
       if (!ability.meetsRequirement) {
         letterColor = PALETTE.gray;
       }
-      renderer.drawText(ABILITY_SLOT_KEY_LABELS[slotIndex] ?? "", boxX + 3, abilityBox.y + 2, letterColor);
+      renderer.drawText(ABILITY_SLOT_KEY_LABELS[slotIndex] ?? "", boxX + Math.floor(abilityBox.size / 2), ABILITY_KEY_LABEL_Y, letterColor, { align: "center", shadowColor: PALETTE.black });
     });
   }
 

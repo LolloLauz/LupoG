@@ -177,9 +177,20 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 ### Sessione A, grafica
 
-- [ ] Animazioni e sprite dedicati per le mosse di ogni classe, una classe alla volta, iniziando dal Mago.
-- [ ] Effetti visivi degli incantesimi e del bastone; icone delle mosse nell'HUD.
-- [ ] Controllo che nessun pixel esca dalla palette (`MAX_PALETTE_COLORS`) e che le ancore degli sprite siano coerenti.
+**Decisioni (26 nov 2026):**
+
+- **Pose nuove + effetti:** niente frame del corpo per ogni mossa. Alle tre pose comuni se ne aggiungono cinque (lancio a mano aperta, tendere l'arco, carica dietro la testa, colpo di scudo, ginocchio a terra), generate come le altre per ogni arma e classe. Il carattere di ogni mossa sta negli **effetti**: sprite animati nel mondo (anelli ad area per elemento, fulmine, fiamme, schegge di ghiaccio, scie di velocità), sagome lilla del balzo, proiettili propri (dardo di fuoco, tre frecce elementali) e la lama tinta dell'elemento (varianti di colore, nessuno sprite in più).
+- **Come dati:** `abilityVisualConfig.ts`, una voce per ogni `AbilityId` (icona, tinta della lama, effetti con istante, punto d'appoggio e spostamento); `Player` segnala gli effetti dovuti come fa con l'onda d'urto, `GameEngine` li passa a `EffectsManager`, che disegna gli sprite.
+- **Icone HUD:** 8×8 dentro il riquadro 10×10; il numero del tasto passa sopra il riquadro (sotto c'è il bordo dorato del pannello), rosso se la risorsa non basta; senza requisito l'icona è una sagoma grigia.
+- **Mago ridisegnato:** veste lunga fino ai piedi (busto e gambe propri, l'orlo ondeggia nel passo), cappello rifinito, bastone con gemma. Hitbox, ancore e altezza dei frame invariati; con le armature la veste prende i colori del materiale come il busto degli altri.
+- **Altare** della bottega rifinito.
+- **Parità:** la 6A è solo grafica, `npm run balance` resta identico al baseline (`balance-check`).
+- **Versione:** la 6A chiude come 2.6.0, la 6B come 2.6.1.
+- **Ordine:** infrastruttura e Mago, poi Cavaliere, Ranger, Berserker, Paladino; gate verde e commit dopo ogni classe.
+
+- [x] Animazioni e sprite dedicati per le mosse di ogni classe, una classe alla volta, iniziando dal Mago. *Fatto: cinque pose nuove (`ABILITY_POSES`), 17 effetti in `ABILITY_EFFECT_CONFIG` (`abilityVisualConfig.ts`, sprite in `abilitySprites.ts`), sagome negli scatti, lama tinta dell'elemento; Mago con veste lunga, barba sul petto, cappello con fascia e mantello; altare rifinito.*
+- [x] Effetti visivi degli incantesimi e del bastone; icone delle mosse nell'HUD. *Fatto: dardo di fuoco a cometa, tre frecce elementali (proiettili nuovi con i valori della freccia), barriere arcana e sacra, bastone con punte d'oro; 20 icone 8×8.*
+- [x] Controllo che nessun pixel esca dalla palette (`MAX_PALETTE_COLORS`) e che le ancore degli sprite siano coerenti. *Fatto: nessun colore nuovo; `classes-phase6.test.mjs` controlla palette, ancore e altezza dei frame del Mago; test del browser verdi; `npm run balance` identico al baseline.*
 
 ### Sessione B, bilanciamento
 

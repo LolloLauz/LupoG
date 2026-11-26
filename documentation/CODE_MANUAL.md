@@ -1,6 +1,6 @@
 # Manuale del codice
 
-Versione del gioco descritta: **2.5.1**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
+Versione del gioco descritta: **2.6.0**. Per la visione d'insieme leggere prima `ARCHITECTURE.md`;
 per le regole di gioco `GAME_MANUAL.md`.
 
 Questo manuale spiega **cosa c'è in ogni file**, **come si muove il codice** e, nella parte finale,
@@ -38,7 +38,7 @@ IRON_AND_SHADOW/
 ├── tests/
 │   ├── run.mjs                 esegue i test unitari (npm test)
 │   ├── helpers.mjs             compila i moduli di src/ al volo e finti oggetti per i test
-│   ├── unit/                   35 file di test unitari (*.test.mjs)
+│   ├── unit/                   36 file di test unitari (*.test.mjs)
 │   └── browser/                test nel browser con Playwright (npm run test:browser): run.mjs e la pagina di prova harness.js
 ├── tools/
 │   ├── balance.mjs             simulatore di bilanciamento (npm run balance)
@@ -94,10 +94,11 @@ modificare qui, senza toccare la logica.
 | `playerConfig.ts` | `PLAYER_CONFIG` (statistiche del cavaliere e valori comuni a tutti i personaggi: salto, hitbox, tempi), `ATTACK_DEFINITIONS` (attacchi), `DEFAULT_ATTACK_BY_INPUT`, `COMBO_DEFINITIONS` |
 | `elementConfig.ts` (Fase 7) | `ELEMENT_CONFIG` (bruciatura, veleno, gelo, shock: nome, colore, durata, danno nel tempo, rallentamento, stordimento con il tempo senza stordimento, danno ai boss), `ELEMENT_ORDER`; Classi Fase 5: `ELEMENT_SYNERGIES` (`SynergyDefinition[]`: `shatter` gelo + colpo pesante, `thermalShock` gelo + fuoco, `overload` bruciatura + fulmine, `detonation` veleno + fuoco; danno ×1,5; l'ordine decide quale scatta) |
 | `progressionConfig.ts` (Fase 6) | `ECONOMY_CONFIG` (monete per nemico, moltiplicatore delle élite, monete per boss), `SHOP_OFFERS` (E5: anche `armor`), `SHOP_HEAL_AMOUNT` e `SHOP_PRICE_INCREASE_PER_PURCHASE` (bottega), `ALWAYS_DISCOVERED_WEAPONS` (la spada: sempre tra le armi che la bottega può vendere) |
+| `abilityVisualConfig.ts` (Classi Fase 6A) | `ABILITY_VISUAL_CONFIG` (una voce per `AbilityId`: `iconSpriteId` 8×8, `weaponTint` facoltativo, `cues` e, per le guardie, `guardFrameIds`), `ABILITY_EFFECT_CONFIG` (17 effetti: anelli `dustRing`, `fireRing`, `frostRing`, `shockRing`, lampi `cast*`, `dustPuff`, `arcanePuff`, `lightning`, `speedLines`, `flameSlash`, `bloodAura`, `bloodSlash`), tipi `AbilityEffectId`, `AbilityEffectCue` (sprite con `atMs`, `offsetX`, `offsetY`, oppure `afterimage` con colore). Solo grafica |
 | `abilityConfig.ts` (Fase 5) | `ABILITY_CONFIG` (Classi Fase 4: ogni voce ha `grade` 1-3, `AbilityGrade`, tutte di grado 1; ogni voce ha `cost: ResourceCost` = `{ stamina?, mana?, health? }` al posto di `staminaCost`, e `modifiers: []` per i modificatori degli incantesimi; base comune `AbilityBase`) (onda d'urto, tiro in ritirata, carica furiosa: abilità d'attacco con il loro `AttackDefinition`; scudo: abilità di guardia con consumo al secondo, finestra della parata perfetta, costo per punto di danno, stordimento), `getAbilityAttacks()` (usata dalle animazioni). Classi Fase 5: quattro mosse per classe, tutte di grado 1; le dodici nuove sono `lunge`, `shieldBash`, `flameBlade` (Cavaliere), `poisonArrow`, `frostArrow`, `fireArrow` (Ranger, senza munizioni), `hotAxe`, `earthquake`, `bloodStrike` (Berserker, costa 15 di salute), `holyHammer`, `consecration`, `frozenJudgement` (Paladino), costruite con gli aiuti `strike`, `elementArrow`, `attackAbility` e `AROUND_HITBOX`; `ABILITY_UNLOCK_CONFIG` (`startingCount` 2, `chestChance` 0,25). Classi Fase 2, incantesimi del Mago: `firebolt` (15 mana, 900 ms; `abilityFirebolt`, 22 danni, proiettile `arcaneFireball` senza munizioni, `elements: ["fire"]`), `frostNova` (30 mana, 5 s; `abilityFrostNova`, 18 danni, `elements: ["frost"]`, `impactEffect: "shockwave"`), `arcaneLeap` (20 mana, 3 s; `abilityArcaneLeap`, scatto indietro invulnerabile), `arcaneBarrier` (guardia: 10 mana per alzarla, 10/s, `costPerBlockedDamage` 1, parata perfetta 250 ms). La guardia ha `resource: "stamina" \| "mana"` (scudo: stamina) e `costPerBlockedDamage` (prima `staminaPerBlockedDamage`) |
 | `characterConfig.ts` (Fase 4) | `CHARACTER_CONFIG` (cavaliere, ranger, berserker, paladino e, Classi Fase 2, mago: nome, descrizione, tratto, suffisso degli sprite, arma iniziale, salute, velocità, moltiplicatori del danno inflitto e subito, schivata, `regeneration` facoltativa; 2.1.1: `ammoRegeneration` facoltativa (`weaponId`, `intervalMs`; solo il Ranger: `bow`, 3000 ms); Fase 5: `maxStamina`, `staminaRegenPerSecond`, `dodgeStaminaCost`, `abilityIds` (elenco in ordine di tasto; dalla Classi Fase 5 quattro per classe); Classi Fase 5, passivi facoltativi: `staminaPerWeaponHit` (Cavaliere, 4), `lowHealthPower` (Berserker: `healthFraction` 0,4, `damageMultiplier` 1,25), `manaPerKill` (Mago, 10), e `trait` aggiornati; Classi Fase 0: `maxMana`, `manaRegenPerSecond` (0), `baseAttributes` (dalla Fase 4 le basi della classe, somma 25: Cavaliere 6/5/2/6/6, Ranger 3/9/3/4/6, Berserker 9/4/1/8/3, Paladino 6/2/4/7/6, Mago 2/4/10/4/5); Fase 6: `unlockLevel`, `unlockText`; Classi Fase 2: `usesSpellFocus` facoltativo, vero solo per il Mago, che ha 70 HP, velocità 84, stamina 80, mana 100 con recupero 6/s, bastone, `abilityIds` `firebolt`, `frostNova`, `arcaneLeap`, `arcaneBarrier`, sblocco al livello 5), `CHARACTER_ORDER` (cavaliere, ranger, berserker, mago, paladino), `DEFAULT_CHARACTER_ID`, `isCharacterId()`. Il cavaliere legge salute, velocità e schivata da `PLAYER_CONFIG` |
 | `enemyConfig.ts` | `ENEMY_AI_CONFIG` (anche `armorCrushStunMs` e i moltiplicatori dei nemici d'élite), `ENEMY_CONFIG` (nemici), `BOSS_CONFIG` e `BOSS_CATALOG` (boss; `weaponReward` = trofeo) Fase 8: `raider` (Predone, a distanza con le accette), `scorpion` (corazzato, scatto), `vulture` (volante), `LANDS_LORD_CONFIG` (Signore delle Lande). |
-| `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco, Classi Fase 2: `arcaneFireball` (il dardo di fuoco del Mago, sprite della palla di fuoco; velocità, traiettoria, durata, dimensioni, se la spada li devia, frame) Fase 8: `hatchet` (accetta di predoni e Signore delle Lande, respinta dalla spada). |
+| `projectileConfig.ts` (2.0) | `PROJECTILE_CONFIG`: freccia, dardo magico, palla di fuoco, Classi Fase 2: `arcaneFireball` (il dardo di fuoco del Mago, sprite a cometa `projectileFirebolt1-3` dalla Fase 6A; velocità, traiettoria, durata, dimensioni, se la spada li devia, frame), Classi Fase 6A: `fireArrow`, `frostArrow`, `poisonArrow` (valori della freccia del giocatore, sprite propri `projectileArrow<Elemento>1-2`, usati dalle mosse del Ranger), Fase 8: `hatchet` (accetta di predoni e Signore delle Lande, respinta dalla spada). |
 | `hazardConfig.ts` (2.0) | `HAZARD_CONFIG`: danno degli spuntoni, moltiplicatori in acqua, aderenza sul ghiaccio |
 | `itemConfig.ts` | `ITEM_CONFIG` (oggetti raccoglibili; quelli con `powerUpId` attivano un power-up, `storedInBag` = pozione da borsa, `manaAmount` = mana dato dalla pozione di mana (Classi Fase 2: `manaPotion`, 40, sprite `itemManaPotion`), `refillsAmmo` = faretra, `coins` = monete), `ITEM_SIZE` |
 | `levelConfig.ts` | `LEVEL_CONFIG` (i 7 livelli; il 6 sono le Lande Desolate della Fase 8), `THEME_STYLES` (tessitura e rampe di colore del terreno per ambientazione: `terrainTexture`, `surfaceColors`, `fillColors`, `ledgeColors`, `detailColors`, `waterColors` facoltativo) |
@@ -382,18 +383,19 @@ attacco), `processEnemyAttacks(enemies, player)`, `processBossAttack(boss, playe
 | `Camera.ts` | `Camera` | `follow(target, mapWidth, mapHeight)`: centra e limita ai bordi |
 | `SpriteManager.ts` | `SpriteManager`, `SpriteColorVariant` | `registerSprite(id, righe, colori, anchorX)`, `drawSprite(..., variant)`, `drawSpriteAligned(..., flashColor, variant)` (E2-E3: una **variante di colore** cambia alcune chiavi; si compone alla prima richiesta e resta in memoria, così l'equipaggiamento non moltiplica i frame) (allinea lo sprite all'hitbox con l'ancora, anche specchiato), `drawSpriteSilhouette(..., colore)`, `getSpriteSize`, `getSpriteAnchorX`; crea le versioni specchiate e, alla prima richiesta, le sagome a tinta unita |
 | `AnimationManager.ts` | `AnimationPlayer`, `AnimationDefinition` | riproduce un'animazione: `play`, `restart`, `update`, `currentFrameId`; durata per frame (`frameDurationsMs`) opzionale |
-| `EffectsManager.ts` | `EffectsManager` | particelle, scritte, tremolio, hit-stop |
+| `EffectsManager.ts` | `EffectsManager` | particelle, scritte, tremolio, hit-stop; Classi Fase 6A: `spawnSpriteEffect`, `spawnAfterimage`, `renderAfterimages` (prima del giocatore), `renderSpriteEffects` (dopo i proiettili) |
+| `sprites/abilitySprites.ts` (Classi Fase 6A) | `registerAbilitySprites`, `WEAPON_TINT_COLORS`, `ABILITY_ICON_SIZE` | effetti delle mosse con quattro toni per elemento (chiavi `1`-`4`), barriere arcana e sacra, 20 icone 8×8; `WEAPON_TINT_COLORS` dà i colori della lama per elemento. Registrato all'avvio da `GameEngine` |
 | `BackgroundRenderer.ts` | `BackgroundRenderer` | sfondi a 16 bit per `forest`, `castle`, `dungeon`, `swamp`, `ice`, `wasteland` (Fase 8: tramonto, `paintMesas`, `paintBones`, `createDust`), `tower`, `shop` (E6: `buildShop`, assi, travi, scaffali con vasi e pozioni, lanterne): 4-6 livelli di parallasse disegnati una volta in canvas da 640 px che si ripetono, più elementi animati (stelle, luna, torce, nebbia, lucciole, aurora, neve, fulmini, vetrate, bracieri) |
 | `TerrainRenderer.ts` | `TerrainRenderer` | terreno e piattaforme con la tessitura dell'ambientazione (`THEME_STYLES`: erba, pietra, mattoni, fango, neve, pietra runica), piattaforme mobili, pericoli (spuntoni, ghiaccio, acqua in due tempi), porta d'uscita, cancello dell'arena |
 | `sprites/spriteTools.ts` | funzioni | `createGrid`, `stampRows`, `setPixel`, `drawSword`, `drawSlashArc`, pose delle gambe, `addOutline` (contorno automatico), `remapSpriteKeys` (varianti) |
-| `sprites/knightSprites.ts` | `registerKnightSprites`, `registerCharacterPreviews`, `getCharacterPreviewFrameId`, `KNIGHT_ANCHOR_X`, `KNIGHT_FIRE_SUFFIX`, `KNIGHT_CROUCH_SUFFIX` | cavaliere 24×30 (attacchi 44×30, lancia 58×30): parte superiore + gambe + arma; ancora alla colonna 7. `registerKnightSprites(spriteManager, personaggio)` compone **una serie completa di frame per ogni arma** (`WEAPON_VISUALS`: lunghezza rispetto alla spada, funzione di disegno, pose d'attacco, icona): le funzioni `compose*` disegnano l'arma e il busto attivi, quindi un frame aggiunto all'elenco vale per tutte le armi e tutti i personaggi. **Personaggi** (Fase 4, `CHARACTER_VISUALS`): stesso corpo del cavaliere, colori propri (stesse chiavi: armatura `d g s w`, sopravveste `m r o`, scudo `N B L`) e, se serve, le 12 righe della testa (`RANGER_HEAD_ROWS`, `BERSERKER_HEAD_ROWS`; il paladino ricolora il pennacchio). Pose delle abilità (`ABILITY_POSES`: arma alzata, colpo a terra, affondo) comuni a tutte le armi. **Equipaggiamento** (E2): la testa usa le chiavi dell'elmo `1`-`4` (`HELMET_TONE_KEYS`; il cappuccio del ranger `h H i` diventa `2 3 4`), le gambe `5`-`7` (`BOOT_TONE_KEYS`), il busto resta `d g s w` (`CHEST_TONE_KEYS`): le righe sono scritte come prima, la sostituzione avviene componendo i frame (`characterBodyRows`, `bootRows`), e `characterColors` dà alle nuove chiavi i colori di sempre. Lo spadone (E3) usa le pose della spada in frame larghi 54 (`GREATSWORD_POSES`). Id di uno sprite: frame + `Crouch` (attacco da accovacciati) + suffisso dell'arma + suffisso del personaggio + `Fire`. Una serie è di circa 600 sprite: il motore registra quella di un personaggio quando serve (`GameEngine.ensureCharacterSprites`) e, all'avvio, solo i due frame d'attesa di ognuno per i menu (`registerCharacterPreviews`). Registra anche le icone 16×16 delle armi. `Player.getRenderedFrameId()` sceglie il frame |
+| `sprites/knightSprites.ts` | `registerKnightSprites`, `registerCharacterPreviews`, `getCharacterPreviewFrameId`, `KNIGHT_ANCHOR_X`, `KNIGHT_FIRE_SUFFIX`, `KNIGHT_CROUCH_SUFFIX` | cavaliere 24×30 (attacchi 44×30, lancia 58×30): parte superiore + gambe + arma; ancora alla colonna 7. `registerKnightSprites(spriteManager, personaggio)` compone **una serie completa di frame per ogni arma** (`WEAPON_VISUALS`: lunghezza rispetto alla spada, funzione di disegno, pose d'attacco, icona): le funzioni `compose*` disegnano l'arma e il busto attivi, quindi un frame aggiunto all'elenco vale per tutte le armi e tutti i personaggi. **Personaggi** (Fase 4, `CHARACTER_VISUALS`): stesso corpo del cavaliere, colori propri (stesse chiavi: armatura `d g s w`, sopravveste `m r o`, scudo `N B L`) e, se serve, le 12 righe della testa (`RANGER_HEAD_ROWS`, `BERSERKER_HEAD_ROWS`; il paladino ricolora il pennacchio). Pose delle abilità (`ABILITY_POSES`, otto: arma alzata, colpo a terra, affondo e, dalla Fase 6A, lancio a mano aperta `Cast`, arco teso `Draw`, carica `Windup`, colpo di scudo `Bash` con `shiftX`, ginocchio a terra `Kneel`) comuni a tutte le armi. Classi Fase 6A: le gambe dipendono dal personaggio (`LegSet`, `activeLegs`, al posto delle costanti `LEGS_*`); `CharacterVisual` ha `torsoRows` e `legs`; il Mago ha la veste lunga (`MAGE_LEGS` da `composeRobeLegs`), barba sul petto, mantello senza stemma e cappello con fascia e stella. **Equipaggiamento** (E2): la testa usa le chiavi dell'elmo `1`-`4` (`HELMET_TONE_KEYS`; il cappuccio del ranger `h H i` diventa `2 3 4`), le gambe `5`-`7` (`BOOT_TONE_KEYS`), il busto resta `d g s w` (`CHEST_TONE_KEYS`): le righe sono scritte come prima, la sostituzione avviene componendo i frame (`characterBodyRows`, `bootRows`), e `characterColors` dà alle nuove chiavi i colori di sempre. Lo spadone (E3) usa le pose della spada in frame larghi 54 (`GREATSWORD_POSES`). Id di uno sprite: frame + `Crouch` (attacco da accovacciati) + suffisso dell'arma + suffisso del personaggio + `Fire`. Una serie è di circa 600 sprite: il motore registra quella di un personaggio quando serve (`GameEngine.ensureCharacterSprites`) e, all'avvio, solo i due frame d'attesa di ognuno per i menu (`registerCharacterPreviews`). Registra anche le icone 16×16 delle armi. `Player.getRenderedFrameId()` sceglie il frame |
 | `sprites/weaponShapes.ts` | `drawSpear`, `drawAxe`, `drawMace`, `drawBow`, `drawCrossbow`, `drawGreatsword` (E3), `drawStaff` (Classi Fase 2), `WeaponDrawer` | forme delle armi della Fase 1 dalla mano alla punta (metallo con le chiavi della lama `b`, `v`: il fuoco e la rarità le ricolorano; ferro scuro `j` e corda `q` hanno chiavi proprie) |
 | `sprites/equipmentVisuals.ts` (E2-E3) | `buildEquipmentVariant`, `getItemIconVariant`, `getWeaponRarityColors`, `getArmorTones`, `getArmorPieceColors`, `ARMOR_ICON_TONE_KEYS` | aspetto dell'equipaggiamento, **solo ricolorazioni**: il metallo delle armi prende i colori della rarità; ogni pezzo d'armatura ricolora la sua parte del personaggio con i toni del materiale e, da Non comune, il tono più chiaro della rarità |
 | `sprites/enemySprites.ts` | `registerEnemySprites` | umanoidi da `SPECS` (`HumanoidSpec`: parte superiore, pose delle gambe, colori, arma spada o arco, mano, ancora): scheletro, arciere, goblin, soldato, golem; pipistrello disegnato a metà e specchiato; lupo e melme con le forme procedurali di `creatureTools.ts` Fase 8: `weapon: "thrown"` (accetta del predone: attacco corto, l'arma vola via), avvoltoio (ali del pipistrello e corpo proprio, `composeVultureHalf`), scorpione (`composeScorpion`). |
 | `sprites/creatureTools.ts` (2.0) | `composeWolf`, `composeBlob`, `composeScorpion` (Fase 8), `fillShadedEllipse` | creature non umanoidi composte da ellissi ombreggiate e rettangoli, con contorno automatico: lo stesso codice disegna il lupo (scala 1) e il Re dei Lupi (scala 2) |
 | `sprites/bossSprites.ts` | `registerBossSprites`, `BOSS_SPRITE_STYLES`, `BOSS_SPRITE_SHAPES` | quattro forme (`BOSS_SPRITE_SHAPES`, se manca: `knight`): **knight** cavaliere corazzato 36×41 (Cavaliere Nero), **witch** strega con veste e bastone, **sorcerer** stregone incappucciato con corona e spada d'ombra (36×44), **beast** lupo gigante 60×42 (hitbox 40×24). La forma impone la hitbox; i colori di ogni boss sono in `BOSS_SPRITE_STYLES` con le chiavi della sua forma |
 | `sprites/projectileSprites.ts` | `registerProjectileSprites` | freccia, dardo magico (2 frame), palla di fuoco (2 frame) |
-| `sprites/itemSprites.ts`, `uiSprites.ts` | funzioni | oggetti 8×8 ombreggiati, forziere chiuso e aperto (`chestClosed`, `chestOpen`, 16×12), icone 16×16 delle armature (`armorIconHelmet`, `armorIconChest`, `armorIconBoots`, chiavi `1`-`4` del materiale, E2); icone dell'HUD (`hudLife`, `hudHeart`, `hudSkull`); Classi Fase 2: `itemManaPotion`; Classi Fase 4: `shopAltar` (16×20, l'altare degli attributi, provvisorio) |
+| `sprites/itemSprites.ts`, `uiSprites.ts` | funzioni | oggetti 8×8 ombreggiati, forziere chiuso e aperto (`chestClosed`, `chestOpen`, 16×12), icone 16×16 delle armature (`armorIconHelmet`, `armorIconChest`, `armorIconBoots`, chiavi `1`-`4` del materiale, E2); icone dell'HUD (`hudLife`, `hudHeart`, `hudSkull`); Classi Fase 2: `itemManaPotion`; Classi Fase 4: `shopAltar` (16×20, l'altare degli attributi, rifinito nella Fase 6A) |
 
 **Come si descrive uno sprite.** Uno sprite è una lista di righe di testo; `.` è trasparente, ogni altra lettera è una
 chiave della mappa dei colori:
@@ -456,8 +458,8 @@ IA dei nemici → `enemy.update`, proiettili lanciati e melme che si dividono �
 `projectileSystem.update` → rimozione dei morti) → oggetti → effetti di danno → ripartenza dopo la morte o caduta →
 completamento del livello → camera.
 
-Ordine di disegno del mondo: livello (sfondo, terreno, pericoli) → oggetti → nemici → boss → giocatore → proiettili →
-acqua in primo piano (con ondulazione) → effetti.
+Ordine di disegno del mondo: livello (sfondo, terreno, pericoli) → oggetti → nemici → boss → sagome degli scatti → giocatore → proiettili →
+effetti a sprite delle mosse → acqua in primo piano (con ondulazione) → effetti.
 
 ### 4.4 Un colpo del giocatore
 `Player.handleInput` memorizza l'input (`bufferAttack`, solo se l'attacco può partire entro `attackBufferMs`) → quando possibile `startAttack` chiede a `ComboManager` l'attacco →
@@ -1227,11 +1229,11 @@ Codice aggiornato:
 
 Codice originale:
 ```ts
-    knightIdle2: composeKnightFrame(LEGS_STAND, 1),
+    knightIdle2: composeKnightFrame(activeLegs.stand, 1),
 ```
 Codice aggiornato:
 ```ts
-    knightIdle2: composeKnightFrame(LEGS_STAND, 1),
+    knightIdle2: composeKnightFrame(activeLegs.stand, 1),
     knightCheer1: composeAttackFrame({ tipX: 13, tipY: 0 }),
     knightCheer2: composeAttackFrame({ tipX: 13, tipY: 0, bodyDrop: 1 }),
 ```
@@ -1382,6 +1384,26 @@ messaggio di fine livello, prima non aggiornava il giocatore: il passo 10 lo fa 
 
 **Risultato atteso:** raggiunta la porta (o sconfitto il boss) il cavaliere si ferma e alterna due pose con la spada in alto
 finché non parte il livello successivo.
+
+### Per saperne di più – Dare grafica a una mossa nuova
+
+Questa guida **non è verificata** da `npm run verify-docs` (non ha il formato "Codice originale / Codice aggiornato"). Una mossa nuova ha già la sua voce in `ABILITY_CONFIG` (`abilityConfig.ts`). La grafica è tutta dati:
+
+1. **Icona.** In `src/rendering/sprites/abilitySprites.ts` aggiungi l'icona 8×8 a `ABILITY_ICONS` (otto righe di otto caratteri, colori di `ICON_COLORS`). Il tipo `Record<AbilityId, ...>` segnala l'icona mancante.
+2. **Voce visiva.** In `src/config/abilityVisualConfig.ts` aggiungi la voce a `ABILITY_VISUAL_CONFIG`, per esempio una mossa che lancia un lampo di fuoco e lascia una fiamma:
+```ts
+  emberStrike: {
+    iconSpriteId: "abilityIconEmberStrike",
+    weaponTint: "fire",
+    cues: [effect("castFire", 0, 16, HAND), effect("flameSlash", 200, 18, 8)],
+  },
+```
+   `atMs` è l'istante dall'inizio della mossa (entro la durata dell'attacco), `offsetX` è in avanti rispetto al personaggio, `offsetY` parte dalla testa (`FEET` = piedi, `HAND` = mano). Per le sagome di uno scatto usa `...afterimages(PALETTE.lilac, 60, 120)`. Una guardia non ha `cues` ma `guardFrameIds` (due frame della barriera).
+3. **Effetto nuovo (solo se serve).** Aggiungi l'id a `AbilityEffectId`, la voce a `ABILITY_EFFECT_CONFIG` (frame, durata, allineamento) e la forma a `EFFECT_SOURCES` in `abilitySprites.ts` (una funzione `compose*` e il tono dell'elemento). Gli effetti esistenti bastano quasi sempre.
+4. **Pose.** Il corpo usa le animazioni in `animationConfig.ts` (`ABILITY_POSES` in `knightSprites.ts` ha le otto pose comuni): scegli quella più vicina, non servono frame nuovi.
+5. **Verifica.** `npm test -- classes-phase6` controlla che ogni mossa abbia icona, effetti con istanti validi e sprite registrati; `npm run test:browser` controlla la palette.
+
+Nessun passo tocca il combattimento: `Player.drainAbilityEffects` e `GameEngine.showAbilityEffects` leggono la voce da soli.
 
 ---
 

@@ -33,6 +33,8 @@ import { POWER_UP_CONFIG } from "../config/powerUpConfig";
 import { PLAYER_CONFIG } from "../config/playerConfig";
 import { WEAPON_CONFIG } from "../config/weaponConfig";
 import { registerProjectileSprites } from "../rendering/sprites/projectileSprites";
+import { registerAbilitySprites } from "../rendering/sprites/abilitySprites";
+import { ABILITY_EFFECT_CONFIG, ABILITY_VISUAL_CONFIG } from "../config/abilityVisualConfig";
 import { HighScoreManager } from "../systems/HighScoreManager";
 import { ItemManager } from "../systems/ItemManager";
 import { LevelManager } from "../systems/LevelManager";
@@ -200,6 +202,7 @@ export class GameEngine {
     registerItemSprites(this.spriteManager);
     registerUiSprites(this.spriteManager);
     registerProjectileSprites(this.spriteManager);
+    registerAbilitySprites(this.spriteManager);
     this.screens = new ScreenManager(this.spriteManager);
     this.levelManager.loadLevel(FIRST_LEVEL_ID);
     const playerStart = this.levelManager.level.playerStart;
@@ -1359,6 +1362,7 @@ export class GameEngine {
       this.lastTiredPopupSeconds = this.levelElapsedSeconds;
       this.effects.addPopup("STANCO", centerX, popupY, PALETTE.lightGray);
     }
+    this.showAbilityEffects(centerX);
     if (this.player.drainAbilityImpact()) {
       const feetY = this.player.positionY + this.player.height;
       for (const offsetX of [-36, -18, 18, 36]) {
@@ -1378,6 +1382,23 @@ export class GameEngine {
       } else {
         this.effects.addPopup("GUARDIA ROTTA", centerX, popupY, PALETTE.orange);
       }
+    }
+  }
+
+  /**
+   * Effetti grafici delle mosse (Classi Fase 6A): sprite d'effetto nel punto indicato dalla mossa (in avanti secondo lo
+   * sguardo) e sagome del personaggio lasciate durante gli scatti.
+   */
+  private showAbilityEffects(centerX: number): void {
+    const player = this.player;
+    const isFacingLeft = player.facingDirection === "left";
+    for (const cue of player.drainAbilityEffects()) {
+      if (cue.kind === "afterimage") {
+        this.effects.spawnAfterimage(player.getRenderedFrameId(), player.positionX, player.positionY + player.height, PLAYER_CONFIG.hitboxWidth, isFacingLeft, cue.color);
+        continue;
+      }
+      const x = centerX + (isFacingLeft ? -cue.offsetX : cue.offsetX);
+      this.effects.spawnSpriteEffect(ABILITY_EFFECT_CONFIG[cue.effectId], x, player.positionY + cue.offsetY, isFacingLeft);
     }
   }
 
@@ -1547,6 +1568,7 @@ export class GameEngine {
         isActive: slot.isActive,
         meetsRequirement: slot.meetsRequirement,
         isKnown: slot.isKnown,
+        iconSpriteId: ABILITY_VISUAL_CONFIG[slot.ability.id].iconSpriteId,
       })),
       unspentAttributePoints: this.attributePoints.unspent,
       lives: this.livesManager.remainingLives,
@@ -1717,8 +1739,10 @@ export class GameEngine {
     this.weaponPickups.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y, this.player);
     this.enemies.forEach((enemy) => enemy.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y));
     this.boss?.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
+    this.effects.renderAfterimages(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
     this.player.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
     this.projectileSystem.render(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
+    this.effects.renderSpriteEffects(this.renderer, this.spriteManager, this.camera.x, this.camera.y);
     this.levelManager.renderForeground(this.renderer, this.camera, this.levelElapsedSeconds);
     this.effects.render(this.renderer, this.camera.x, this.camera.y);
     if (GAME_CONFIG.debugMode) {

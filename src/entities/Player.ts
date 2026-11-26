@@ -5,6 +5,8 @@ import { PlayerModifiers } from "../combat/PlayerModifiers";
 import { ResourcePool } from "../combat/ResourcePool";
 import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
 import { buildEquipmentVariant } from "../rendering/sprites/equipmentVisuals";
+import { WEAPON_TINT_COLORS } from "../rendering/sprites/abilitySprites";
+import { ABILITY_VISUAL_CONFIG, GUARD_FRAME_DURATION_MS, type AbilityEffectCue } from "../config/abilityVisualConfig";
 import type { SpriteColorVariant } from "../rendering/SpriteManager";
 import {
   NO_STRENGTH_PENALTIES,
@@ -154,6 +156,10 @@ export class Player extends GameObject {
   private hasPendingLowHealth = false;
   private pendingAbilityName: string | null = null;
   private hasPendingAbilityImpact = false;
+  /** Effetti grafici delle mosse dovuti dall'ultima chiamata a drainAbilityEffects (Classi Fase 6A). */
+  private pendingAbilityEffects: AbilityEffectCue[] = [];
+  /** Varianti di colore con la lama tinta di un elemento, sopra le armature indossate (si azzerano cambiando equipaggiamento). */
+  private readonly weaponTintVariants = new Map<ElementId, SpriteColorVariant>();
 
   private readonly animationPlayer = new AnimationPlayer(PLAYER_ANIMATIONS, "idle");
   /** Arma in mano: decide attacchi e combo (vedi equipWeapon). */
@@ -553,6 +559,16 @@ export class Player extends GameObject {
     return name;
   }
 
+  /**
+   * Effetti grafici della mossa in corso il cui istante è passato dall'ultima chiamata (Classi Fase 6A): il motore li
+   * trasforma in sprite d'effetto e sagome (vedi ABILITY_VISUAL_CONFIG).
+   */
+  public drainAbilityEffects(): AbilityEffectCue[] {
+    const effects = this.pendingAbilityEffects;
+    this.pendingAbilityEffects = [];
+    return effects;
+  }
+
   /** Vero una volta sola quando il colpo di un'abilità con effetto (onda d'urto) diventa attivo. */
   public drainAbilityImpact(): boolean {
     const hasImpact = this.hasPendingAbilityImpact;
@@ -604,6 +620,18 @@ export class Player extends GameObject {
       return null;
     }
     return this.attackElapsedMs >= dash.startMs && this.attackElapsedMs < dash.endMs ? dash : null;
+  }
+
+  /**
+   * Mossa a cui appartiene l'attacco in corso (null se non è una mossa), qualunque sia lo slot scelto adesso: cambiare
+   * slot durante la mossa non ne interrompe gli effetti né la tinta della lama (Classi Fase 6A).
+   */
+  private get runningAbility(): AbilityDefinition | null {
+    const attack = this.currentAttack;
+    if (attack === null) {
+      return null;
+    }
+    return this.abilities.find((ability) => ability.kind === "attack" && ability.attack === attack) ?? null;
   }
 
   /** Vero se l'attacco in corso è l'abilità del personaggio. */
@@ -664,6 +692,7 @@ export class Player extends GameObject {
     this.equipment = computeEquipmentBonuses(this.weaponItem, this.armor);
     this.equipmentVariant = buildEquipmentVariant(this.weaponItem, this.armor, true);
     this.armorOnlyVariant = buildEquipmentVariant(this.weaponItem, this.armor, false);
+    this.weaponTintVariants.clear();
     this.refreshStrengthPenalties();
     this.clampResourcesToMax();
   }
@@ -1101,6 +1130,7 @@ export class Player extends GameObject {
     // Con il power-up del fuoco si usano le varianti con la lama incandescente;
     // attaccando da accovacciati, le varianti in cui il cavaliere resta basso.
     const fireSuffix = this.modifiers.has("fire") ? KNIGHT_FIRE_SUFFIX : "";
+    const tintVariant = this.getWeaponTintVariant();
     spriteManager.drawSpriteAligned(
       renderer,
       `${this.getRenderedFrameId()}${fireSuffix}`,
@@ -1109,17 +1139,32 @@ export class Player extends GameObject {
       PLAYER_CONFIG.hitboxWidth,
       this.facingDirection === "left",
       null,
-      fireSuffix === "" ? this.equipmentVariant : this.armorOnlyVariant
+      tintVariant ?? (fireSuffix === "" ? this.equipmentVariant : this.armorOnlyVariant)
     );
-    // scudo alzato: una barriera di luce davanti (bianca finché la parata è perfetta; lilla la barriera del Mago)
+    // guardia alzata: la barriera della mossa davanti (sagoma bianca finché la parata è perfetta)
     if (this.isGuardUp) {
       const ability = this.ability;
       const isPerfectWindow = ability.kind === "guard" && this.guardElapsedMs <= ability.perfectWindowMs;
-      const barrierX = (this.facingDirection === "right" ? this.positionX + this.width + 3 : this.positionX - 5) - cameraX;
-      const guardColor = ability.kind === "guard" && ability.resource === "mana" ? PALETTE.lilac : PALETTE.cyan;
-      const barrierColor = isPerfectWindow ? PALETTE.white : guardColor;
-      renderer.fillGlow(barrierX + 1, this.positionY + this.height / 2 - cameraY, 9, barrierColor, 2, 4);
-      renderer.fillRect(barrierX, this.positionY + 1 - cameraY, 2, this.height - 2, barrierColor);
+      const guardFrameIds = ABILITY_VISUAL_CONFIG[ability.id].guardFrameIds;
+      const glowColor = ability.kind === "guard" && ability.resource === "mana" ? PALETTE.lilac : PALETTE.cyan;
+      if (guardFrameIds === undefined) {
+        // guardia senza barriera disegnata: la barra di luce di prima (bianca nella finestra della parata perfetta)
+        const barColor = isPerfectWindow ? PALETTE.white : glowColor;
+        const barX = (this.facingDirection === "right" ? this.positionX + this.width + 3 : this.positionX - 5) - cameraX;
+        renderer.fillGlow(barX + 1, this.positionY + this.height / 2 - cameraY, 9, barColor, 2, 4);
+        renderer.fillRect(barX, this.positionY + 1 - cameraY, 2, this.height - 2, barColor);
+      } else {
+        const frameId = guardFrameIds[Math.floor(this.guardElapsedMs / GUARD_FRAME_DURATION_MS) % 2]!;
+        const size = spriteManager.getSpriteSize(frameId);
+        const barrierX = (this.facingDirection === "right" ? this.positionX + this.width + 1 : this.positionX - 1 - size.width) - cameraX;
+        const barrierY = this.positionY + this.height / 2 - size.height / 2 - cameraY;
+        renderer.fillGlow(barrierX + size.width / 2, barrierY + size.height / 2, 9, isPerfectWindow ? PALETTE.white : glowColor, 2, 4);
+        if (isPerfectWindow) {
+          spriteManager.drawSpriteSilhouette(renderer, frameId, Math.round(barrierX), Math.round(barrierY), this.facingDirection === "left", PALETTE.white);
+        } else {
+          spriteManager.drawSprite(renderer, frameId, Math.round(barrierX), Math.round(barrierY), this.facingDirection === "left");
+        }
+      }
     }
     // arco a piena carica: un bagliore che pulsa davanti alla mano
     if (this.chargeFraction === 1) {
@@ -1127,6 +1172,28 @@ export class Player extends GameObject {
       const pulse = Math.floor(this.attackElapsedMs / 120) % 2;
       renderer.fillGlow(handX - cameraX, this.positionY + 10 - cameraY, 6 + pulse, PALETTE.white, 2, 6);
     }
+  }
+
+  /**
+   * Durante una mossa che tinge l'arma (Classi Fase 6A), la variante con lama e scie dell'elemento sopra le armature
+   * indossate; null altrimenti.
+   */
+  private getWeaponTintVariant(): SpriteColorVariant | null {
+    const running = this.runningAbility;
+    if (running === null) {
+      return null;
+    }
+    const element = ABILITY_VISUAL_CONFIG[running.id].weaponTint;
+    if (element === undefined) {
+      return null;
+    }
+    let variant = this.weaponTintVariants.get(element);
+    if (variant === undefined) {
+      const armor = this.armorOnlyVariant;
+      variant = { id: `${armor?.id ?? ""}|tinta-${element}`, colors: { ...armor?.colors, ...WEAPON_TINT_COLORS[element] } };
+      this.weaponTintVariants.set(element, variant);
+    }
+    return variant;
   }
 
   /**
@@ -1206,6 +1273,14 @@ export class Player extends GameObject {
         this.attackElapsedMs >= ability.attack.hitStartMs
       ) {
         this.hasPendingAbilityImpact = true;
+      }
+      const running = this.runningAbility;
+      if (running !== null) {
+        for (const cue of ABILITY_VISUAL_CONFIG[running.id].cues) {
+          if (elapsedBefore <= cue.atMs && cue.atMs < this.attackElapsedMs) {
+            this.pendingAbilityEffects.push(cue);
+          }
+        }
       }
       this.launchProjectileIfDue();
       if (this.currentAttack.charge !== undefined && this.attackElapsedMs >= this.currentAttack.durationMs) {

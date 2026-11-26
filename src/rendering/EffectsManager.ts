@@ -1,6 +1,8 @@
 import { measureTextWidth } from "./BitmapFont";
+import { AFTERIMAGE_CONFIG, type AbilityEffectDefinition } from "../config/abilityVisualConfig";
 import { PALETTE } from "../config/gameConfig";
 import type { Renderer } from "./Renderer";
+import type { SpriteManager } from "./SpriteManager";
 
 interface Particle {
   x: number;
@@ -22,7 +24,29 @@ interface ScorePopup {
   remainingMs: number;
 }
 
+/** Effetto a sprite (Classi Fase 6A): una serie di frame giocata una volta nel punto indicato. */
+interface SpriteEffect {
+  definition: AbilityEffectDefinition;
+  x: number;
+  y: number;
+  isFlipped: boolean;
+  elapsedMs: number;
+}
+
+/** Sagoma a tinta unita di un frame del personaggio, lasciata dove era (scatti e balzi, Classi Fase 6A). */
+interface Afterimage {
+  spriteId: string;
+  hitboxX: number;
+  hitboxBottom: number;
+  hitboxWidth: number;
+  isFlipped: boolean;
+  color: string;
+  remainingMs: number;
+}
+
 const MAX_PARTICLES = 200;
+const MAX_SPRITE_EFFECTS = 24;
+
 const POPUP_DURATION_MS = 700;
 const POPUP_RISE_PIXELS = 14;
 
@@ -35,6 +59,8 @@ const POPUP_RISE_PIXELS = 14;
 export class EffectsManager {
   private particles: Particle[] = [];
   private popups: ScorePopup[] = [];
+  private spriteEffects: SpriteEffect[] = [];
+  private afterimages: Afterimage[] = [];
   private shakeRemainingMs = 0;
   private shakeTotalMs = 1;
   private shakeMagnitude = 0;
@@ -51,11 +77,38 @@ export class EffectsManager {
     return this.popups.length;
   }
 
+  public get spriteEffectCount(): number {
+    return this.spriteEffects.length;
+  }
+
+  public get afterimageCount(): number {
+    return this.afterimages.length;
+  }
+
   public get isHitStopActive(): boolean {
     return this.hitStopRemainingMs > 0;
   }
 
   // --- generazione ----------------------------------------------------------
+
+  /**
+   * Effetto a sprite (Classi Fase 6A) nel punto (x, y) del mondo, allineato secondo la definizione
+   * (centrato, o appoggiato con l'ultima riga). isFlipped = rivolto a sinistra.
+   */
+  public spawnSpriteEffect(definition: AbilityEffectDefinition, x: number, y: number, isFlipped: boolean): void {
+    if (this.spriteEffects.length >= MAX_SPRITE_EFFECTS) {
+      return;
+    }
+    this.spriteEffects.push({ definition, x: Math.round(x), y: Math.round(y), isFlipped, elapsedMs: 0 });
+  }
+
+  /** Sagoma del frame spriteId allineata all'hitbox indicata (coordinate del mondo), nel colore indicato. */
+  public spawnAfterimage(spriteId: string, hitboxX: number, hitboxBottom: number, hitboxWidth: number, isFlipped: boolean, color: string): void {
+    if (this.afterimages.length >= MAX_SPRITE_EFFECTS) {
+      return;
+    }
+    this.afterimages.push({ spriteId, hitboxX: Math.round(hitboxX), hitboxBottom: Math.round(hitboxBottom), hitboxWidth, isFlipped, color, remainingMs: AFTERIMAGE_CONFIG.durationMs });
+  }
 
   /** Scintille di un colpo: partono nella direzione dell'attacco (1 = destra, -1 = sinistra). */
   public spawnHitSparks(x: number, y: number, direction: 1 | -1): void {
@@ -165,6 +218,16 @@ export class EffectsManager {
       popup.remainingMs -= deltaTimeMs;
     }
     this.popups = this.popups.filter((popup) => popup.remainingMs > 0);
+    for (const effect of this.spriteEffects) {
+      effect.elapsedMs += deltaTimeMs;
+    }
+    this.spriteEffects = this.spriteEffects.filter(
+      (effect) => effect.elapsedMs < effect.definition.frameDurationMs * effect.definition.frameIds.length
+    );
+    for (const afterimage of this.afterimages) {
+      afterimage.remainingMs -= deltaTimeMs;
+    }
+    this.afterimages = this.afterimages.filter((afterimage) => afterimage.remainingMs > 0);
     this.shakeRemainingMs = Math.max(0, this.shakeRemainingMs - deltaTimeMs);
   }
 
@@ -210,9 +273,42 @@ export class EffectsManager {
     }
   }
 
+  /** Sagome dei personaggi: si disegnano prima del giocatore, così restano dietro. */
+  public renderAfterimages(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
+    for (const afterimage of this.afterimages) {
+      if (afterimage.remainingMs < AFTERIMAGE_CONFIG.durationMs / 2 && Math.floor(afterimage.remainingMs / AFTERIMAGE_CONFIG.blinkMs) % 2 === 0) {
+        continue;
+      }
+      spriteManager.drawSpriteAligned(
+        renderer,
+        afterimage.spriteId,
+        afterimage.hitboxX - cameraX,
+        afterimage.hitboxBottom - cameraY,
+        afterimage.hitboxWidth,
+        afterimage.isFlipped,
+        afterimage.color
+      );
+    }
+  }
+
+  /** Effetti a sprite (anelli, lampi, fulmini): sopra i personaggi. */
+  public renderSpriteEffects(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
+    for (const effect of this.spriteEffects) {
+      const { frameIds, frameDurationMs, align } = effect.definition;
+      const frameIndex = Math.min(frameIds.length - 1, Math.floor(effect.elapsedMs / frameDurationMs));
+      const frameId = frameIds[frameIndex]!;
+      const size = spriteManager.getSpriteSize(frameId);
+      const drawX = effect.x - Math.floor(size.width / 2) - cameraX;
+      const drawY = (align === "bottom" ? effect.y - size.height : effect.y - Math.floor(size.height / 2)) - cameraY;
+      spriteManager.drawSprite(renderer, frameId, Math.round(drawX), Math.round(drawY), effect.isFlipped);
+    }
+  }
+
   public clear(): void {
     this.particles = [];
     this.popups = [];
+    this.spriteEffects = [];
+    this.afterimages = [];
     this.shakeRemainingMs = 0;
     this.hitStopRemainingMs = 0;
   }

@@ -1,4 +1,4 @@
-import type { AbilityDefinition, AbilityId, AttackDefinition, ElementId, ResourceCost } from "../types/EntityTypes";
+import type { AbilityDefinition, AbilityId, AttackDefinition, ElementId, ProjectileTypeId, ResourceCost } from "../types/EntityTypes";
 
 /**
  * Abilità speciali dei personaggi (Fase 5, tasti 7-0; quattro per classe dalla Classi Fase 5, valori da bilanciare). Ognuna ha un costo (stamina, mana o salute: Classi Fase 0)
@@ -101,8 +101,8 @@ function strike(id: string, damage: number, hitbox: AttackDefinition["hitbox"], 
 /** Classi Fase 5: area intorno al personaggio, davanti e dietro (come l'onda d'urto). */
 const AROUND_HITBOX = { x: -40, y: 0, width: 92, height: 24 };
 
-/** Classi Fase 5: freccia speciale del Ranger, con un elemento e senza consumare munizioni. */
-function elementArrow(id: string, damage: number, element: ElementId): AttackDefinition {
+/** Classi Fase 5: freccia speciale del Ranger, con un elemento e senza consumare munizioni (sprite proprio dalla Fase 6A). */
+function elementArrow(id: string, damage: number, element: ElementId, projectileId: ProjectileTypeId): AttackDefinition {
   return {
     id,
     damage,
@@ -112,7 +112,7 @@ function elementArrow(id: string, damage: number, element: ElementId): AttackDef
     cooldownMs: 150,
     hitbox: NO_HITBOX,
     animation: id,
-    projectile: { projectileId: "playerArrow", launchAtMs: 180, originX: 20, originY: 9, aimY: 0, usesAmmo: false },
+    projectile: { projectileId, launchAtMs: 180, originX: 20, originY: 9, aimY: 0, usesAmmo: false },
     elements: [element],
   };
 }
@@ -240,11 +240,11 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
 
   // --- Classi Fase 5: Ranger ---
   poisonArrow: attackAbility("poisonArrow", "FRECCIA VELENOSA", "Freccia che avvelena", { stamina: 25 }, 4000,
-    elementArrow("abilityPoisonArrow", 14, "poison")),
+    elementArrow("abilityPoisonArrow", 14, "poison", "poisonArrow")),
   frostArrow: attackAbility("frostArrow", "FRECCIA GELIDA", "Freccia che gela", { stamina: 25 }, 5000,
-    elementArrow("abilityFrostArrow", 14, "frost")),
+    elementArrow("abilityFrostArrow", 14, "frost", "frostArrow")),
   fireArrow: attackAbility("fireArrow", "FRECCIA DI FUOCO", "Freccia che brucia", { stamina: 30 }, 5000,
-    elementArrow("abilityFireArrow", 18, "fire")),
+    elementArrow("abilityFireArrow", 18, "fire", "fireArrow")),
 
   // --- Classi Fase 5: Berserker ---
   hotAxe: attackAbility("hotAxe", "ASCIA ROVENTE", "Fendente di fuoco", { stamina: 30 }, 4500,

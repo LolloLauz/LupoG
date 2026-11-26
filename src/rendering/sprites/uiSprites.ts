@@ -70,30 +70,31 @@ const ALTAR_COLORS: Record<string, string> = {
 };
 
 /**
- * Altare degli attributi nella stanza del negozio (Classi Fase 4), 16x20: un cristallo su un piedistallo di pietra.
- * Sprite provvisorio: quello rifinito arriva con la Fase 6A.
+ * Altare degli attributi nella stanza del negozio (Classi Fase 4, rifinito nella Classi Fase 6A), 16x20: un cristallo
+ * sfaccettato (faccia chiara a sinistra) sospeso tra due punte d'oro, sopra un piedistallo di pietra con il pentagono
+ * degli attributi inciso in oro e la base a gradini. Luce dall'alto a sinistra.
  */
 const ALTAR_ROWS = [
   "......kkkk......",
-  ".....klwlak.....",
-  "....klwllaak....",
-  "....kllaaavk....",
-  ".....kaavvk.....",
-  "......kvvk......",
-  ".......kk.......",
-  "..kkkkkkkkkkkk..",
-  ".kPPPPPPPPPPPLk.",
-  ".kLLyLLLLLLyLSk.",
+  ".....kwlaak.....",
+  "....kwllaavk....",
+  "...kklwlavvkk...",
+  "..kyklllavvkyk..",
+  "...kkaaavvvkk...",
+  ".....kavvvk.....",
+  "..kkkkkvvkkkkk..",
+  ".kPPPPPkkPPPPLk.",
+  ".kLyLLLLLLLLySk.",
   ".kkkkkkkkkkkkkk.",
-  "...kLTTTTTTSk...",
-  "...kLTnyynTSk...",
-  "...kLTynnyTSk...",
-  "...kLTTTTTTSk...",
-  "...kLTTTTTTSk...",
+  "...kLTTnyTTSk...",
+  "...kLTyTTnTSk...",
+  "...kLnTTTTySk...",
+  "...kLTyTTnTSk...",
+  "...kLTTynnTSk...",
   "..kkkkkkkkkkkk..",
   ".kPLLLLLLLLLLSk.",
-  ".kSSSSSSSSSSSDk.",
-  ".kkkkkkkkkkkkkk.",
+  "kPLTTTTTTTTTTSDk",
+  "kkkkkkkkkkkkkkkk",
 ];
 
 export function registerUiSprites(spriteManager: SpriteManager): void {
