@@ -63,7 +63,7 @@ export const ITEM_CONFIG: Record<ItemTypeId, ItemDefinition> = {
     spriteId: "itemGem",
     healAmount: 0,
     scoreBonus: 200,
-    // le gemme valgono monete, da spendere nella bottega (valore da bilanciare nella Fase 6)
+    // le gemme valgono monete, da spendere nella bottega (valore confermato dopo la Fase 6B)
     coins: 30,
   },
   powerBerserk: {

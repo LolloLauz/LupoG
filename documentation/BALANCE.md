@@ -161,7 +161,7 @@ d'armatura, che indossa se è migliore, e una spada, che prende se è di rarità
 Il bot di `tools/balance.mjs` **non usa la bottega**, quindi le misure qui sopra valgono per una partita senza acquisti, che la renderebbero più facile.
 Dalla 2.1 le gemme valgono 30 monete (8 gemme in tutto il gioco: 240 monete) e i potenziamenti permanenti non ci sono più (il bot non li usava).
 Raccogliendo tutto e sconfiggendo tutti i nemici del livello si guadagnano da 74 monete (livello 1) a 154 (livello 7), boss ed élite compresi;
-una pozione costa 40. Il valore della gemma è provvisorio. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
+una pozione costa 40. Il valore della gemma (30) è confermato. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
 perché il gioco sembrava già facile per il bot.
 
 ## Classi Fase 6B: bilanciamento delle cinque classi (2.6.1)

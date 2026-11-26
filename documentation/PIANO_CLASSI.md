@@ -44,7 +44,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 - [x] **Salvataggio:** `ProgressManager` conserva solo livelli già giocati, classi sbloccate, record e difficoltà; aggiungere un campo di versione con migrazione dal formato 2.0, che scarta il resto. *Fatto: resta salvato anche il personaggio scelto nel menu (una preferenza, come la difficoltà); le classi sbloccate si ricavano dal livello raggiunto.*
 - [x] **Azzeramento a nuova partita:** borsa, zaino, armature, monete e gemme ripartono da zero; nessun cambio di classe durante la partita. *Fatto: anche le armi trovate (vendute in bottega) valgono solo per la partita; il Mitico del boss finale è ora solo un trofeo mostrato.*
-- [x] **Gemme in monete:** raccogliere una gemma dà 30 monete (valore da bilanciare) oltre ai 200 punti; togliere il contatore gemme dall'HUD.
+- [x] **Gemme in monete:** raccogliere una gemma dà 30 monete (valore confermato dopo la 6B) oltre ai 200 punti; togliere il contatore gemme dall'HUD.
 - [x] **Potenziamenti permanenti:** rimuovere i potenziamenti a gemme e la voce Potenziamenti dal titolo; sistemare Cancella dati e la scheda del personaggio.
 - [x] **Comandi:**
   - schivata su Shift sinistro; K liberato;
@@ -211,7 +211,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 - [x] Quanti punti statistica si guadagnano per livello e per boss. *Deciso: 3 per livello e 2 per boss (vedi Fase 4).*
 - [x] Come si ottengono le mosse extra delle classi. *Deciso: vedi Fase 5.*
-- [ ] Valore in monete della gemma (proposta: 30). *Nella 6B è rimasto 30: il simulatore non usa la bottega, serve una prova con persone.*
+- [x] Valore in monete della gemma (proposta: 30). *Deciso: 30 (confermato dopo la 6B). Il simulatore non usa la bottega, quindi si può ritoccare dopo una prova con persone.*
 
 ---
 
