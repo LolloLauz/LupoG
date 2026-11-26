@@ -7,7 +7,7 @@ import { measureTextWidth } from "../rendering/BitmapFont";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteColorVariant, SpriteManager } from "../rendering/SpriteManager";
 import { getCharacterPreviewFrameId } from "../rendering/sprites/knightSprites";
-import type { CharacterDefinition, CharacterId } from "../types/EntityTypes";
+import type { AttributeId, CharacterDefinition, CharacterId } from "../types/EntityTypes";
 import type { GameStateName } from "../types/GameTypes";
 import type { ThemeId } from "../types/LevelTypes";
 import { MenuManager } from "./MenuManager";
@@ -17,6 +17,8 @@ import { ARMOR_CONFIG, ARMOR_SLOTS, ARMOR_SLOT_NAMES } from "../config/armorConf
 import { RARITY_CONFIG } from "../config/rarityConfig";
 import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
 import { compareItemStats, describeItemStats } from "../systems/EquipmentStats";
+import { getItemStrengthRequirement } from "../systems/AttributeStats";
+import { fillPolygon, drawLine, getPentagonVertices, strokePolygon } from "./PentagonChart";
 import { getItemBaseName, getItemIconSpriteId, getItemName, getItemWeight, getUniqueItemDefinition } from "../systems/ItemFactory";
 import { describeWeaponAffinity, type WeaponAffinityLine } from "../systems/WeaponAffinity";
 import { getWeaponAffinity } from "../config/weaponAffinityConfig";
@@ -43,7 +45,10 @@ export type MenuCommand =
   | "showEquipment"
   | "equipmentUse"
   | "equipmentDrop"
-  | "closeEquipment";
+  | "closeEquipment"
+  | "showAttributes"
+  | "assignAttributePoint"
+  | "closeAttributes";
 
 /** Un posto della borsa nella schermata dell'equipaggiamento (E4). */
 export type EquipmentBagView = { kind: "weapon"; item: WeaponItem; ammo: number | null; isEquipped: boolean } | { kind: "potion"; iconSpriteId: string; count: number } | null;
@@ -60,7 +65,48 @@ export interface EquipmentView {
   bonuses: EquipmentBonuses;
   /** Classe in uso: bonus e malus delle armi nella scheda (Classi Fase 3). */
   characterId: CharacterId;
+  /** Forza effettiva (Classi Fase 4): il requisito degli oggetti si mostra rosso se non basta. */
+  strength: number;
 }
+
+/** Un attributo nel pentagono (Classi Fase 4): base della classe, punti spesi, bonus dei power-up e totale. */
+export interface AttributeRowView {
+  id: AttributeId;
+  name: string;
+  shortName: string;
+  base: number;
+  spent: number;
+  bonus: number;
+  effective: number;
+  /** Effetti attuali, già scritti (es. "SALUTE +16"). */
+  effectLines: string[];
+}
+
+/** Dati della schermata degli attributi (Classi Fase 4). */
+export interface AttributesView {
+  /** "spend" all'altare della bottega (si assegnano punti), "view" dall'equipaggiamento (solo lettura). */
+  mode: "spend" | "view";
+  unspentPoints: number;
+  maxValue: number;
+  rows: AttributeRowView[];
+  /** Righe in fondo (carico, requisiti): rosse se c'è un malus. */
+  statusLines: Array<{ text: string; isWarning: boolean }>;
+}
+
+/** Colori del pentagono (Classi Fase 4): base della classe, punti spesi, bonus dei power-up. */
+export const ATTRIBUTE_CHART_COLORS = {
+  base: PALETTE.blue,
+  baseText: PALETTE.lightBlue,
+  spent: PALETTE.gold,
+  spentText: PALETTE.goldLight,
+  bonus: PALETTE.green,
+  bonusText: PALETTE.lightGreen,
+  grid: PALETTE.slate,
+  outline: PALETTE.goldLight,
+} as const;
+
+/** Geometria della schermata degli attributi. */
+export const ATTRIBUTES_LAYOUT = { centerX: 88, centerY: 116, radius: 60, rowsX: 180, rowsY: 44, rowStep: 14 } as const;
 
 /** Colori della riga di classe delle armi (Classi Fase 3): verde i bonus, rosso malus e divieti. */
 export const WEAPON_AFFINITY_TONE_COLORS: Record<WeaponAffinityLine["tone"], string> = {
@@ -111,6 +157,8 @@ export interface ScreenData {
   shopOffers: ShopOfferView[];
   /** Equipaggiamento (E4): solo quando serve la sua schermata. */
   equipment?: EquipmentView;
+  /** Attributi (Classi Fase 4): solo quando serve il pentagono. */
+  attributes?: AttributesView;
 }
 
 /** Una voce della bottega come appare sullo schermo. */
@@ -236,6 +284,8 @@ export class ScreenManager {
 
   /** Voce evidenziata nella bottega (l'ultima è "PROSEGUI"). */
   private shopIndex = 0;
+  /** Attributo evidenziato nel pentagono (indice in ATTRIBUTE_ORDER). */
+  private attributeIndex = 0;
   /** Cursore della schermata dell'equipaggiamento: riga 0 = armature e borsa, righe 1-2 = zaino. */
   private equipmentRow = 0;
   private equipmentColumn = 0;
@@ -290,6 +340,12 @@ export class ScreenManager {
     this.shopIndex = 0;
     this.equipmentRow = 0;
     this.equipmentColumn = 0;
+    this.attributeIndex = 0;
+  }
+
+  /** Attributo evidenziato nella schermata degli attributi. */
+  public get selectedAttributeId(): AttributeId {
+    return this.latestData?.attributes?.rows[this.attributeIndex]?.id ?? "strength";
   }
 
   /** Legge l'input e restituisce l'eventuale comando scelto dal giocatore. */
@@ -317,6 +373,9 @@ export class ScreenManager {
     }
     if (state === "equipment") {
       return this.updateEquipment(input, data);
+    }
+    if (state === "attributes") {
+      return this.updateAttributes(input, data);
     }
     return this.menus[state]?.update(input) ?? null;
   }
@@ -349,7 +408,23 @@ export class ScreenManager {
     if (input.wasPressed("dropItem")) {
       return "equipmentDrop";
     }
+    if (input.wasPressed("openAttributes")) {
+      return "showAttributes";
+    }
     return input.wasPressed("pause") || input.wasPressed("openEquipment") ? "closeEquipment" : null;
+  }
+
+  /**
+   * Pentagono degli attributi (Classi Fase 4): su e giù scelgono l'attributo; all'altare J o Invio assegnano un punto;
+   * Esc, P o I chiudono.
+   */
+  private updateAttributes(input: InputManager, data: ScreenData): MenuCommand | null {
+    const view = data.attributes;
+    this.attributeIndex = ScreenManager.moveCursor(input, this.attributeIndex, view?.rows.length ?? 5);
+    if (view?.mode === "spend" && (input.wasPressed("assignPoint") || input.wasPressed("confirm"))) {
+      return "assignAttributePoint";
+    }
+    return input.wasPressed("pause") || input.wasPressed("openAttributes") || input.wasPressed("openEquipment") ? "closeAttributes" : null;
   }
 
   /** Cursore verticale circolare (W/S). */
@@ -431,6 +506,9 @@ export class ScreenManager {
         break;
       case "equipment":
         this.renderEquipment(renderer, data);
+        break;
+      case "attributes":
+        this.renderAttributes(renderer, data);
         break;
       case "paused":
         this.renderPause(renderer);
@@ -678,6 +756,90 @@ export class ScreenManager {
     this.renderEquipmentCard(renderer, view, selected);
     this.renderNotice(renderer, 116);
     renderer.drawText("FRECCE: scegli  INVIO: usa  Q: lascia  I: chiudi", renderer.width / 2, 220, PALETTE.gray, { align: "center" });
+    renderer.drawText("P: ATTRIBUTI", renderer.width - 14, 30, PALETTE.goldLight, { align: "right", shadowColor: PALETTE.black });
+  }
+
+  /**
+   * Schermata degli attributi (Classi Fase 4): a sinistra il pentagono (base, punti spesi e power-up in tre colori),
+   * a destra i cinque valori, gli effetti dell'attributo scelto, carico e requisiti.
+   */
+  private renderAttributes(renderer: Renderer, data: ScreenData): void {
+    const view = data.attributes;
+    renderer.drawDitherOverlay();
+    drawOrnateFrame(renderer, 6, 4, renderer.width - 12, renderer.height - 8);
+    this.drawGradientTitle(renderer, "ATTRIBUTI", renderer.width / 2, 10, 2, TITLE_GOLD_ROWS);
+    if (view === undefined) {
+      return;
+    }
+    const layout = ATTRIBUTES_LAYOUT;
+    const colors = ATTRIBUTE_CHART_COLORS;
+    const rows = view.rows;
+    const maxValues = rows.map(() => view.maxValue);
+    const vertices = (values: number[]): ReturnType<typeof getPentagonVertices> => getPentagonVertices(layout.centerX, layout.centerY, layout.radius, values, view.maxValue);
+    // griglia: bordo al massimo, anello a metà, assi
+    const outer = vertices(maxValues);
+    outer.forEach((vertex) => drawLine(renderer, { x: layout.centerX, y: layout.centerY }, vertex, colors.grid));
+    strokePolygon(renderer, vertices(maxValues.map((value) => value / 2)), colors.grid);
+    // dal più grande al più piccolo: ogni strato copre il precedente e lascia vedere solo la sua parte
+    fillPolygon(renderer, vertices(rows.map((row) => row.effective)), colors.bonus);
+    fillPolygon(renderer, vertices(rows.map((row) => Math.min(view.maxValue, row.base + row.spent))), colors.spent);
+    fillPolygon(renderer, vertices(rows.map((row) => row.base)), colors.base);
+    strokePolygon(renderer, vertices(rows.map((row) => row.effective)), colors.outline);
+    strokePolygon(renderer, outer, PALETTE.gray);
+    // sigle e valori ai vertici, verso l'esterno
+    outer.forEach((vertex, index) => {
+      const row = rows[index]!;
+      const offsetX = vertex.x - layout.centerX;
+      const align = Math.abs(offsetX) < 4 ? "center" : offsetX > 0 ? "left" : "right";
+      const labelX = align === "center" ? vertex.x : vertex.x + (offsetX > 0 ? 5 : -5);
+      const labelY = vertex.y < layout.centerY - layout.radius / 2 ? vertex.y - 20 : vertex.y < layout.centerY ? vertex.y - 8 : vertex.y + 3;
+      const isSelected = index === this.attributeIndex;
+      renderer.drawText(row.shortName, Math.round(labelX), Math.round(labelY), isSelected ? PALETTE.goldLight : PALETTE.stonePale, { align, shadowColor: PALETTE.black });
+      renderer.drawText(String(row.effective), Math.round(labelX), Math.round(labelY) + 9, PALETTE.white, { align, shadowColor: PALETTE.black });
+    });
+    // elenco a destra: sigla, base, spesi e power-up nei colori del grafico, totale
+    renderer.drawText(`PUNTI DA SPENDERE ${view.unspentPoints}`, renderer.width - 14, 30, view.unspentPoints > 0 ? PALETTE.goldLight : PALETTE.gray, { align: "right", shadowColor: PALETTE.black });
+    rows.forEach((row, index) => {
+      const y = layout.rowsY + index * layout.rowStep;
+      const isSelected = index === this.attributeIndex;
+      if (isSelected) {
+        renderer.drawText(">", layout.rowsX - 8, y, PALETTE.goldLight, { shadowColor: PALETTE.black });
+      }
+      renderer.drawText(row.name, layout.rowsX, y, isSelected ? PALETTE.goldLight : PALETTE.white, { shadowColor: PALETTE.black });
+      let partX = layout.rowsX + 74;
+      const parts: Array<[string, string]> = [[String(row.base), colors.baseText]];
+      if (row.spent > 0) parts.push([`+${row.spent}`, colors.spentText]);
+      if (row.bonus > 0) parts.push([`+${row.bonus}`, colors.bonusText]);
+      for (const [text, color] of parts) {
+        renderer.drawText(text, partX, y, color, { shadowColor: PALETTE.black });
+        partX += measureTextWidth(text, 1) + 2;
+      }
+      renderer.drawText(String(row.effective), renderer.width - 14, y, PALETTE.white, { align: "right", shadowColor: PALETTE.black });
+    });
+    // legenda dei colori
+    const legendY = layout.rowsY + rows.length * layout.rowStep + 2;
+    let legendX = layout.rowsX - 8;
+    for (const [label, color] of [["BASE", colors.base], ["SPESI", colors.spent], ["POWER-UP", colors.bonus]] as const) {
+      renderer.fillRect(legendX, legendY + 1, 5, 5, color);
+      renderer.drawText(label, legendX + 7, legendY, PALETTE.lightGray, { shadowColor: PALETTE.black });
+      legendX += measureTextWidth(label, 1) + 14;
+    }
+    // effetti dell'attributo scelto
+    const selectedRow = rows[this.attributeIndex];
+    if (selectedRow !== undefined) {
+      const effectsY = legendY + 14;
+      renderer.drawText(`EFFETTI (${selectedRow.shortName})`, layout.rowsX - 8, effectsY, PALETTE.stonePale, { shadowColor: PALETTE.black });
+      const lines = selectedRow.effectLines.length > 0 ? selectedRow.effectLines : ["NESSUN PUNTO SPESO"];
+      lines.slice(0, 5).forEach((line, index) => {
+        renderer.drawText(line, layout.rowsX - 4, effectsY + 10 + index * 9, PALETTE.lightGray, { shadowColor: PALETTE.black });
+      });
+    }
+    view.statusLines.slice(0, 2).forEach((line, index) => {
+      renderer.drawText(line.text, 14, 194 + index * 9, line.isWarning ? PALETTE.red : PALETTE.lightGray, { shadowColor: PALETTE.black });
+    });
+    this.renderNotice(renderer, 212);
+    const footer = view.mode === "spend" ? "FRECCE: scegli  J/INVIO: assegna  ESC: chiudi" : "SPENDI I PUNTI ALL'ALTARE DELLA BOTTEGA  P: chiudi";
+    renderer.drawText(footer, renderer.width / 2, 222, PALETTE.gray, { align: "center" });
   }
 
   /** Casella con l'icona dell'oggetto (colori della rarità), lineetta della rarità; cornice bianca sul cursore. */
@@ -750,7 +912,14 @@ export class ScreenManager {
     const rarity = RARITY_CONFIG[item.rarity];
     renderer.drawText(getItemName(item), 22, top + 8, rarity.color, { shadowColor: PALETTE.black });
     const slotName = item.kind === "armor" ? ARMOR_SLOT_NAMES[ARMOR_CONFIG[item.baseId].slot] : "ARMA";
-    renderer.drawText(`${rarity.name} - ${getItemBaseName(item)} (${slotName})  PESO ${getItemWeight(item)}`, 22, top + 19, PALETTE.lightGray, { shadowColor: PALETTE.black });
+    const typeLine = `${rarity.name} - ${getItemBaseName(item)} (${slotName})  PESO ${getItemWeight(item)}`;
+    renderer.drawText(typeLine, 22, top + 19, PALETTE.lightGray, { shadowColor: PALETTE.black });
+    // requisito di Forza (Classi Fase 4): rosso se la Forza non basta
+    const requiredStrength = getItemStrengthRequirement(item);
+    if (requiredStrength > 0) {
+      const color = view.strength >= requiredStrength ? PALETTE.lightGray : PALETTE.red;
+      renderer.drawText(`FOR ${requiredStrength}`, 22 + measureTextWidth(typeLine, 1) + 6, top + 19, color, { shadowColor: PALETTE.black });
+    }
     const differences = comparedWith === null && cell.section !== "backpack" ? null : compareItemStats(item, comparedWith);
     const lines = describeItemStats(item);
     // bonus e malus della classe per le armi (Classi Fase 3): prime righe della griglia, nei colori del tono. Le statistiche

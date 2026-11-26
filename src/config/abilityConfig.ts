@@ -102,6 +102,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { stamina: 40 },
     cooldownMs: 6000,
     modifiers: [],
+    grade: 1,
     attack: SHOCKWAVE_ATTACK,
     impactEffect: "shockwave",
   },
@@ -113,6 +114,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { stamina: 30 },
     cooldownMs: 4000,
     modifiers: [],
+    grade: 1,
     attack: BACKSTEP_SHOT_ATTACK,
   },
   furiousCharge: {
@@ -123,6 +125,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { stamina: 40 },
     cooldownMs: 5000,
     modifiers: [],
+    grade: 1,
     attack: FURIOUS_CHARGE_ATTACK,
   },
   shieldGuard: {
@@ -133,6 +136,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { stamina: 10 },
     cooldownMs: 300,
     modifiers: [],
+    grade: 1,
     resource: "stamina",
     drainPerSecond: 12,
     perfectWindowMs: 250,
@@ -147,6 +151,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { mana: 15 },
     cooldownMs: 900,
     modifiers: [],
+    grade: 1,
     attack: FIREBOLT_ATTACK,
   },
   frostNova: {
@@ -157,6 +162,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { mana: 30 },
     cooldownMs: 5000,
     modifiers: [],
+    grade: 1,
     attack: FROST_NOVA_ATTACK,
     impactEffect: "shockwave",
   },
@@ -168,6 +174,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { mana: 20 },
     cooldownMs: 3000,
     modifiers: [],
+    grade: 1,
     attack: ARCANE_LEAP_ATTACK,
   },
   arcaneBarrier: {
@@ -178,6 +185,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     cost: { mana: 10 },
     cooldownMs: 300,
     modifiers: [],
+    grade: 1,
     resource: "mana",
     drainPerSecond: 10,
     perfectWindowMs: 250,

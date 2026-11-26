@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.3.0.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.4.0.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -57,6 +57,7 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa); nella schermata dell'equipaggiamento, **Q** sull'oggetto scelto |
 | Usare un posto della borsa | **1**, **2**, **3**, **4** (arma: la impugni; pozione di salute o di mana: la bevi) |
 | Equipaggiamento (armature, borsa, zaino) | **I** (anche dalla pausa); **I** o **Esc** la richiude |
+| Attributi (pentagono) | **P** dalla schermata dell'equipaggiamento (sola lettura; **P** o **Esc** per tornare); all'**altare** della bottega, **E** vicino: **W**/**S** scelgono l'attributo, **J** o **Invio** assegna un punto, **Esc** chiude |
 | Pausa / riprendi | **Esc** |
 | Menu: scegliere | **W** / **S** oppure **↑** / **↓** (scelta del personaggio: anche **A** / **D** oppure **←** / **→**) |
 | Menu: confermare | **Invio** |
@@ -97,6 +98,7 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 |---|---|
 | **Titolo** | logo, record, il personaggio scelto, menu *Nuova partita*, *Personaggio*, *Scegli livello*, *Difficoltà* (Invio la cambia: Facile → Normale → Difficile), *Controlli* e *Cancella dati* |
 | **Cancella dati** | chiede conferma (la voce già scelta è *No*): con *Sì* cancella record, livelli raggiunti, difficoltà e personaggio, e si riparte come alla prima partita (cavaliere con la spada) |
+| **Attributi** | il pentagono con i cinque attributi, i punti spesi e i bonus dei power-up, gli effetti dell'attributo scelto, il carico e i requisiti di Forza (vedi "Attributi"); si apre con **P** dall'equipaggiamento o dall'altare della bottega |
 | **Bottega** | tra un livello e l'altro: si comprano pozioni, cure, munizioni, armi e armature con le monete (vedi sezione 11b) |
 | **Personaggio** | i cinque personaggi in fila (quelli non ancora sbloccati sono sagome con il lucchetto) e la scheda di quello evidenziato (statistiche in tacche da 1 a 5, arma iniziale, salute, mana (riga "100 MANA", solo per il Mago), tratto); A/D (o W/S) per scegliere, Invio per confermare, Esc per tornare senza cambiare |
 | **Scegli livello** | i sette livelli: quelli già raggiunti si possono giocare (partita nuova da quel livello), gli altri sono chiusi da un lucchetto; W/S per scegliere, Invio per giocare, Esc per tornare |
@@ -127,6 +129,54 @@ cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale e ab
   personaggio compare "PASSIVA: LE FRECCE SI RICARICANO". La sua schivata resta più lunga e più frequente.
 
 - **Mago:** fragile, ma gli incantesimi colpiscono da lontano e a mana. Ha **100 di mana** (barra blu sotto la stamina; scheda del personaggio: "100 MANA"). Il mana si recupera piano, **6 al secondo** dopo 0,6 secondi senza spese, e **5 per ogni bersaglio colpito con il bastone**. Si sblocca sconfiggendo la **Strega della Palude** (livello 4). Sprite provvisori: cappello a punta e veste viola.
+
+### Attributi (Forza, Destrezza, Intelligenza, Vitalità, Tempra)
+
+Ogni personaggio ha cinque **attributi**, da 0 a **20**. Partono da valori propri della classe (somma 25) e si alzano con i **punti attributo**.
+Chi non spende punti gioca come prima: gli effetti contano solo i punti **sopra la base**.
+
+| Personaggio | FOR | DES | INT | VIT | TEM |
+|---|---|---|---|---|---|
+| **Cavaliere** | 6 | 5 | 2 | 6 | 6 |
+| **Ranger** | 3 | 9 | 3 | 4 | 6 |
+| **Berserker** | 9 | 4 | 1 | 8 | 3 |
+| **Paladino** | 6 | 2 | 4 | 7 | 6 |
+| **Mago** | 2 | 4 | 10 | 4 | 5 |
+
+**Effetti di ogni punto speso:**
+
+| Attributo | Effetto per punto |
+|---|---|
+| **Forza** | danno +3% per spada, lancia, ascia, mazza e spadone, +1% per pugnale e bastone; carico +1 (capacità); requisiti delle armi e armature pesanti |
+| **Destrezza** | recupero tra gli attacchi -1%; costo della schivata -1,5%; danno +3% per pugnale, arco, balestra, coltelli e giavellotto |
+| **Intelligenza** | potenza delle mosse 7-0 +2% (tutte le classi); per chi ha mana: mana +4, rigenerazione del mana +3%, costo degli incantesimi -1%; danno del bastone +3%; grado delle mosse usabili |
+| **Vitalità** | salute +4; difesa +0,5% |
+| **Tempra** | stamina +4; recupero della stamina +3%; resistenze agli elementi +1% |
+
+Difesa (tetto 25%), resistenze (60%) e recupero (30%) condividono il **tetto** con l'equipaggiamento: i punti non lo superano.
+
+**Danno delle armi.** Ogni arma ha un attributo **principale** (Forza: spada, lancia, ascia, mazza, spadone; Destrezza: pugnale, arco, balestra, coltelli, giavellotto; Intelligenza: bastone): +3% di danno per punto speso. Il **secondario** (Forza per il corpo a corpo e il bastone, Destrezza per le armi a distanza e da lancio) dà +1% per punto; se coincide con il principale vale solo il principale. Vale solo per gli attacchi dell'arma, non per le mosse e gli incantesimi.
+
+**Requisiti di Forza** (morbidi: l'oggetto si usa sempre, ma con un malus):
+
+| Oggetto | Forza richiesta | Se manca |
+|---|---|---|
+| Arma da Forza di peso 3 o più (lancia 3, ascia e mazza 6, spadone 9) | (peso - 2) × 3 | per ogni punto che manca, danno -4% e recupero +4% (tetto 40%) |
+| Pezzo d'armatura | il suo peso (1-4, corazza ×2) | per ogni punto che manca, velocità -3%, sommato sui pezzi (tetto 40%) |
+
+L'arma iniziale non ha malus. Alla raccolta e nell'equipaggiamento compare "FORZA INSUFFICIENTE (-n)"; nella scheda dell'oggetto "FOR n" è **rosso** se non basta.
+
+**Carico.** Si porta senza malus fino a **8 + Forza** di peso, contando l'arma in mano e le armature indossate (non lo zaino). Ogni punto in più toglie il **3%** di velocità, fino a -30%.
+
+**Gradi delle mosse.** Ogni mossa ha un grado da 1 a 3: il 2 richiede **Intelligenza 12**, il 3 richiede **16**. Sotto la soglia la mossa non parte ("INTELLIGENZA INSUFFICIENTE") e il suo riquadro nell'HUD è grigio. Tutte le mosse attuali sono di grado 1.
+
+**Power-up.** Un power-up può dare punti di attributo temporanei (sempre entro il 20). Nessun power-up attuale lo fa.
+
+**Punti attributo.** Si guadagnano a fine livello: **3**, più **2** se il livello aveva un boss. Non si ricevono dopo l'ultimo livello. I boss sono nei livelli 3-7: in una partita si spendono **26 punti**. Sono uguali a ogni difficoltà, valgono per la sola partita (una nuova partita riparte da zero) e, se perdi una vita e ricominci il livello, tornano com'erano all'inizio. Il riquadro di fine livello mostra "+N PUNTI ATTRIBUTO".
+
+**Altare.** Nella stanza della bottega, tra l'ultimo piedistallo e la porta, c'è l'**altare**: con punti da spendere brilla e mostra quanti sono. **E** vicino apre il pentagono in modalità spesa: **W**/**S** scelgono l'attributo, **J** o **Invio** assegna un punto, **Esc** chiude. I punti spesi **non si ridistribuiscono**; quelli non spesi si tengono per la bottega dopo.
+
+**Il pentagono.** Cinque vertici (FOR in alto, poi in senso orario DES, INT, VIT, TEM) con tre colori: la **base** della classe, i **punti spesi** e i **bonus dei power-up**. A destra l'elenco con i valori, sotto gli effetti dell'attributo scelto (anche il danno dell'arma in mano), in fondo "CARICO n/m" e, se serve, "FORZA INSUFFICIENTE". Dall'equipaggiamento (**P**) è solo da leggere. Chiudendo l'equipaggiamento si torna dove era stato aperto (gioco o pausa).
 
 ### Stamina
 
@@ -172,8 +222,9 @@ Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma
 |---|---|
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
 | barra verde sotto la salute | stamina (gialla sotto un terzo); per chi ha mana (Mago) le barre sono due, più sottili: stamina sopra, **mana blu** sotto |
-| riquadri con il numero del tasto (**7**; per il Mago **7**, **8**, **9**, **0**, uno ogni 11 px) | mosse speciali: dorate quando sono pronte, scure mentre si ricaricano, azzurre con lo scudo o la barriera alzati; numero rosso se la risorsa non basta; bordo dorato sulla mossa scelta (solo con più mosse) |
+| riquadri con il numero del tasto (**7**; per il Mago **7**, **8**, **9**, **0**, uno ogni 11 px) | mosse speciali: dorate quando sono pronte, scure mentre si ricaricano, azzurre con lo scudo o la barriera alzati; numero rosso se la risorsa non basta; riquadro **grigio scuro** con la cifra grigia se la mossa richiede più Intelligenza di quella che hai; bordo dorato sulla mossa scelta (solo con più mosse) |
 | icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
+| **+N PUNTI** sotto il pannello, a sinistra (dopo le icone dei power-up) | punti attributo ancora da spendere; lampeggia piano; sparisce quando sono finiti |
 | icona dell'elmo **x3** | vite rimaste |
 | 4 riquadri numerati sotto la barra, a destra | la borsa: armi e pozioni (con quante sono); l'arma in mano ha la cornice dorata |
 | **LIVELLO n** | livello corrente |
@@ -382,7 +433,7 @@ La difesa non scende mai sotto 1 danno per colpo.
 **Raccogliere un'armatura** (E): se il suo posto è libero la indossi subito, altrimenti va nello zaino ("ZAINO PIENO" se non c'è spazio).
 
 **Schermata dell'equipaggiamento** (tasto **I**, anche dalla pausa). Il gioco si ferma. In alto le armature indossate e la borsa, sotto lo
-**zaino** (12 posti per armi e armature di riserva) e il riassunto dei bonus; in basso la scheda dell'oggetto scelto: nella riga del tipo compare il **PESO** (armature da 1 di stoffa a 4 di acciaio, la corazza conta il doppio). Per ora il peso è solo un dato: non cambia il gioco. Per le armi le prime righe della griglia mostrano i bonus e malus della tua classe: in **verde** "CLASSE DANNO +15%" e "CLASSE MUNIZIONI +50%", in **rosso** "CLASSE DANNO -15%", "CLASSE RECUPERO +15%" e, per le vietate, "NON PUOI USARLA". Frecce per scegliere:
+**zaino** (12 posti per armi e armature di riserva) e il riassunto dei bonus; in basso la scheda dell'oggetto scelto: nella riga del tipo compare il **PESO** (armature da 1 di stoffa a 4 di acciaio, la corazza conta il doppio). Il peso conta per i requisiti di Forza e per il carico (vedi "Attributi"); nella scheda, "FOR n" è la Forza richiesta (rossa se non basta). Per le armi le prime righe della griglia mostrano i bonus e malus della tua classe: in **verde** "CLASSE DANNO +15%" e "CLASSE MUNIZIONI +50%", in **rosso** "CLASSE DANNO -15%", "CLASSE RECUPERO +15%" e, per le vietate, "NON PUOI USARLA". Frecce per scegliere:
 
 - **Invio** su un'armatura indossata la toglie (nello zaino); su un'arma della borsa la mette nello zaino (non l'ultima); su un oggetto dello
   zaino lo indossa o lo impugna (quello che aveva lo stesso posto torna nello zaino).
@@ -670,7 +721,7 @@ Se perdi una vita tornano quelle che avevi all'inizio del livello; ogni nuova pa
 
 **Bottega.** Dopo il riquadro di fine livello (tranne l'ultimo) si entra nella **bottega del mercante**, una stanza in cui si cammina:
 niente nemici. Ogni voce sta su un **piedistallo** con il suo prezzo sopra (rosso se le monete non bastano); avvicinati e premi **E**
-per comprarla. Per andare avanti esci dalla **porta in fondo** a destra.
+per comprarla. Per andare avanti esci dalla **porta in fondo** a destra. Sul cammino c'è anche l'**altare degli attributi** (vedi "Attributi"): **E** vicino per spendere i punti guadagnati. Il messaggio della bottega ricorda l'altare e i punti da spendere.
 
 | Voce | Prezzo | Effetto |
 |---|---|---|
@@ -698,6 +749,7 @@ sagome con il lucchetto e l'obiettivo. Gli sblocchi dipendono dal livello più a
 | record | armature e zaino |
 | difficoltà | pozioni |
 | personaggio scelto | monete e punteggio |
+|  | punti attributo (spesi e da spendere) |
 
 Chi aveva un salvataggio della versione 2.0 tiene livelli raggiunti, difficoltà e personaggio; il resto del vecchio salvataggio viene
 cancellato al primo avvio. Il record è salvato a parte e resta. *Cancella dati* azzera tutto, record e sblocchi compresi.

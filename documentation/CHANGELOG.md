@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.4.0 – Classi, Fase 4: attributi, requisiti di Forza, punti e pentagono (2026-11-26)
+Cinque attributi con effetti veri, punti da spendere all'altare della bottega e una schermata a pentagono.
+### Aggiunto
+- **Attributi** (`ATTRIBUTE_CONFIG`: Forza, Destrezza, Intelligenza, Vitalità, Tempra), da 0 a `ATTRIBUTE_MAX_VALUE` (20). Basi per classe in `CHARACTER_CONFIG.baseAttributes` (somma 25): Cavaliere 6/5/2/6/6, Ranger 3/9/3/4/6, Berserker 9/4/1/8/3, Paladino 6/2/4/7/6, Mago 2/4/10/4/5. Base neutra: gli effetti contano solo i punti **sopra la base**, quindi chi non spende punti gioca come nella 2.3.
+- **Effetti per punto speso**: DES recupero -1% e costo della schivata -1,5%; INT potenza delle mosse 7-0 +2% (tutte le classi) e, solo per chi ha mana, mana +4, rigenerazione del mana +3%, costo degli incantesimi -1% (`onlyWithMana`); VIT salute +4 e difesa +0,5%; TEM stamina +4, recupero della stamina +3%, resistenze +1%. Difesa (25%), resistenze (60%) e recupero (30%) condividono il tetto con l'equipaggiamento (`AFFIX_CONFIG`, `combineCappedFraction`). Otto `PlayerStatName` percentuali nuove; `PlayerModifiers` ha le basi nuove, `getAttributeBonus` e `onPowerUpsChanged`.
+- **Danno delle armi** (`WEAPON_SCALING_CONFIG`): +3% per punto sull'attributo principale (`scalingAttribute`), +1% sul secondario (Forza per corpo a corpo e bastone, Destrezza per armi a distanza e da lancio), solo sugli attacchi dell'arma.
+- **Requisiti di Forza morbidi** (`STRENGTH_REQUIREMENT_CONFIG`): armi da Forza di peso 3 o più, Forza richiesta (peso - 2) × 3 (lancia 3, ascia e mazza 6, spadone 9), -4% di danno e +4% di recupero per punto mancante; armature, Forza richiesta pari al peso del pezzo, -3% di velocità per punto mancante sommato sui pezzi; tetto 40%. **Carico** (`CARRY_CONFIG`): 8 + Forza su arma in mano e armature indossate, -3% di velocità per punto in più, tetto 30%. Avvisi "FORZA INSUFFICIENTE (-n)" alla raccolta e nell'equipaggiamento; "FOR n" nella scheda (rosso se non basta).
+- **Gradi delle mosse**: `AbilityDefinition.grade` (1-3; tutte le mosse attuali di grado 1) e requisito rigido di Intelligenza 12 (grado 2) e 16 (grado 3) in `SPELL_GRADE_INT_REQUIREMENT`: riquadro grigio nell'HUD e popup "INTELLIGENZA INSUFFICIENTE".
+- **Power-up**: `PowerUpDefinition.attributeBonuses` (punti di attributo temporanei, entro il 20). Nessun power-up nuovo.
+- **Punti attributo** (`src/systems/AttributePoints.ts`): 3 a fine livello, più 2 se il livello aveva un boss, solo se c'è un livello successivo; i boss sono nei livelli 3-7, quindi 26 punti spendibili in una partita. Uguali a ogni difficoltà, azzerati a nuova partita, salvati nello snapshot di inizio livello (ricominciando il livello tornano com'erano). Riquadro di fine livello "+N PUNTI ATTRIBUTO"; HUD "+N PUNTI" sotto il pannello a sinistra.
+- **Altare** nella stanza della bottega (`SHOP_ROOM_CONFIG.altar`, x 330, sprite provvisorio `shopAltar` in `uiSprites.ts`): **E** vicino apre il pentagono in modalità spesa (frecce su/giù, **J** o Invio assegna un punto, Esc chiude; nessuna ridistribuzione). Il messaggio della bottega ha la riga dell'altare e i punti da spendere.
+- **Schermata degli attributi**: nuovo stato `attributes` (da `playing` e da `equipment`); dall'equipaggiamento **P** (azione `openAttributes`, `KeyP`; `assignPoint` = `KeyJ`, entrambe nel contesto menu) la apre in sola lettura. Pentagono a pixel (`src/ui/PentagonChart.ts`) con base, punti spesi e bonus dei power-up in tre colori della palette (`ATTRIBUTE_CHART_COLORS`), elenco a destra, effetti dell'attributo scelto, carico e requisiti in fondo.
+- **Simulatore**: opzione `spentAttributes` di `playLevel` e nuova sezione "BUILD" (`npm run balance -- --build`): Cavaliere con l'onda d'urto, tutti i punti in Forza, Intelligenza, Vitalità o nessuno; stampa anche tempo e HP persi.
+- Test: `tests/unit/classes-phase4.test.mjs` (78 controlli); nel browser pentagono, altare e nuova partita senza punti (3 controlli).
+### Modificato
+- `Player.setAttributes` diventa `setSpentAttributes` (punti spesi sopra la base); `attributes` restituisce i valori effettivi (base + spesi + power-up, al massimo 20).
+- Chiudendo l'equipaggiamento si torna dove era stato aperto (`equipmentReturnState`), anche dopo essere passati dal pentagono.
+- Il peso degli oggetti, finora solo un dato mostrato, ora conta per i requisiti di Forza e il carico.
+- **Simulatore, tre righe cambiano per scelta** (il bot indossa armature pesanti senza la Forza richiesta): Cavaliere "medio" con equipaggiamento al massimo (acciaio) 100% → 95% vinte; Mago col bottino, rusher 95% → 83% e medio 95% → 88%. Baseline `tools/balance-baseline.txt` aggiornato con la sezione nuova. Esito della sezione BUILD (rusher): Forza finisce prima (311 s contro 378 s) e perde meno salute (551 HP contro 798), Vitalità non muore ma perde più salute (731), Intelligenza sta in mezzo.
+- Test adattati: classes-phase0 (46 controlli: gli attributi hanno le basi), classes-phase3, weapons, mage-phase2, equipment-phases (forma dei dati e delle regex).
+- Versione portata a 2.4.0 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Verificato
+- `npm test` (1338 controlli in 33 file), `npm run test:browser` (180 controlli), `npm run balance -- --build`, `npm run verify-docs`.
+
 ## 2.3.0 – Classi, Fase 3: compatibilità classe × arma, munizioni nello zaino, peso (2026-11-25)
 La tabella di compatibilità diventa per arma e viene applicata; le munizioni nello zaino non si perdono più.
 ### Aggiunto

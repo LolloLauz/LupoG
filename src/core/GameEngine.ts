@@ -36,11 +36,14 @@ import { LevelManager } from "../systems/LevelManager";
 import { LivesManager } from "../systems/LivesManager";
 import { ScoreManager } from "../systems/ScoreManager";
 import { Inventory, type EquipmentActionOutcome, type InventorySnapshot } from "../systems/Inventory";
+import { AttributePoints, type AttributePointsSnapshot } from "../systems/AttributePoints";
+import { describeAttributeEffects, getItemStrengthRequirement, getWeaponScalingPercentFor } from "../systems/AttributeStats";
+import { ATTRIBUTE_CONFIG, ATTRIBUTE_MAX_VALUE, ATTRIBUTE_ORDER } from "../config/attributeConfig";
 import { WeaponPickupManager } from "../systems/WeaponPickupManager";
 import type { WeaponPickup } from "../entities/WeaponPickup";
 import { BAG_SLOT_ACTIONS, POTION_IDS, type PotionId } from "../config/inventoryConfig";
 import { ITEM_CONFIG, ITEM_SIZE } from "../config/itemConfig";
-import type { CharacterId, Damageable, WeaponId } from "../types/EntityTypes";
+import type { AttributeId, CharacterId, Damageable, WeaponId } from "../types/EntityTypes";
 import type { ItemInstance } from "../types/ItemTypes";
 import { RARITY_CONFIG } from "../config/rarityConfig";
 import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
@@ -51,7 +54,7 @@ import { resolveLootWeaponId, rollArmorDrop, rollFinalBossReward, rollLootArmor,
 import type { LootSourceId } from "../config/lootConfig";
 import type { Vector2 } from "../types/GameTypes";
 import { HUDManager, type HUDData } from "../ui/HUDManager";
-import { ScreenManager, WEAPON_AFFINITY_TONE_COLORS, type EquipmentCell, type EquipmentView, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
+import { ScreenManager, WEAPON_AFFINITY_TONE_COLORS, type AttributesView, type EquipmentCell, type EquipmentView, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
 import { ARMOR_SETS } from "../config/armorConfig";
 import { EMPTY_ARMOR, getActiveSets } from "../systems/EquipmentStats";
 import { ProgressManager } from "../systems/ProgressManager";
@@ -135,6 +138,15 @@ export class GameEngine {
   private readonly discoveredWeaponIds = new Set<WeaponId>();
   /** Borsa all'inizio del livello: ricominciando il livello torna così (come punteggio e monete). */
   private levelStartInventory: InventorySnapshot = this.inventory.snapshot();
+  /** Punti attributo della partita (Classi Fase 4) e il loro stato a inizio livello (come la borsa). */
+  private readonly attributePoints = new AttributePoints();
+  private levelStartAttributePoints: AttributePointsSnapshot = this.attributePoints.snapshot();
+  /** Punti guadagnati con l'ultimo livello completato (riquadro di fine livello). */
+  private lastAwardedAttributePoints = 0;
+  /** Pentagono degli attributi: "spend" dall'altare della bottega, "view" dall'equipaggiamento (solo lettura). */
+  private attributesScreenMode: "spend" | "view" = "view";
+  /** Da dove si è aperto l'equipaggiamento: chiudendolo si torna lì, anche dopo essere passati dal pentagono. */
+  private equipmentReturnState: "playing" | "paused" = "playing";
   /**
    * Trofeo dell'ultimo boss sconfitto: la sua arma (con una rarità alta) e un pezzo d'armatura, che compaiono
    * all'inizio del livello indicato.
@@ -234,6 +246,7 @@ export class GameEngine {
       if (this.input.wasPressed("pause")) {
         this.gameState.change("paused");
       } else if (this.input.wasPressed("openEquipment") && this.levelPhase === "playing" && !this.player.isDead) {
+        this.equipmentReturnState = "playing";
         this.gameState.change("equipment");
       } else {
         this.updatePlaying(deltaTimeSeconds);
@@ -295,10 +308,21 @@ export class GameEngine {
         this.gameState.change("playing");
         break;
       case "showEquipment":
+        this.equipmentReturnState = "paused";
         this.gameState.change("equipment");
         break;
       case "closeEquipment":
-        this.gameState.change(this.gameState.previous === "paused" ? "paused" : "playing");
+        this.gameState.change(this.equipmentReturnState);
+        break;
+      case "showAttributes":
+        this.attributesScreenMode = "view";
+        this.gameState.change("attributes");
+        break;
+      case "assignAttributePoint":
+        this.assignAttributePoint(this.screens.selectedAttributeId);
+        break;
+      case "closeAttributes":
+        this.gameState.change(this.attributesScreenMode === "spend" ? "playing" : "equipment");
         break;
       case "equipmentUse":
         this.useEquipmentCell(this.screens.selectedEquipmentCell);
@@ -334,6 +358,8 @@ export class GameEngine {
     this.player.setCharacter(CHARACTER_CONFIG[this.progressManager.characterId]);
     this.resetRunEquipment();
     this.levelStartInventory = this.inventory.snapshot();
+    this.attributePoints.reset();
+    this.levelStartAttributePoints = this.attributePoints.snapshot();
     this.weaponReward = null;
     this.isNewRecord = false;
   }
@@ -363,6 +389,29 @@ export class GameEngine {
       this.screens.showNotice(GameEngine.PURCHASE_MESSAGES[outcome], 1.5);
     }
     return outcome;
+  }
+
+  /**
+   * Altare della bottega (Classi Fase 4): un punto nell'attributo scelto; l'esito compare in basso nel pentagono.
+   * I punti spesi non si ridistribuiscono.
+   */
+  private assignAttributePoint(attributeId: AttributeId): void {
+    if (this.attributesScreenMode !== "spend") {
+      return;
+    }
+    const outcome = this.attributePoints.spend(attributeId, this.player.baseAttributes[attributeId]);
+    if (outcome === "spent") {
+      this.player.setSpentAttributes(this.attributePoints.spent);
+      this.screens.showNotice(`${ATTRIBUTE_CONFIG[attributeId].name} ${this.player.attributes[attributeId]}`, 1.5);
+    } else {
+      this.screens.showNotice(outcome === "noPoints" ? "NESSUN PUNTO DA SPENDERE" : "AL MASSIMO", 1.5);
+    }
+  }
+
+  /** Vero se il giocatore è abbastanza vicino all'altare della stanza del negozio. */
+  private isNearShopAltar(): boolean {
+    const centerX = this.player.positionX + this.player.width / 2;
+    return this.isInShopRoom && Math.abs(SHOP_ROOM_CONFIG.altar.centerX - centerX) <= SHOP_ROOM_CONFIG.altar.reachDistance;
   }
 
   /** Si esce dalla bottega (dal menu o dalla porta della stanza): comincia il livello successivo. */
@@ -439,6 +488,9 @@ export class GameEngine {
     // ogni partita parte da zero: solo l'arma iniziale della classe, niente pozioni, armature o zaino
     this.resetRunEquipment();
     this.player.revive();
+    // punti attributo: ogni partita parte da zero (Classi Fase 4)
+    this.attributePoints.reset();
+    this.lastAwardedAttributePoints = 0;
     this.shop = null;
     this.weaponReward = null;
     this.finalBossRewardName = null;
@@ -465,6 +517,7 @@ export class GameEngine {
     this.levelElapsedSeconds = 0;
     this.levelStartScore = this.scoreManager.currentScore;
     this.levelStartInventory = this.inventory.snapshot();
+    this.levelStartAttributePoints = this.attributePoints.snapshot();
     this.levelStartCoins = this.scoreManager.coins;
     this.updateCamera();
   }
@@ -507,6 +560,8 @@ export class GameEngine {
     this.scoreManager.restore(this.levelStartScore, this.levelStartCoins);
     // anche la borsa torna com'era a inizio livello (pozioni e armi raccolte nel livello si ritrovano a terra)
     this.inventory.restore(this.levelStartInventory);
+    this.attributePoints.restore(this.levelStartAttributePoints);
+    this.player.setSpentAttributes(this.attributePoints.spent);
     this.equipFromInventory();
     // dopo l'equipaggiamento: la salute torna piena contando i bonus delle armature di inizio livello
     this.player.revive();
@@ -853,6 +908,7 @@ export class GameEngine {
    */
   private useEquipmentCell(cell: EquipmentCell): void {
     let outcome: EquipmentActionOutcome = "empty";
+    let equippedItem: ItemInstance | null = null;
     if (cell.section === "armor") {
       outcome = this.inventory.unequipArmor(cell.slot);
     } else if (cell.section === "bag") {
@@ -863,10 +919,16 @@ export class GameEngine {
       }
       outcome = this.inventory.moveWeaponToBackpack(cell.index);
     } else {
+      equippedItem = this.inventory.backpackItems[cell.index] ?? null;
       outcome = this.inventory.equipFromBackpack(cell.index);
     }
     if (outcome === "equipped" || outcome === "unequipped") {
       this.equipFromInventory();
+    }
+    const strengthWarning = outcome === "equipped" && equippedItem !== null ? this.describeMissingStrength(equippedItem) : null;
+    if (strengthWarning !== null) {
+      this.screens.showNotice(strengthWarning, 2);
+      return;
     }
     const messages: Record<EquipmentActionOutcome, string> = {
       equipped: "EQUIPAGGIATO",
@@ -942,6 +1004,11 @@ export class GameEngine {
         this.buyFromShopRoom(offerIndex);
         return;
       }
+      if (this.isNearShopAltar()) {
+        this.attributesScreenMode = "spend";
+        this.gameState.change("attributes");
+        return;
+      }
     }
     const pickup = this.weaponPickups.findReachablePickup(this.player);
     if (pickup !== null) {
@@ -982,6 +1049,9 @@ export class GameEngine {
       this.equipFromInventory();
       this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
       this.effects.addPopup(outcome === "equipped" ? getItemName(item) : `${getItemName(item)} NELLO ZAINO`, centerX, popupY, rarityColor);
+      if (outcome === "equipped") {
+        this.warnAboutStrength(item, centerX, popupY - 10);
+      }
       return;
     }
     // rete di sicurezza (Classi Fase 3): il filtro del bottino non lascia a terra armi vietate alla classe
@@ -1017,6 +1087,21 @@ export class GameEngine {
     this.equipFromInventory();
     this.effects.spawnSparkle(centerX, pickup.positionY + pickup.height / 2);
     this.effects.addPopup(message, centerX, popupY, rarityColor);
+    this.warnAboutStrength(item, centerX, popupY - 10);
+  }
+
+  /** Messaggio del requisito di Forza non soddisfatto (Classi Fase 4), oppure null. */
+  private describeMissingStrength(item: ItemInstance): string | null {
+    const missing = getItemStrengthRequirement(item) - this.player.attributes.strength;
+    return missing > 0 ? `FORZA INSUFFICIENTE (-${missing})` : null;
+  }
+
+  /** Raccolto un oggetto pesante senza la Forza che serve: si usa lo stesso, ma compare l'avviso del malus. */
+  private warnAboutStrength(item: ItemInstance, x: number, y: number): void {
+    const message = this.describeMissingStrength(item);
+    if (message !== null) {
+      this.effects.addPopup(message, x, y, PALETTE.red);
+    }
   }
 
   /** Passiva della classe (le frecce del Ranger): le munizioni tornano piano piano, anche con l'arma non in mano. */
@@ -1175,6 +1260,9 @@ export class GameEngine {
     if (this.player.drainNoMana()) {
       this.effects.addPopup("SENZA MANA", centerX, popupY, PALETTE.lightBlue);
     }
+    if (this.player.drainLowIntelligence()) {
+      this.effects.addPopup("INTELLIGENZA INSUFFICIENTE", centerX, popupY, PALETTE.lilac);
+    }
     if (this.player.drainTired() && (this.levelElapsedSeconds - this.lastTiredPopupSeconds >= 0.5 || this.levelElapsedSeconds < this.lastTiredPopupSeconds)) {
       this.lastTiredPopupSeconds = this.levelElapsedSeconds;
       this.effects.addPopup("STANCO", centerX, popupY, PALETTE.lightGray);
@@ -1284,8 +1372,12 @@ export class GameEngine {
       this.bannerRemainingMs = GAME_CONFIG.levelBannerDurationMs;
       this.scoreManager.addScore(GAME_CONFIG.levelCompleteBonus);
       const nextLevelId = this.currentLevelId + 1;
+      this.lastAwardedAttributePoints = 0;
       if (this.levelManager.hasLevel(nextLevelId)) {
         this.player.heal(GAME_CONFIG.levelCompleteHeal);
+        // Classi Fase 4: punti attributo da spendere all'altare della bottega (in più se il livello aveva un boss)
+        this.lastAwardedAttributePoints = AttributePoints.pointsForLevel(this.levelManager.level.hasBoss);
+        this.attributePoints.award(this.lastAwardedAttributePoints);
       }
       // Fase 6: raggiungere il livello successivo può sbloccare un personaggio
       const lockedBefore = CHARACTER_ORDER.filter((id) => !this.progressManager.isCharacterUnlocked(id));
@@ -1329,7 +1421,7 @@ export class GameEngine {
 
   private render(): void {
     const state = this.gameState.current;
-    if (state === "playing" || state === "paused" || state === "equipment") {
+    if (state === "playing" || state === "paused" || state === "equipment" || state === "attributes") {
       this.renderWorld();
       this.hud.render(this.renderer, this.spriteManager, this.getHUDData(), this.levelElapsedSeconds);
       this.renderLevelMessages();
@@ -1356,7 +1448,9 @@ export class GameEngine {
         isAffordable: slot.isAffordable,
         isSelected: slot.isSelected,
         isActive: slot.isActive,
+        meetsRequirement: slot.meetsRequirement,
       })),
+      unspentAttributePoints: this.attributePoints.unspent,
       lives: this.livesManager.remainingLives,
       score: this.scoreManager.currentScore,
       coins: this.scoreManager.coins,
@@ -1426,7 +1520,49 @@ export class GameEngine {
         };
       }),
       equipment: this.gameState.is("equipment") ? this.getEquipmentView() : undefined,
+      attributes: this.gameState.is("attributes") ? this.getAttributesView() : undefined,
     };
+  }
+
+  /**
+   * Dati del pentagono (Classi Fase 4): per ogni attributo base, punti spesi, bonus dei power-up e totale, con gli
+   * effetti attuali (anche sul danno dell'arma in mano); in fondo carico e requisiti di Forza.
+   */
+  private getAttributesView(): AttributesView {
+    const player = this.player;
+    const hasMana = player.characterDefinition.maxMana > 0;
+    const pointsAboveBase = player.attributePointsAboveBaseValues;
+    const weapon = player.equippedWeapon;
+    const rows = ATTRIBUTE_ORDER.map((attributeId) => {
+      const effectLines = describeAttributeEffects(attributeId, pointsAboveBase[attributeId], hasMana);
+      const weaponPercent = getWeaponScalingPercentFor(weapon, attributeId, pointsAboveBase[attributeId]);
+      if (weaponPercent !== null) {
+        effectLines.unshift(`DANNO ${weapon.name.toUpperCase()} +${weaponPercent}%`);
+      }
+      return {
+        id: attributeId,
+        name: ATTRIBUTE_CONFIG[attributeId].name,
+        shortName: ATTRIBUTE_CONFIG[attributeId].shortName,
+        base: player.baseAttributes[attributeId],
+        spent: player.spentAttributes[attributeId],
+        bonus: player.getAttributePowerUpBonus(attributeId),
+        effective: player.attributes[attributeId],
+        effectLines,
+      };
+    });
+    const strength = player.strengthStatus;
+    const speedPenalty = Math.round((1 - strength.movementSpeedMultiplier) * 100);
+    const statusLines: AttributesView["statusLines"] = [
+      { text: `CARICO ${strength.load}/${strength.carryCapacity}${speedPenalty > 0 ? `  VELOCITÀ -${speedPenalty}%` : ""}`, isWarning: speedPenalty > 0 },
+    ];
+    const missingParts = [
+      ...(strength.weaponMissingStrength > 0 ? [`ARMA -${strength.weaponMissingStrength}`] : []),
+      ...(strength.armorMissingStrength > 0 ? [`ARMATURA -${strength.armorMissingStrength}`] : []),
+    ];
+    if (missingParts.length > 0) {
+      statusLines.push({ text: `FORZA INSUFFICIENTE: ${missingParts.join(", ")}`, isWarning: true });
+    }
+    return { mode: this.attributesScreenMode, unspentPoints: this.attributePoints.unspent, maxValue: ATTRIBUTE_MAX_VALUE, rows, statusLines };
   }
 
   /** Dati della schermata dell'equipaggiamento (E4): armature, borsa, zaino, set attivi e bonus. */
@@ -1447,6 +1583,7 @@ export class GameEngine {
       activeSets: getActiveSets(armor).map((set) => `${ARMOR_SETS[set.material].name} ${set.pieces}/3`),
       bonuses: this.player.equipmentBonuses,
       characterId: this.player.characterDefinition.id,
+      strength: this.player.attributes.strength,
     };
   }
 
@@ -1545,6 +1682,27 @@ export class GameEngine {
         }
       }
     });
+    this.renderShopAltar(floorY, bob);
+  }
+
+  /**
+   * Altare degli attributi (Classi Fase 4): con punti da spendere il cristallo brilla e sopra compare quanti sono;
+   * avvicinandosi, "E: ATTRIBUTI".
+   */
+  private renderShopAltar(floorY: number, bob: number): void {
+    const altar = SHOP_ROOM_CONFIG.altar;
+    const centerX = altar.centerX - this.camera.x;
+    const top = floorY - altar.height;
+    const unspent = this.attributePoints.unspent;
+    if (unspent > 0) {
+      this.renderer.fillGlow(centerX, top + 3, 10 - bob, PALETTE.lilac, 2, 4);
+      this.renderer.drawText(`${unspent} PUNTI`, centerX, top - 26, PALETTE.goldLight, { align: "center", shadowColor: PALETTE.black });
+    }
+    this.spriteManager.drawSprite(this.renderer, altar.spriteId, Math.round(centerX - altar.width / 2), top, false);
+    if (this.isNearShopAltar()) {
+      this.renderer.drawText("ALTARE", centerX, top - 46, PALETTE.lilac, { align: "center", shadowColor: PALETTE.black });
+      this.renderer.drawText("E: ATTRIBUTI", centerX, top - 36, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+    }
   }
 
   /** Bonus e malus della classe in uso per un'arma (Classi Fase 3); null per armature, altre voci e armi neutre. */
@@ -1564,11 +1722,18 @@ export class GameEngine {
       return;
     }
     if (this.isInShopRoom) {
-      this.hud.renderMessageBox(this.renderer, "BOTTEGA", ["E: COMPRA DAI PIEDISTALLI", "PORTA A DESTRA: PROSEGUI"]);
+      const shopLines = ["E: COMPRA DAI PIEDISTALLI", "E SULL'ALTARE: ATTRIBUTI", "PORTA A DESTRA: PROSEGUI"];
+      if (this.attributePoints.unspent > 0) {
+        shopLines.push(`${this.attributePoints.unspent} PUNTI DA SPENDERE`);
+      }
+      this.hud.renderMessageBox(this.renderer, "BOTTEGA", shopLines);
       return;
     }
     if (this.levelPhase === "completed") {
       const lines = [`BONUS ${GAME_CONFIG.levelCompleteBonus}`];
+      if (this.lastAwardedAttributePoints > 0) {
+        lines.push(`+${this.lastAwardedAttributePoints} PUNTI ATTRIBUTO`);
+      }
       for (const name of this.newlyUnlockedCharacterNames) {
         lines.push(`SBLOCCATO: ${name}`);
       }

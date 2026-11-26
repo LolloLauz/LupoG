@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.3.0**.
+Versione: **2.4.0**.
 
 **Stati usati:**
 
@@ -26,8 +26,8 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 1263 controlli) | Implementata | |
-| Test nel browser (`npm run test:browser`, 177 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176; 2.2.0: 177/177 |
+| Test unitari inclusi (`npm test`, 1338 controlli) | Implementata | |
+| Test nel browser (`npm run test:browser`, 180 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176; 2.2.0: 177/177; 2.4.0: 180/180 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
 | Compatibilità con Firefox, Safari, Edge e browser mobili | Da implementare | non provata: verificato solo Chromium |
@@ -109,7 +109,15 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Tabella di compatibilità classe × arma (11 armi × 5 classi): arma iniziale e ✓ normali, ★ preferite (danno +15%, munizioni +50%), ▼ penalizzate (danno -15%, recupero +15%), ✗ vietate; il Mago impugna anche spada e pugnale | Implementata | Classi Fase 3 (2.3.0); `WEAPON_AFFINITY_CONFIG` per arma, `WeaponAffinity.ts`; valori da bilanciare |
 | Divieti e filtro del bottino: un'arma vietata non si impugna né si raccoglie ("NON PUOI USARLA") e non compare mai a terra: forzieri, élite, trofei, ricompensa finale e bottega la sostituiscono (`lootSubstituteId`) | Implementata | Classi Fase 3; `Player.equipWeapon`, `Inventory.equipFromBackpack`, `resolveLootWeaponId` |
 | Munizioni secondo la classe (massimo × `ammoMultiplier`, per difetto) e munizioni conservate nello zaino (`BackpackEntry`) | Implementata | Classi Fase 3; corregge il difetto annotato nel piano |
-| Peso degli oggetti (armature da 1 a 4, corazza ×2) mostrato nella scheda dell'equipaggiamento, con riga di classe per le armi (anche in bottega) | Implementata | Classi Fase 3; il peso non ha ancora effetti (Forza dalla Fase 4) |
+| Peso degli oggetti (armature da 1 a 4, corazza ×2) mostrato nella scheda dell'equipaggiamento, con riga di classe per le armi (anche in bottega) | Implementata | Classi Fase 3; dalla Classi Fase 4 il peso conta per i requisiti di Forza e il carico |
+| Cinque attributi (FOR, DES, INT, VIT, TEM, da 0 a 20) con basi per classe (somma 25); gli effetti contano solo i punti spesi sopra la base | Implementata | Classi Fase 4 (2.4.0); `ATTRIBUTE_CONFIG`, `CHARACTER_CONFIG.baseAttributes`, `AttributeStats.ts`; valori da bilanciare |
+| Effetti degli attributi: DES recupero e costo della schivata; INT potenza delle mosse e, per chi ha mana, mana, rigenerazione e costo; VIT salute e difesa; TEM stamina, recupero della stamina e resistenze; tetti condivisi con l'equipaggiamento | Implementata | Classi Fase 4; otto statistiche nuove in `PlayerStatName` |
+| Danno delle armi che scala con gli attributi (+3% sul principale, +1% sul secondario, solo attacchi dell'arma) | Implementata | Classi Fase 4; `WEAPON_SCALING_CONFIG` |
+| Requisiti di Forza morbidi per armi e armature pesanti e carico (8 + FOR); avvisi "FORZA INSUFFICIENTE (-n)" | Implementata | Classi Fase 4; `STRENGTH_REQUIREMENT_CONFIG`, `CARRY_CONFIG` |
+| Gradi delle mosse (1-3) con requisito rigido di Intelligenza (12 e 16): slot grigio e "INTELLIGENZA INSUFFICIENTE" | Implementata | Classi Fase 4; `AbilityDefinition.grade`; tutte le mosse attuali sono di grado 1 |
+| Punti attributo (3 a fine livello, +2 con il boss: 26 in una partita) da spendere all'altare della stanza del negozio, senza ridistribuzione; indicatore "+N PUNTI" nell'HUD | Implementata | Classi Fase 4; `systems/AttributePoints.ts`; sprite dell'altare provvisorio (Fase 6A) |
+| Schermata degli attributi (pentagono a pixel con base, punti spesi e power-up; sola lettura con P dall'equipaggiamento, spesa all'altare) | Implementata | Classi Fase 4; stato `attributes`, `ui/PentagonChart.ts` |
+| Power-up con punti di attributo temporanei (`attributeBonuses`) | Implementata | Classi Fase 4; nessun power-up attuale li usa |
 | Pozione di mana (+40 mana): posto proprio nella borsa (max 2), bottino per chi ha mana, in bottega a 35 monete al posto della faretra | Implementata | Classi Fase 2; `ITEM_CONFIG.manaPotion`, `LOOT_SOURCES[..].manaPotionChance`; valori da bilanciare |
 | HUD con mana: barra blu sotto la stamina e un riquadro per ogni mossa (numero rosso se la risorsa non basta) | Implementata | Classi Fase 2; senza mana l'HUD resta com'era |
 | Parata con lo scudo (Paladino): para i colpi da davanti e le frecce, costa stamina; parata perfetta (scudo alzato da meno di 0,25 s) gratuita, stordisce l'attaccante per 1 s; guardia rotta senza stamina | Implementata | Fase 5; i boss non vengono storditi |

@@ -357,7 +357,7 @@ try {
     const palette = ${colorsArg}; const e = iron.engine; const result = {};
     const colorsOk = () => { const colors = iron.readCanvasColors(); return [...colors.keys()].filter(c => !palette.includes(c)).length === 0; };
     iron.tap("Enter"); for (let i = 0; i < 5; i++) iron.step();
-    e.bannerRemainingMs = 0; e.scoreManager.addCoins(100);
+    e.bannerRemainingMs = 0; e.scoreManager.addCoins(100); e.attributePoints.award(3);
     e.levelPhase = "completed"; e.bannerRemainingMs = 1; iron.step(); iron.step();
     // E6: la bottega è una stanza camminabile (si resta "playing"); E vicino al primo piedistallo compra la pozione
     result.shopState = e.gameState.current; result.inShopRoom = e.isInShopRoom; result.shopColors = colorsOk();
@@ -370,6 +370,20 @@ try {
     iron.tap("KeyI"); iron.step(); iron.step();
     result.equipmentState = e.gameState.current; result.equipmentColors = colorsOk();
     iron.tap("KeyI"); iron.step(); iron.step(); result.afterEquipment = e.gameState.current;
+    // Classi Fase 4: dall'equipaggiamento P apre il pentagono in sola lettura (J non spende); all'altare E apre la spesa
+    result.points = e.attributePoints.unspent;
+    iron.tap("KeyI"); iron.step(); iron.step(); iron.tap("KeyP"); iron.step(); iron.step();
+    result.viewState = e.gameState.current; result.viewColors = colorsOk();
+    iron.tap("KeyJ"); iron.step(); iron.step(); result.viewUnspent = e.attributePoints.unspent;
+    iron.tap("KeyP"); iron.step(); iron.step(); result.backToEquipment = e.gameState.current;
+    iron.tap("KeyI"); iron.step(); iron.step();
+    e.player.positionX = 330 - e.player.width / 2; iron.step(); iron.step(); result.altarColors = colorsOk();
+    iron.tap("KeyE"); iron.step(); iron.step();
+    result.altarState = e.gameState.current; result.altarScreenColors = colorsOk();
+    const strengthBefore = e.player.attributes.strength;
+    iron.tap("KeyJ"); iron.step(); iron.step();
+    result.assigned = [e.attributePoints.unspent, e.player.attributes.strength - strengthBefore].join("/");
+    iron.tap("Escape"); iron.step(); iron.step(); result.afterAltar = e.gameState.current;
     // la porta in fondo alla stanza porta al livello 2
     iron.setKey("KeyD", true); for (let i = 0; i < 600 && e.isInShopRoom; i++) iron.step(); iron.setKey("KeyD", false); iron.step();
     result.afterShop = e.gameState.current; result.level = e.currentLevelId; result.leftShopRoom = !e.isInShopRoom;
@@ -379,6 +393,7 @@ try {
     iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
     iron.tap("Enter"); for (let i = 0; i < 5; i++) iron.step();
     result.newRun = [e.currentLevelId, e.inventory.weaponIds.join(), e.inventory.potionCount, e.inventory.backpackItems.length, Object.values(e.inventory.equippedArmor).filter(Boolean).length, e.scoreManager.coins].join("/");
+    result.newRunAttributes = [e.attributePoints.unspent, e.player.spentAttributes.strength].join("/");
     result.savedKeys = Object.keys(JSON.parse(localStorage.getItem("ironAndShadow.progress"))).sort().join();
     iron.tap("Escape"); iron.step(); iron.tap("KeyS"); iron.step(); iron.tap("Enter"); iron.step(); iron.step();
     return result;
@@ -386,6 +401,9 @@ try {
   check("partite scollegate: la nuova partita ha la sola arma iniziale, niente pozioni, zaino, armature o monete", progression.newRun === "1/sword/0/0/0/0", JSON.stringify(progression));
   check("il salvataggio contiene solo versione, livello raggiunto, difficoltà e personaggio", progression.savedKeys === "characterId,difficulty,unlockedLevelId,version", JSON.stringify(progression));
   check("bottega (E6): a fine livello si entra nella stanza del negozio (solo colori della palette), E sul piedistallo compra una pozione, la porta porta al livello 2", progression.shopState === "playing" && progression.inShopRoom === true && progression.shopColors === true && progression.bought === 40 && progression.potions === 1 && progression.afterShop === "playing" && progression.level === 2 && progression.leftShopRoom === true, JSON.stringify(progression));
+  check("attributi (Classi Fase 4): con 3 punti, P dall'equipaggiamento apre il pentagono in sola lettura (solo colori della palette) e lo richiude", progression.points === 3 && progression.viewState === "attributes" && progression.viewColors === true && progression.viewUnspent === 3 && progression.backToEquipment === "equipment", JSON.stringify(progression));
+  check("altare (Classi Fase 4): E apre la spesa, J assegna un punto alla Forza, Esc torna al gioco; solo colori della palette", progression.altarColors === true && progression.altarState === "attributes" && progression.altarScreenColors === true && progression.assigned === "2/1" && progression.afterAltar === "playing", JSON.stringify(progression));
+  check("partite scollegate: la nuova partita riparte senza punti attributo", progression.newRunAttributes === "0/0", JSON.stringify(progression));
   check("equipaggiamento (E4): I apre la schermata (solo colori della palette) e la richiude", progression.equipmentState === "equipment" && progression.equipmentColors === true && progression.afterEquipment === "playing", JSON.stringify(progression));
 
   // --- velocità coerente

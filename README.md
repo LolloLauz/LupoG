@@ -1,7 +1,7 @@
 # IRON & SHADOW
 *Medieval Action Arcade* in pixel art a 16 bit – TypeScript, HTML5 Canvas, Vite. Nessun audio, nessuna dipendenza di esecuzione.
 
-**Versione 2.3.0** – grafica a 16 bit (320×240), 7 livelli, 14 tipi di nemici, 5 boss, armi, personaggi, abilità, bottega, elementi, 3 difficoltà, selezione dei livelli.
+**Versione 2.4.0** – grafica a 16 bit (320×240), 7 livelli, 14 tipi di nemici, 5 boss, armi, personaggi, abilità, bottega, elementi, 3 difficoltà, selezione dei livelli.
 Provato solo in Chromium (vedi `documentation/TESTING.md`).
 
 ## Giocare

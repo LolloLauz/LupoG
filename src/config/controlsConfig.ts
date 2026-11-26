@@ -33,6 +33,9 @@ export const CONTROLS_CONFIG: Record<GameAction, string[]> = {
   bagSlot4: ["Digit4", "Numpad4"],
   /** Schermata dell'equipaggiamento (E4): si apre e si chiude con I (anche dalla pausa). */
   openEquipment: ["KeyI"],
+  /** Classi Fase 4: dalla schermata dell'equipaggiamento P apre il pentagono degli attributi; lì J assegna un punto. */
+  openAttributes: ["KeyP"],
+  assignPoint: ["KeyJ"],
   pause: ["Escape"],
   confirm: ["Enter"],
   menuUp: ["KeyW", "ArrowUp"],
@@ -68,5 +71,5 @@ export const INPUT_CONTEXT_ACTIONS: Record<InputContext, GameAction[]> = {
     "pause",
   ],
   // nella schermata dell'equipaggiamento: I la chiude, Q lascia a terra l'oggetto scelto
-  menu: ["menuUp", "menuDown", "menuLeft", "menuRight", "confirm", "pause", "openEquipment", "dropItem"],
+  menu: ["menuUp", "menuDown", "menuLeft", "menuRight", "confirm", "pause", "openEquipment", "dropItem", "openAttributes", "assignPoint"],
 };

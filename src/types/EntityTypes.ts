@@ -60,7 +60,19 @@ export type PlayerStatName =
   /** Punti in più sui massimi di salute, stamina e mana (Classi Fase 0: li useranno attributi e power-up). */
   | "maxHealthBonus"
   | "maxStaminaBonus"
-  | "maxManaBonus";
+  | "maxManaBonus"
+  /**
+   * Classi Fase 4: percentuali date dagli attributi (base 0). Recupero degli attacchi, difesa e resistenze si sommano a
+   * quelle dell'equipaggiamento sotto lo stesso tetto (AFFIX_CONFIG); gli altri valgono da soli.
+   */
+  | "attackRecoveryPercent"
+  | "dodgeCostReductionPercent"
+  | "abilityPowerPercent"
+  | "manaRegenPercent"
+  | "spellCostReductionPercent"
+  | "defensePercent"
+  | "staminaRegenPercent"
+  | "resistancePercent";
 
 /**
  * Fonti permanenti dei modificatori, accanto ai power-up (Classi Fase 0): restano finché la fonte non le cambia
@@ -77,11 +89,23 @@ export type AttributeId = "strength" | "dexterity" | "intelligence" | "vitality"
 /** Valore di ogni attributo (punti). */
 export type Attributes = Record<AttributeId, number>;
 
-/** Effetto di un punto di attributo su una statistica: si somma (operazione "add") valuePerPoint x punti. */
+/**
+ * Effetto di un punto di attributo su una statistica: si somma (operazione "add") valuePerPoint x punti.
+ * onlyWithMana: vale solo per le classi con mana (Classi Fase 4: mana, rigenerazione e costo degli incantesimi).
+ * label: come si mostra nel pentagono (es. "SALUTE"); percent: il valore si scrive con il segno di percentuale;
+ * isReduction: l'effetto riduce (tempi, costi) e si mostra con il meno.
+ */
 export interface AttributeEffectPerPoint {
   stat: PlayerStatName;
   valuePerPoint: number;
+  onlyWithMana?: boolean;
+  label: string;
+  percent: boolean;
+  isReduction?: boolean;
 }
+
+/** Grado di una mossa (Classi Fase 4): dal 2 in su richiede Intelligenza (SPELL_GRADE_INT_REQUIREMENT). */
+export type AbilityGrade = 1 | 2 | 3;
 
 /** Definizione di un attributo (dati, nessuna logica). */
 export interface AttributeDefinition {
@@ -117,6 +141,11 @@ export interface PowerUpDefinition {
   auraColor: string;
   /** Elemento dato ai colpi del cavaliere finché il power-up è attivo (Fase 7). */
   element?: ElementId;
+  /**
+   * Punti di attributo in più finché il power-up è attivo (Classi Fase 4): passano per gli stessi effetti per punto
+   * e per i requisiti, senza toccare i valori base né i punti spesi; il totale resta entro ATTRIBUTE_MAX_VALUE.
+   */
+  attributeBonuses?: Partial<Attributes>;
 }
 
 /** Power-up attivo: la definizione e il tempo che resta (per l'HUD). */
@@ -460,6 +489,8 @@ interface AbilityBase {
   cooldownMs: number;
   /** Modificatori (punto di estensione): vuoto. */
   modifiers: readonly AbilityModifier[];
+  /** Grado (Classi Fase 4): 1 = sempre usabile; 2 e 3 richiedono Intelligenza (requisito rigido). */
+  grade: AbilityGrade;
 }
 
 /**
@@ -541,7 +572,10 @@ export interface CharacterDefinition {
   manaRegenPerSecond: number;
   /** Vero se la classe sfrutta i bonus dei catalizzatori (spellFocus del bastone): solo il Mago. */
   usesSpellFocus?: boolean;
-  /** Attributi di partenza (Classi Fase 0: tutti a zero). */
+  /**
+   * Attributi di partenza (Classi Fase 4): servono al pentagono e ai requisiti; gli effetti contano solo i punti sopra
+   * questi valori, così un personaggio senza punti spesi gioca come nella 2.3.
+   */
   baseAttributes: Readonly<Attributes>;
   /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto 7 o L). Player ne tiene attivo uno. */
   abilityIds: readonly AbilityId[];

@@ -16,6 +16,11 @@ export const SHOP_ROOM_CONFIG = {
   reachDistance: 14,
   /** Banco del mercante: x, larghezza e altezza (poggia sul pavimento). */
   counter: { x: 48, width: 56, height: 16 },
+  /**
+   * Altare degli attributi (Classi Fase 4): tra l'ultimo piedistallo e la porta; con E vicino si apre il pentagono per
+   * spendere i punti. centerX = centro dello sprite (16x20, "shopAltar"), reachDistance come per i piedistalli.
+   */
+  altar: { centerX: 330, reachDistance: 14, spriteId: "shopAltar", width: 16, height: 20 },
   /** Mercante (dietro il banco): x dello sprite. */
   merchantX: 66,
   /**

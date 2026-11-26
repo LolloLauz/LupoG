@@ -1,3 +1,4 @@
+import { measureTextWidth } from "../rendering/BitmapFont";
 import { ABILITY_SLOT_KEY_LABELS } from "../config/controlsConfig";
 import { PALETTE } from "../config/gameConfig";
 import type { Renderer } from "../rendering/Renderer";
@@ -15,9 +16,12 @@ export interface HUDData {
   maxMana: number;
   /**
    * Mosse della classe, una per slot (indice 0 = tasto 7): ricarica che manca (1 = appena usata), pronta (ricarica
-   * finita e risorse sufficienti), risorse sufficienti, slot attivo (l'ultimo scelto), in uso (scudo alzato).
+   * finita e risorse sufficienti), risorse sufficienti, slot attivo (l'ultimo scelto), in uso (scudo alzato), grado alla
+   * portata dell'Intelligenza (Classi Fase 4: se no il riquadro è grigio scuro con la cifra grigia).
    */
-  abilities: Array<{ cooldownFraction: number; isReady: boolean; isAffordable: boolean; isSelected: boolean; isActive: boolean }>;
+  abilities: Array<{ cooldownFraction: number; isReady: boolean; isAffordable: boolean; isSelected: boolean; isActive: boolean; meetsRequirement: boolean }>;
+  /** Punti attributo non spesi (Classi Fase 4): se ce ne sono, un indicatore sotto il pannello, a sinistra. */
+  unspentAttributePoints: number;
   lives: number;
   score: number;
   /** Monete della partita (Fase 6), da spendere nella bottega. */
@@ -82,6 +86,7 @@ export class HUDManager {
     spriteManager.drawSprite(renderer, "itemCoin", renderer.width - 44, 13, false);
     renderer.drawText(`x${data.coins}`, renderer.width - 6, 13, PALETTE.goldLight, { align: "right", shadowColor: PALETTE.black });
     this.renderPowerUps(renderer, spriteManager, data.powerUps, timeSeconds);
+    this.renderAttributePoints(renderer, data.unspentAttributePoints, data.powerUps.length, timeSeconds);
     this.renderBag(renderer, spriteManager, data.bag);
     if (data.boss !== null) {
       this.renderBossBar(renderer, spriteManager, data.boss);
@@ -100,6 +105,23 @@ export class HUDManager {
       renderer.fillRect(slotX + 10, slotY + 3, 16, 3, PALETTE.slate);
       renderer.fillRect(slotX + 10, slotY + 3, barWidth, 3, isExpiring ? PALETTE.white : powerUp.color);
     });
+  }
+
+  /**
+   * Punti attributo da spendere (Classi Fase 4): un riquadro con "+N PUNTI" sotto il pannello, a sinistra, dopo le icone
+   * dei power-up; la scritta lampeggia piano per ricordare l'altare della bottega.
+   */
+  private renderAttributePoints(renderer: Renderer, unspentPoints: number, powerUpCount: number, timeSeconds: number): void {
+    if (unspentPoints <= 0) {
+      return;
+    }
+    const text = `+${unspentPoints} PUNTI`;
+    const x = 5 + powerUpCount * 30;
+    const y = HUD_HEIGHT + 4;
+    const width = measureTextWidth(text, 1) + 4;
+    renderer.fillRect(x - 1, y - 1, width, 10, PALETTE.black);
+    const isBright = Math.floor(timeSeconds * 2) % 2 === 0;
+    renderer.drawText(text, x + 1, y, isBright ? PALETTE.goldLight : PALETTE.gold);
   }
 
   /** Riquadro centrato con titolo e righe di testo (messaggi di livello). */
@@ -181,7 +203,7 @@ export class HUDManager {
       const frameColor = hasSeveralSlots && ability.isSelected ? PALETTE.goldLight : PALETTE.black;
       renderer.fillRect(boxX, abilityBox.y, abilityBox.size, abilityBox.size, frameColor);
       const innerSize = abilityBox.size - 2;
-      const background = ability.isActive ? PALETTE.blue : ability.isReady ? PALETTE.bronze : PALETTE.slate;
+      const background = !ability.meetsRequirement ? PALETTE.stoneDark : ability.isActive ? PALETTE.blue : ability.isReady ? PALETTE.bronze : PALETTE.slate;
       renderer.fillRect(boxX + 1, abilityBox.y + 1, innerSize, innerSize, background);
       if (ability.cooldownFraction > 0) {
         const coveredHeight = Math.ceil(innerSize * ability.cooldownFraction);
@@ -191,6 +213,9 @@ export class HUDManager {
       let letterColor: string = ability.isActive ? PALETTE.white : ability.isReady ? (isPulsing ? PALETTE.cream : PALETTE.goldLight) : PALETTE.gray;
       if (!ability.isAffordable && !ability.isActive) {
         letterColor = PALETTE.red;
+      }
+      if (!ability.meetsRequirement) {
+        letterColor = PALETTE.gray;
       }
       renderer.drawText(ABILITY_SLOT_KEY_LABELS[slotIndex] ?? "", boxX + 3, abilityBox.y + 2, letterColor);
     });

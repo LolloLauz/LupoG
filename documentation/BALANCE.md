@@ -7,7 +7,7 @@ verificarli dopo una modifica. Tutti i valori si cambiano in `src/config/`.
 
 `tools/balance.mjs` fa giocare un **bot** nel gioco reale (stesse classi del gioco, senza grafica)
 e stampa duelli, boss, livelli e partite complete. Con `npm run balance -- --quick` è più rapido
-ma meno preciso.
+ma meno preciso. Le sezioni si possono lanciare da sole: `--characters`, `--mage`, `--equipment` e, dalla Classi Fase 4, `--build`.
 
 Due profili di bot:
 
@@ -162,6 +162,37 @@ Raccogliendo tutto e sconfiggendo tutti i nemici del livello si guadagnano da 74
 una pozione costa 40. Il valore della gemma è provvisorio. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
 perché il gioco sembrava già facile per il bot.
 
+## Classi Fase 4: attributi, requisiti e build (2.4.0)
+
+Gli attributi non cambiano le classi che non spendono punti (le basi sono neutre: contano solo i punti sopra la base). Le differenze
+nel simulatore vengono da due fonti: i **requisiti di Forza** (il bot indossa le armature migliori senza badare alla Forza) e la nuova
+sezione **BUILD**. Valori in `src/config/attributeConfig.ts`; tutti provvisori, da rivedere nella Classi Fase 6B.
+
+**Sezione BUILD** (`npm run balance -- --build`, 60 partite per riga): il Cavaliere con l'onda d'urto gioca partite complete e,
+a fine livello, mette **tutti i punti** (3 + 2 con il boss) in un attributo: Forza, Intelligenza, Vitalità o nessuno. Misura anche tempo
+e salute persa. Il bot usa solo la spada e non cambia equipaggiamento.
+
+| Build (rusher, 60 partite) | Vinte | Morti medie | Tempo | HP persi |
+|---|---|---|---|---|
+| nessuna | 100% | 0,85 | 378 s | 798 |
+| **Forza** | 100% | 0,00 | 311 s | 551 |
+| Intelligenza | 100% | 0,57 | 356 s | 719 |
+| Vitalità | 100% | 0,00 | 331 s | 731 |
+
+Il medio vince sempre con ogni build (HP persi: nessuna 448, Forza 396, Intelligenza 425, Vitalità 455). Direzione: **Forza** finisce prima e perde
+meno salute; **Vitalità** non muore ma perde più salute; **Intelligenza** sta in mezzo (il Cavaliere ha poca Intelligenza e la usa solo per la potenza dell'onda).
+Le build giocano in modo riconoscibile, che era il criterio di chiusura della fase.
+
+**Tre righe esistenti cambiano, per scelta** (baseline `tools/balance-baseline.txt` aggiornato a parte, dalla decisione del 26 novembre):
+
+| Riga | Prima | Dopo | Perché |
+|---|---|---|---|
+| Cavaliere "medio", equipaggiamento al massimo (acciaio) | 100% vinte | 95% vinte (2,53 vite rimaste, 0,60 morti) | l'acciaio pesa 4 per pezzo: senza Forza la velocità cala |
+| Mago "rusher", partite complete con il bottino | 95% | 83% | il bot indossa armature pesanti senza la Forza richiesta (Mago: FOR 2) |
+| Mago "medio", partite complete con il bottino | 95% | 88% | come sopra |
+
+Sono effetti del bot, che non spende punti in Forza né sceglie armature leggere: una persona può evitarli.
+
 ## Classi Fase 3: compatibilità armi e classi (2.3.0)
 
 La tabella classe × arma (`src/config/weaponAffinityConfig.ts`) usa tre valori, uguali per simbolo:
@@ -269,6 +300,9 @@ boss conviene rilanciare `npm run balance` e guardare più valori vicini.
 | Mago: salute, mana e recupero (2.2.0) | `src/config/characterConfig.ts` | `CHARACTER_CONFIG.mage` |
 | Incantesimi: costi, ricariche, danni, elementi | `src/config/abilityConfig.ts` | `ABILITY_CONFIG` (firebolt, frostNova, arcaneLeap, arcaneBarrier) |
 | Bastone e catalizzatore | `src/config/weaponConfig.ts` | `WEAPON_CONFIG.staff`, `spellFocus` |
+| Attributi: basi per classe | `src/config/characterConfig.ts` | `CHARACTER_CONFIG[..].baseAttributes` |
+| Attributi: effetti per punto, massimo e punti per livello (2.4.0) | `src/config/attributeConfig.ts` | `ATTRIBUTE_CONFIG`, `ATTRIBUTE_MAX_VALUE`, `ATTRIBUTE_POINTS_CONFIG` |
+| Scaling delle armi, requisiti di Forza, carico, gradi delle mosse | `src/config/attributeConfig.ts` | `WEAPON_SCALING_CONFIG`, `STRENGTH_REQUIREMENT_CONFIG`, `CARRY_CONFIG`, `SPELL_GRADE_INT_REQUIREMENT` |
 | Compatibilità classe × arma: bonus, malus, divieti e sostituti nel bottino (2.3.0) | `src/config/weaponAffinityConfig.ts` | `PREFERRED_WEAPON_AFFINITY`, `PENALIZED_WEAPON_AFFINITY`, `WEAPON_AFFINITY_CONFIG` |
 | Pozione di mana (bottino e bottega) | `src/config/itemConfig.ts`, `lootConfig.ts`, `progressionConfig.ts` | `manaPotion`, `manaPotionChance`, `SHOP_OFFERS.manaPotion` |
 | Cura di livello, danno da caduta, vite | `src/config/gameConfig.ts` | `GAME_CONFIG` |
