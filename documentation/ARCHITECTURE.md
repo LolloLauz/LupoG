@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.5.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.5.1**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -412,7 +412,7 @@ I **divieti** sono applicati in tre punti: `Player.equipWeapon` restituisce `boo
 |---|---|
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
-| `npm test` | 1467 controlli unitari in Node (meno di 1 secondo) |
+| `npm test` | 1480 controlli unitari in Node (meno di 1 secondo) |
 | `npm run test:browser` | 180 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica); `-- --build` solo le build di attributi (Classi Fase 4) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |

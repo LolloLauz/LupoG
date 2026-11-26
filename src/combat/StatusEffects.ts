@@ -25,7 +25,7 @@ interface ActiveStatus {
  * Effetti di stato di un nemico o di un boss (Fase 7): bruciatura e veleno (danno nel tempo), gelo (rallenta), shock
  * (stordisce, poi per un po' non si può stordire di nuovo). Le resistenze del bersaglio (ElementModifiers) scalano danno e
  * durata; 0 = immune. Riapplicare un effetto ne fa ripartire la durata. Solo logica: il proprietario applica il danno
- * (senza mai uccidere), lo stordimento e il rallentamento.
+ * (che può uccidere), lo stordimento e il rallentamento.
  */
 export class StatusEffects {
   private readonly active = new Map<ElementId, ActiveStatus>();

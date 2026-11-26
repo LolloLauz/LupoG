@@ -10,7 +10,7 @@ export interface ElementDefinition {
   color: string;
   /** Durata dell'effetto (ms). */
   durationMs: number;
-  /** Danno nel tempo: tickDamage ogni tickMs (0 = nessun danno). Non uccide mai: lascia almeno 1 HP. */
+  /** Danno nel tempo: tickDamage ogni tickMs (0 = nessun danno). Può uccidere (con le ricompense di un colpo). */
   tickMs: number;
   tickDamage: number;
   /** Moltiplicatore della velocità finché dura (gelo); 1 = nessun rallentamento. */

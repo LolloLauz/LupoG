@@ -49,10 +49,10 @@ medio (schiva a volte)   partite vinte 100%   vite rimaste (se vinta) 2.90   mor
 
 === EQUIPAGGIAMENTO (E5): PARTITE COMPLETE DEL CAVALIERE, SENZA, CON IL BOTTINO DI FINE LIVELLO, AL MASSIMO ===
 rusher (non schiva)      senza    partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie 0.90
-rusher (non schiva)      bottino  partite vinte  98%   vite rimaste (se vinta) 3.00   morti medie 0.05
+rusher (non schiva)      bottino  partite vinte  97%   vite rimaste (se vinta) 3.00   morti medie 0.10
 rusher (non schiva)      massimo  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie 0.10
-medio (schiva a volte)   bottino  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+medio (schiva a volte)   bottino  partite vinte 100%   vite rimaste (se vinta) 2.98   morti medie 0.02
 medio (schiva a volte)   massimo  partite vinte  95%   vite rimaste (se vinta) 2.53   morti medie 0.60
 
 === PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, stamina, cura; con e senza l'abilità L) ===
@@ -60,10 +60,10 @@ CAVALIERE  rusher (non schiva)      senza abilità partite vinte 100%   vite rim
 CAVALIERE  rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 2.15   morti medie 0.85
 CAVALIERE  medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie 0.10
 CAVALIERE  medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03
-RANGER     rusher (non schiva)      senza abilità partite vinte  30%   vite rimaste (se vinta) 1.61   morti medie 2.52
+RANGER     rusher (non schiva)      senza abilità partite vinte  15%   vite rimaste (se vinta) 1.33   morti medie 2.80
 RANGER     rusher (non schiva)      con abilità   partite vinte   5%   vite rimaste (se vinta) 1.00   morti medie 2.95
 RANGER     medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 2.82   morti medie 0.18
-RANGER     medio (schiva a volte)   con abilità   partite vinte  93%   vite rimaste (se vinta) 2.27   morti medie 0.88
+RANGER     medio (schiva a volte)   con abilità   partite vinte  93%   vite rimaste (se vinta) 2.34   morti medie 0.82
 BERSERKER  rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 BERSERKER  rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 BERSERKER  medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
@@ -84,19 +84,19 @@ MAGO contro SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   HP per
 MAGO contro SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   HP persi 29   tempo 35s
 MAGO contro SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   HP persi 33   tempo 34s
 MAGO contro SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   HP persi 26   tempo 36s
-MAGO rusher (non schiva)      senza    partite vinte  95%   vite rimaste (se vinta) 2.67   morti medie 0.47 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.45)
+MAGO rusher (non schiva)      senza    partite vinte 100%   vite rimaste (se vinta) 2.88   morti medie 0.12 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.10)
 MAGO rusher (non schiva)      bottino  partite vinte  90%   vite rimaste (se vinta) 3.00   morti medie 0.30 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.25)
-MAGO medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2.92   morti medie 0.08 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.07)
-MAGO medio (schiva a volte)   bottino  partite vinte  93%   vite rimaste (se vinta) 2.98   morti medie 0.22 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.17)
+MAGO medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2.85   morti medie 0.15 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.07 / 0.08)
+MAGO medio (schiva a volte)   bottino  partite vinte  90%   vite rimaste (se vinta) 3.00   morti medie 0.30 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.25)
 
 === BUILD (Classi Fase 4): PARTITE COMPLETE DEL CAVALIERE CON L'ONDA D'URTO, TUTTI I PUNTI IN UN ATTRIBUTO ===
 rusher (non schiva)      nessuna       partite vinte 100%   vite rimaste (se vinta) 2.15   morti medie 0.85   tempo 378s   HP persi 798
-rusher (non schiva)      forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 311s   HP persi 551
+rusher (non schiva)      forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 310s   HP persi 552
 rusher (non schiva)      intelligenza  partite vinte 100%   vite rimaste (se vinta) 2.48   morti medie 0.52   tempo 353s   HP persi 710
 rusher (non schiva)      vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 331s   HP persi 731
-medio (schiva a volte)   nessuna       partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03   tempo 332s   HP persi 448
-medio (schiva a volte)   forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 311s   HP persi 395
+medio (schiva a volte)   nessuna       partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03   tempo 332s   HP persi 446
+medio (schiva a volte)   forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 310s   HP persi 395
 medio (schiva a volte)   intelligenza  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 324s   HP persi 424
-medio (schiva a volte)   vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 330s   HP persi 455
+medio (schiva a volte)   vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 330s   HP persi 447
 
 (rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)

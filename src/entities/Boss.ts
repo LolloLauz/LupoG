@@ -220,12 +220,17 @@ export class Boss extends GameObject implements Damageable {
     this.currentHealth = Math.max(0, this.currentHealth - hitDamage - shockDamage);
     this.hitFlashRemainingMs = this.definition.hitFlashMs;
     if (!this.isAlive) {
-      this.deathElapsedMs = 0;
-      this.velocityX = 0;
-      this.currentAttack = null;
-      this.changeBaseState("dead");
-      this.animationPlayer.restart("dead");
+      this.startDying();
     }
+  }
+
+  /** Comincia la morte: si ferma, l'attacco si interrompe, parte l'animazione. */
+  private startDying(): void {
+    this.deathElapsedMs = 0;
+    this.velocityX = 0;
+    this.currentAttack = null;
+    this.changeBaseState("dead");
+    this.animationPlayer.restart("dead");
   }
 
   /** Area d'urto dell'attacco se in questo momento è attiva, altrimenti null. */
@@ -268,14 +273,17 @@ export class Boss extends GameObject implements Damageable {
   ): void {
     const deltaTimeMs = deltaTimeSeconds * 1000;
     this.hitFlashRemainingMs = Math.max(0, this.hitFlashRemainingMs - deltaTimeMs);
-    // effetti di stato: il danno nel tempo non uccide mai (lascia almeno 1 HP)
+    // effetti di stato: il danno nel tempo può uccidere (il motore dà le ricompense)
     if (this.isAlive) {
       for (const tick of this.statusEffects.update(deltaTimeMs)) {
-        const tickDamage = Math.min(tick.damage, this.currentHealth - 1);
+        const tickDamage = Math.min(tick.damage, this.currentHealth);
         if (tickDamage > 0) {
           this.currentHealth -= tickDamage;
           this.pendingStatusTicks.push({ element: tick.element, damage: tickDamage });
         }
+      }
+      if (!this.isAlive) {
+        this.startDying();
       }
     } else {
       this.statusEffects.clear();
