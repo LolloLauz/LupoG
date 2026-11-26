@@ -103,7 +103,7 @@ export default async function (t, load) {
 
   // --- compatibilità classe x arma (Classi Fase 3: una cella per arma, valori in classes-phase3.test.mjs) ---
   t("la tabella ha una riga per ogni classe e una cella per ogni arma", CHARACTER_ORDER.every((id) => Object.keys(WEAPON_AFFINITY_CONFIG[id] ?? {}).sort().join() === [...weaponIds].sort().join()));
-  t("getWeaponAffinity legge la cella dell'arma", getWeaponAffinity("berserker", "axe") === WEAPON_AFFINITY_CONFIG.berserker.axe && getWeaponAffinity("ranger", "bow") === NEUTRAL_WEAPON_AFFINITY);
+  t("getWeaponAffinity legge la cella dell'arma", getWeaponAffinity("berserker", "axe") === WEAPON_AFFINITY_CONFIG.berserker.axe && getWeaponAffinity("paladin", "mace") === NEUTRAL_WEAPON_AFFINITY);
   {
     const p = grounded("knight");
     t("giocatore: con l'arma iniziale la compatibilità è neutra", JSON.stringify(p.weaponAffinity) === JSON.stringify(NEUTRAL_WEAPON_AFFINITY));

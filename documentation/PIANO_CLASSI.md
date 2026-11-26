@@ -194,12 +194,12 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 ### Sessione B, bilanciamento
 
-- [ ] Estendere il simulatore con un bot per ciascuna classe e per le build di statistiche (oggi i bot diversi dal Mago usano solo la mossa sul tasto 7: le 12 mosse nuove non sono misurate).
-- [ ] Ritoccare costi, ricariche, danni, valori della tabella di compatibilità, prezzo delle gemme e punti statistica.
-- [ ] Verificare i boss (HP, fasi) e il tasso di sopravvivenza per classe e per difficoltà.
-- [ ] Aggiornare BALANCE.md e il manuale con i valori finali.
+- [x] Estendere il simulatore con un bot per ciascuna classe e per le build di statistiche. *Fatto: bot di classe guidato dai dati delle mosse, sezione per classe (boss, mosse una alla volta, partite alle tre difficoltà, build), antiblocco e conteggio dei blocchi, sezioni in parallelo.*
+- [x] Ritoccare costi, ricariche, danni, valori della tabella di compatibilità, prezzo delle gemme e punti statistica. *Fatto (2.6.1): ricarica delle frecce 1,5 s, 24 frecce per il Ranger, tiro rapido 10, colpo di sangue a 8 di salute. Il resto invariato; gemma e prezzi non sono misurabili (il simulatore non usa la bottega).*
+- [x] Verificare i boss (HP, fasi) e il tasso di sopravvivenza per classe e per difficoltà. *Fatto: contro i boss tutte le classi vincono sempre, HP e fasi invariati.*
+- [x] Aggiornare BALANCE.md e il manuale con i valori finali.
 
-**Criterio di chiusura:** ogni classe completa il gioco in modo simile alle altre sul simulatore, a tutte e tre le difficoltà.
+**Criterio di chiusura:** ogni classe completa il gioco in modo simile alle altre sul simulatore, a tutte e tre le difficoltà. *Bersaglio adottato (bot medio, senza equipaggiamento): almeno 95% in Facile, 90% in Normale, 70% in Difficile. Raggiunto; in Difficile si va dal 72% (Ranger) al 100% (Berserker).*
 
 ---
 
@@ -211,7 +211,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 - [x] Quanti punti statistica si guadagnano per livello e per boss. *Deciso: 3 per livello e 2 per boss (vedi Fase 4).*
 - [x] Come si ottengono le mosse extra delle classi. *Deciso: vedi Fase 5.*
-- [ ] Valore in monete della gemma (proposta: 30).
+- [ ] Valore in monete della gemma (proposta: 30). *Nella 6B è rimasto 30: il simulatore non usa la bottega, serve una prova con persone.*
 
 ---
 

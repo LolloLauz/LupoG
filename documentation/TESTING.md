@@ -1,6 +1,6 @@
 # Test e verifiche
 
-Versione descritta: **2.6.0**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
+Versione descritta: **2.6.1**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
 Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima esecuzione prima della consegna.
 
 ---
@@ -10,10 +10,10 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 1512 controlli in 36 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 1513 controlli in 36 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 180 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
-| `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure); `-- --characters` misura solo i personaggi; `-- --mage` solo il Mago (Classi Fase 2); `-- --build` solo le build di attributi (Classi Fase 4) | `npm install` | circa 1 minuto |
+| `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure); `-- --core` solo il controllo con il Cavaliere e la sola spada; `-- --equipment` solo le partite con e senza equipaggiamento; `-- --classes` solo le cinque classi; `-- --class=<id>` una classe (con `--classes` o `--class`, `--part=boss,moves,runs,builds` sceglie le parti); `-- --quick` meno ripetizioni | `npm install` | circa 5 minuti |
 | `npm run build` | controllo dei tipi + versione distribuibile in `dist/` | `npm install` | pochi secondi |
 
 I test unitari e `verify-docs` non richiedono nulla oltre a `npm install`. I **test nel browser** usano Playwright, che **non è una dipendenza del progetto**
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 1512 controlli)
+### 2.1 Test unitari (`tests/unit/`, 1513 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -64,7 +64,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `progression.test.mjs` | 46 | Fase 6 e Classi Fase 1: configurazione (economia, bottega, sblocchi a livelli esistenti), monete (spesa solo se bastano, ripristino, moneta raccolta), bottega (voci con e senza armi da vendere, arma scelta tra quelle trovate, cura, pozione e borsa piena, faretra, arma esaurita, monete insufficienti senza spesa, borsa senza posti), gemme (30 monete e 200 punti), salvataggio (solo quattro campi, sblocchi dal livello, migrazione dal 2.0 riscritta subito e una volta sola, archivio non scrivibile, cancella dati), giocatore senza bonus permanenti, scelta del personaggio che non tocca la partita, comandi (J, K, Shift sinistro, 7-0, L; 5, 6 e Spazio liberi), stati e schermate (niente potenziamenti, bottega con uscita solo da PROSEGUI, personaggio bloccato), collegamenti nel motore |
 | `ammo-regeneration.test.mjs` | 7 | 2.1.1, passiva del Ranger: solo il Ranger e solo l'arco, una freccia allo scadere dell'intervallo, ricarica con l'arco in borsa, tempo che non si accumula a faretra piena, mai oltre il massimo, niente per la balestra o senza passiva, collegamenti nel motore (frecce in mano, azzeramento a ogni livello) |
 | `mage-phase2.test.mjs` | 65 | Classi Fase 2, il Mago: configurazione (statistiche, mana, sblocco, ordine dei personaggi, quattro incantesimi sui tasti 7-0, bastone con `spellFocus`, tabella di compatibilità), costo e danno degli incantesimi con il bastone in mano, recupero del mana (colpi, pozione, attesa), dardo di fuoco (bruciatura, niente munizioni), nova di gelo, balzo arcano, barriera (mana, parata perfetta, guardia rotta), "SENZA MANA", `abilitySlots`, pozioni per tipo (`Inventory`), filtro del bottino e pozione di mana nel bottino, bottega del Mago (bastone, pozione di mana, "NON SERVE"), HUD (due barre, riquadri, numero rosso, bordo dorato), sprite e animazioni |
-| `classes-phase3.test.mjs` | 99 | Classi Fase 3: una prova per ognuna delle 55 celle della tabella classe × arma, sostituti del bottino, nessun drop dei livelli inutilizzabile per nessuna classe e mai senza arma, divieti (`equipWeapon`, `equipFromBackpack`, raccolta), munizioni per classe (`getWeaponMaxAmmo`, `Inventory.getMaxAmmo`), munizioni nello zaino (`BackpackEntry`, scambio, bottega a borsa piena), riga di classe (`describeWeaponAffinity`), peso delle armature |
+| `classes-phase3.test.mjs` | 100 | Classi Fase 3: una prova per ognuna delle 55 celle della tabella classe × arma, sostituti del bottino, nessun drop dei livelli inutilizzabile per nessuna classe e mai senza arma, divieti (`equipWeapon`, `equipFromBackpack`, raccolta), munizioni per classe (`getWeaponMaxAmmo`, `Inventory.getMaxAmmo`; 24 frecce per l'arco del Ranger, unica arma iniziale con capienza diversa), munizioni nello zaino (`BackpackEntry`, scambio, bottega a borsa piena), riga di classe (`describeWeaponAffinity`), peso delle armature |
 | `classes-phase4.test.mjs` | 78 | Classi Fase 4: basi per classe (somma 25, massimo 20), effetti per punto speso e solo sopra la base (le classi senza mana saltano quelli del mana), tetti condivisi con l'equipaggiamento (difesa, resistenze, recupero), scaling del danno delle armi (principale e secondario, solo sugli attacchi dell'arma), requisiti di Forza di armi e armature e carico, gradi delle mosse (INT 12 e 16, slot grigio e messaggio), bonus di attributo dei power-up, punti (3 + 2 con il boss, solo con un livello successivo, nello snapshot, azzerati a nuova partita), altare e pentagono (stati, comandi P e J, geometria), "+N PUNTI" nell'HUD |
 | `classes-phase5.test.mjs` | 129 | Classi Fase 5: quattro mosse per classe nell'ordine dei tasti, costo, ricarica ed effetto di ogni mossa (proiettili senza munizioni, aree, scatti, guardia), sblocco (due mosse di partenza, ordine, slot chiuso, avviso, nuova partita, snapshot del motore, boss e forziere), lucchetto nell'HUD, costo in salute, passivi (Cavaliere, Berserker, Mago), sinergie (innesco, consumo, stesso elemento, immunità, una per colpo, nemici e boss, almeno una per classe) |
 | `classes-phase6.test.mjs` | 32 | Classi Fase 6A, grafica delle mosse: una voce visiva per ogni mossa (icona 8×8, istanti entro la durata dell'attacco, effetti e sprite registrati), 17 effetti con frame e allineamento, icone nell'HUD (dato `iconSpriteId`, sagoma grigia senza requisito), lama tinta (varianti sopra le armature), barriere delle guardie, proiettili nuovi (cometa e tre frecce con i valori della freccia), Mago (veste lunga, stessa altezza e ancora di ogni frame, solo colori della palette) |

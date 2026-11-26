@@ -15,6 +15,8 @@ function forbidden(lootSubstituteId: WeaponId): Readonly<WeaponAffinity> {
 }
 
 const STARTING = NEUTRAL_WEAPON_AFFINITY;
+/** Arco del Ranger (Classi Fase 6B): è l'unica sua arma di partenza, quindi porta il doppio delle frecce. */
+const RANGER_BOW: Readonly<WeaponAffinity> = { ...NEUTRAL_WEAPON_AFFINITY, ammoMultiplier: 2 };
 const OK = NEUTRAL_WEAPON_AFFINITY;
 const PREFERRED = PREFERRED_WEAPON_AFFINITY;
 const PENALIZED = PENALIZED_WEAPON_AFFINITY;
@@ -24,7 +26,7 @@ const PENALIZED = PENALIZED_WEAPON_AFFINITY;
  * (✗). Una cella per arma, non per categoria: armi della stessa categoria possono comportarsi in modo diverso (il
  * Paladino è bravo con la mazza ma non con lo spadone). La categoria resta in WEAPON_CONFIG per lo scaling (Fase 4).
  * Le armi vietate non compaiono mai a terra: il filtro del bottino (resolveLootWeaponId) dà lootSubstituteId.
- * I valori sono uguali per simbolo; la messa a punto cella per cella è della Fase 6B.
+ * I valori sono uguali per simbolo; unica eccezione (Classi Fase 6B) la capienza dell'arco del Ranger.
  */
 export const WEAPON_AFFINITY_CONFIG: Record<CharacterId, Record<WeaponId, Readonly<WeaponAffinity>>> = {
   knight: {
@@ -47,7 +49,7 @@ export const WEAPON_AFFINITY_CONFIG: Record<CharacterId, Record<WeaponId, Readon
     axe: PENALIZED,
     mace: PENALIZED,
     greatsword: forbidden("crossbow"),
-    bow: STARTING,
+    bow: RANGER_BOW,
     crossbow: PREFERRED,
     throwingKnives: PREFERRED,
     javelin: PREFERRED,

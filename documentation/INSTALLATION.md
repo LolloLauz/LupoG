@@ -1,6 +1,6 @@
 # Manuale di installazione
 
-Versione descritta: **2.6.0**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
+Versione descritta: **2.6.1**. Ci sono due modi di usare il progetto: **giocare** (nessuna installazione) e
 **modificare il codice** (serve Node.js).
 
 ---
@@ -55,7 +55,7 @@ Installa `typescript` e `vite` nella cartella `node_modules/` (non si distribuis
 | `npm run typecheck` | controlla gli errori di TypeScript (strict) senza creare file |
 | `npm run build` | controlla i tipi e crea la versione distribuibile in `dist/` |
 | `npm run preview` | avvia un server locale che mostra il contenuto di `dist/` (per provare la build) |
-| `npm test` | esegue i test unitari (1512 controlli, meno di 1 secondo); vedi `TESTING.md` |
+| `npm test` | esegue i test unitari (1513 controlli, meno di 1 secondo); vedi `TESTING.md` |
 | `npm run test:browser` | test nel browser (richiede Playwright: `npm install --no-save playwright` e `npx playwright install chromium`) |
 | `npm run balance` | simulatore di bilanciamento con un bot (vedi `BALANCE.md`); `-- --quick` per una versione rapida |
 | `npm run verify-docs` | verifica gli esempi del `CODE_MANUAL.md` (vedi la sezione 7 di quel manuale) |

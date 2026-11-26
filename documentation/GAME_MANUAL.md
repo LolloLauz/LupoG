@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.6.0.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.6.1.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -126,16 +126,16 @@ cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale, pas
   le armi, cambia solo le statistiche; ogni classe ha però armi preferite, penalizzate o vietate (vedi "Compatibilità classe-arma" nelle armi). Il **Mago** è l'eccezione più forte: usa il **bastone**, che è solo suo, oltre a **spada e pugnale**.
 - Velocità: la velocità dell'arma in mano si moltiplica con quella del personaggio (es. Paladino con l'ascia: 72 × 0,85).
 - I power-up si sommano ai tratti: la Furia moltiplica anche il danno del Berserker, lo Scudo anche la difesa del Paladino.
-- **Passiva del Ranger:** le frecce dell'**arco** si ricaricano da sole, **una ogni 3 secondi** (vedi "Le armi"). La sua schivata resta più lunga e più frequente.
+- **Passiva del Ranger:** le frecce dell'**arco** si ricaricano da sole, **una ogni 1,5 secondi** (vedi "Le armi"); il suo arco ne tiene **24** invece di 12. La sua schivata resta più lunga e più frequente.
 
 **Passivi.** Ogni personaggio ha un tratto sempre attivo. Quello scritto nella scheda è nella terza colonna.
 
 | Personaggio | Effetto | Scritta nella scheda |
 |---|---|---|
 | **Cavaliere** | ogni bersaglio colpito con l'arma **corpo a corpo** ridà **4 di stamina** (non con le mosse, non con i proiettili, non con i forzieri) | "PASSIVA: I COLPI RIDANNO STAMINA" |
-| **Ranger** | le frecce dell'arco si ricaricano, una ogni 3 s | "PASSIVA: LE FRECCE SI RICARICANO" |
+| **Ranger** | le frecce dell'arco si ricaricano, una ogni 1,5 s | "PASSIVA: LE FRECCE SI RICARICANO" |
 | **Berserker** | con la salute **sotto il 40%** il danno è **×1,25** (armi e mosse). La sua schivata resta corta e faticosa | "PASSIVA: PIÙ FORTE SOTTO IL 40% HP" |
-| **Mago** | ogni **nemico o boss sconfitto** da un suo colpo diretto (arma o incantesimo) ridà **10 di mana** | "PASSIVA: MANA DAI NEMICI VINTI" |
+| **Mago** | ogni **nemico o boss sconfitto** (anche dal veleno o dalla bruciatura) ridà **10 di mana** | "PASSIVA: MANA DAI NEMICI VINTI" |
 | **Paladino** | si cura di **1 HP al secondo** dopo 4 s senza colpi | "SI CURA PIANO FUORI DAI COLPI" |
 
 - **Mago:** fragile, ma gli incantesimi colpiscono da lontano e a mana. Ha **100 di mana** (barra blu sotto la stamina; scheda del personaggio: "100 MANA"). Il mana si recupera piano, **6 al secondo** dopo 0,6 secondi senza spese, e **5 per ogni bersaglio colpito con il bastone**. Si sblocca sconfiggendo la **Strega della Palude** (livello 4). Veste viola lunga fino ai piedi (l'orlo ondeggia quando cammina), barba bianca sul petto, cappello a punta con fascia e stella, mantello e bastone con le punte d'oro.
@@ -229,7 +229,7 @@ Le mosse imparate valgono **solo per la partita in corso** (anche partendo da **
 | **Carica furiosa** | Berserker (7) | 40 stamina | 5 s | **scatto in avanti** di circa 70 px che **travolge** e attraversa i nemici (35 danni, rompe la guardia); non rende invulnerabili |
 | **Ascia rovente** | Berserker (8) | 30 stamina | 4,5 s | fendente da **30** che **brucia** |
 | **Terremoto** | Berserker (9) | 40 stamina | 7 s | colpo tutt'intorno da **20** con **shock**; tremolio e polvere |
-| **Colpo di sangue** | Berserker (0) | **15 di salute** | 6 s | colpo lento da **55** che rompe la guardia; non parte se non ti resterebbe almeno 1 HP ("SALUTE INSUFFICIENTE") |
+| **Colpo di sangue** | Berserker (0) | **8 di salute** | 6 s | colpo lento da **55** che rompe la guardia; non parte se non ti resterebbe almeno 1 HP ("SALUTE INSUFFICIENTE") |
 | **Scudo** | Paladino (7) | 10 stamina per alzarlo | 0,3 s | **tieni premuto 7** (o L): lo scudo para i colpi **da davanti** (anche le frecce); non ti muovi ma puoi girarti; consuma 12 di stamina al secondo |
 | **Martello sacro** | Paladino (8) | 30 stamina | 5 s | colpo da **24** con **shock** che rompe la guardia |
 | **Consacrazione** | Paladino (9) | 40 stamina | 7 s | fuoco tutt'intorno: **18** e **bruciatura**; tremolio e polvere |
@@ -342,7 +342,7 @@ Oltre alla spada ci sono cinque armi corpo a corpo, più il bastone del Mago. Si
 
 | **Bastone** (solo Mago) | 8 / 8 danni, 320 ms | **Mulinello** (J ×3): 8 + 8 + 14; **Spazzata arcana** (J, K): 8 + 16, colpisce in basso anche **dietro** di te | 18 danni, 560 ms | normale | **catalizzatore**: ridà **5 mana** per ogni bersaglio colpito e rende gli incantesimi più forti (×1,2) e meno cari (×0,85); in picchiata 14 danni; non ha munizioni |
 
-**Compatibilità classe-arma** (Classi Fase 3). Ogni classe ha un rapporto diverso con **ciascuna** arma. Legenda: **I** arma iniziale (valori normali), **✓** normale, **★** preferita, **▼** penalizzata, **✗** vietata.
+**Compatibilità classe-arma** (Classi Fase 3). Ogni classe ha un rapporto diverso con **ciascuna** arma. Legenda: **I** arma iniziale (valori normali; solo l'arco del Ranger ha il doppio delle frecce), **✓** normale, **★** preferita, **▼** penalizzata, **✗** vietata.
 
 | Arma | Cavaliere | Ranger | Berserker | Paladino | Mago |
 |---|---|---|---|---|---|
@@ -360,9 +360,11 @@ Oltre alla spada ci sono cinque armi corpo a corpo, più il bastone del Mago. Si
 
 | Segno | Effetto |
 |---|---|
-| ★ preferita | **+15% di danno**; per le armi a distanza **+50% di munizioni** (Ranger: coltelli 9, balestra 9, giavellotti 4; l'arco resta a 12) |
+| ★ preferita | **+15% di danno**; per le armi a distanza **+50% di munizioni** (Ranger: coltelli 9, balestra 9, giavellotti 4; l'arco non è ★: è la sua arma iniziale, vedi sotto) |
 | ▼ penalizzata | **-15% di danno** e recupero tra gli attacchi **+15%** (più lento) |
 | ✗ vietata | non si impugna, non si raccoglie ("NON PUOI USARLA"); dallo zaino resta dov'è |
+
+**Arco del Ranger.** Danno e recupero sono normali, ma le frecce sono **+100%**: **24** invece di 12. Nella scheda dell'equipaggiamento compare "CLASSE MUNIZIONI +100%"; in bottega, se l'arco è in vendita, "CLASSE: MUNIZIONI +100%".
 
 Bonus e malus valgono solo per gli **attacchi dell'arma**: le mosse speciali e gli incantesimi (tasti 7-0) hanno sempre il loro danno e la loro ricarica, qualunque arma si abbia in mano.
 
@@ -377,20 +379,20 @@ deviano con la spada e non hanno combo. Si usano anche in aria (lì non c'è la 
 
 | Arma | J | K | Munizioni | Particolarità |
 |---|---|---|---|---|
-| **Arco** | tiro rapido, 8 danni | **tieni premuto per caricare**, rilascia per tirare: da 10 a **34 danni**, freccia fino a 1,6 volte più veloce (carica piena in 0,9 s, segnalata da un bagliore; dopo 2,5 s tira da solo) | **12** frecce | la freccia scende appena: mira dritto |
+| **Arco** | tiro rapido, 10 danni | **tieni premuto per caricare**, rilascia per tirare: da 10 a **34 danni**, freccia fino a 1,6 volte più veloce (carica piena in 0,9 s, segnalata da un bagliore; dopo 2,5 s tira da solo) | **12** frecce (**24** il Ranger) | la freccia scende appena: mira dritto |
 | **Balestra** | dardo da **40 danni**, veloce e dritto | come J | **6** dardi | **ricarica di 0,9 s** dopo ogni tiro |
 | **Coltelli** | lancio ad arco, 12 danni | lancio più basso (per i nemici piccoli) | **6** | il coltello cade dove colpisce o dove si ferma: **passandoci sopra lo recuperi** (+1); quelli caduti negli abissi si perdono |
 | **Giavellotto** | lancio potente ad arco, **50 danni**, **trafigge** tutti i nemici sulla sua strada | come J | **3** | ogni giavellotto lanciato **si perde**; finiti i giavellotti l'arma esce dalla borsa e impugni l'arma successiva |
 
 Senza munizioni l'arma non tira ("SENZA MUNIZIONI"), nemmeno il tiro caricato dell'arco. Frecce e dardi tirati non si recuperano: in ogni
 livello c'è una **faretra** che, toccandola, riempie le munizioni di **tutte** le armi della borsa (se sono già piene resta a terra
-per dopo). Anche raccogliendo di nuovo un'arma con munizioni che hai già le sue munizioni tornano piene. Il **massimo** delle munizioni dipende dalla classe (con ★ +50%, vedi "Compatibilità classe-arma"). Nella borsa il numero sotto l'icona indica le munizioni (in rosso quando sono finite).
+per dopo). Anche raccogliendo di nuovo un'arma con munizioni che hai già le sue munizioni tornano piene. Il **massimo** delle munizioni dipende dalla classe (con ★ +50%, l'arco del Ranger +100%; vedi "Compatibilità classe-arma"). Nella borsa il numero sotto l'icona indica le munizioni (in rosso quando sono finite).
 I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno delle frecce).
 
-**Frecce del Ranger.** Solo con il Ranger le frecce dell'arco tornano da sole, **una ogni 3 secondi**, fino al massimo di 12:
+**Frecce del Ranger.** Solo con il Ranger le frecce dell'arco tornano da sole, **una ogni 1,5 secondi**, fino al massimo di 24:
 
 - vale con l'arco **in mano o in borsa**, non nello **zaino** (e non per un arco lasciato a terra);
-- il tempo scorre solo se manca almeno una freccia: dopo un tiro con l'arco pieno, la prima torna dopo 3 secondi interi;
+- il tempo scorre solo se manca almeno una freccia: dopo un tiro con l'arco pieno, la prima torna dopo 1,5 secondi interi;
 - il conteggio riparte da zero a ogni livello; in pausa e nei menu è fermo;
 - i **quadrelli della balestra** e le altre munizioni non si ricaricano. La faretra continua a riempire tutto subito.
 

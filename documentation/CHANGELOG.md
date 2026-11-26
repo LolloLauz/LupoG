@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.6.1 – Classi, Fase 6B: bilanciamento delle cinque classi (2026-11-26)
+Valori e misure in `BALANCE.md`. Bersaglio (bot medio, senza equipaggiamento): almeno 95% di partite vinte in Facile, 90% in Normale, 70% in Difficile. Raggiunto; in Difficile si va dal 72% (Ranger) al 100% (Berserker).
+### Modificato
+- **Ricarica delle frecce del Ranger**: una ogni 1,5 s invece di 3 s.
+- **Arco del Ranger**: 24 frecce invece di 12 (`RANGER_BOW` in `weaponAffinityConfig.ts`, `ammoMultiplier` 2). L'equipaggiamento e la bottega mostrano la riga di classe "MUNIZIONI +100%".
+- **Tiro rapido dell'arco** (`bowShot`): 10 danni invece di 8, per chiunque impugni l'arco.
+- **Colpo di sangue**: costa 8 di salute invece di 15.
+- **Simulatore** (`tools/balance.mjs`): bot per ogni classe, sezioni per classe (boss, mosse una alla volta, partite alle tre difficoltà, build), antiblocco e conteggio dei blocchi, sezioni in processi paralleli (circa 5 minuti). Opzioni `--core`, `--equipment`, `--classes`, `--class=<id>`, `--part=...`; tolte `--characters`, `--mage` e `--build`. Baseline aggiornato.
+- `classes-phase0.test.mjs` e `classes-phase3.test.mjs` aggiornati per l'arco del Ranger.
+- Documenti: BALANCE (sezione 6B), PIANO_CLASSI, GAME_MANUAL, ARCHITECTURE, CODE_MANUAL, TESTING, FEATURES; agente `balance-check`.
+- Versione portata a 2.6.1 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Invariato
+- HP e fasi dei boss, tabella di compatibilità (a parte l'arco del Ranger), altre mosse, punti attributo, gemma e prezzi (questi ultimi due non misurati: il simulatore non usa la bottega).
+### Verificato
+- `npm run typecheck`, `npm test` (1513 controlli in 36 file), `npm run verify-docs`, `npm run test:browser` (180 controlli); `npm run balance` identico al nuovo baseline.
+
 ## 2.6.0 – Classi, Fase 6A: grafica delle mosse (2026-11-26)
 Solo grafica: danni, costi, tempi e hitbox restano quelli di prima, `npm run balance` identico al baseline.
 ### Aggiunto
