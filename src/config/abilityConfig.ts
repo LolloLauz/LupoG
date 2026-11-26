@@ -251,7 +251,7 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     strike("abilityHotAxe", 30, { x: 6, y: 2, width: 26, height: 22 }, { elements: ["fire"] })),
   earthquake: attackAbility("earthquake", "TERREMOTO", "Scuote tutti intorno", { stamina: 40 }, 7000,
     strike("abilityEarthquake", 20, AROUND_HITBOX, { elements: ["shock"] }), "shockwave"),
-  bloodStrike: attackAbility("bloodStrike", "COLPO DI SANGUE", "Paghi con la salute", { health: 15 }, 6000,
+  bloodStrike: attackAbility("bloodStrike", "COLPO DI SANGUE", "Paghi con la salute", { health: 8 }, 6000,
     strike("abilityBloodStrike", 55, { x: 4, y: 0, width: 30, height: 24 }, { durationMs: 620, hitStartMs: 300, hitEndMs: 440, breaksGuard: true })),
 
   // --- Classi Fase 5: Paladino ---

@@ -36,7 +36,7 @@ export default async function (t, load) {
   // --- la tabella, cella per cella (I = arma iniziale, ×1; ★ preferita; ✓ neutra; ▼ malus; ✗ vietata) ---
   const EXPECTED = {
     knight: { sword: "I", dagger: "✓", spear: "★", axe: "✓", mace: "✓", greatsword: "★", bow: "▼", crossbow: "▼", throwingKnives: "▼", javelin: "✓", staff: "✗" },
-    ranger: { sword: "✓", dagger: "✓", spear: "▼", axe: "▼", mace: "▼", greatsword: "✗", bow: "I", crossbow: "★", throwingKnives: "★", javelin: "★", staff: "✗" },
+    ranger: { sword: "✓", dagger: "✓", spear: "▼", axe: "▼", mace: "▼", greatsword: "✗", bow: "A", crossbow: "★", throwingKnives: "★", javelin: "★", staff: "✗" },
     berserker: { sword: "✓", dagger: "▼", spear: "✓", axe: "I", mace: "✓", greatsword: "★", bow: "▼", crossbow: "▼", throwingKnives: "▼", javelin: "✓", staff: "✗" },
     paladin: { sword: "★", dagger: "▼", spear: "✓", axe: "★", mace: "I", greatsword: "▼", bow: "▼", crossbow: "▼", throwingKnives: "▼", javelin: "▼", staff: "✗" },
     mage: { sword: "✓", dagger: "✓", spear: "✗", axe: "✗", mace: "✗", greatsword: "✗", bow: "✗", crossbow: "✗", throwingKnives: "✗", javelin: "✗", staff: "I" },
@@ -50,11 +50,15 @@ export default async function (t, load) {
     for (const weaponId of weaponIds) {
       const symbol = EXPECTED[characterId][weaponId];
       const cell = getWeaponAffinity(characterId, weaponId);
-      const isRight = symbol === "✗" ? !cell.isAllowed && cell.lootSubstituteId !== undefined : cell === SYMBOL_VALUES[symbol] && cell.isAllowed;
+      // A = arco del Ranger (Classi Fase 6B): arma iniziale a ×1, con il doppio delle frecce
+      const isRight = symbol === "✗" ? !cell.isAllowed && cell.lootSubstituteId !== undefined
+        : symbol === "A" ? cell.isAllowed && cell.damageMultiplier === 1 && cell.recoveryMultiplier === 1 && cell.ammoMultiplier === 2
+        : cell === SYMBOL_VALUES[symbol] && cell.isAllowed;
       t(`tabella: ${characterId} con ${weaponId} = ${symbol}`, isRight, JSON.stringify(cell));
     }
   }
-  t("la ★ dell'arma iniziale vale ×1 per ogni classe", CHARACTER_ORDER.every((id) => getWeaponAffinity(id, CHARACTER_CONFIG[id].startingWeaponId) === NEUTRAL_WEAPON_AFFINITY));
+  t("la ★ dell'arma iniziale vale ×1 su danno e recupero per ogni classe", CHARACTER_ORDER.every((id) => { const cell = getWeaponAffinity(id, CHARACTER_CONFIG[id].startingWeaponId); return cell.damageMultiplier === 1 && cell.recoveryMultiplier === 1; }));
+  t("solo l'arco del Ranger, tra le armi iniziali, ha una capienza diversa", CHARACTER_ORDER.filter((id) => getWeaponAffinity(id, CHARACTER_CONFIG[id].startingWeaponId) !== NEUTRAL_WEAPON_AFFINITY).join() === "ranger");
   t("al massimo un divieto per le classi senza magia, oltre al bastone",
     CHARACTER_ORDER.filter((id) => id !== "mage").every((id) => weaponIds.filter((weaponId) => weaponId !== "staff" && !WEAPON_AFFINITY_CONFIG[id][weaponId].isAllowed).length <= 1));
 
@@ -89,7 +93,7 @@ export default async function (t, load) {
   {
     const ranger = grounded("ranger");
     const refused = ranger.equipWeapon(WEAPON_CONFIG.greatsword);
-    t("equipWeapon rifiuta un'arma vietata (Ranger con lo spadone): false e l'arma non cambia", refused === false && ranger.equippedWeapon.id === "bow" && JSON.stringify(ranger.weaponAffinity) === JSON.stringify(NEUTRAL_WEAPON_AFFINITY));
+    t("equipWeapon rifiuta un'arma vietata (Ranger con lo spadone): false e l'arma non cambia", refused === false && ranger.equippedWeapon.id === "bow" && JSON.stringify(ranger.weaponAffinity) === JSON.stringify(getWeaponAffinity("ranger", "bow")));
     t("equipWeapon accetta le armi permesse", grounded("mage").equipWeapon(WEAPON_CONFIG.dagger) === true);
     t("messaggio del divieto", FORBIDDEN_WEAPON_MESSAGE === "NON PUOI USARLA");
   }
@@ -111,8 +115,8 @@ export default async function (t, load) {
   }
 
   // --- munizioni secondo la classe ---
-  t("munizioni ★ del Ranger: coltelli 9, balestra 9, giavellotti 4 (per difetto); arco 12 (iniziale)",
-    getWeaponMaxAmmo("ranger", "throwingKnives") === 9 && getWeaponMaxAmmo("ranger", "crossbow") === 9 && getWeaponMaxAmmo("ranger", "javelin") === 4 && getWeaponMaxAmmo("ranger", "bow") === 12);
+  t("munizioni ★ del Ranger: coltelli 9, balestra 9, giavellotti 4 (per difetto); arco 24 (iniziale, ×2)",
+    getWeaponMaxAmmo("ranger", "throwingKnives") === 9 && getWeaponMaxAmmo("ranger", "crossbow") === 9 && getWeaponMaxAmmo("ranger", "javelin") === 4 && getWeaponMaxAmmo("ranger", "bow") === 24);
   t("munizioni delle altre classi: quelle dell'arma; armi senza munizioni: infinite",
     getWeaponMaxAmmo("knight", "throwingKnives") === 6 && getWeaponMaxAmmo(null, "javelin") === 3 && getWeaponMaxAmmo("ranger", "sword") === undefined);
   {

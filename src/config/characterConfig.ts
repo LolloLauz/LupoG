@@ -46,8 +46,8 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     trait: "PASSIVA: LE FRECCE SI RICARICANO",
     spriteSuffix: "Ranger",
     startingWeaponId: "bow",
-    // passiva: una freccia ogni 3 secondi (valore da bilanciare nella Fase 6)
-    ammoRegeneration: { weaponId: "bow", intervalMs: 3000 },
+    // passiva: una freccia ogni 1,5 secondi (Classi Fase 6B; erano 3)
+    ammoRegeneration: { weaponId: "bow", intervalMs: 1500 },
     maxHealth: 75,
     movementSpeed: 96,
     damageMultiplier: 1,

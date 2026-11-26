@@ -6,8 +6,10 @@ verificarli dopo una modifica. Tutti i valori si cambiano in `src/config/`.
 ## Come si misura: `npm run balance`
 
 `tools/balance.mjs` fa giocare un **bot** nel gioco reale (stesse classi del gioco, senza grafica)
-e stampa duelli, boss, livelli e partite complete. Con `npm run balance -- --quick` è più rapido
-ma meno preciso. Le sezioni si possono lanciare da sole: `--characters`, `--mage`, `--equipment` e, dalla Classi Fase 4, `--build`.
+e stampa duelli, boss, livelli, partite complete e una sezione per ogni classe. Dura circa 5 minuti (le sezioni girano in
+processi paralleli); con `npm run balance -- --quick` è più rapido ma meno preciso. Le sezioni si possono lanciare da sole:
+`--core` (controllo con il Cavaliere e la sola spada), `--equipment`, `--classes` e `--class=<id>`, quest'ultima anche con
+`--part=boss,moves,runs,builds`. Le opzioni `--characters`, `--mage` e `--build`, citate nelle sezioni storiche, non ci sono più.
 
 Due profili di bot:
 
@@ -161,6 +163,78 @@ Dalla 2.1 le gemme valgono 30 monete (8 gemme in tutto il gioco: 240 monete) e i
 Raccogliendo tutto e sconfiggendo tutti i nemici del livello si guadagnano da 74 monete (livello 1) a 154 (livello 7), boss ed élite compresi;
 una pozione costa 40. Il valore della gemma è provvisorio. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
 perché il gioco sembrava già facile per il bot.
+
+## Classi Fase 6B: bilanciamento delle cinque classi (2.6.1)
+
+### Come misura il simulatore
+
+- **Bot di classe.** Ogni classe combatte con la sua arma iniziale e usa tutte le mosse note, scelte in base ai loro dati
+  (area, proiettile, scatto, guardia, sinergia). Il Ranger tira caricato, si accovaccia contro i nemici bassi e senza frecce arretra.
+- **Partite complete.** Facile, Normale e Difficile, con le vite della difficoltà. I punti attributo vanno a turno
+  nell'attributo di classe (quello con la base più alta, Vitalità esclusa; Cavaliere e Paladino usano la Forza) e in
+  Vitalità; quando sono al massimo, i punti in più vanno in Vitalità e poi negli altri attributi, così nessuno resta da spendere. Con "bottino" il bot scarta
+  le armature di cui non ha la Forza richiesta.
+- **Blocchi.** Il report conta a parte i tentativi finiti a tempo scaduto. Nel baseline sono zero: se ricompaiono, prima di
+  toccare i numeri va controllato il bot. Durante la fase **tutti gli 0% indagati erano difetti del bot** (portata della mazza,
+  tiri contro ostacoli o sopra nemici bassi, giri a vuoto su spuntoni e corpi, boss non confinato nell'arena).
+- **Controllo.** Duelli, boss, livelli, partite ed equipaggiamento del Cavaliere con la sola spada sono rimasti identici.
+
+### Bersaglio e risultati
+
+Bersaglio: bot "medio" senza equipaggiamento con almeno il 95% di partite vinte in Facile, 90% in Normale e 70% in Difficile.
+Tra parentesi il risultato con il bottino di fine livello (60 partite per cella).
+
+| Classe | Facile | Normale | Difficile |
+|---|---|---|---|
+| Cavaliere | 100% (100%) | 100% (100%) | 95% (100%) |
+| Ranger | 100% (97%) | 100% (95%) | 72% (95%) |
+| Berserker | 100% (100%) | 100% (100%) | 100% (100%) |
+| Mago | 100% (100%) | 100% (100%) | 75% (100%) |
+| Paladino | 100% (100%) | 100% (100%) | 100% (100%) |
+
+In Difficile restano 28 punti tra il Berserker e il Ranger: sono dentro il bersaglio, ma sono la prima cosa da rivedere
+dopo una prova con persone. Contro i boss da soli (Normale) tutte le classi vincono sempre: **HP e fasi dei boss non sono cambiati**.
+
+### Cosa è cambiato
+
+| Valore | Prima | Dopo | Perché |
+|---|---|---|---|
+| Ricarica delle frecce del Ranger | 3 s | 1,5 s | il Ranger restava senza modo di attaccare |
+| Frecce del Ranger (`ammoMultiplier` di Ranger × arco) | 12 | 24 | come sopra; tocca solo il Ranger |
+| Danno del tiro rapido dell'arco | 8 | 10 | vale per chiunque impugni l'arco (per le altre classi resta ▼) |
+| Costo del colpo di sangue (salute) | 15 | 8 | usandola, il Berserker perdeva più salute che senza mosse |
+
+Il Ranger in Difficile partiva dallo **0%** (con il bottino 58%). Una sola leva per volta (ricarica, salute, frecce o tiro)
+si fermava al 20%; la salute non è servita ed è rimasta 75. Con il tiro rapido a 8 i risultati non erano regolari (il bot
+passa dal tiro caricato a quello rapido secondo le frecce rimaste), quindi valori vicini a questi vanno rimisurati.
+
+**Rimasti invariati:** la tabella di compatibilità (a parte l'arco del Ranger), le altre mosse, i punti attributo
+(3 per livello e 2 per boss) e la gemma (30 monete). Il simulatore **non usa la bottega**, quindi il valore della gemma e i
+prezzi non sono misurati.
+
+### Mosse una alla volta (cinque boss, Normale, bot medio)
+
+Salute persa senza mosse → con tutte: Cavaliere 22% → 24%, Ranger 29% → 20%, Berserker 29% → 24%, Mago 97% → 30%
+(senza incantesimi vince il 68%), Paladino 40% → 37%.
+
+- **Colpo di scudo** (da solo 26% contro 22%): raddoppiare il danno non cambia il risultato. Serve a stordire, e i boss non si
+  stordiscono; il suo valore contro i nemici comuni non è misurato. Invariato.
+- **Colpo di sangue** (da solo 36% contro 29%): resta uno scambio tra salute e velocità (duello più corto di 2 s).
+- **Balzo arcano** da solo peggiora il risultato del Mago: il bot lo usa al posto della schivata. È una mossa di movimento, che
+  il simulatore misura male. Invariato.
+
+### Attributi (Difficile, bot medio, senza equipaggiamento)
+
+| Classe | Nessun punto | Tutto nell'attributo di classe | Tutto in Vitalità |
+|---|---|---|---|
+| Cavaliere | 7% | 82% (Forza) | 100% |
+| Ranger | 0% | 55% (Destrezza) | 45% |
+| Berserker | 83% | 100% (Forza) | 100% |
+| Mago | 0% | 72% (Intelligenza) | 12% |
+| Paladino | 37% | 100% (Forza) | 100% |
+
+"Tutto in" un attributo significa: prima quello, fino al massimo, poi i punti in più altrove.
+In Difficile **spendere i punti è necessario** per quasi tutte le classi. Per il Mago conta quasi solo l'Intelligenza.
 
 ## Classi Fase 5: mosse, passivi e sinergie (2.5.0)
 
@@ -321,7 +395,7 @@ boss conviene rilanciare `npm run balance` e guardare più valori vicini.
 | Danni e durata degli attacchi, combo | `src/config/playerConfig.ts` | `ATTACK_DEFINITIONS`, `COMBO_DEFINITIONS` |
 | Nemici normali | `src/config/enemyConfig.ts` | `ENEMY_CONFIG` |
 | Boss e fasi | `src/config/enemyConfig.ts` | `BOSS_CONFIG` |
-| Ricarica delle frecce del Ranger (2.1.1: una ogni 3 s; non misurata, il bot usa solo la spada; valore da rivedere nella Classi Fase 6) | `src/config/characterConfig.ts` | `ammoRegeneration.intervalMs` |
+| Ricarica delle frecce del Ranger (una ogni 1,5 s dalla 2.6.1) | `src/config/characterConfig.ts` | `ammoRegeneration.intervalMs` |
 | Mago: salute, mana e recupero (2.2.0) | `src/config/characterConfig.ts` | `CHARACTER_CONFIG.mage` |
 | Mosse e incantesimi di tutte le classi: costi, ricariche, danni, elementi | `src/config/abilityConfig.ts` | `ABILITY_CONFIG` |
 | Mosse di partenza e probabilità dal forziere (2.5.0) | `src/config/abilityConfig.ts` | `ABILITY_UNLOCK_CONFIG` |

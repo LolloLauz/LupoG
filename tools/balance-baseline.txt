@@ -1,5 +1,3 @@
-
-
 === DUELLI (un gruppo di nemici su terreno piano, giocatore a 100 HP) ===
 scheletro         rusher (non schiva)      HP persi  10.0   tempo 3.0s
 goblin            rusher (non schiva)      HP persi   8.0   tempo 2.4s
@@ -47,6 +45,7 @@ Livello 7 medio (schiva a volte)   vittorie  98%   HP persi  93   tempo 63s
 rusher (non schiva)      partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie per livello 0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.15 / 0.75
 medio (schiva a volte)   partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie per livello 0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.08
 
+
 === EQUIPAGGIAMENTO (E5): PARTITE COMPLETE DEL CAVALIERE, SENZA, CON IL BOTTINO DI FINE LIVELLO, AL MASSIMO ===
 rusher (non schiva)      senza    partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie 0.90
 rusher (non schiva)      bottino  partite vinte  97%   vite rimaste (se vinta) 3.00   morti medie 0.10
@@ -55,48 +54,191 @@ medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2
 medio (schiva a volte)   bottino  partite vinte 100%   vite rimaste (se vinta) 2.98   morti medie 0.02
 medio (schiva a volte)   massimo  partite vinte  95%   vite rimaste (se vinta) 2.53   morti medie 0.60
 
-=== PERSONAGGI: PARTITE COMPLETE (tutti con la spada: si misurano salute, velocità, danno, difesa, schivata, stamina, cura; con e senza l'abilità L) ===
-CAVALIERE  rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 2.10   morti medie 0.90
-CAVALIERE  rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 2.15   morti medie 0.85
-CAVALIERE  medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 2.90   morti medie 0.10
-CAVALIERE  medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03
-RANGER     rusher (non schiva)      senza abilità partite vinte  15%   vite rimaste (se vinta) 1.33   morti medie 2.80
-RANGER     rusher (non schiva)      con abilità   partite vinte   5%   vite rimaste (se vinta) 1.00   morti medie 2.95
-RANGER     medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 2.82   morti medie 0.18
-RANGER     medio (schiva a volte)   con abilità   partite vinte  93%   vite rimaste (se vinta) 2.34   morti medie 0.82
-BERSERKER  rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
-BERSERKER  rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
-BERSERKER  medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
-BERSERKER  medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 2.95   morti medie 0.05
-PALADINO   rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 2.98   morti medie 0.02
-PALADINO   rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 2.98   morti medie 0.02
-PALADINO   medio (schiva a volte)   senza abilità partite vinte  95%   vite rimaste (se vinta) 2.53   morti medie 0.60
-PALADINO   medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
+=== CLASSE: CAVALIERE (Classi Fase 6B: bot di classe con l'arma iniziale e le sue mosse) ===
+--- boss da soli, difficoltà normale, tutte le mosse ---
+CAVALIERE NERO       rusher (non schiva)      vittorie 100%   salute persa  19%   tempo  19s
+CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   salute persa  16%   tempo  19s
+STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   salute persa  25%   tempo  32s
+STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   salute persa  25%   tempo  32s
+RE DEI LUPI          rusher (non schiva)      vittorie 100%   salute persa  24%   tempo  29s
+RE DEI LUPI          medio (schiva a volte)   vittorie 100%   salute persa  21%   tempo  30s
+SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   salute persa  33%   tempo  31s
+SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   salute persa  27%   tempo  31s
+SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   salute persa  33%   tempo  34s
+SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   salute persa  29%   tempo  35s
+--- una mossa alla volta contro i cinque boss (media, bot medio) ---
+nessuna mossa            vittorie 100%   salute persa  22%   tempo  32s
+solo ONDA D'URTO         vittorie 100%   salute persa  22%   tempo  32s
+solo AFFONDO             vittorie 100%   salute persa  19%   tempo  30s
+solo COLPO DI SCUDO      vittorie 100%   salute persa  26%   tempo  33s
+solo LAMA ARDENTE        vittorie 100%   salute persa  22%   tempo  31s
+tutte                    vittorie 100%   salute persa  24%   tempo  30s
+--- partite complete (vite della difficoltà; punti a turno tra attributo di classe e Vitalità) ---
+FACILE     rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 248s
+FACILE     rusher (non schiva)      bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 221s
+FACILE     medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 251s
+FACILE     medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 223s
+NORMALE    rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 270s
+NORMALE    rusher (non schiva)      bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 240s
+NORMALE    medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 271s
+NORMALE    medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 240s
+DIFFICILE  rusher (non schiva)      senza    vinte  45%   morti medie 1.47 (0.0 0.0 0.7 0.0 0.0 0.4 0.5)   blocchi 0.00   tempo 339s
+DIFFICILE  rusher (non schiva)      bottino  vinte 100%   morti medie 0.05 (0.0 0.0 0.1 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 281s
+DIFFICILE  medio (schiva a volte)   senza    vinte  95%   morti medie 0.48 (0.0 0.0 0.0 0.0 0.0 0.2 0.3)   blocchi 0.00   tempo 340s
+DIFFICILE  medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 280s
+--- build: tutti i punti in un attributo (l'eccedenza in Vitalità, poi negli altri), difficoltà difficile, bot medio, senza equipaggiamento ---
+nessun punto speso   vinte   7%   morti medie 1.93 (0.0 0.0 0.0 0.0 0.0 1.6 0.3)   blocchi 0.00   tempo 327s
+FORZA                vinte  82%   morti medie 0.78 (0.0 0.0 0.0 0.0 0.0 0.6 0.2)   blocchi 0.00   tempo 338s
+VITALITA'            vinte 100%   morti medie 0.18 (0.0 0.0 0.0 0.0 0.0 0.0 0.1)   blocchi 0.00   tempo 333s
 
-=== MAGO (Classi Fase 2): BASTONE E INCANTESIMI (7 dardo, 8 nova, 9 balzo, 0 barriera contro i boss) ===
-MAGO contro CAVALIERE NERO       rusher (non schiva)      vittorie 100%   HP persi 22   tempo 19s
-MAGO contro CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   HP persi 13   tempo 20s
-MAGO contro STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   HP persi 33   tempo 32s
-MAGO contro STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   HP persi 25   tempo 33s
-MAGO contro RE DEI LUPI          rusher (non schiva)      vittorie 100%   HP persi 24   tempo 28s
-MAGO contro RE DEI LUPI          medio (schiva a volte)   vittorie 100%   HP persi 20   tempo 30s
-MAGO contro SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   HP persi 38   tempo 32s
-MAGO contro SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   HP persi 29   tempo 35s
-MAGO contro SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   HP persi 33   tempo 34s
-MAGO contro SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   HP persi 26   tempo 36s
-MAGO rusher (non schiva)      senza    partite vinte 100%   vite rimaste (se vinta) 2.88   morti medie 0.12 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.10)
-MAGO rusher (non schiva)      bottino  partite vinte  90%   vite rimaste (se vinta) 3.00   morti medie 0.30 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.25)
-MAGO medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2.85   morti medie 0.15 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.07 / 0.08)
-MAGO medio (schiva a volte)   bottino  partite vinte  90%   vite rimaste (se vinta) 3.00   morti medie 0.30 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.25)
+=== CLASSE: RANGER (Classi Fase 6B: bot di classe con l'arma iniziale e le sue mosse) ===
+--- boss da soli, difficoltà normale, tutte le mosse ---
+CAVALIERE NERO       rusher (non schiva)      vittorie 100%   salute persa   0%   tempo  17s
+CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   salute persa   0%   tempo  17s
+STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   salute persa  33%   tempo  33s
+STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   salute persa  30%   tempo  33s
+RE DEI LUPI          rusher (non schiva)      vittorie 100%   salute persa  11%   tempo  24s
+RE DEI LUPI          medio (schiva a volte)   vittorie 100%   salute persa  12%   tempo  25s
+SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   salute persa  34%   tempo  30s
+SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   salute persa  31%   tempo  31s
+SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   salute persa  30%   tempo  32s
+SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   salute persa  28%   tempo  32s
+--- una mossa alla volta contro i cinque boss (media, bot medio) ---
+nessuna mossa            vittorie 100%   salute persa  29%   tempo  32s
+solo TIRO IN RITIRATA    vittorie 100%   salute persa  21%   tempo  30s
+solo FRECCIA VELENOSA    vittorie 100%   salute persa  27%   tempo  31s
+solo FRECCIA GELIDA      vittorie 100%   salute persa  28%   tempo  32s
+solo FRECCIA DI FUOCO    vittorie 100%   salute persa  25%   tempo  31s
+tutte                    vittorie 100%   salute persa  20%   tempo  28s
+--- partite complete (vite della difficoltà; punti a turno tra attributo di classe e Vitalità) ---
+FACILE     rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 261s
+FACILE     rusher (non schiva)      bottino  vinte  82%   morti medie 0.92 (0.0 0.0 0.0 0.0 0.2 0.8 0.0)   blocchi 0.00   tempo 246s
+FACILE     medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 271s
+FACILE     medio (schiva a volte)   bottino  vinte  97%   morti medie 0.47 (0.0 0.0 0.0 0.0 0.1 0.4 0.0)   blocchi 0.00   tempo 248s
+NORMALE    rusher (non schiva)      senza    vinte 100%   morti medie 0.10 (0.0 0.0 0.0 0.0 0.0 0.0 0.1)   blocchi 0.00   tempo 306s
+NORMALE    rusher (non schiva)      bottino  vinte  88%   morti medie 0.35 (0.0 0.0 0.0 0.1 0.1 0.3 0.0)   blocchi 0.00   tempo 260s
+NORMALE    medio (schiva a volte)   senza    vinte 100%   morti medie 0.05 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 311s
+NORMALE    medio (schiva a volte)   bottino  vinte  95%   morti medie 0.42 (0.0 0.0 0.0 0.0 0.1 0.3 0.0)   blocchi 0.00   tempo 272s
+DIFFICILE  rusher (non schiva)      senza    vinte  97%   morti medie 0.50 (0.0 0.0 0.0 0.1 0.0 0.4 0.0)   blocchi 0.00   tempo 406s
+DIFFICILE  rusher (non schiva)      bottino  vinte  70%   morti medie 0.67 (0.0 0.0 0.0 0.1 0.0 0.5 0.0)   blocchi 0.00   tempo 321s
+DIFFICILE  medio (schiva a volte)   senza    vinte  72%   morti medie 0.83 (0.0 0.0 0.0 0.5 0.1 0.1 0.1)   blocchi 0.00   tempo 383s
+DIFFICILE  medio (schiva a volte)   bottino  vinte  95%   morti medie 0.32 (0.0 0.0 0.0 0.2 0.0 0.1 0.0)   blocchi 0.00   tempo 341s
+--- build: tutti i punti in un attributo (l'eccedenza in Vitalità, poi negli altri), difficoltà difficile, bot medio, senza equipaggiamento ---
+nessun punto speso   vinte   0%   morti medie 2.00 (0.0 0.0 0.0 0.7 0.3 0.9 0.1)   blocchi 0.00   tempo 344s
+DESTREZZA            vinte  55%   morti medie 1.17 (0.0 0.0 0.0 0.9 0.0 0.1 0.1)   blocchi 0.00   tempo 359s
+FORZA                vinte   5%   morti medie 1.95 (0.0 0.0 0.0 0.7 0.3 0.8 0.1)   blocchi 0.00   tempo 348s
+VITALITA'            vinte  45%   morti medie 1.42 (0.0 0.0 0.0 0.3 0.1 0.8 0.3)   blocchi 0.00   tempo 430s
 
-=== BUILD (Classi Fase 4): PARTITE COMPLETE DEL CAVALIERE CON L'ONDA D'URTO, TUTTI I PUNTI IN UN ATTRIBUTO ===
-rusher (non schiva)      nessuna       partite vinte 100%   vite rimaste (se vinta) 2.15   morti medie 0.85   tempo 378s   HP persi 798
-rusher (non schiva)      forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 310s   HP persi 552
-rusher (non schiva)      intelligenza  partite vinte 100%   vite rimaste (se vinta) 2.48   morti medie 0.52   tempo 353s   HP persi 710
-rusher (non schiva)      vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 331s   HP persi 731
-medio (schiva a volte)   nessuna       partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03   tempo 332s   HP persi 446
-medio (schiva a volte)   forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 310s   HP persi 395
-medio (schiva a volte)   intelligenza  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 324s   HP persi 424
-medio (schiva a volte)   vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 330s   HP persi 447
+=== CLASSE: BERSERKER (Classi Fase 6B: bot di classe con l'arma iniziale e le sue mosse) ===
+--- boss da soli, difficoltà normale, tutte le mosse ---
+CAVALIERE NERO       rusher (non schiva)      vittorie 100%   salute persa  10%   tempo  20s
+CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   salute persa  10%   tempo  20s
+STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   salute persa  28%   tempo  34s
+STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   salute persa  28%   tempo  34s
+RE DEI LUPI          rusher (non schiva)      vittorie 100%   salute persa  24%   tempo  30s
+RE DEI LUPI          medio (schiva a volte)   vittorie 100%   salute persa  24%   tempo  30s
+SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   salute persa  24%   tempo  32s
+SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   salute persa  25%   tempo  32s
+SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   salute persa  35%   tempo  35s
+SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   salute persa  35%   tempo  36s
+--- una mossa alla volta contro i cinque boss (media, bot medio) ---
+nessuna mossa            vittorie 100%   salute persa  29%   tempo  36s
+solo CARICA FURIOSA      vittorie 100%   salute persa  20%   tempo  33s
+solo ASCIA ROVENTE       vittorie 100%   salute persa  26%   tempo  35s
+solo TERREMOTO           vittorie 100%   salute persa  28%   tempo  35s
+solo COLPO DI SANGUE     vittorie 100%   salute persa  36%   tempo  34s
+tutte                    vittorie 100%   salute persa  24%   tempo  30s
+--- partite complete (vite della difficoltà; punti a turno tra attributo di classe e Vitalità) ---
+FACILE     rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 232s
+FACILE     rusher (non schiva)      bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 225s
+FACILE     medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 235s
+FACILE     medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 227s
+NORMALE    rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 244s
+NORMALE    rusher (non schiva)      bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 238s
+NORMALE    medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 247s
+NORMALE    medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 239s
+DIFFICILE  rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 278s
+DIFFICILE  rusher (non schiva)      bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 266s
+DIFFICILE  medio (schiva a volte)   senza    vinte 100%   morti medie 0.15 (0.0 0.0 0.0 0.0 0.0 0.0 0.1)   blocchi 0.00   tempo 292s
+DIFFICILE  medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 269s
+--- build: tutti i punti in un attributo (l'eccedenza in Vitalità, poi negli altri), difficoltà difficile, bot medio, senza equipaggiamento ---
+nessun punto speso   vinte  83%   morti medie 0.83 (0.0 0.0 0.0 0.0 0.0 0.3 0.6)   blocchi 0.00   tempo 321s
+FORZA                vinte 100%   morti medie 0.17 (0.0 0.0 0.0 0.0 0.0 0.0 0.1)   blocchi 0.00   tempo 292s
+VITALITA'            vinte 100%   morti medie 0.05 (0.0 0.0 0.0 0.0 0.0 0.0 0.1)   blocchi 0.00   tempo 291s
+
+=== CLASSE: MAGO (Classi Fase 6B: bot di classe con l'arma iniziale e le sue mosse) ===
+--- boss da soli, difficoltà normale, tutte le mosse ---
+CAVALIERE NERO       rusher (non schiva)      vittorie 100%   salute persa  27%   tempo  18s
+CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   salute persa  18%   tempo  19s
+STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   salute persa  40%   tempo  31s
+STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   salute persa  32%   tempo  32s
+RE DEI LUPI          rusher (non schiva)      vittorie 100%   salute persa  28%   tempo  27s
+RE DEI LUPI          medio (schiva a volte)   vittorie 100%   salute persa  28%   tempo  28s
+SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   salute persa  49%   tempo  32s
+SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   salute persa  36%   tempo  33s
+SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   salute persa  43%   tempo  33s
+SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   salute persa  37%   tempo  35s
+--- una mossa alla volta contro i cinque boss (media, bot medio) ---
+nessuna mossa            vittorie  68%   salute persa  97%   tempo  49s
+solo DARDO DI FUOCO      vittorie 100%   salute persa  36%   tempo  30s
+solo NOVA DI GELO        vittorie  85%   salute persa  77%   tempo  42s
+solo BALZO ARCANO        vittorie  56%   salute persa 109%   tempo  51s
+solo BARRIERA            vittorie  75%   salute persa  93%   tempo  49s
+tutte                    vittorie 100%   salute persa  30%   tempo  29s
+--- partite complete (vite della difficoltà; punti a turno tra attributo di classe e Vitalità) ---
+FACILE     rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 228s
+FACILE     rusher (non schiva)      bottino  vinte  98%   morti medie 0.08 (0.0 0.0 0.0 0.0 0.0 0.1 0.0)   blocchi 0.00   tempo 205s
+FACILE     medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 233s
+FACILE     medio (schiva a volte)   bottino  vinte 100%   morti medie 0.02 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 207s
+NORMALE    rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 259s
+NORMALE    rusher (non schiva)      bottino  vinte  97%   morti medie 0.10 (0.0 0.0 0.0 0.0 0.0 0.1 0.0)   blocchi 0.00   tempo 225s
+NORMALE    medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 266s
+NORMALE    medio (schiva a volte)   bottino  vinte 100%   morti medie 0.08 (0.0 0.0 0.0 0.0 0.0 0.1 0.0)   blocchi 0.00   tempo 234s
+DIFFICILE  rusher (non schiva)      senza    vinte   3%   morti medie 1.97 (0.0 0.0 0.3 0.0 0.0 1.6 0.0)   blocchi 0.00   tempo 300s
+DIFFICILE  rusher (non schiva)      bottino  vinte  93%   morti medie 0.45 (0.0 0.0 0.2 0.0 0.0 0.2 0.0)   blocchi 0.00   tempo 289s
+DIFFICILE  medio (schiva a volte)   senza    vinte  75%   morti medie 0.82 (0.0 0.0 0.0 0.0 0.0 0.8 0.0)   blocchi 0.00   tempo 342s
+DIFFICILE  medio (schiva a volte)   bottino  vinte 100%   morti medie 0.13 (0.0 0.0 0.0 0.0 0.0 0.1 0.0)   blocchi 0.00   tempo 290s
+--- build: tutti i punti in un attributo (l'eccedenza in Vitalità, poi negli altri), difficoltà difficile, bot medio, senza equipaggiamento ---
+nessun punto speso   vinte   0%   morti medie 2.00 (0.0 0.0 0.2 0.1 0.6 1.1 0.0)   blocchi 0.00   tempo 302s
+INTELLIGENZA         vinte  72%   morti medie 0.92 (0.0 0.0 0.0 0.0 0.0 0.9 0.0)   blocchi 0.00   tempo 343s
+FORZA                vinte   0%   morti medie 2.00 (0.0 0.0 0.2 0.0 0.5 1.2 0.0)   blocchi 0.00   tempo 297s
+VITALITA'            vinte  12%   morti medie 1.87 (0.0 0.0 0.0 0.0 0.0 1.5 0.3)   blocchi 0.00   tempo 387s
+
+=== CLASSE: PALADINO (Classi Fase 6B: bot di classe con l'arma iniziale e le sue mosse) ===
+--- boss da soli, difficoltà normale, tutte le mosse ---
+CAVALIERE NERO       rusher (non schiva)      vittorie 100%   salute persa  31%   tempo  28s
+CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   salute persa  22%   tempo  28s
+STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   salute persa  39%   tempo  41s
+STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   salute persa  30%   tempo  41s
+RE DEI LUPI          rusher (non schiva)      vittorie 100%   salute persa  45%   tempo  39s
+RE DEI LUPI          medio (schiva a volte)   vittorie 100%   salute persa  37%   tempo  39s
+SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   salute persa  54%   tempo  41s
+SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   salute persa  38%   tempo  42s
+SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   salute persa  80%   tempo  46s
+SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   salute persa  57%   tempo  46s
+--- una mossa alla volta contro i cinque boss (media, bot medio) ---
+nessuna mossa            vittorie 100%   salute persa  40%   tempo  42s
+solo SCUDO               vittorie 100%   salute persa  37%   tempo  42s
+solo MARTELLO SACRO      vittorie 100%   salute persa  41%   tempo  41s
+solo CONSACRAZIONE       vittorie 100%   salute persa  38%   tempo  41s
+solo GIUDIZIO GELIDO     vittorie 100%   salute persa  39%   tempo  41s
+tutte                    vittorie 100%   salute persa  37%   tempo  39s
+--- partite complete (vite della difficoltà; punti a turno tra attributo di classe e Vitalità) ---
+FACILE     rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 349s
+FACILE     rusher (non schiva)      bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 309s
+FACILE     medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 340s
+FACILE     medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 306s
+NORMALE    rusher (non schiva)      senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 374s
+NORMALE    rusher (non schiva)      bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 339s
+NORMALE    medio (schiva a volte)   senza    vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 368s
+NORMALE    medio (schiva a volte)   bottino  vinte 100%   morti medie 0.00 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 331s
+DIFFICILE  rusher (non schiva)      senza    vinte   0%   morti medie 2.00 (0.0 0.0 1.0 0.0 0.0 0.6 0.4)   blocchi 0.00   tempo 440s
+DIFFICILE  rusher (non schiva)      bottino  vinte  95%   morti medie 0.78 (0.0 0.0 0.7 0.0 0.0 0.1 0.0)   blocchi 0.00   tempo 424s
+DIFFICILE  medio (schiva a volte)   senza    vinte 100%   morti medie 0.12 (0.0 0.0 0.0 0.0 0.0 0.0 0.1)   blocchi 0.00   tempo 437s
+DIFFICILE  medio (schiva a volte)   bottino  vinte 100%   morti medie 0.02 (0.0 0.0 0.0 0.0 0.0 0.0 0.0)   blocchi 0.00   tempo 383s
+--- build: tutti i punti in un attributo (l'eccedenza in Vitalità, poi negli altri), difficoltà difficile, bot medio, senza equipaggiamento ---
+nessun punto speso   vinte  37%   morti medie 1.57 (0.0 0.0 0.1 0.0 0.0 0.8 0.7)   blocchi 0.00   tempo 489s
+FORZA                vinte 100%   morti medie 0.15 (0.0 0.0 0.0 0.0 0.0 0.1 0.1)   blocchi 0.00   tempo 432s
+VITALITA'            vinte 100%   morti medie 0.17 (0.0 0.0 0.1 0.0 0.0 0.0 0.1)   blocchi 0.00   tempo 456s
 
 (rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)

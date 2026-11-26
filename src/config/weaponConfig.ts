@@ -103,7 +103,7 @@ const NO_HITBOX = { x: 0, y: 0, width: 0, height: 0 } as const;
 
 /** Arco: J = tiro rapido; K tenuto premuto = tiro caricato (danno e velocità secondo la carica). */
 const BOW_ATTACKS: Record<string, AttackDefinition> = {
-  bowShot: { id: "bowShot", damage: 8, durationMs: 300, hitStartMs: 0, hitEndMs: 0, cooldownMs: 150, hitbox: NO_HITBOX, animation: "bowShot", projectile: { projectileId: "playerArrow", launchAtMs: 150, originX: 20, originY: 9, aimY: 0 } },
+  bowShot: { id: "bowShot", damage: 10, durationMs: 300, hitStartMs: 0, hitEndMs: 0, cooldownMs: 150, hitbox: NO_HITBOX, animation: "bowShot", projectile: { projectileId: "playerArrow", launchAtMs: 150, originX: 20, originY: 9, aimY: 0 } },
   bowCharge: {
     id: "bowCharge",
     damage: 10,
