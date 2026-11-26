@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.2.0.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.3.0.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -120,7 +120,7 @@ cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale e ab
 | **Paladino** | 110 | 72 | ×1 | ×0,75 | 120 (25) | 30, 0,8 s | mazza | **Scudo** (e cura lenta: 1 HP/s dopo 4 s senza colpi) |
 
 - Ogni nuova partita inizia con la **sola arma iniziale** del personaggio scelto. Durante la partita puoi cambiare arma: il personaggio non limita
-  le armi, cambia solo le statistiche. Il **Mago** è l'eccezione: usa solo il **bastone**, e il bastone è solo suo (vedi "Le armi").
+  le armi, cambia solo le statistiche; ogni classe ha però armi preferite, penalizzate o vietate (vedi "Compatibilità classe-arma" nelle armi). Il **Mago** è l'eccezione più forte: usa il **bastone**, che è solo suo, oltre a **spada e pugnale**.
 - Velocità: la velocità dell'arma in mano si moltiplica con quella del personaggio (es. Paladino con l'ascia: 72 × 0,85).
 - I power-up si sommano ai tratti: la Furia moltiplica anche il danno del Berserker, lo Scudo anche la difesa del Paladino.
 - **Passiva del Ranger:** le frecce dell'**arco** si ricaricano da sole, **una ogni 3 secondi** (vedi "Le armi"). Nella scheda del
@@ -246,7 +246,33 @@ Oltre alla spada ci sono cinque armi corpo a corpo, più il bastone del Mago. Si
 
 | **Bastone** (solo Mago) | 8 / 8 danni, 320 ms | **Mulinello** (J ×3): 8 + 8 + 14; **Spazzata arcana** (J, K): 8 + 16, colpisce in basso anche **dietro** di te | 18 danni, 560 ms | normale | **catalizzatore**: ridà **5 mana** per ogni bersaglio colpito e rende gli incantesimi più forti (×1,2) e meno cari (×0,85); in picchiata 14 danni; non ha munizioni |
 
-**Compatibilità.** Il Mago usa **solo il bastone**; tutte le altre classi usano ogni arma **tranne il bastone**. Le armi trovate che il Mago non può usare (forzieri, nemici d'élite, trofei dei boss, bottega) diventano **bastoni**, di rarità estratta come per le altre armi; il bastone Leggendario è il **BASTONE DELLE STELLE** (+14 danno, elemento folgore, recupero più rapido). Per ora il divieto vale solo per il bottino: dalla Fase 3 del piano varrà anche al momento di impugnare.
+**Compatibilità classe-arma** (Classi Fase 3). Ogni classe ha un rapporto diverso con **ciascuna** arma. Legenda: **I** arma iniziale (valori normali), **✓** normale, **★** preferita, **▼** penalizzata, **✗** vietata.
+
+| Arma | Cavaliere | Ranger | Berserker | Paladino | Mago |
+|---|---|---|---|---|---|
+| Spada | I | ✓ | ✓ | ★ | ✓ |
+| Pugnale | ✓ | ✓ | ▼ | ▼ | ✓ |
+| Lancia | ★ | ▼ | ✓ | ✓ | ✗ |
+| Ascia | ✓ | ▼ | I | ★ | ✗ |
+| Mazza | ✓ | ▼ | ✓ | I | ✗ |
+| Spadone | ★ | ✗ | ★ | ▼ | ✗ |
+| Arco | ▼ | I | ▼ | ▼ | ✗ |
+| Balestra | ▼ | ★ | ▼ | ▼ | ✗ |
+| Coltelli | ▼ | ★ | ▼ | ▼ | ✗ |
+| Giavellotto | ✓ | ★ | ✓ | ▼ | ✗ |
+| Bastone | ✗ | ✗ | ✗ | ✗ | I |
+
+| Segno | Effetto |
+|---|---|
+| ★ preferita | **+15% di danno**; per le armi a distanza **+50% di munizioni** (Ranger: coltelli 9, balestra 9, giavellotti 4; l'arco resta a 12) |
+| ▼ penalizzata | **-15% di danno** e recupero tra gli attacchi **+15%** (più lento) |
+| ✗ vietata | non si impugna, non si raccoglie ("NON PUOI USARLA"); dallo zaino resta dov'è |
+
+Bonus e malus valgono solo per gli **attacchi dell'arma**: le mosse speciali e gli incantesimi (tasti 7-0) hanno sempre il loro danno e la loro ricarica, qualunque arma si abbia in mano.
+
+Il Mago può ora impugnare anche **spada e pugnale**; il bastone resta solo suo. Il **catalizzatore** (mana e incantesimi più forti) vale però solo con il bastone.
+
+**Bottino filtrato.** Le armi vietate non compaiono mai a terra: forzieri, nemici d'élite, trofei dei boss, ricompensa finale e bottega le sostituiscono (rarità estratta come per le altre armi). Il **bastone** delle altre classi diventa la loro arma iniziale; lo **spadone** del Ranger diventa una **balestra**; per il Mago lo spadone diventa una **spada** e ogni altra arma vietata un **bastone**. In bottega il Mago trova sempre anche i bastoni tra le armi in vendita (di un'altra rarità rispetto al suo), non solo la spada. Il bastone Leggendario è il **BASTONE DELLE STELLE** (+14 danno, elemento folgore, recupero più rapido).
 
 I boss non vengono mai storditi: contro di loro ascia e mazza contano solo per il danno.
 
@@ -262,7 +288,7 @@ deviano con la spada e non hanno combo. Si usano anche in aria (lì non c'è la 
 
 Senza munizioni l'arma non tira ("SENZA MUNIZIONI"), nemmeno il tiro caricato dell'arco. Frecce e dardi tirati non si recuperano: in ogni
 livello c'è una **faretra** che, toccandola, riempie le munizioni di **tutte** le armi della borsa (se sono già piene resta a terra
-per dopo). Anche raccogliendo di nuovo un'arma con munizioni che hai già le sue munizioni tornano piene. Nella borsa il numero sotto l'icona indica le munizioni (in rosso quando sono finite).
+per dopo). Anche raccogliendo di nuovo un'arma con munizioni che hai già le sue munizioni tornano piene. Il **massimo** delle munizioni dipende dalla classe (con ★ +50%, vedi "Compatibilità classe-arma"). Nella borsa il numero sotto l'icona indica le munizioni (in rosso quando sono finite).
 I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno delle frecce).
 
 **Frecce del Ranger.** Solo con il Ranger le frecce dell'arco tornano da sole, **una ogni 3 secondi**, fino al massimo di 12:
@@ -309,13 +335,14 @@ La borsa ha **4 posti**, mostrati sotto la barra in alto a destra, ognuno con il
 - **1-4** usano il posto: un'arma diventa quella in mano (cornice dorata); una pozione di salute cura **30 HP** (a salute piena non viene sprecata); una **pozione di mana** ridà **40 mana** (a mana pieno resta, con la scritta "MANA PIENO").
 - Le pozioni di ogni tipo (salute, mana) stanno in un posto proprio, **al massimo 2 per tipo**: conservarle per i boss aiuta molto, quindi la scorta è piccola.
 - **Q** lascia a terra l'**arma in mano** (impugni la prossima della borsa); tenendo **Q** e premendo **1-4** lasci il contenuto di quel posto
-  (un'arma, oppure **una** pozione). Solo stando a terra; l'ultima arma non si può lasciare. Un'arma lasciata tiene le sue munizioni e si
+  (un'arma, oppure **una** pozione). Solo stando a terra; l'ultima arma non si può lasciare. Un'arma lasciata (anche dallo zaino) tiene le sue munizioni e si
   riprende con **E** dopo essersi allontanati un attimo; una pozione si riprende subito.
 - Un'arma **identica** a una che hai già non si prende due volte ("GIÀ NELLA BORSA"). Un'arma dello **stesso tipo ma diversa** (un'altra
   rarità o altri modificatori) prende il posto della tua, che va nello **zaino**.
 - **Borsa piena**: una nuova arma prende il posto di quella in mano, che va nello **zaino** (vedi "Equipaggiamento"); se anche lo zaino è
   pieno resta a terra nello stesso punto (puoi riprenderla dopo esserti allontanato un attimo). Una pozione in più non entra ("BORSA PIENA").
 - Se perdi una vita, la borsa torna **com'era all'inizio del livello** (come punteggio e monete): ciò che avevi raccolto nel livello è di nuovo a terra.
+- **Munizioni nello zaino**: un'arma da lancio messa nello zaino e ripresa (o scambiata a borsa piena, o comprata con la borsa piena) **conserva** le munizioni che aveva. Nello zaino le munizioni non si ricaricano.
 - Borsa, armature e zaino valgono **solo per la partita in corso**: la partita successiva riparte con la sola arma iniziale.
 - I **power-up**, le monete e le gemme non vanno nella borsa: si raccolgono toccandoli.
 
@@ -355,11 +382,12 @@ La difesa non scende mai sotto 1 danno per colpo.
 **Raccogliere un'armatura** (E): se il suo posto è libero la indossi subito, altrimenti va nello zaino ("ZAINO PIENO" se non c'è spazio).
 
 **Schermata dell'equipaggiamento** (tasto **I**, anche dalla pausa). Il gioco si ferma. In alto le armature indossate e la borsa, sotto lo
-**zaino** (12 posti per armi e armature di riserva) e il riassunto dei bonus; in basso la scheda dell'oggetto scelto. Frecce per scegliere:
+**zaino** (12 posti per armi e armature di riserva) e il riassunto dei bonus; in basso la scheda dell'oggetto scelto: nella riga del tipo compare il **PESO** (armature da 1 di stoffa a 4 di acciaio, la corazza conta il doppio). Per ora il peso è solo un dato: non cambia il gioco. Per le armi le prime righe della griglia mostrano i bonus e malus della tua classe: in **verde** "CLASSE DANNO +15%" e "CLASSE MUNIZIONI +50%", in **rosso** "CLASSE DANNO -15%", "CLASSE RECUPERO +15%" e, per le vietate, "NON PUOI USARLA". Frecce per scegliere:
 
 - **Invio** su un'armatura indossata la toglie (nello zaino); su un'arma della borsa la mette nello zaino (non l'ultima); su un oggetto dello
   zaino lo indossa o lo impugna (quello che aveva lo stesso posto torna nello zaino).
 - **Q** lascia a terra l'oggetto scelto (solo stando a terra).
+- Un'arma che la tua classe non può usare non si impugna dallo zaino: "NON PUOI USARLA".
 - Per gli oggetti dello zaino la scheda li **confronta** con quello che indossi: tra parentesi la differenza, **verde** se migliora,
   **rossa** se peggiora.
 
@@ -655,6 +683,7 @@ per comprarla. Per andare avanti esci dalla **porta in fondo** a destra.
 
 Il prezzo di arma e armatura cresce con la rarità (Non comune ×1,5 ... Leggendario ×5) e **sale del 25% dopo ogni acquisto di
 equipaggiamento** nella stessa visita. L'offerta cambia a ogni visita e, avanzando, le rarità sono più alte. **Non si rivende niente.**
+Nelle offerte di arma, la riga sotto il nome mostra i bonus e malus della tua classe al posto della descrizione (nella bottega camminabile compare sopra il nome dell'offerta che stai toccando). Le armi vietate non vengono mai messe in vendita. Con la borsa piena un'arma da lancio comprata va nello zaino con le sue munizioni.
 Il Mago trova in vendita un **bastone**, che prende il posto del suo (il vecchio va nello zaino); un bastone identico a quello che ha già non viene messo in vendita. Un acquisto che non serve non toglie monete ("NON SERVE", "BORSA PIENA").
 
 **Sblocchi.** All'inizio si gioca solo il **Cavaliere**. Il **Ranger** si sblocca completando il livello 2, il **Berserker** sconfiggendo il

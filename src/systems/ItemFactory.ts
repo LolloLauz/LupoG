@@ -189,6 +189,11 @@ export function getItemBaseName(item: ItemInstance): string {
   return item.kind === "weapon" ? WEAPON_CONFIG[item.baseId].name.toUpperCase() : ARMOR_CONFIG[item.baseId].name;
 }
 
+/** Peso dell'oggetto (Classi Fase 3): quello del suo tipo di base, arma o pezzo d'armatura. */
+export function getItemWeight(item: ItemInstance): number {
+  return item.kind === "weapon" ? WEAPON_CONFIG[item.baseId].weight : ARMOR_CONFIG[item.baseId].weight;
+}
+
 /**
  * Nome dell'oggetto: quello degli oggetti fissi, altrimenti il tipo di base seguito dal nome del primo modificatore
  * ("SPADA DELLA FURIA", "ELMO DI FERRO DELLA SALAMANDRA"). Gli oggetti Comuni hanno solo il nome del tipo.

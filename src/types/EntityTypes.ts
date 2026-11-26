@@ -351,14 +351,17 @@ export type WeaponId = "sword" | "dagger" | "spear" | "axe" | "mace" | "bow" | "
 export type WeaponCategoryId = "blade" | "heavy" | "polearm" | "ranged" | "thrown" | "staff";
 
 /**
- * Compatibilità di una classe con una categoria di armi (Classi Fase 0: tutte neutre, valori dalla Fase 3).
- * isAllowed = false: la classe non può impugnarla. I moltiplicatori valgono sul danno inflitto e sul recupero
- * tra un attacco e l'altro (meno di 1 = più rapido).
+ * Compatibilità di una classe con un'arma (Classi Fase 3: una cella per arma, vedi WEAPON_AFFINITY_CONFIG).
+ * isAllowed = false: la classe non può impugnarla. I moltiplicatori valgono sul danno inflitto, sul recupero
+ * tra un attacco e l'altro (meno di 1 = più rapido) e sul massimo delle munizioni (per difetto, solo per le armi
+ * che ne hanno). lootSubstituteId: per le armi vietate, l'arma che il bottino dà al loro posto.
  */
 export interface WeaponAffinity {
   isAllowed: boolean;
   damageMultiplier: number;
   recoveryMultiplier: number;
+  ammoMultiplier: number;
+  lootSubstituteId?: WeaponId;
 }
 
 /** Bonus di un catalizzatore (vedi WeaponDefinition.spellFocus). */
@@ -396,9 +399,9 @@ export interface WeaponDefinition {
   air?: { combos: ComboDefinition[]; defaultAttackByInput: Record<AttackInputAction, string> };
   /** Moltiplicatore della velocità di camminata con quest'arma in mano (1 = normale). */
   movementSpeedMultiplier: number;
-  /** Categoria (Classi Fase 0): la usa la tabella di compatibilità con le classi. */
+  /** Categoria (Classi Fase 0): famiglia dell'arma, per lo scaling delle statistiche (Fase 4). */
   category: WeaponCategoryId;
-  /** Peso (unità astratte, 1 = leggerissima): dalla Fase 3 rallenta, dalla Fase 4 richiede Forza. */
+  /** Peso (unità astratte, 1 = leggerissima): per ora solo mostrato; dalla Fase 4 richiede Forza. */
   weight: number;
   /** Attributo che dalla Fase 4 fa crescere il danno dell'arma. */
   scalingAttribute: AttributeId;

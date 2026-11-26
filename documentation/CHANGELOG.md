@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.3.0 – Classi, Fase 3: compatibilità classe × arma, munizioni nello zaino, peso (2026-11-25)
+La tabella di compatibilità diventa per arma e viene applicata; le munizioni nello zaino non si perdono più.
+### Aggiunto
+- **Tabella per arma** (`WEAPON_AFFINITY_CONFIG`, 11 armi × 5 classi): ogni cella `WeaponAffinity` ha `isAllowed`, `damageMultiplier`, `recoveryMultiplier`, `ammoMultiplier` e, per le vietate, `lootSubstituteId`. Costanti `NEUTRAL_WEAPON_AFFINITY` (✓ e arma iniziale), `PREFERRED_WEAPON_AFFINITY` (★: danno ×1,15, munizioni ×1,5), `PENALIZED_WEAPON_AFFINITY` (▼: danno ×0,85, recupero ×1,15), `forbidden(sostituto)`. La categoria resta un tag di `WEAPON_CONFIG` (scaling della Fase 4). Munizioni ★ del Ranger: coltelli 9, balestra 9, giavellotti 4 (arco 12).
+- **Divieti**: `Player.equipWeapon` restituisce `boolean` e rifiuta le armi vietate; `Inventory.equipFromBackpack` ha il nuovo esito `forbidden` (l'arma resta nello zaino); `GameEngine.pickUpEquipment` non raccoglie un'arma vietata. Messaggio "NON PUOI USARLA".
+- **Modulo `src/systems/WeaponAffinity.ts`**: `getWeaponMaxAmmo`, `canWieldWeapon`, `describeWeaponAffinity`, `FORBIDDEN_WEAPON_MESSAGE`.
+- **Munizioni per classe**: `Player.maxAmmo`, `Inventory.setCharacter` (chiamato da `resetRunEquipment` a ogni nuova partita) e `Inventory.getMaxAmmo`; il massimo vale per borsa, raccolta, faretra, ricarica dell'arco del Ranger e coltelli recuperati.
+- **Peso**: `weight` nelle armature (`ARMOR_WEIGHT_BY_MATERIAL`: stoffa 1, cuoio 2, ferro 3, acciaio 4; `ARMOR_WEIGHT_SLOT_FACTOR`: corazza ×2) e `getItemWeight(item)`. Per ora è solo un dato mostrato: dalla Fase 4 richiederà Forza (il malus di velocità previsto in origine è scartato, le armature pesanti hanno già `moveSpeed` negativo).
+- **Interfaccia**: la scheda dell'equipaggiamento mostra "PESO n" e, per le armi, i bonus e malus della classe nelle prime righe della griglia ("CLASSE DANNO +15%", "CLASSE MUNIZIONI +50%" in verde; "CLASSE DANNO -15%", "CLASSE RECUPERO +15%", "NON PUOI USARLA" in rosso); `EquipmentView.characterId`. In bottega la riga di classe prende il posto della descrizione (`ShopOfferView.classLine`); nella bottega camminabile compare sopra il nome dell'offerta. Colori in `WEAPON_AFFINITY_TONE_COLORS`. L'HUD non cambia.
+- Test: `tests/unit/classes-phase3.test.mjs` (99 controlli).
+### Modificato
+- **Il Mago può impugnare spada e pugnale** (la Fase 2 prevedeva solo il bastone); il catalizzatore resta solo del bastone. In bottega i catalizzatori restano sempre tra le armi in vendita per le classi con `usesSpellFocus`, così la spada (sempre scoperta) non toglie il bastone di un'altra rarità.
+- **Bonus e malus della tabella solo sugli attacchi dell'arma**: `getDamageMultiplier()` è ora il moltiplicatore generale; `getDamageMultiplierFor(attacco)` e il recupero applicano la cella solo se l'attacco è dell'arma in mano (`isWeaponAttack`), quindi abilità e incantesimi non cambiano.
+- La scheda dell'equipaggiamento non nasconde più statistiche per far posto alle righe di classe: se la griglia è piena compare una sola riga riassuntiva ("CLASSE: BONUS"/"CLASSE: MALUS").
+- `Inventory.setArmorAndBackpack` riceve `BackpackEntry[]` (munizioni comprese); `equipFromInventory` controlla l'esito di `equipWeapon` e, se l'arma è rifiutata, la borsa torna all'arma in mano.
+- **Filtro del bottino** (`resolveLootWeaponId`): un'arma vietata diventa il `lootSubstituteId` della cella (rete di sicurezza: l'arma iniziale). Spadone del Ranger → balestra; Mago: spadone → spada, le altre vietate → bastone; bastone delle altre classi → arma iniziale. Vale per forzieri, élite, trofei dei boss, ricompensa finale e bottega: le armi vietate non compaiono mai a terra.
+- Lo zaino conserva `BackpackEntry { item, ammo? }` (anche in `InventorySnapshot.backpack`); `addToBackpack(item, ammo?)`, `removeFromBackpack` restituisce l'entry, nuovo `getBackpackAmmo(index)`; `backpackItems` resta l'elenco degli oggetti.
+- Test adattati: classes-phase0, mage-phase2 (Mago con spada e pugnale, bottino), weapons-phase2 (i test dell'arco usano il Ranger, per cui l'arco è neutro), inventory.
+- Versione portata a 2.3.0 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Corretto
+- Le munizioni nello zaino: un'arma da lancio messa nello zaino e ripresa (o lasciata a terra dallo zaino, scambiata a borsa piena, comprata in bottega con borsa piena) conserva le sue munizioni; nello zaino non si ricaricano.
+### Verificato
+- `npm run typecheck`, `npm test` (1263 controlli in 32 file), `npm run balance` (cambia solo il Paladino "rusher" con la spada: 2,70 → 2,98 vite; baseline aggiornato), `npm run test:browser` (177 controlli), `npm run verify-docs`.
+
 ## 2.2.0 – Classi, Fase 2: il Mago (2026-11-25)
 Quinta classe giocabile: il Mago, con mana, bastone e quattro incantesimi.
 ### Aggiunto

@@ -1,10 +1,11 @@
 import { ARMOR_CONFIG, ARMOR_SLOTS } from "../config/armorConfig";
 import { INVENTORY_CONFIG, type PotionId } from "../config/inventoryConfig";
-import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
-import type { WeaponId } from "../types/EntityTypes";
+import { DEFAULT_WEAPON_ID } from "../config/weaponConfig";
+import type { CharacterId, WeaponId } from "../types/EntityTypes";
 import type { ArmorItem, ArmorSlot, EquippedArmor, ItemInstance, WeaponItem } from "../types/ItemTypes";
 import { EMPTY_ARMOR } from "./EquipmentStats";
 import { areItemsEqual, cloneItem, toWeaponItem } from "./ItemFactory";
+import { canWieldWeapon, getWeaponMaxAmmo } from "./WeaponAffinity";
 
 /**
  * Contenuto di un posto della borsa. Per le armi: l'oggetto (rarità e modificatori, E1) e, per comodità,
@@ -12,12 +13,21 @@ import { areItemsEqual, cloneItem, toWeaponItem } from "./ItemFactory";
  */
 export type BagSlot = { kind: "weapon"; weaponId: WeaponId; item: WeaponItem; ammo?: number } | { kind: "potion"; potionId: PotionId; count: number };
 
+/**
+ * Un posto dello zaino: l'oggetto e, per le armi con munizioni, quante ne restano (Classi Fase 3: un'arma da lancio
+ * messa nello zaino e ripresa non torna piena). ammo omesso = piene.
+ */
+export interface BackpackEntry {
+  item: ItemInstance;
+  ammo?: number;
+}
+
 /** Copia della borsa, dello zaino e delle armature (per ripristinarli quando si ricomincia un livello). */
 export interface InventorySnapshot {
   slots: Array<BagSlot | null>;
   equippedSlotIndex: number;
   armor: EquippedArmor;
-  backpack: ItemInstance[];
+  backpack: BackpackEntry[];
 }
 
 /** Esito dell'aggiunta di un'arma. */
@@ -50,26 +60,42 @@ export type SlotSelection = { kind: "equip"; weaponId: WeaponId } | { kind: "pot
 /** Esito di un'armatura raccolta: indossata (posto libero), nello zaino, oppure zaino pieno. */
 export type ArmorPickupOutcome = "equipped" | "stored" | "full";
 
-/** Esito di un'azione della schermata dell'equipaggiamento (E4). */
-export type EquipmentActionOutcome = "equipped" | "unequipped" | "backpackFull" | "lastWeapon" | "empty";
+/**
+ * Esito di un'azione della schermata dell'equipaggiamento (E4). forbidden = arma vietata alla classe (Classi Fase 3):
+ * resta nello zaino.
+ */
+export type EquipmentActionOutcome = "equipped" | "unequipped" | "backpackFull" | "lastWeapon" | "empty" | "forbidden";
 
 /**
  * La borsa: un numero fisso di posti, ognuno con un'arma o con un gruppo di pozioni.
  * C'è sempre almeno un'arma, quella in mano (equippedSlotIndex). In più (E2, E4) le armature indossate e lo zaino,
  * con gli oggetti di riserva (armi e armature). Solo logica: niente disegno, niente giocatore (il motore applica
  * gli effetti: impugnare l'arma, bere la pozione, indossare le armature).
+ * La classe in uso (setCharacter, Classi Fase 3) decide il massimo delle munizioni e le armi che si possono impugnare;
+ * senza classe valgono i valori delle armi e nessun divieto.
  */
 export class Inventory {
   private slots: Array<BagSlot | null>;
   private equippedIndex = 0;
   private armorSet: EquippedArmor = { ...EMPTY_ARMOR };
-  private backpack: ItemInstance[] = [];
+  private backpack: BackpackEntry[] = [];
+  private characterId: CharacterId | null = null;
 
   constructor(
     private readonly slotCount: number = INVENTORY_CONFIG.slotCount,
     private readonly backpackSize: number = INVENTORY_CONFIG.backpackSize
   ) {
-    this.slots = Inventory.createSlots(slotCount, [DEFAULT_WEAPON_ID]);
+    this.slots = this.createSlots(slotCount, [DEFAULT_WEAPON_ID]);
+  }
+
+  /** Classe in uso (a ogni nuova partita): massimo delle munizioni e divieti della tabella di compatibilità. */
+  public setCharacter(characterId: CharacterId | null): void {
+    this.characterId = characterId;
+  }
+
+  /** Massimo delle munizioni di un'arma per la classe in uso (undefined = infinite). */
+  public getMaxAmmo(weaponId: WeaponId): number | undefined {
+    return getWeaponMaxAmmo(this.characterId, weaponId);
   }
 
   /** Posti della borsa (null = vuoto), in ordine. */
@@ -120,7 +146,16 @@ export class Inventory {
 
   /** Oggetti nello zaino, in ordine. */
   public get backpackItems(): readonly ItemInstance[] {
-    return this.backpack;
+    return this.backpack.map((entry) => entry.item);
+  }
+
+  /** Munizioni dell'arma in un posto dello zaino (null = senza munizioni, o posto vuoto). */
+  public getBackpackAmmo(index: number): number | null {
+    const entry = this.backpack[index];
+    if (entry === undefined || entry.item.kind !== "weapon") {
+      return null;
+    }
+    return entry.ammo ?? this.getMaxAmmo(entry.item.baseId) ?? null;
   }
 
   public get backpackCapacity(): number {
@@ -131,23 +166,23 @@ export class Inventory {
     return this.backpack.length < this.backpackSize;
   }
 
-  /** Mette un oggetto nello zaino. false se è pieno. */
-  public addToBackpack(item: ItemInstance): boolean {
+  /** Mette un oggetto nello zaino, con le munizioni che gli restano (omesse = piene). false se è pieno. */
+  public addToBackpack(item: ItemInstance, ammo: number | null = null): boolean {
     if (!this.hasBackpackRoom) {
       return false;
     }
-    this.backpack.push(cloneItem(item));
+    this.backpack.push(Inventory.createBackpackEntry(item, ammo));
     return true;
   }
 
-  /** Toglie un oggetto dallo zaino (per lasciarlo a terra). null se il posto è vuoto. */
-  public removeFromBackpack(index: number): ItemInstance | null {
-    const item = this.backpack[index];
-    if (item === undefined) {
+  /** Toglie un oggetto dallo zaino (per lasciarlo a terra), con le sue munizioni. null se il posto è vuoto. */
+  public removeFromBackpack(index: number): BackpackEntry | null {
+    const entry = this.backpack[index];
+    if (entry === undefined) {
       return null;
     }
     this.backpack.splice(index, 1);
-    return item;
+    return entry;
   }
 
   /** Indossa un pezzo d'armatura e restituisce quello che c'era nel suo posto (o null). */
@@ -189,25 +224,30 @@ export class Inventory {
 
   /**
    * Usa un oggetto dello zaino (E4): un'armatura si indossa (quella di prima prende il suo posto nello zaino);
-   * un'arma entra nella borsa in un posto libero o al posto di quella in mano (che torna nello zaino) e si impugna.
+   * un'arma entra nella borsa in un posto libero o al posto di quella in mano (che torna nello zaino) e si impugna,
+   * con le munizioni che aveva. Un'arma vietata alla classe resta nello zaino (forbidden).
    */
   public equipFromBackpack(index: number): EquipmentActionOutcome {
-    const item = this.backpack[index];
-    if (item === undefined) {
+    const entry = this.backpack[index];
+    if (entry === undefined) {
       return "empty";
     }
+    const item = entry.item;
     if (item.kind === "armor") {
       const previous = this.equipArmor(item);
-      this.backpack.splice(index, 1, ...(previous === null ? [] : [previous]));
+      this.backpack.splice(index, 1, ...(previous === null ? [] : [Inventory.createBackpackEntry(previous)]));
       return "equipped";
+    }
+    if (!canWieldWeapon(this.characterId, item.baseId)) {
+      return "forbidden";
     }
     const sameTypeIndex = this.slots.findIndex((slot) => slot?.kind === "weapon" && slot.weaponId === item.baseId);
     const freeIndex = this.slots.indexOf(null);
     const targetIndex = sameTypeIndex >= 0 ? sameTypeIndex : freeIndex >= 0 ? freeIndex : this.equippedIndex;
     const previous = this.slots[targetIndex];
-    this.slots[targetIndex] = Inventory.createWeaponSlot(item);
+    this.slots[targetIndex] = this.createWeaponSlot(item, entry.ammo ?? null);
     this.equippedIndex = targetIndex;
-    this.backpack.splice(index, 1, ...(previous?.kind === "weapon" ? [previous.item] : []));
+    this.backpack.splice(index, 1, ...(previous?.kind === "weapon" ? [Inventory.createBackpackEntry(previous.item, previous.ammo ?? null)] : []));
     return "equipped";
   }
 
@@ -220,7 +260,7 @@ export class Inventory {
     if (this.weaponIds.length <= 1) {
       return "lastWeapon";
     }
-    if (!this.addToBackpack(slot.item)) {
+    if (!this.addToBackpack(slot.item, slot.ammo ?? null)) {
       return "backpackFull";
     }
     this.slots[slotIndex] = null;
@@ -230,8 +270,8 @@ export class Inventory {
     return "unequipped";
   }
 
-  /** Armature e zaino salvati (inizio partita): gli oggetti in più dello zaino si perdono. */
-  public setArmorAndBackpack(armor: Readonly<EquippedArmor>, backpack: readonly ItemInstance[]): void {
+  /** Armature e zaino salvati (inizio partita), con le munizioni dello zaino: gli oggetti in più dello zaino si perdono. */
+  public setArmorAndBackpack(armor: Readonly<EquippedArmor>, backpack: readonly BackpackEntry[]): void {
     this.armorSet = { ...EMPTY_ARMOR };
     for (const slot of ARMOR_SLOTS) {
       const item = armor[slot];
@@ -239,7 +279,7 @@ export class Inventory {
         this.armorSet[slot] = cloneItem(item);
       }
     }
-    this.backpack = backpack.slice(0, this.backpackSize).map((item) => cloneItem(item));
+    this.backpack = backpack.slice(0, this.backpackSize).map((entry) => Inventory.copyBackpackEntry(entry));
   }
 
   // --- borsa ---
@@ -261,7 +301,7 @@ export class Inventory {
   /** Aggiunge munizioni a un'arma della borsa (es. coltello recuperato). false se l'arma non c'è o è già piena. */
   public addAmmo(weaponId: WeaponId, amount: number): boolean {
     const slot = this.slots.find((candidate) => candidate?.kind === "weapon" && candidate.weaponId === weaponId);
-    const max = WEAPON_CONFIG[weaponId].ammo?.max;
+    const max = this.getMaxAmmo(weaponId);
     if (slot === undefined || slot === null || slot.kind !== "weapon" || slot.ammo === undefined || max === undefined || slot.ammo >= max) {
       return false;
     }
@@ -278,7 +318,7 @@ export class Inventory {
     if (index >= 0) {
       this.slots[index] = null;
       if (this.weaponIds.length === 0) {
-        this.slots[index] = Inventory.createWeaponSlot(toWeaponItem(DEFAULT_WEAPON_ID));
+        this.slots[index] = this.createWeaponSlot(toWeaponItem(DEFAULT_WEAPON_ID));
       }
       if (index === this.equippedIndex || this.slots[this.equippedIndex]?.kind !== "weapon") {
         this.equippedIndex = this.slots.findIndex((slot) => slot?.kind === "weapon");
@@ -289,14 +329,14 @@ export class Inventory {
 
   /** Vero se quest'arma è nella borsa e le manca almeno una munizione. */
   public isMissingAmmo(weaponId: WeaponId): boolean {
-    const max = WEAPON_CONFIG[weaponId].ammo?.max;
+    const max = this.getMaxAmmo(weaponId);
     return max !== undefined && this.slots.some((slot) => slot?.kind === "weapon" && slot.weaponId === weaponId && slot.ammo !== undefined && slot.ammo < max);
   }
 
   /** Vero se almeno un'arma della borsa non ha le munizioni piene. */
   public get needsAmmo(): boolean {
     return this.slots.some((slot) => {
-      const max = slot?.kind === "weapon" ? WEAPON_CONFIG[slot.weaponId].ammo?.max : undefined;
+      const max = slot?.kind === "weapon" ? this.getMaxAmmo(slot.weaponId) : undefined;
       return slot?.kind === "weapon" && slot.ammo !== undefined && max !== undefined && slot.ammo < max;
     });
   }
@@ -310,7 +350,7 @@ export class Inventory {
   public refillAllAmmo(): boolean {
     let hasRefilled = false;
     for (const slot of this.slots) {
-      const max = slot?.kind === "weapon" ? WEAPON_CONFIG[slot.weaponId].ammo?.max : undefined;
+      const max = slot?.kind === "weapon" ? this.getMaxAmmo(slot.weaponId) : undefined;
       if (slot?.kind === "weapon" && slot.ammo !== undefined && max !== undefined && slot.ammo < max) {
         slot.ammo = max;
         hasRefilled = true;
@@ -358,7 +398,7 @@ export class Inventory {
         items.push(item);
       }
     }
-    this.slots = Inventory.createSlots(this.slotCount, items);
+    this.slots = this.createSlots(this.slotCount, items);
     const equippedIndex = this.slots.findIndex((slot) => slot?.kind === "weapon" && slot.weaponId === equippedWeaponId);
     this.equippedIndex = equippedIndex >= 0 ? equippedIndex : 0;
   }
@@ -375,18 +415,18 @@ export class Inventory {
     if (existing !== undefined && existing !== null && existing.kind === "weapon") {
       if (areItemsEqual(existing.item, item)) {
         // un'arma con munizioni già nella borsa: le munizioni tornano piene
-        const max = WEAPON_CONFIG[item.baseId].ammo?.max;
+        const max = this.getMaxAmmo(item.baseId);
         if (max !== undefined && existing.ammo !== undefined && existing.ammo < max) {
           existing.ammo = max;
           return { outcome: "refilled", droppedWeaponId: null };
         }
         return { outcome: "duplicate", droppedWeaponId: null };
       }
-      this.slots[existingIndex] = Inventory.createWeaponSlot(item, ammo);
+      this.slots[existingIndex] = this.createWeaponSlot(item, ammo);
       this.equippedIndex = existingIndex;
       return { outcome: "replaced", droppedWeaponId: existing.weaponId, droppedItem: existing.item, droppedAmmo: existing.ammo };
     }
-    const newSlot = Inventory.createWeaponSlot(item, ammo);
+    const newSlot = this.createWeaponSlot(item, ammo);
     const freeIndex = this.slots.indexOf(null);
     if (freeIndex >= 0) {
       this.slots[freeIndex] = newSlot;
@@ -466,7 +506,7 @@ export class Inventory {
       slots: this.slots.map((slot) => Inventory.copySlot(slot)),
       equippedSlotIndex: this.equippedIndex,
       armor: { ...this.armorSet },
-      backpack: this.backpack.map((item) => cloneItem(item)),
+      backpack: this.backpack.map((entry) => Inventory.copyBackpackEntry(entry)),
     };
   }
 
@@ -474,7 +514,16 @@ export class Inventory {
     this.slots = snapshot.slots.map((slot) => Inventory.copySlot(slot));
     this.equippedIndex = snapshot.equippedSlotIndex;
     this.armorSet = { ...snapshot.armor };
-    this.backpack = snapshot.backpack.map((item) => cloneItem(item));
+    this.backpack = snapshot.backpack.map((entry) => Inventory.copyBackpackEntry(entry));
+  }
+
+  private static copyBackpackEntry(entry: BackpackEntry): BackpackEntry {
+    return entry.ammo === undefined ? { item: cloneItem(entry.item) } : { item: cloneItem(entry.item), ammo: entry.ammo };
+  }
+
+  /** Posto dello zaino; le munizioni contano solo per le armi che ne hanno (null o omesse = piene). */
+  private static createBackpackEntry(item: ItemInstance, ammo: number | null = null): BackpackEntry {
+    return item.kind === "weapon" && ammo !== null ? { item: cloneItem(item), ammo: Math.max(0, ammo) } : { item: cloneItem(item) };
   }
 
   private static copySlot(slot: BagSlot | null): BagSlot | null {
@@ -484,17 +533,17 @@ export class Inventory {
     return slot.kind === "weapon" ? { ...slot, item: cloneItem(slot.item) } : { ...slot };
   }
 
-  private static createSlots(slotCount: number, weapons: ReadonlyArray<WeaponId | WeaponItem>): Array<BagSlot | null> {
+  private createSlots(slotCount: number, weapons: ReadonlyArray<WeaponId | WeaponItem>): Array<BagSlot | null> {
     const slots: Array<BagSlot | null> = Array.from({ length: slotCount }, () => null);
     weapons.slice(0, slotCount).forEach((weapon, index) => {
-      slots[index] = Inventory.createWeaponSlot(toWeaponItem(weapon));
+      slots[index] = this.createWeaponSlot(toWeaponItem(weapon));
     });
     return slots;
   }
 
-  /** Posto per un'arma; le armi con munizioni partono con quelle indicate (o piene). */
-  private static createWeaponSlot(item: WeaponItem, ammo: number | null = null): BagSlot {
-    const max = WEAPON_CONFIG[item.baseId].ammo?.max;
+  /** Posto per un'arma; le armi con munizioni partono con quelle indicate (o piene, secondo la classe in uso). */
+  private createWeaponSlot(item: WeaponItem, ammo: number | null = null): BagSlot {
+    const max = this.getMaxAmmo(item.baseId);
     const copy = cloneItem(item);
     return max === undefined ? { kind: "weapon", weaponId: item.baseId, item: copy } : { kind: "weapon", weaponId: item.baseId, item: copy, ammo: Math.min(max, ammo ?? max) };
   }

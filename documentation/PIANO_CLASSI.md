@@ -86,14 +86,25 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 **Obiettivo:** ogni classe ha armi preferite, armi con malus e armi vietate, con la tabella come unica fonte di verità.
 
-- [ ] **Valori reali:** riempire la tabella di compatibilità (bozza nel documento di progetto): bonus di danno, munizioni o velocità per le armi preferite, malus per quelle meno adatte.
-- [ ] **Divieti:** `Player.equipWeapon` rifiuta le armi ✗ con il messaggio "NON PUOI USARLA"; se l'arma è in uno slot (zaino) resta lì, ma non si impugna.
-- [ ] **Filtro del loot:** `ItemFactory` e `LootSystem` non generano a terra armi vietate per la classe in uso, e le sostituiscono con un'arma compatibile; vale anche per forzieri, élite, trofei dei boss e bottega.
-- [ ] **Peso:** ogni arma e armatura ha un peso; senza le statistiche della Fase 4 il peso dà solo un malus di velocità fisso, che la Fase 4 sostituisce con il requisito di Forza.
-- [ ] **Munizioni nello zaino (difetto da correggere):** oggi un'arma da lancio spostata nello zaino e ripresa torna con le munizioni piene, perché lo zaino conserva solo l'oggetto (`Inventory.moveWeaponToBackpack` ed `equipFromBackpack`; anche lo scambio a borsa piena in `GameEngine.pickUpEquipment` ignora `droppedAmmo`). Lo zaino deve conservare il numero di munizioni, anche nello snapshot di inizio livello.
-- [ ] **Schermata equipaggiamento:** mostrare bonus e malus della classe accanto al confronto con l'oggetto indossato.
-- [ ] **Test:** una prova per ogni cella della tabella (vietata, malus, bonus); verifica che nessun livello possa lasciare il giocatore senza arma impugnabile.
-- [ ] **Documentazione:** la tabella entra nel manuale, nella sezione delle armi.
+**Decisioni (grilling del 25 nov 2026):**
+
+- La tabella è indicizzata **per arma** (11 armi × 5 classi), non per categoria: la categoria resta nei tag dell'arma per lo scaling della Fase 4.
+- Ogni cella: `isAllowed`, `damageMultiplier`, `recoveryMultiplier`, `ammoMultiplier` e, se vietata, `lootSubstituteId`.
+- Valori uguali per simbolo (la messa a punto per cella è della Fase 6B): ★ = danno ×1,15 e munizioni ×1,5 (per difetto); ▼ = danno ×0,85 e recupero ×1,15; ✓ = ×1. La ★ sull'arma iniziale vale ×1 (la classe è già bilanciata su quella).
+- Celle: la ★ sta su spada (Cavaliere), arco (Ranger), ascia (Berserker), mazza (Paladino), bastone (Mago), tutte armi iniziali a ×1; ★ con bonus su lancia e spadone (Cavaliere), balestra, coltelli e giavellotto (Ranger), spadone (Berserker), spada e ascia (Paladino). I ▼ sono quelli della bozza. Divieti: spadone per il Ranger; per il Mago tutto tranne spada, pugnale e bastone (il catalizzatore resta solo del bastone); bastone per le altre classi.
+- Sostituti nel bottino: spadone del Ranger → balestra; Mago: spadone → spada, le altre armi vietate → bastone; bastone delle altre classi → arma iniziale.
+- Le armi vietate non compaiono mai a terra; il divieto in `equipWeapon` è una rete di sicurezza.
+- Peso delle armature solo come dato (stoffa 1, cuoio 2, ferro 3, acciaio 4, la corazza vale il doppio), mostrato come `PESO n`; nessun effetto sul gioco fino alla Fase 4.
+- Nessun bot nuovo nel simulatore (restano alla 6B): il criterio di chiusura diventa "nessun drop inutilizzabile", provato dai test sui dati e dal bot del browser.
+
+- [x] **Valori reali:** riempire la tabella di compatibilità (bozza nel documento di progetto): bonus di danno, munizioni o velocità per le armi preferite, malus per quelle meno adatte. *Fatto: tabella per arma in `weaponAffinityConfig.ts` con le costanti ★/▼/✓ delle decisioni qui sopra.*
+- [x] **Divieti:** `Player.equipWeapon` rifiuta le armi ✗ con il messaggio "NON PUOI USARLA"; se l'arma è in uno slot (zaino) resta lì, ma non si impugna. *Fatto: `equipWeapon` restituisce false, `equipFromBackpack` dà "forbidden", la raccolta a terra rifiuta l'arma.*
+- [x] **Filtro del loot:** `ItemFactory` e `LootSystem` non generano a terra armi vietate per la classe in uso, e le sostituiscono con un'arma compatibile; vale anche per forzieri, élite, trofei dei boss e bottega. *Fatto: `resolveLootWeaponId` usa `lootSubstituteId` della cella.*
+- [x] **Peso:** ogni arma e armatura ha un peso; senza le statistiche della Fase 4 il peso dà solo un malus di velocità fisso, che la Fase 4 sostituisce con il requisito di Forza. *Cambiato: il peso è solo un dato mostrato (`PESO n`), senza malus; le armature pesanti rallentano già con `moveSpeed`. L'effetto arriva con la Forza nella Fase 4.*
+- [x] **Munizioni nello zaino (difetto da correggere):** oggi un'arma da lancio spostata nello zaino e ripresa torna con le munizioni piene, perché lo zaino conserva solo l'oggetto (`Inventory.moveWeaponToBackpack` ed `equipFromBackpack`; anche lo scambio a borsa piena in `GameEngine.pickUpEquipment` ignora `droppedAmmo`). Lo zaino deve conservare il numero di munizioni, anche nello snapshot di inizio livello. *Fatto: `BackpackEntry { item, ammo? }`; anche a terra dallo zaino e in bottega a borsa piena.*
+- [x] **Schermata equipaggiamento:** mostrare bonus e malus della classe accanto al confronto con l'oggetto indossato. *Fatto: righe "CLASSE …" nella scheda (verdi/rosse) e riga di classe nella bottega.*
+- [x] **Test:** una prova per ogni cella della tabella (vietata, malus, bonus); verifica che nessun livello possa lasciare il giocatore senza arma impugnabile. *Fatto: `classes-phase3.test.mjs`.*
+- [x] **Documentazione:** la tabella entra nel manuale, nella sezione delle armi. *Fatto (2.3.0): GAME_MANUAL (tabella, legenda, sostituti), ARCHITECTURE, CODE_MANUAL, TESTING, FEATURES, BALANCE e CHANGELOG.*
 
 **Criterio di chiusura:** tutte e cinque le classi completano i livelli con armi trovate lungo il percorso, senza drop inutilizzabili.
 

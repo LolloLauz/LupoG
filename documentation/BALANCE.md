@@ -162,6 +162,18 @@ Raccogliendo tutto e sconfiggendo tutti i nemici del livello si guadagnano da 74
 una pozione costa 40. Il valore della gemma è provvisorio. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
 perché il gioco sembrava già facile per il bot.
 
+## Classi Fase 3: compatibilità armi e classi (2.3.0)
+
+La tabella classe × arma (`src/config/weaponAffinityConfig.ts`) usa tre valori, uguali per simbolo:
+★ (arma preferita, non iniziale) danno ×1,15 e munizioni ×1,5 per difetto; ▼ danno ×0,85 e recupero
+×1,15; ✓ e arma iniziale ×1. L'arma iniziale resta a ×1 perché ogni classe era già bilanciata su quella.
+La messa a punto cella per cella è rimandata alla Classi Fase 6B, con i bot per classe.
+
+Effetto sul simulatore (il bot usa la spada per tutte le classi tranne il Mago): cambia solo il Paladino,
+per cui la spada è ★. Nelle partite complete il Paladino "rusher" passa da 2,70 a 2,98 vite rimaste (morti
+medie da 0,30 a 0,02), con e senza abilità; tutte le altre righe sono identiche. Il baseline
+(`tools/balance-baseline.txt`) è aggiornato nello stesso commit.
+
 ## Classi Fase 2: il Mago (2.2.0)
 
 Il Mago ha un bot proprio (`playMageTurn` in `tools/balance.mjs`; solo lui con `npm run balance -- --mage`): colpisce con il
@@ -257,6 +269,7 @@ boss conviene rilanciare `npm run balance` e guardare più valori vicini.
 | Mago: salute, mana e recupero (2.2.0) | `src/config/characterConfig.ts` | `CHARACTER_CONFIG.mage` |
 | Incantesimi: costi, ricariche, danni, elementi | `src/config/abilityConfig.ts` | `ABILITY_CONFIG` (firebolt, frostNova, arcaneLeap, arcaneBarrier) |
 | Bastone e catalizzatore | `src/config/weaponConfig.ts` | `WEAPON_CONFIG.staff`, `spellFocus` |
+| Compatibilità classe × arma: bonus, malus, divieti e sostituti nel bottino (2.3.0) | `src/config/weaponAffinityConfig.ts` | `PREFERRED_WEAPON_AFFINITY`, `PENALIZED_WEAPON_AFFINITY`, `WEAPON_AFFINITY_CONFIG` |
 | Pozione di mana (bottino e bottega) | `src/config/itemConfig.ts`, `lootConfig.ts`, `progressionConfig.ts` | `manaPotion`, `manaPotionChance`, `SHOP_OFFERS.manaPotion` |
 | Cura di livello, danno da caduta, vite | `src/config/gameConfig.ts` | `GAME_CONFIG` |
 | Pozione, moneta, gemma | `src/config/itemConfig.ts` | `ITEM_CONFIG` |

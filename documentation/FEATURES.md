@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.2.0**.
+Versione: **2.3.0**.
 
 **Stati usati:**
 
@@ -26,7 +26,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 1166 controlli) | Implementata | |
+| Test unitari inclusi (`npm test`, 1263 controlli) | Implementata | |
 | Test nel browser (`npm run test:browser`, 177 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176; 2.2.0: 177/177 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
@@ -106,7 +106,10 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | **Mago** (70 HP, velocità 84, stamina 80, **mana 100** con recupero 6/s dopo 600 ms, bastone; si sblocca sconfiggendo la Strega della Palude) | Implementata | Classi Fase 2 (2.2.0); `CHARACTER_CONFIG.mage`, `usesSpellFocus`; sprite provvisori (cappello a punta, veste viola); valori da bilanciare nella Fase 6; non provato da persone |
 | Incantesimi del Mago sui tasti 7-0: dardo di fuoco (15 mana, bruciatura), nova di gelo (30, area con gelo), balzo arcano (20, scatto invulnerabile), barriera (guardia tenuta sul tasto 0, costa mana) | Implementata | Classi Fase 2; `ABILITY_CONFIG`, `AttackDefinition.elements`, guardia con `resource` e `costPerBlockedDamage`; con più mosse il bordo dorato segna lo slot attivo |
 | Bastone (catalizzatore): colpi 8/8/14 (MULINELLO), SPAZZATA ARCANA, incantesimi più forti (×1,2) e meno cari (×0,85), 5 mana per bersaglio colpito; Leggendario BASTONE DELLE STELLE | Implementata | Classi Fase 2; `WeaponDefinition.spellFocus`, `Player.activeSpellFocus`; vale solo per chi ha `usesSpellFocus` |
-| Tabella di compatibilità arma-classe: il Mago solo bastone, le altre classi tutto tranne il bastone | In sviluppo | Classi Fase 2; oggi la legge solo il filtro del bottino (`resolveLootWeaponId`: forzieri, élite, trofei, bottega); `equipWeapon` la applicherà dalla Fase 3 |
+| Tabella di compatibilità classe × arma (11 armi × 5 classi): arma iniziale e ✓ normali, ★ preferite (danno +15%, munizioni +50%), ▼ penalizzate (danno -15%, recupero +15%), ✗ vietate; il Mago impugna anche spada e pugnale | Implementata | Classi Fase 3 (2.3.0); `WEAPON_AFFINITY_CONFIG` per arma, `WeaponAffinity.ts`; valori da bilanciare |
+| Divieti e filtro del bottino: un'arma vietata non si impugna né si raccoglie ("NON PUOI USARLA") e non compare mai a terra: forzieri, élite, trofei, ricompensa finale e bottega la sostituiscono (`lootSubstituteId`) | Implementata | Classi Fase 3; `Player.equipWeapon`, `Inventory.equipFromBackpack`, `resolveLootWeaponId` |
+| Munizioni secondo la classe (massimo × `ammoMultiplier`, per difetto) e munizioni conservate nello zaino (`BackpackEntry`) | Implementata | Classi Fase 3; corregge il difetto annotato nel piano |
+| Peso degli oggetti (armature da 1 a 4, corazza ×2) mostrato nella scheda dell'equipaggiamento, con riga di classe per le armi (anche in bottega) | Implementata | Classi Fase 3; il peso non ha ancora effetti (Forza dalla Fase 4) |
 | Pozione di mana (+40 mana): posto proprio nella borsa (max 2), bottino per chi ha mana, in bottega a 35 monete al posto della faretra | Implementata | Classi Fase 2; `ITEM_CONFIG.manaPotion`, `LOOT_SOURCES[..].manaPotionChance`; valori da bilanciare |
 | HUD con mana: barra blu sotto la stamina e un riquadro per ogni mossa (numero rosso se la risorsa non basta) | Implementata | Classi Fase 2; senza mana l'HUD resta com'era |
 | Parata con lo scudo (Paladino): para i colpi da davanti e le frecce, costa stamina; parata perfetta (scudo alzato da meno di 0,25 s) gratuita, stordisce l'attaccante per 1 s; guardia rotta senza stamina | Implementata | Fase 5; i boss non vengono storditi |

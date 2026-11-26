@@ -38,11 +38,20 @@ export const ARMOR_MATERIALS: Record<ArmorMaterialId, ArmorMaterialDefinition> =
 
 export const ARMOR_MATERIAL_ORDER: readonly ArmorMaterialId[] = ["cloth", "leather", "iron", "steel"];
 
+/**
+ * Peso delle armature (Classi Fase 3, stesse unità del peso delle armi): dal materiale, la corazza vale il doppio.
+ * Per ora è solo un dato mostrato nella schermata dell'equipaggiamento; dalla Fase 4 richiede Forza.
+ */
+export const ARMOR_WEIGHT_BY_MATERIAL: Record<ArmorMaterialId, number> = { cloth: 1, leather: 2, iron: 3, steel: 4 };
+export const ARMOR_WEIGHT_SLOT_FACTOR: Record<ArmorSlot, number> = { helmet: 1, chest: 2, boots: 1 };
+
 export interface ArmorDefinition {
   id: ArmorId;
   name: string;
   slot: ArmorSlot;
   material: ArmorMaterialId;
+  /** Peso del pezzo (vedi ARMOR_WEIGHT_BY_MATERIAL). */
+  weight: number;
   /** Statistiche base (rarità Comune). */
   stats: ArmorStats;
   /** Icona 16x16 (a terra, nell'HUD e nella schermata dell'equipaggiamento), ricolorata con il materiale. */
@@ -52,7 +61,8 @@ export interface ArmorDefinition {
 const ICON_BY_SLOT: Record<ArmorSlot, string> = { helmet: "armorIconHelmet", chest: "armorIconChest", boots: "armorIconBoots" };
 
 function piece(id: ArmorId, name: string, slot: ArmorSlot, material: ArmorMaterialId, stats: Partial<ArmorStats>): ArmorDefinition {
-  return { id, name, slot, material, stats: { defense: 0, maxHealth: 0, maxStamina: 0, moveSpeed: 0, ...stats }, iconSpriteId: ICON_BY_SLOT[slot] };
+  const weight = ARMOR_WEIGHT_BY_MATERIAL[material] * ARMOR_WEIGHT_SLOT_FACTOR[slot];
+  return { id, name, slot, material, weight, stats: { defense: 0, maxHealth: 0, maxStamina: 0, moveSpeed: 0, ...stats }, iconSpriteId: ICON_BY_SLOT[slot] };
 }
 
 /**
