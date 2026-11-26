@@ -27,7 +27,7 @@ export default async function (t, load) {
     return p;
   };
   const weaponIds = Object.keys(WEAPON_CONFIG);
-  const categoryIds = Object.keys(WEAPON_AFFINITY_CONFIG.knight);
+  const categoryIds = ["blade", "heavy", "polearm", "ranged", "thrown", "staff"];
 
   // --- ResourcePool ---
   {
@@ -94,25 +94,19 @@ export default async function (t, load) {
   }
 
   // --- tag delle armi ---
-  t("ogni arma ha una categoria della tabella", weaponIds.every((id) => categoryIds.includes(WEAPON_CONFIG[id].category)));
+  t("ogni arma ha una categoria nota", weaponIds.every((id) => categoryIds.includes(WEAPON_CONFIG[id].category)));
   t("ogni categoria ha almeno un'arma", categoryIds.every((category) => weaponIds.some((id) => WEAPON_CONFIG[id].category === category)));
   t("ogni arma ha un peso intero positivo", weaponIds.every((id) => Number.isInteger(WEAPON_CONFIG[id].weight) && WEAPON_CONFIG[id].weight > 0));
   t("ogni arma scala con un attributo esistente", weaponIds.every((id) => ATTRIBUTE_ORDER.includes(WEAPON_CONFIG[id].scalingAttribute)));
   t("pugnale più leggero della spada, spadone il più pesante",
     WEAPON_CONFIG.dagger.weight < WEAPON_CONFIG.sword.weight && weaponIds.every((id) => WEAPON_CONFIG[id].weight <= WEAPON_CONFIG.greatsword.weight));
 
-  // --- compatibilità classe x categoria ---
-  t("la tabella ha una riga per ogni classe e le stesse categorie", CHARACTER_ORDER.every((id) => Object.keys(WEAPON_AFFINITY_CONFIG[id] ?? {}).sort().join() === [...categoryIds].sort().join()));
-  t("tutte le celle ×1; divieti solo per il bastone (Classi Fase 2: solo il Mago, e il Mago solo il bastone)",
-    CHARACTER_ORDER.every((id) => categoryIds.every((category) => {
-      const cell = WEAPON_AFFINITY_CONFIG[id][category];
-      return cell.isAllowed === ((id === "mage") === (category === "staff")) && cell.damageMultiplier === 1 && cell.recoveryMultiplier === 1;
-    })));
-  t("getWeaponAffinity passa dalla categoria dell'arma", getWeaponAffinity("berserker", "axe") === WEAPON_AFFINITY_CONFIG.berserker.heavy && getWeaponAffinity("ranger", "bow") === NEUTRAL_WEAPON_AFFINITY);
+  // --- compatibilità classe x arma (Classi Fase 3: una cella per arma, valori in classes-phase3.test.mjs) ---
+  t("la tabella ha una riga per ogni classe e una cella per ogni arma", CHARACTER_ORDER.every((id) => Object.keys(WEAPON_AFFINITY_CONFIG[id] ?? {}).sort().join() === [...weaponIds].sort().join()));
+  t("getWeaponAffinity legge la cella dell'arma", getWeaponAffinity("berserker", "axe") === WEAPON_AFFINITY_CONFIG.berserker.axe && getWeaponAffinity("ranger", "bow") === NEUTRAL_WEAPON_AFFINITY);
   {
-    const p = grounded("ranger");
-    p.equipWeapon(WEAPON_CONFIG.greatsword);
-    t("giocatore: compatibilità neutra con l'arma in mano", JSON.stringify(p.weaponAffinity) === JSON.stringify(NEUTRAL_WEAPON_AFFINITY));
+    const p = grounded("knight");
+    t("giocatore: con l'arma iniziale la compatibilità è neutra", JSON.stringify(p.weaponAffinity) === JSON.stringify(NEUTRAL_WEAPON_AFFINITY));
   }
 
   // --- attributi nella pipeline dei modificatori ---

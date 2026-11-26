@@ -3,6 +3,7 @@ import { SHOP_BASIC_OFFERS, SHOP_HEAL_AMOUNT, SHOP_OFFERS, SHOP_PRICE_INCREASE_P
 import type { DifficultyId } from "../config/gameConfig";
 import type { Player } from "../entities/Player";
 import { CHARACTER_CONFIG, DEFAULT_CHARACTER_ID } from "../config/characterConfig";
+import { WEAPON_CONFIG } from "../config/weaponConfig";
 import type { CharacterId, WeaponId } from "../types/EntityTypes";
 import type { ItemInstance } from "../types/ItemTypes";
 import type { Inventory } from "./Inventory";
@@ -69,12 +70,16 @@ export class Shop {
     const basicOffers = CHARACTER_CONFIG[characterId].maxMana > 0 ? SHOP_BASIC_OFFERS.withMana : SHOP_BASIC_OFFERS.default;
     const offers = basicOffers.map((id) => Shop.createOffer(id, null));
     const lootContext = { source: "shop" as const, levelId: context.levelId, difficulty: context.difficulty };
-    // armi vietate alla classe diventano armi permesse; se la classe ha armi vietate (il Mago) e ha già tutte quelle
-    // permesse, in vendita c'è comunque una di quelle (un bastone di un'altra rarità prende il posto del suo)
+    // armi vietate alla classe diventano armi permesse; se la classe ha armi vietate e ha già tutte quelle permesse,
+    // in vendita c'è comunque una di quelle (un'arma di un'altra rarità prende il posto della sua).
+    // Le classi con catalizzatore (il Mago) trovano sempre anche i catalizzatori tra i candidati (Classi Fase 3: la spada,
+    // sempre scoperta e ora permessa al Mago, non deve togliere dalla bottega il bastone di un'altra rarità)
     const resolvedIds = [...new Set(discoveredWeaponIds.map((weaponId) => resolveLootWeaponId(characterId, weaponId)))];
     const hasForbiddenWeapons = discoveredWeaponIds.some((weaponId) => resolveLootWeaponId(characterId, weaponId) !== weaponId);
     const missingIds = resolvedIds.filter((weaponId) => !inventory.hasWeapon(weaponId));
-    const candidates = missingIds.length === 0 && hasForbiddenWeapons ? resolvedIds : missingIds;
+    const focusIds = CHARACTER_CONFIG[characterId].usesSpellFocus === true ? resolvedIds.filter((weaponId) => WEAPON_CONFIG[weaponId].spellFocus !== undefined) : [];
+    const withFocusIds = [...new Set([...missingIds, ...focusIds])];
+    const candidates = withFocusIds.length === 0 && hasForbiddenWeapons ? resolvedIds : withFocusIds;
     if (candidates.length > 0) {
       const weaponId = pickRandom(candidates, randomNumber);
       const weapon = rollLootWeapon(weaponId, lootContext, randomNumber);
@@ -144,7 +149,7 @@ export class Shop {
       // un'arma dello stesso tipo prende il posto della vecchia, che va nello zaino (bastone del Mago)
       const result = inventory.addWeapon(item);
       if (result.droppedItem !== undefined) {
-        inventory.addToBackpack(result.droppedItem);
+        inventory.addToBackpack(result.droppedItem, result.droppedAmmo ?? null);
       }
     } else {
       inventory.addToBackpack(item);

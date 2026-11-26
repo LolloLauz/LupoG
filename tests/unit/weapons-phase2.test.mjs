@@ -30,7 +30,9 @@ t("giavellotto: il colpo più forte di tutte le armi a distanza",W.javelin.attac
 const cs=new CollisionSystem();const P=[{x:0,y:200,width:2000,height:40}];
 const input=(pressed=[],held=[])=>({isHeld:a=>held.includes(a),wasPressed:a=>pressed.includes(a),wasReleased:()=>false});
 const frame=(p,pressed=[],held=[])=>p.update(1/60,input(pressed,held),cs,P,2000);
-const grounded=(id,ammo=null)=>{const p=new Player(100,176);p.equipWeapon(W[id],ammo);for(let i=0;i<5;i++)frame(p);return p};
+// Classi Fase 3: l'arco lo impugna il Ranger, per cui è neutro (il Cavaliere ha ▼ sull'arco); qui si misurano i valori dell'arma
+const {CHARACTER_CONFIG}=await load('config/characterConfig');
+const grounded=(id,ammo=null)=>{const p=new Player(100,176,id==='bow'?CHARACTER_CONFIG.ranger:undefined);p.equipWeapon(W[id],ammo);for(let i=0;i<5;i++)frame(p);return p};
 const fireAndCollect=(p,action,held=[],frames=30)=>{frame(p,[action],held);const launches=[...p.drainProjectileLaunches()];for(let i=0;i<frames;i++){frame(p,[],held);launches.push(...p.drainProjectileLaunches());}return launches;};
 {const p=grounded('bow');frame(p,['attack']);for(let i=0;i<3;i++)frame(p);
  t("tirando non c'è area d'urto della spada",p.activeAttack?.id==='bowShot'&&p.getActiveAttackHitbox()===null);

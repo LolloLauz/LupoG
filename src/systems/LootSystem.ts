@@ -2,7 +2,6 @@ import { ARMOR_CONFIG, ARMOR_MATERIAL_ORDER, ARMOR_SLOTS } from "../config/armor
 import type { DifficultyId } from "../config/gameConfig";
 import { CHARACTER_CONFIG } from "../config/characterConfig";
 import { getWeaponAffinity } from "../config/weaponAffinityConfig";
-import { WEAPON_CONFIG } from "../config/weaponConfig";
 import { LOOT_DIFFICULTY_LEVEL_BONUS, LOOT_LEVEL_SCALE, LOOT_SOURCES, type LootSourceId } from "../config/lootConfig";
 import { RARITY_ORDER, getRarityRank } from "../config/rarityConfig";
 import { LEGENDARY_ITEMS, MYTHIC_ITEMS, type UniqueItemDefinition } from "../config/uniqueItemConfig";
@@ -75,19 +74,20 @@ export function rollLootArmor(context: LootContext, random: RandomSource): Armor
 }
 
 /**
- * Filtro del bottino (Classi Fase 2, anticipo della Fase 3): un'arma vietata alla classe dalla tabella di compatibilità
- * diventa un'arma permessa. Prima l'arma iniziale della classe, se permessa; altrimenti la prima permessa di
- * WEAPON_CONFIG. Per il Mago ogni arma diventa un bastone; le altre classi oggi non hanno armi vietate a terra.
+ * Filtro del bottino (Classi Fase 3): un'arma vietata alla classe dalla tabella di compatibilità diventa il suo
+ * sostituto (lootSubstituteId della cella), così a terra non compare mai un'arma inutilizzabile. Rete di sicurezza:
+ * senza sostituto (o con un sostituto a sua volta vietato) l'arma iniziale della classe.
  */
 export function resolveLootWeaponId(characterId: CharacterId, weaponId: WeaponId): WeaponId {
-  if (getWeaponAffinity(characterId, weaponId).isAllowed) {
+  const affinity = getWeaponAffinity(characterId, weaponId);
+  if (affinity.isAllowed) {
     return weaponId;
   }
-  const startingWeaponId = CHARACTER_CONFIG[characterId].startingWeaponId;
-  if (getWeaponAffinity(characterId, startingWeaponId).isAllowed) {
-    return startingWeaponId;
+  const substituteId = affinity.lootSubstituteId;
+  if (substituteId !== undefined && getWeaponAffinity(characterId, substituteId).isAllowed) {
+    return substituteId;
   }
-  return (Object.keys(WEAPON_CONFIG) as WeaponId[]).find((candidate) => getWeaponAffinity(characterId, candidate).isAllowed) ?? weaponId;
+  return CHARACTER_CONFIG[characterId].startingWeaponId;
 }
 
 /**

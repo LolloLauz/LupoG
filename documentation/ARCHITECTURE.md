@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.2.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.3.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -372,7 +372,17 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 
 **Catalizzatore.** `WeaponDefinition.spellFocus` (`powerMultiplier`, `manaCostMultiplier`, `manaPerHit`) descrive cosa dà un'arma agli incantesimi; vale solo se la classe ha `usesSpellFocus` (`Player.activeSpellFocus`). Tre punti lo leggono: `Player.getAbilityCost` (costo in mana, arrotondato), `Player.getDamageMultiplierFor(attack)` (moltiplica solo il danno degli incantesimi; lo usano `CombatSystem` e i proiettili) e `Player.registerHit` (ogni bersaglio colpito con un attacco dell'arma ridà `manaPerHit`, tramite `restoreMana` e `ResourcePool.restore`). Le altre classi con il bastone non ottengono niente: il bonus è della classe, non dell'arma.
 
-**Compatibilità arma-classe e filtro del bottino.** `weaponAffinityConfig.ts` ha una tabella classe per categoria: il Mago può usare solo la categoria `staff`, le altre classi tutto tranne il bastone (`FORBIDDEN_WEAPON_AFFINITY`). In 2.2.0 i divieti li legge solo `resolveLootWeaponId` (`LootSystem`), che sostituisce un'arma vietata con l'arma iniziale della classe (o la prima permessa): è applicato a forzieri, élite, trofei dei boss e bottega. `Player.equipWeapon` non li controlla ancora (arriva nella Fase 3).
+**Compatibilità arma-classe e filtro del bottino (Classi Fase 3).** `weaponAffinityConfig.ts` ha una tabella **per arma**: 11 armi × 5 classi, non più per categoria (la categoria resta nei tag di `WEAPON_CONFIG` solo per lo scaling della Fase 4). Ogni cella `WeaponAffinity` ha `isAllowed`, `damageMultiplier`, `recoveryMultiplier`, `ammoMultiplier` e, per le vietate, `lootSubstituteId`. Quattro costanti: `NEUTRAL_WEAPON_AFFINITY` (✓ e arma iniziale, tutto ×1), `PREFERRED_WEAPON_AFFINITY` (★: danno ×1,15, munizioni ×1,5), `PENALIZED_WEAPON_AFFINITY` (▼: danno ×0,85, recupero ×1,15, cioè più lento) e `forbidden(sostituto)`. Il Mago può ora impugnare spada e pugnale (la Fase 2 prevedeva solo il bastone); il catalizzatore (`spellFocus`) resta del bastone.
+
+Il **filtro del bottino** `resolveLootWeaponId` (`LootSystem`) sostituisce un'arma vietata con il `lootSubstituteId` della cella (rete di sicurezza: l'arma iniziale): spadone del Ranger → balestra; Mago: spadone → spada, le altre vietate → bastone; bastone delle altre classi → arma iniziale. Vale per forzieri, élite, trofei dei boss, ricompensa finale e bottega, quindi un'arma vietata non compare mai a terra.
+
+I **divieti** sono applicati in tre punti: `Player.equipWeapon` restituisce `boolean` e rifiuta le armi vietate (non cambia nulla); `Inventory.equipFromBackpack` restituisce `"forbidden"` (l'arma resta nello zaino) e il motore mostra "NON PUOI USARLA"; `GameEngine.pickUpEquipment` non raccoglie l'arma vietata. Il modulo `src/systems/WeaponAffinity.ts` raccoglie le funzioni di lettura (`getWeaponMaxAmmo`, `canWieldWeapon`, `describeWeaponAffinity`, `FORBIDDEN_WEAPON_MESSAGE`).
+
+**Munizioni per classe.** Il massimo delle munizioni è quello dell'arma per `ammoMultiplier`, per difetto (`getWeaponMaxAmmo`). `Inventory.setCharacter(characterId)` è chiamato da `GameEngine.resetRunEquipment` a ogni nuova partita; `Inventory.getMaxAmmo` e `Player.maxAmmo` valgono per borsa, raccolta, faretra, ricarica dell'arco del Ranger e coltelli recuperati.
+
+**Zaino con munizioni.** Lo zaino conserva per ogni posto una `BackpackEntry { item, ammo? }`, anche nello snapshot di inizio livello (`InventorySnapshot.backpack`). Un'arma da lancio messa nello zaino e ripresa, lasciata a terra dallo zaino, scambiata a borsa piena o comprata a borsa piena conserva le munizioni; nello zaino non si ricaricano.
+
+**Peso.** Le armature hanno `weight` (`ARMOR_WEIGHT_BY_MATERIAL` × `ARMOR_WEIGHT_SLOT_FACTOR`); `getItemWeight(item)` (`ItemFactory`) lo legge per ogni oggetto. È solo un dato mostrato nella scheda: nessun effetto fino alla Fase 4 (richiederà Forza). Il malus di velocità previsto in origine è stato scartato perché le armature pesanti hanno già `moveSpeed` negativo.
 
 **Pozioni per tipo.** `BagSlot` di tipo pozione ha `potionId` (`PotionId`: salute o mana). Ogni tipo ha i suoi posti (`INVENTORY_CONFIG.maxPotionSlots`, `maxPotionsPerSlot`), quindi due pozioni di mana non tolgono posto a quelle di salute; `addPotion`, `canAddPotion` e `getPotionCount` prendono il tipo. Il bottino estrae la pozione di mana con `rollManaPotionDrop`, solo per le classi con mana, così per le altre il generatore casuale resta lo stesso di prima. La bottega, per chi ha mana, vende la pozione di mana al posto della faretra e offre sempre un bastone (che prende il posto del suo, mandandolo nello zaino).
 
@@ -384,7 +394,7 @@ di nuovo fa ripartire la durata invece di sommarsi. I power-up si perdono a ogni
 |---|---|
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
-| `npm test` | 1166 controlli unitari in Node (meno di 1 secondo) |
+| `npm test` | 1263 controlli unitari in Node (meno di 1 secondo) |
 | `npm run test:browser` | 177 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |

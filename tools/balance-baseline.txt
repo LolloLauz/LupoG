@@ -66,8 +66,8 @@ BERSERKER  rusher (non schiva)      senza abilità partite vinte 100%   vite rim
 BERSERKER  rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 BERSERKER  medio (schiva a volte)   senza abilità partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 BERSERKER  medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 2.95   morti medie 0.05
-PALADINO   rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 2.70   morti medie 0.30
-PALADINO   rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 2.70   morti medie 0.30
+PALADINO   rusher (non schiva)      senza abilità partite vinte 100%   vite rimaste (se vinta) 2.98   morti medie 0.02
+PALADINO   rusher (non schiva)      con abilità   partite vinte 100%   vite rimaste (se vinta) 2.98   morti medie 0.02
 PALADINO   medio (schiva a volte)   senza abilità partite vinte  95%   vite rimaste (se vinta) 2.53   morti medie 0.60
 PALADINO   medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 

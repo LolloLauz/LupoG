@@ -65,8 +65,9 @@ export default async function (t, load) {
   t("bastone: categoria propria, nessuna munizione, colpi leggeri deboli, catalizzatore",
     WEAPON_CONFIG.staff.category === "staff" && WEAPON_CONFIG.staff.ammo === undefined && WEAPON_CONFIG.staff.attacks.staffStrike1.damage < WEAPON_CONFIG.sword.attacks[WEAPON_CONFIG.sword.defaultAttackByInput.attack].damage &&
       WEAPON_CONFIG.staff.spellFocus.powerMultiplier > 1 && WEAPON_CONFIG.staff.spellFocus.manaCostMultiplier < 1 && WEAPON_CONFIG.staff.spellFocus.manaPerHit > 0);
-  t("solo il bastone è permesso al Mago, e il bastone solo al Mago",
-    Object.keys(WEAPON_CONFIG).every((id) => getWeaponAffinity("mage", id).isAllowed === (id === "staff")) && CHARACTER_ORDER.every((id) => WEAPON_AFFINITY_CONFIG[id].staff.isAllowed === (id === "mage")));
+  // Classi Fase 3: il Mago impugna anche spada e pugnale (senza catalizzatore)
+  t("al Mago sono permessi solo bastone, spada e pugnale; il bastone solo al Mago",
+    Object.keys(WEAPON_CONFIG).every((id) => getWeaponAffinity("mage", id).isAllowed === ["staff", "sword", "dagger"].includes(id)) && CHARACTER_ORDER.every((id) => WEAPON_AFFINITY_CONFIG[id].staff.isAllowed === (id === "mage")));
   t("solo il Mago sfrutta il catalizzatore", CHARACTER_ORDER.filter((id) => CHARACTER_CONFIG[id].usesSpellFocus === true).join() === "mage");
 
   // --- mana: pagamento, rifiuto, recupero ---
@@ -230,8 +231,8 @@ export default async function (t, load) {
     /selection\.potionId === "manaPotion"[\s\S]{0,200}MANA PIENO[\s\S]{0,300}restoreMana\(manaAmount\)/.test(engineSource) && /addPotion\(GameEngine\.toPotionId\(item\.definition\.id\)\)/.test(engineSource) && /rollManaPotionDrop\(source, this\.player\.characterDefinition\.id, this\.lootRandom\)/.test(engineSource));
 
   // --- bottino e bottega ---
-  t("bottino del Mago: ogni arma diventa un bastone", Object.keys(WEAPON_CONFIG).every((id) => resolveLootWeaponId("mage", id) === "staff"));
-  t("bottino delle altre classi: nessuna arma cambia", ["knight", "ranger", "berserker", "paladin"].every((characterId) => Object.keys(WEAPON_CONFIG).filter((id) => id !== "staff").every((id) => resolveLootWeaponId(characterId, id) === id)));
+  t("bottino del Mago: spada e pugnale restano, lo spadone diventa una spada, le altre armi un bastone",
+    Object.keys(WEAPON_CONFIG).every((id) => resolveLootWeaponId("mage", id) === (["staff", "sword", "dagger"].includes(id) ? id : id === "greatsword" ? "sword" : "staff")));
   t("motore: forzieri, élite e trofei dei boss passano dal filtro", (engineSource.match(/rollLootWeapon\(this\.resolveLootWeapon\(/g) ?? []).length === 3);
   {
     let calls = 0;
@@ -243,6 +244,7 @@ export default async function (t, load) {
     const bag = new Inventory();
     bag.reset(["staff"], "staff");
     // generatore alto: il bastone in vendita è raro, diverso da quello Comune in borsa
+    // la spada è sempre tra le armi scoperte (e dalla Classi Fase 3 il Mago può usarla): il bastone resta tra i candidati
     const shop = Shop.open(["sword", "staff", "bow"], bag, () => 0.95, { levelId: 5, difficulty: "normal", characterId: "mage" });
     const ids = shop.offers.map((offer) => offer.id);
     t("bottega del Mago: pozione di mana al posto della faretra, e un bastone in vendita anche se ne ha già uno", ids.join() === "potion,manaPotion,heal,weapon,armor" && shop.offers[3].weaponId === "staff");
@@ -254,7 +256,7 @@ export default async function (t, load) {
     t("il bastone comprato prende il posto di quello in mano, che va nello zaino", shop.buy(3, customer) === "bought" && bag.weaponIds.join() === "staff" && bag.equippedWeaponItem.rarity === "epic" && bag.backpackItems.some((item) => item.baseId === "staff" && item.rarity === oldStaff.rarity));
     const sameBag = new Inventory();
     sameBag.reset(["staff"], "staff");
-    const sameShop = Shop.open(["sword", "staff"], sameBag, () => 0.01, { levelId: 1, difficulty: "normal", characterId: "mage" });
+    const sameShop = Shop.open(["staff", "axe"], sameBag, () => 0.01, { levelId: 1, difficulty: "normal", characterId: "mage" });
     t("un bastone identico a quello in borsa non va in vendita (niente voce inutile)", sameShop.offers.every((offer) => offer.id !== "weapon"));
     const knightBag = new Inventory();
     knightBag.reset(["sword"], "sword");
@@ -274,8 +276,8 @@ export default async function (t, load) {
     }
     const knightDraws = draws.filter((_, index) => index % 2 === 0);
     const mageDraws = draws.filter((_, index) => index % 2 === 1);
-    t("trofeo finale: il cavaliere non riceve mai il bastone, il Mago solo bastoni o armature",
-      knightDraws.every((item) => item.baseId !== "staff") && mageDraws.every((item) => item.kind === "armor" || item.baseId === "staff") && mageDraws.some((item) => item.baseId === "staff") && Object.values(LEGENDARY_ITEMS).some((item) => item.baseId === "staff"));
+    t("trofeo finale: il cavaliere non riceve mai il bastone, il Mago solo armi permesse (bastone, spada, pugnale) o armature",
+      knightDraws.every((item) => item.baseId !== "staff") && mageDraws.every((item) => item.kind === "armor" || ["staff", "sword", "dagger"].includes(item.baseId)) && mageDraws.some((item) => item.baseId === "staff") && Object.values(LEGENDARY_ITEMS).some((item) => item.baseId === "staff"));
   }
 
   // --- HUD ---

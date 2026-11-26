@@ -17,7 +17,9 @@ import { ARMOR_CONFIG, ARMOR_SLOTS, ARMOR_SLOT_NAMES } from "../config/armorConf
 import { RARITY_CONFIG } from "../config/rarityConfig";
 import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
 import { compareItemStats, describeItemStats } from "../systems/EquipmentStats";
-import { getItemBaseName, getItemIconSpriteId, getItemName, getUniqueItemDefinition } from "../systems/ItemFactory";
+import { getItemBaseName, getItemIconSpriteId, getItemName, getItemWeight, getUniqueItemDefinition } from "../systems/ItemFactory";
+import { describeWeaponAffinity, type WeaponAffinityLine } from "../systems/WeaponAffinity";
+import { getWeaponAffinity } from "../config/weaponAffinityConfig";
 import type { ArmorSlot, EquipmentBonuses, EquippedArmor, ItemInstance, WeaponItem } from "../types/ItemTypes";
 
 /** Icona della sagoma di un posto d'armatura vuoto. */
@@ -56,7 +58,16 @@ export interface EquipmentView {
   activeSets: string[];
   /** Bonus totali dell'equipaggiamento (riassunto a destra). */
   bonuses: EquipmentBonuses;
+  /** Classe in uso: bonus e malus delle armi nella scheda (Classi Fase 3). */
+  characterId: CharacterId;
 }
+
+/** Colori della riga di classe delle armi (Classi Fase 3): verde i bonus, rosso malus e divieti. */
+export const WEAPON_AFFINITY_TONE_COLORS: Record<WeaponAffinityLine["tone"], string> = {
+  bonus: PALETTE.lightGreen,
+  malus: PALETTE.red,
+  forbidden: PALETTE.red,
+};
 
 /** Casella scelta nella schermata dell'equipaggiamento. */
 export type EquipmentCell = { section: "armor"; slot: ArmorSlot } | { section: "bag"; index: number } | { section: "backpack"; index: number };
@@ -115,6 +126,8 @@ export interface ShopOfferView {
   nameColor?: string | null;
   /** Lato dell'icona (16 le armi, 8 gli oggetti). */
   iconSize: 8 | 16;
+  /** Bonus e malus della classe per l'arma in vendita (Classi Fase 3): prende il posto della descrizione. */
+  classLine?: WeaponAffinityLine | null;
 }
 
 /** Colore rappresentativo di ogni ambientazione (riquadro nella selezione dei livelli). */
@@ -591,7 +604,9 @@ export class ScreenManager {
       this.spriteManager.drawSprite(renderer, offer.iconSpriteId, offer.iconSize === 16 ? 38 : 42, iconY, false, false, offer.iconVariant ?? null);
       const nameColor = offer.isSoldOut ? PALETTE.slate : (offer.nameColor ?? PALETTE.white);
       renderer.drawText(offer.name, 60, rowY, nameColor, { shadowColor: PALETTE.black });
-      renderer.drawText(offer.description, 60, rowY + 9, PALETTE.lightGray, { shadowColor: PALETTE.black });
+      const classLine = offer.classLine ?? null;
+      const descriptionColor = classLine === null || offer.isSoldOut ? PALETTE.lightGray : WEAPON_AFFINITY_TONE_COLORS[classLine.tone];
+      renderer.drawText(classLine === null ? offer.description : classLine.text, 60, rowY + 9, descriptionColor, { shadowColor: PALETTE.black });
       if (offer.isSoldOut) {
         renderer.drawText("ESAURITO", renderer.width - 38, rowY + 4, PALETTE.slate, { align: "right" });
       } else {
@@ -735,21 +750,36 @@ export class ScreenManager {
     const rarity = RARITY_CONFIG[item.rarity];
     renderer.drawText(getItemName(item), 22, top + 8, rarity.color, { shadowColor: PALETTE.black });
     const slotName = item.kind === "armor" ? ARMOR_SLOT_NAMES[ARMOR_CONFIG[item.baseId].slot] : "ARMA";
-    renderer.drawText(`${rarity.name} - ${getItemBaseName(item)} (${slotName})`, 22, top + 19, PALETTE.lightGray, { shadowColor: PALETTE.black });
+    renderer.drawText(`${rarity.name} - ${getItemBaseName(item)} (${slotName})  PESO ${getItemWeight(item)}`, 22, top + 19, PALETTE.lightGray, { shadowColor: PALETTE.black });
     const differences = comparedWith === null && cell.section !== "backpack" ? null : compareItemStats(item, comparedWith);
     const lines = describeItemStats(item);
-    lines.slice(0, 8).forEach((line, index) => {
+    // bonus e malus della classe per le armi (Classi Fase 3): prime righe della griglia, nei colori del tono. Le statistiche
+    // non devono sparire: se non c'è posto per una riga per voce, una sola riga riassuntiva; se manca anche quella, niente
+    const classLine = item.kind === "weapon" ? describeWeaponAffinity(getWeaponAffinity(view.characterId, item.baseId), item.baseId) : null;
+    const gridSize = 8;
+    let classTexts: string[] = [];
+    if (classLine !== null) {
+      const fullTexts = classLine.tone === "forbidden" ? [classLine.text] : classLine.parts.map((part) => `CLASSE ${part}`);
+      const summary = classLine.tone === "forbidden" ? classLine.text : classLine.tone === "bonus" ? "CLASSE: BONUS" : "CLASSE: MALUS";
+      classTexts = lines.length + fullTexts.length <= gridSize ? fullTexts : lines.length < gridSize ? [summary] : [];
+    }
+    const classColor = classLine === null ? PALETTE.white : WEAPON_AFFINITY_TONE_COLORS[classLine.tone];
+    const gridLines = [
+      ...classTexts.map((text) => ({ key: "", text, color: classColor })),
+      ...lines.map((line) => ({ key: line.key, text: line.text === "" ? line.label : `${line.label} ${line.text}`, color: PALETTE.white })),
+    ];
+    gridLines.slice(0, gridSize).forEach((line, index) => {
       const x = index < 4 ? 22 : 164;
       const y = top + 32 + (index % 4) * 10;
-      const text = line.text === "" ? line.label : `${line.label} ${line.text}`;
-      renderer.drawText(text, x, y, PALETTE.white, { shadowColor: PALETTE.black });
-      const difference = differences?.get(line.key) ?? 0;
+      const text = line.text;
+      renderer.drawText(text, x, y, line.color, { shadowColor: PALETTE.black });
+      const difference = line.key === "" ? 0 : (differences?.get(line.key) ?? 0);
       if (differences !== null && difference !== 0) {
         const differenceText = `(${difference > 0 ? "+" : ""}${difference})`;
         renderer.drawText(differenceText, x + measureTextWidth(text, 1) + 4, y, difference > 0 ? PALETTE.lightGreen : PALETTE.red, { shadowColor: PALETTE.black });
       }
     });
-    if (lines.length === 0) {
+    if (gridLines.length === 0) {
       renderer.drawText("NESSUN BONUS", 22, top + 32, PALETTE.gray, { shadowColor: PALETTE.black });
     }
     const unique = item.uniqueId === undefined ? undefined : getUniqueItemDefinition(item.uniqueId);

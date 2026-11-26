@@ -20,6 +20,7 @@ import { DEFAULT_WEAPON_ID, WEAPON_CONFIG } from "../config/weaponConfig";
 import { AnimationPlayer } from "../rendering/AnimationManager";
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
+import { canWieldWeapon, getWeaponMaxAmmo } from "../systems/WeaponAffinity";
 import { CollisionSystem } from "../systems/CollisionSystem";
 import type { AbilityDefinition, AttackDefinition, Attributes, CharacterDefinition, Damageable, ElementId, GuardOutcome, HitProperties, PlayerEnvironment, PlayerState, PowerUpDefinition, ProjectileLaunch, ResourceCost, SpellFocusDefinition, WeaponAffinity, WeaponDefinition } from "../types/EntityTypes";
 import type { GameAction, InputSource, Rectangle, Vector2 } from "../types/GameTypes";
@@ -296,14 +297,20 @@ export class Player extends GameObject {
   }
 
   /**
-   * Moltiplicatore del danno di un attacco: quello generale (getDamageMultiplier) e, per gli attacchi degli incantesimi,
-   * la potenza del catalizzatore in mano.
+   * Moltiplicatore del danno di un attacco: quello generale (getDamageMultiplier); per gli attacchi dell'arma in mano
+   * il bonus o malus della classe (Classi Fase 3); per gli attacchi degli incantesimi la potenza del catalizzatore.
    */
   public getDamageMultiplierFor(attack: AttackDefinition): number {
     const focus = this.activeSpellFocus;
     const spell = this.abilities.find((ability) => ability.kind === "attack" && ability.attack.id === attack.id);
     const spellPower = focus !== null && spell !== undefined && Player.isSpell(spell) ? focus.powerMultiplier : 1;
-    return this.getDamageMultiplier() * spellPower;
+    const affinity = this.isWeaponAttack(attack) ? this.weaponAffinity.damageMultiplier : 1;
+    return this.getDamageMultiplier() * spellPower * affinity;
+  }
+
+  /** Vero se l'attacco è dell'arma in mano (non un'abilità o un incantesimo): solo questi sentono la tabella di compatibilità. */
+  private isWeaponAttack(attack: AttackDefinition): boolean {
+    return this.weapon.attacks[attack.id] !== undefined;
   }
 
   /** Recupera mana (pozione di mana): non oltre il massimo. */
@@ -328,7 +335,7 @@ export class Player extends GameObject {
     return this.abilityCooldownFraction === 0 && this.canAfford(this.getAbilityCost(this.ability));
   }
 
-  /** Compatibilità della classe con l'arma in mano (Classi Fase 0: sempre neutra). */
+  /** Compatibilità della classe con l'arma in mano (Classi Fase 3: bonus e malus della tabella). */
   public get weaponAffinity(): Readonly<WeaponAffinity> {
     return getWeaponAffinity(this.character.id, this.weapon.id);
   }
@@ -498,8 +505,12 @@ export class Player extends GameObject {
    * Cambia arma (di solito una voce di WEAPON_CONFIG): l'attacco in corso e la combo vengono annullati.
    * ammo = munizioni di quell'arma (solo per le armi con munizioni; se omesso: piene).
    * item = l'oggetto (rarità e modificatori); se omesso e l'arma cambia, un'arma Comune.
+   * Classi Fase 3: un'arma vietata alla classe dalla tabella di compatibilità non si impugna (false, non cambia nulla).
    */
-  public equipWeapon(weapon: WeaponDefinition, ammo: number | null = null, item: WeaponItem | null = null): void {
+  public equipWeapon(weapon: WeaponDefinition, ammo: number | null = null, item: WeaponItem | null = null): boolean {
+    if (!canWieldWeapon(this.character.id, weapon.id)) {
+      return false;
+    }
     const nextItem = item ?? (this.weaponItem.baseId === weapon.id ? this.weaponItem : createWeaponItem(weapon.id));
     if (nextItem !== this.weaponItem) {
       this.weaponItem = nextItem;
@@ -519,7 +530,9 @@ export class Player extends GameObject {
         this.animationPlayer.play(this.getAnimationName());
       }
     }
-    this.ammo = weapon.ammo === undefined ? null : Math.max(0, Math.min(weapon.ammo.max, ammo ?? weapon.ammo.max));
+    const maxAmmo = this.maxAmmo;
+    this.ammo = maxAmmo === null ? null : Math.max(0, Math.min(maxAmmo, ammo ?? maxAmmo));
+    return true;
   }
 
   /** Munizioni dell'arma in mano (null = infinite). */
@@ -527,10 +540,16 @@ export class Player extends GameObject {
     return this.ammo;
   }
 
+  /** Massimo delle munizioni dell'arma in mano per questa classe (Classi Fase 3: ammoMultiplier); null = infinite. */
+  public get maxAmmo(): number | null {
+    return getWeaponMaxAmmo(this.character.id, this.weapon.id) ?? null;
+  }
+
   /** Imposta le munizioni dell'arma in mano (es. coltello recuperato). Ignorato per le armi senza munizioni. */
   public setAmmo(ammo: number): void {
-    if (this.weapon.ammo !== undefined) {
-      this.ammo = Math.max(0, Math.min(this.weapon.ammo.max, ammo));
+    const maxAmmo = this.maxAmmo;
+    if (maxAmmo !== null) {
+      this.ammo = Math.max(0, Math.min(maxAmmo, ammo));
     }
   }
 
@@ -586,14 +605,12 @@ export class Player extends GameObject {
     return true;
   }
 
-  /** Moltiplicatore del danno inflitto. Punto di estensione per i futuri power-up. */
+  /**
+   * Moltiplicatore generale del danno inflitto (power-up, classe, equipaggiamento). Il bonus o malus della classe per
+   * l'arma vale solo per gli attacchi dell'arma: vedi getDamageMultiplierFor.
+   */
   public getDamageMultiplier(): number {
-    return (
-      this.modifiers.getValue("damageMultiplier") *
-      this.character.damageMultiplier *
-      this.equipment.damageMultiplier *
-      this.weaponAffinity.damageMultiplier
-    );
+    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.equipment.damageMultiplier;
   }
 
   /**
@@ -1222,9 +1239,13 @@ export class Player extends GameObject {
     this.hasPendingPlungeLanding = true;
   }
 
-  /** Recupero dopo un attacco, accorciato dai modificatori "recupero" dell'arma. */
+  /**
+   * Recupero dopo un attacco, accorciato dai modificatori "recupero" dell'arma; per gli attacchi dell'arma anche il
+   * bonus o malus della classe (Classi Fase 3), che non tocca abilità e incantesimi.
+   */
   private getAttackCooldownMs(attack: AttackDefinition): number {
-    return attack.cooldownMs * this.equipment.recoveryMultiplier * this.weaponAffinity.recoveryMultiplier;
+    const affinity = this.isWeaponAttack(attack) ? this.weaponAffinity.recoveryMultiplier : 1;
+    return attack.cooldownMs * this.equipment.recoveryMultiplier * affinity;
   }
 
   /** La risorsa indicata (guardia: stamina per lo scudo, mana per la barriera). */

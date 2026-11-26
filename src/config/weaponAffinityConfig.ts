@@ -1,63 +1,101 @@
-import type { CharacterId, WeaponAffinity, WeaponCategoryId, WeaponId } from "../types/EntityTypes";
-import { WEAPON_CONFIG } from "./weaponConfig";
+import type { CharacterId, WeaponAffinity, WeaponId } from "../types/EntityTypes";
 
-/** Nessun bonus, nessun malus, nessun divieto. */
-export const NEUTRAL_WEAPON_AFFINITY: Readonly<WeaponAffinity> = { isAllowed: true, damageMultiplier: 1, recoveryMultiplier: 1 };
+/** ✓ Nessun bonus, nessun malus. È anche il valore dell'arma iniziale (★ iniziale): la classe è bilanciata su quella. */
+export const NEUTRAL_WEAPON_AFFINITY: Readonly<WeaponAffinity> = { isAllowed: true, damageMultiplier: 1, recoveryMultiplier: 1, ammoMultiplier: 1 };
 
-/** Arma vietata alla classe (Classi Fase 2: il bastone per le classi senza magia, le altre armi per il Mago). */
-export const FORBIDDEN_WEAPON_AFFINITY: Readonly<WeaponAffinity> = { isAllowed: false, damageMultiplier: 1, recoveryMultiplier: 1 };
+/** ★ Arma preferita (non iniziale): più danno e, per le armi con munizioni, più colpi. */
+export const PREFERRED_WEAPON_AFFINITY: Readonly<WeaponAffinity> = { isAllowed: true, damageMultiplier: 1.15, recoveryMultiplier: 1, ammoMultiplier: 1.5 };
+
+/** ▼ Arma poco adatta: meno danno e recupero più lento. */
+export const PENALIZED_WEAPON_AFFINITY: Readonly<WeaponAffinity> = { isAllowed: true, damageMultiplier: 0.85, recoveryMultiplier: 1.15, ammoMultiplier: 1 };
+
+/** ✗ Arma vietata: la classe non la impugna e nel bottino diventa lootSubstituteId. */
+function forbidden(lootSubstituteId: WeaponId): Readonly<WeaponAffinity> {
+  return { isAllowed: false, damageMultiplier: 1, recoveryMultiplier: 1, ammoMultiplier: 1, lootSubstituteId };
+}
+
+const STARTING = NEUTRAL_WEAPON_AFFINITY;
+const OK = NEUTRAL_WEAPON_AFFINITY;
+const PREFERRED = PREFERRED_WEAPON_AFFINITY;
+const PENALIZED = PENALIZED_WEAPON_AFFINITY;
 
 /**
- * Compatibilità classe x categoria d'arma (Classi Fase 0): l'unica fonte di verità su armi preferite, armi con
- * malus e armi vietate. Le categorie delle armi sono in WEAPON_CONFIG (category).
- * Fase 0: tutte le celle neutre (×1, nessun divieto), il gioco non cambia. I valori veri arrivano con la Fase 3.
- * Fase 2: il bastone è solo del Mago, e il Mago usa solo il bastone. Per ora i divieti li legge solo il filtro del
- * bottino (resolveLootWeaponId): Player.equipWeapon li applicherà dalla Fase 3.
+ * Compatibilità classe x arma (Classi Fase 3): l'unica fonte di verità su armi preferite (★), con malus (▼) e vietate
+ * (✗). Una cella per arma, non per categoria: armi della stessa categoria possono comportarsi in modo diverso (il
+ * Paladino è bravo con la mazza ma non con lo spadone). La categoria resta in WEAPON_CONFIG per lo scaling (Fase 4).
+ * Le armi vietate non compaiono mai a terra: il filtro del bottino (resolveLootWeaponId) dà lootSubstituteId.
+ * I valori sono uguali per simbolo; la messa a punto cella per cella è della Fase 6B.
  */
-export const WEAPON_AFFINITY_CONFIG: Record<CharacterId, Record<WeaponCategoryId, Readonly<WeaponAffinity>>> = {
+export const WEAPON_AFFINITY_CONFIG: Record<CharacterId, Record<WeaponId, Readonly<WeaponAffinity>>> = {
   knight: {
-    blade: NEUTRAL_WEAPON_AFFINITY,
-    heavy: NEUTRAL_WEAPON_AFFINITY,
-    polearm: NEUTRAL_WEAPON_AFFINITY,
-    ranged: NEUTRAL_WEAPON_AFFINITY,
-    thrown: NEUTRAL_WEAPON_AFFINITY,
-    staff: FORBIDDEN_WEAPON_AFFINITY,
+    sword: STARTING,
+    dagger: OK,
+    spear: PREFERRED,
+    axe: OK,
+    mace: OK,
+    greatsword: PREFERRED,
+    bow: PENALIZED,
+    crossbow: PENALIZED,
+    throwingKnives: PENALIZED,
+    javelin: OK,
+    staff: forbidden("sword"),
   },
   ranger: {
-    blade: NEUTRAL_WEAPON_AFFINITY,
-    heavy: NEUTRAL_WEAPON_AFFINITY,
-    polearm: NEUTRAL_WEAPON_AFFINITY,
-    ranged: NEUTRAL_WEAPON_AFFINITY,
-    thrown: NEUTRAL_WEAPON_AFFINITY,
-    staff: FORBIDDEN_WEAPON_AFFINITY,
+    sword: OK,
+    dagger: OK,
+    spear: PENALIZED,
+    axe: PENALIZED,
+    mace: PENALIZED,
+    greatsword: forbidden("crossbow"),
+    bow: STARTING,
+    crossbow: PREFERRED,
+    throwingKnives: PREFERRED,
+    javelin: PREFERRED,
+    staff: forbidden("bow"),
   },
   berserker: {
-    blade: NEUTRAL_WEAPON_AFFINITY,
-    heavy: NEUTRAL_WEAPON_AFFINITY,
-    polearm: NEUTRAL_WEAPON_AFFINITY,
-    ranged: NEUTRAL_WEAPON_AFFINITY,
-    thrown: NEUTRAL_WEAPON_AFFINITY,
-    staff: FORBIDDEN_WEAPON_AFFINITY,
+    sword: OK,
+    dagger: PENALIZED,
+    spear: OK,
+    axe: STARTING,
+    mace: OK,
+    greatsword: PREFERRED,
+    bow: PENALIZED,
+    crossbow: PENALIZED,
+    throwingKnives: PENALIZED,
+    javelin: OK,
+    staff: forbidden("axe"),
   },
   paladin: {
-    blade: NEUTRAL_WEAPON_AFFINITY,
-    heavy: NEUTRAL_WEAPON_AFFINITY,
-    polearm: NEUTRAL_WEAPON_AFFINITY,
-    ranged: NEUTRAL_WEAPON_AFFINITY,
-    thrown: NEUTRAL_WEAPON_AFFINITY,
-    staff: FORBIDDEN_WEAPON_AFFINITY,
+    sword: PREFERRED,
+    dagger: PENALIZED,
+    spear: OK,
+    axe: PREFERRED,
+    mace: STARTING,
+    greatsword: PENALIZED,
+    bow: PENALIZED,
+    crossbow: PENALIZED,
+    throwingKnives: PENALIZED,
+    javelin: PENALIZED,
+    staff: forbidden("mace"),
   },
+  // il Mago: bastone, spada e pugnale; il catalizzatore (spellFocus) resta solo del bastone
   mage: {
-    blade: FORBIDDEN_WEAPON_AFFINITY,
-    heavy: FORBIDDEN_WEAPON_AFFINITY,
-    polearm: FORBIDDEN_WEAPON_AFFINITY,
-    ranged: FORBIDDEN_WEAPON_AFFINITY,
-    thrown: FORBIDDEN_WEAPON_AFFINITY,
-    staff: NEUTRAL_WEAPON_AFFINITY,
+    sword: OK,
+    dagger: OK,
+    spear: forbidden("staff"),
+    axe: forbidden("staff"),
+    mace: forbidden("staff"),
+    greatsword: forbidden("sword"),
+    bow: forbidden("staff"),
+    crossbow: forbidden("staff"),
+    throwingKnives: forbidden("staff"),
+    javelin: forbidden("staff"),
+    staff: STARTING,
   },
 };
 
-/** Compatibilità di una classe con un'arma (attraverso la categoria dell'arma). */
+/** Compatibilità di una classe con un'arma. */
 export function getWeaponAffinity(characterId: CharacterId, weaponId: WeaponId): Readonly<WeaponAffinity> {
-  return WEAPON_AFFINITY_CONFIG[characterId][WEAPON_CONFIG[weaponId].category];
+  return WEAPON_AFFINITY_CONFIG[characterId][weaponId];
 }

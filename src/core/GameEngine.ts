@@ -45,11 +45,13 @@ import type { ItemInstance } from "../types/ItemTypes";
 import { RARITY_CONFIG } from "../config/rarityConfig";
 import { getItemIconVariant } from "../rendering/sprites/equipmentVisuals";
 import { getItemIconSpriteId, getItemName, type RandomSource } from "../systems/ItemFactory";
+import { FORBIDDEN_WEAPON_MESSAGE, canWieldWeapon, describeWeaponAffinity, type WeaponAffinityLine } from "../systems/WeaponAffinity";
+import { getWeaponAffinity } from "../config/weaponAffinityConfig";
 import { resolveLootWeaponId, rollArmorDrop, rollFinalBossReward, rollLootArmor, rollLootWeapon, rollManaPotionDrop, type LootContext } from "../systems/LootSystem";
 import type { LootSourceId } from "../config/lootConfig";
 import type { Vector2 } from "../types/GameTypes";
 import { HUDManager, type HUDData } from "../ui/HUDManager";
-import { ScreenManager, type EquipmentCell, type EquipmentView, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
+import { ScreenManager, WEAPON_AFFINITY_TONE_COLORS, type EquipmentCell, type EquipmentView, type MenuCommand, type ScreenData } from "../ui/ScreenManager";
 import { ARMOR_SETS } from "../config/armorConfig";
 import { EMPTY_ARMOR, getActiveSets } from "../systems/EquipmentStats";
 import { ProgressManager } from "../systems/ProgressManager";
@@ -872,6 +874,7 @@ export class GameEngine {
       backpackFull: "ZAINO PIENO",
       lastWeapon: "È L'ULTIMA ARMA",
       empty: "",
+      forbidden: FORBIDDEN_WEAPON_MESSAGE,
     };
     if (messages[outcome] !== "") {
       this.screens.showNotice(messages[outcome], 1.5);
@@ -886,7 +889,6 @@ export class GameEngine {
     }
     const centerX = this.player.positionX + this.player.width / 2;
     const feetY = this.player.positionY + this.player.height;
-    let dropped: ItemInstance | null = null;
     if (cell.section === "bag") {
       const slot = this.inventory.bagSlots[cell.index];
       if (slot === null || slot === undefined) {
@@ -900,11 +902,20 @@ export class GameEngine {
       this.screens.showNotice("A TERRA", 1.5);
       return;
     }
-    dropped = cell.section === "armor" ? this.inventory.takeArmor(cell.slot) : this.inventory.removeFromBackpack(cell.index);
+    // dallo zaino l'arma scende con le munizioni che le restano (Classi Fase 3)
+    let dropped: ItemInstance | null = null;
+    let droppedAmmo: number | null = null;
+    if (cell.section === "armor") {
+      dropped = this.inventory.takeArmor(cell.slot);
+    } else {
+      const entry = this.inventory.removeFromBackpack(cell.index);
+      dropped = entry?.item ?? null;
+      droppedAmmo = entry?.ammo ?? null;
+    }
     if (dropped === null) {
       return;
     }
-    this.weaponPickups.spawn(dropped, centerX, feetY, false);
+    this.weaponPickups.spawn(dropped, centerX, feetY, false, droppedAmmo);
     this.equipFromInventory();
     this.screens.showNotice(`${getItemName(dropped)} A TERRA`, 1.5);
   }
@@ -973,6 +984,11 @@ export class GameEngine {
       this.effects.addPopup(outcome === "equipped" ? getItemName(item) : `${getItemName(item)} NELLO ZAINO`, centerX, popupY, rarityColor);
       return;
     }
+    // rete di sicurezza (Classi Fase 3): il filtro del bottino non lascia a terra armi vietate alla classe
+    if (!canWieldWeapon(this.player.characterDefinition.id, item.baseId)) {
+      this.effects.addPopup(FORBIDDEN_WEAPON_MESSAGE, centerX, popupY, PALETTE.red);
+      return;
+    }
     const result = this.inventory.addWeapon(item, pickup.ammo);
     if (result.outcome === "duplicate") {
       this.effects.addPopup("GIÀ NELLA BORSA", centerX, popupY, PALETTE.lightGray);
@@ -992,7 +1008,7 @@ export class GameEngine {
     let message = getItemName(item);
     if (result.droppedItem !== undefined) {
       // l'arma che esce dalla borsa va nello zaino; se è pieno resta a terra al posto di quella presa
-      if (this.inventory.addToBackpack(result.droppedItem)) {
+      if (this.inventory.addToBackpack(result.droppedItem, result.droppedAmmo ?? null)) {
         message = `${message} (${getItemName(result.droppedItem)} NELLO ZAINO)`;
       } else {
         this.weaponPickups.spawn(result.droppedItem, centerX, pickup.positionY + pickup.height, false, result.droppedAmmo ?? null);
@@ -1084,6 +1100,7 @@ export class GameEngine {
 
   /** Equipaggiamento di inizio partita: la sola arma iniziale della classe scelta, niente pozioni, armature o zaino. */
   private resetRunEquipment(): void {
+    this.inventory.setCharacter(this.progressManager.characterId);
     const startingWeaponId = CHARACTER_CONFIG[this.progressManager.characterId].startingWeaponId;
     this.inventory.reset([startingWeaponId], startingWeaponId);
     this.inventory.setArmorAndBackpack(EMPTY_ARMOR, []);
@@ -1099,7 +1116,13 @@ export class GameEngine {
    * armature: l'unico punto in cui l'equipaggiamento passa dalla borsa al giocatore.
    */
   private equipFromInventory(): void {
-    this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo, this.inventory.equippedWeaponItem);
+    // rete di sicurezza (Classi Fase 3): arma vietata nella borsa? resta quella di prima, e la borsa torna a quella
+    if (!this.player.equipWeapon(WEAPON_CONFIG[this.inventory.equippedWeaponId], this.inventory.equippedAmmo, this.inventory.equippedWeaponItem)) {
+      const fallbackIndex = this.inventory.bagSlots.findIndex((slot) => slot?.kind === "weapon" && slot.weaponId === this.player.equippedWeapon.id);
+      if (fallbackIndex >= 0) {
+        this.inventory.selectSlot(fallbackIndex);
+      }
+    }
     this.player.setArmor(this.inventory.equippedArmor);
   }
 
@@ -1398,6 +1421,7 @@ export class GameEngine {
           iconSpriteId: item !== null ? getItemIconSpriteId(item) : GameEngine.SHOP_ICONS[offer.id],
           iconVariant: item !== null ? getItemIconVariant(item) : null,
           nameColor: item !== null ? RARITY_CONFIG[item.rarity].color : null,
+          classLine: this.describeClassAffinity(item),
           iconSize: item !== null ? 16 : 8,
         };
       }),
@@ -1422,6 +1446,7 @@ export class GameEngine {
       backpackCapacity: this.inventory.backpackCapacity,
       activeSets: getActiveSets(armor).map((set) => `${ARMOR_SETS[set.material].name} ${set.pieces}/3`),
       bonuses: this.player.equipmentBonuses,
+      characterId: this.player.characterDefinition.id,
     };
   }
 
@@ -1514,8 +1539,20 @@ export class GameEngine {
         const nameColor = item === null ? PALETTE.white : RARITY_CONFIG[item.rarity].color;
         this.renderer.drawText(offer.name, centerX, pedestalTop - 52, nameColor, { align: "center", shadowColor: PALETTE.black });
         this.renderer.drawText(item === null ? `E COMPRA - ${offer.description}` : `E COMPRA - ${RARITY_CONFIG[item.rarity].name}`, centerX, pedestalTop - 42, PALETTE.white, { align: "center", shadowColor: PALETTE.black });
+        const classLine = this.describeClassAffinity(item);
+        if (classLine !== null) {
+          this.renderer.drawText(classLine.text, centerX, pedestalTop - 62, WEAPON_AFFINITY_TONE_COLORS[classLine.tone], { align: "center", shadowColor: PALETTE.black });
+        }
       }
     });
+  }
+
+  /** Bonus e malus della classe in uso per un'arma (Classi Fase 3); null per armature, altre voci e armi neutre. */
+  private describeClassAffinity(item: ItemInstance | null): WeaponAffinityLine | null {
+    if (item === null || item.kind !== "weapon") {
+      return null;
+    }
+    return describeWeaponAffinity(getWeaponAffinity(this.player.characterDefinition.id, item.baseId), item.baseId);
   }
 
   /** Colori del mercante: il personaggio incappucciato con la veste del mercante (nessuno sprite nuovo). */
