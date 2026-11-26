@@ -1,5 +1,25 @@
 # Changelog
 
+## 2.6.0 – Classi, Fase 6A: grafica delle mosse (2026-11-26)
+Solo grafica: danni, costi, tempi e hitbox restano quelli di prima, `npm run balance` identico al baseline.
+### Aggiunto
+- **Aspetto delle mosse come dati** (`src/config/abilityVisualConfig.ts`): `ABILITY_VISUAL_CONFIG` ha una voce per ogni mossa (icona 8×8, tinta della lama, effetti con istante e punto d'appoggio, sagome degli scatti, barriera delle guardie); `ABILITY_EFFECT_CONFIG` descrive 17 effetti (anelli di polvere, fuoco, gelo e shock, lampi di lancio, nuvole di polvere e arcane, fulmine, scie di velocità, fendenti di fiamma e di sangue).
+- **Sprite delle mosse** (`src/rendering/sprites/abilitySprites.ts`): effetti con quattro toni per elemento, barriere arcana e sacra, 20 icone, `WEAPON_TINT_COLORS`. Nessun colore nuovo fuori palette.
+- **Pipeline degli effetti**: `Player.drainAbilityEffects`, `GameEngine.showAbilityEffects`, `EffectsManager.spawnSpriteEffect`, `spawnAfterimage`, `renderAfterimages` (prima del giocatore) e `renderSpriteEffects` (dopo i proiettili).
+- **Lama tinta** dell'elemento durante la mossa (variante di colore sopra le armature) e **barriera della guardia** come sprite, bianca nella finestra della parata perfetta.
+- **Cinque pose nuove** (`ABILITY_POSES`): lancio a mano aperta, arco teso, carica, colpo di scudo, ginocchio a terra; animazioni delle mosse in `animationConfig.ts`.
+- **Proiettili**: il dardo di fuoco è una cometa (`projectileFirebolt1-3`); nuovi `fireArrow`, `frostArrow`, `poisonArrow` (valori della freccia del giocatore, sprite propri) per le frecce del Ranger.
+- Test: `tests/unit/classes-phase6.test.mjs` (31 controlli); `config-integrity` registra anche gli sprite delle mosse.
+### Modificato
+- **HUD**: il riquadro 10×10 mostra l'icona della mossa; il numero del tasto passa sopra il riquadro (`ABILITY_KEY_LABEL_Y`); sagoma grigia senza requisito; la ricarica è un retino scuro. `HUDData.abilities` ha `iconSpriteId`.
+- **Mago ridisegnato**: veste lunga fino ai piedi (l'orlo ondeggia), barba sul petto, mantello senza stemma, cappello con fascia e stella, bastone con punte d'oro. Hitbox, ancore e altezza dei frame invariati.
+- `knightSprites.ts`: le gambe dipendono dal personaggio (`LegSet`, `activeLegs` al posto delle costanti `LEGS_*`); `CharacterVisual` ha `torsoRows` e `legs`.
+- Altare della bottega rifinito.
+- Documenti: GAME_MANUAL (HUD, mosse, Mago), ARCHITECTURE (grafica delle mosse), CODE_MANUAL (file nuovi, Esempio 11 con `activeLegs.stand`, guida "Dare grafica a una mossa nuova"), TESTING, FEATURES.
+- Versione portata a 2.6.0 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Verificato
+- Gate verde: `npm run typecheck`, `npm test` (1511 controlli in 36 file), `npm run test:browser` (180 controlli), `npm run verify-docs`; `npm run balance` identico al baseline (solo grafica).
+
 ## 2.5.1 – Veleno e bruciatura uccidono, bottino a terra (2026-11-26)
 ### Corretto
 - Il danno nel tempo (veleno, bruciatura) non si ferma più a 1 HP: nemici e boss muoiono. La morte vale come un colpo del giocatore: punti, monete, oggetti lasciati, trofeo e mossa del boss, mana del Mago (`GameEngine.handleStatusKill` e `rewardDefeat`; prima la regola "lascia almeno 1 HP" era voluta, perché le ricompense partivano solo da un colpo).

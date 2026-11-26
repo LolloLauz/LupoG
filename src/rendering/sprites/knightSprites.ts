@@ -166,12 +166,27 @@ const KNIGHT_LEGS_CROUCH: string[] = [
   ".....kkkkkk..kkkkkkk....",
 ];
 
-/** Compatibilità con i nomi della versione 1.0 (usati anche negli esempi del manuale). */
-const LEGS_STAND = KNIGHT_LEGS_STAND;
-const LEGS_STRIDE = KNIGHT_LEGS_STRIDE;
-const LEGS_PASSING = KNIGHT_LEGS_PASSING;
-const LEGS_JUMP = KNIGHT_LEGS_JUMP;
-const LEGS_FALL = KNIGHT_LEGS_FALL;
+/**
+ * Gambe di un personaggio in ogni posa (7 righe; 4 la posa accovacciata). Il passo con l'altra gamba è lo
+ * specchio di stride. Il cavaliere e quasi tutte le classi usano KNIGHT_LEGS; il Mago la veste lunga (Classi Fase 6A).
+ */
+interface LegSet {
+  stand: string[];
+  stride: string[];
+  passing: string[];
+  jump: string[];
+  fall: string[];
+  crouch: string[];
+}
+
+const KNIGHT_LEGS: LegSet = {
+  stand: KNIGHT_LEGS_STAND,
+  stride: KNIGHT_LEGS_STRIDE,
+  passing: KNIGHT_LEGS_PASSING,
+  jump: KNIGHT_LEGS_JUMP,
+  fall: KNIGHT_LEGS_FALL,
+  crouch: KNIGHT_LEGS_CROUCH,
+};
 
 /** Spada a riposo: tenuta dritta davanti, la mano è su HAND_X/HAND_Y. */
 const SWORD_KEYS: BladeKeys = { grip: "e", blade: "b", edge: "v", guard: "y" };
@@ -189,6 +204,10 @@ interface SwordPose {
   frameWidth?: number;
   /** Vero per le pose disegnate per un'arma precisa: la lunghezza dell'arma non viene scalata. */
   fixedLength?: boolean;
+  /** Pixel di cui il corpo si sporge in avanti (colpo di scudo, Classi Fase 6A). */
+  shiftX?: number;
+  /** Solo per le pose delle mosse: posa accovacciata (ginocchio a terra, Classi Fase 6A). */
+  crouched?: boolean;
 }
 
 /**
@@ -216,6 +235,8 @@ const drawKnightSword: WeaponDrawer = (grid, handX, handY, tipX, tipY) => drawSw
 let activeVisual: WeaponVisual | null = null;
 /** Parte superiore del personaggio che si sta componendo (testa propria + busto del cavaliere). */
 let activeBodyRows: string[] = BODY_ROWS;
+/** Gambe del personaggio che si sta componendo. */
+let activeLegs: LegSet = KNIGHT_LEGS;
 
 /** Disegna l'arma attiva dalla mano verso la punta della posa (accorciata o allungata). */
 function drawActiveWeapon(grid: PixelGrid, handX: number, handY: number, tipX: number, tipY: number, fixedLength = false): void {
@@ -259,7 +280,7 @@ export const KNIGHT_CROUCH_SUFFIX = "Crouch";
 const CROUCH_BODY_DROP = KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length - BODY_ROWS.length + 3;
 
 function stampCrouchedBody(grid: PixelGrid, shiftX: number): void {
-  stampRows(grid, bootRows(KNIGHT_LEGS_CROUCH), shiftX, KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length);
+  stampRows(grid, bootRows(activeLegs.crouch), shiftX, KNIGHT_HEIGHT - KNIGHT_LEGS_CROUCH.length);
   stampRows(grid, activeBodyRows.slice(0, activeBodyRows.length - 3), shiftX, CROUCH_BODY_DROP);
 }
 
@@ -285,21 +306,22 @@ function composeAttackFrame(pose: SwordPose, crouched = false): string[] {
     handY = HAND_Y + CROUCH_BODY_DROP;
     tipY = Math.min(KNIGHT_HEIGHT - 1, pose.tipY + CROUCH_BODY_DROP);
   } else {
-    stampRows(grid, composeKnightFrame(LEGS_STAND, pose.bodyDrop ?? 0, false));
+    stampRows(grid, composeKnightFrame(activeLegs.stand, pose.bodyDrop ?? 0, false), pose.shiftX ?? 0);
   }
+  const handX = HAND_X + (pose.shiftX ?? 0);
   for (const arc of pose.arcs ?? []) {
     const radius = Math.max(6, Math.round(arc.radius * arcScale));
-    drawSlashArc(grid, HAND_X, handY, radius, arc.startDegrees, arc.endDegrees, "a");
-    drawSlashArc(grid, HAND_X, handY, radius - 1, arc.startDegrees, arc.endDegrees, "c");
+    drawSlashArc(grid, handX, handY, radius, arc.startDegrees, arc.endDegrees, "a");
+    drawSlashArc(grid, handX, handY, radius - 1, arc.startDegrees, arc.endDegrees, "c");
   }
-  drawActiveWeapon(grid, HAND_X, handY, pose.tipX, tipY, pose.fixedLength === true);
+  drawActiveWeapon(grid, handX, handY, pose.tipX, tipY, pose.fixedLength === true);
   return grid.map((row) => row.join(""));
 }
 
 /** Cavaliere colpito: indietreggia con la spada abbassata e stelline d'impatto. */
 function composeHurtFrame(): string[] {
   const grid = createGrid(KNIGHT_WIDTH, KNIGHT_HEIGHT);
-  stampRows(grid, bootRows(LEGS_FALL), 0, BODY_ROWS.length);
+  stampRows(grid, bootRows(activeLegs.fall), 0, BODY_ROWS.length);
   stampRows(grid, activeBodyRows, -1, 1);
   drawActiveWeapon(grid, HAND_X - 1, HAND_Y + 1, KNIGHT_WIDTH - 1, KNIGHT_HEIGHT - 3);
   for (const [x, y] of [[3, 2], [2, 4], [4, 1], [6, 0], [1, 7], [20, 3], [22, 5]] as const) {
@@ -370,11 +392,18 @@ const ATTACK_POSES: Record<string, SwordPose> = {
 /**
  * Pose delle abilità (Fase 5): arma alzata, colpo a terra, affondo in avanti. Valgono per tutte le armi
  * (la lunghezza segue l'arma), quindi un'abilità si può usare con qualsiasi arma in mano.
+ * Classi Fase 6A: lancio (arma tesa in alto davanti), mira (arma orizzontale, come l'arco), carica dietro la testa,
+ * colpo di scudo (corpo in avanti, arma bassa) e ginocchio a terra (arma piantata nel suolo).
  */
 const ABILITY_POSES: Record<string, SwordPose> = {
   knightAbilityRaise: { tipX: 20, tipY: 0, bodyDrop: 1 },
   knightAbilitySlam: { tipX: 34, tipY: 27, arcs: [{ radius: 16, startDegrees: 20, endDegrees: 80 }] },
   knightAbilityThrust: { tipX: 38, tipY: 17, arcs: [{ radius: 18, startDegrees: -15, endDegrees: 15 }] },
+  knightAbilityCast: { tipX: 31, tipY: 5 },
+  knightAbilityDraw: { tipX: 32, tipY: 17 },
+  knightAbilityWindup: { tipX: 8, tipY: 2, bodyDrop: 1 },
+  knightAbilityBash: { tipX: 30, tipY: 27, shiftX: 3 },
+  knightAbilityKneel: { tipX: 36, tipY: 29, crouched: true, arcs: [{ radius: 14, startDegrees: 30, endDegrees: 85 }] },
 };
 
 /** Pose della lancia: affondi orizzontali e un fendente ampio (frame larghi 58 pixel). */
@@ -450,6 +479,10 @@ interface CharacterVisual {
   headRows?: string[];
   /** Chiavi della testa che un elmo ricolora -> chiavi dell'elmo (se omesso: d g s w -> 1 2 3 4). */
   helmetKeyMap?: Readonly<Record<string, string>>;
+  /** Busto proprio sotto la testa (11 righe; se omesso quello del cavaliere). */
+  torsoRows?: string[];
+  /** Gambe proprie (se omesse quelle del cavaliere). */
+  legs?: LegSet;
 }
 
 /** Ranger: cappuccio e mantello verdi, cuoio al posto dell'armatura (f, F = volto; h, H, i = cappuccio). */
@@ -485,8 +518,9 @@ const BERSERKER_HEAD_ROWS: string[] = [
 ]
 
 /**
- * Mago (Classi Fase 2, aspetto provvisorio): cappello a punta piegato all'indietro (h, H, i), volto (f, F) e barba
- * bianca (x, X). La veste viola ricolora l'armatura del busto e lo scudo diventa il mantello.
+ * Mago (Classi Fase 2, rifinito nella Classi Fase 6A): cappello a punta piegato all'indietro con la tesa larga (h, H, i),
+ * volto (f, F) e barba bianca (x, X) che scende sul petto. La veste viola ricolora l'armatura del busto, lo scudo
+ * diventa il mantello e le gambe sono la veste lunga (MAGE_LEGS).
  */
 const MAGE_HEAD_ROWS: string[] = [
   "........................",
@@ -494,14 +528,85 @@ const MAGE_HEAD_ROWS: string[] = [
   "......khHk..............",
   ".......khHk.............",
   "........khHHk...........",
-  ".......khhHHik..........",
+  ".......khyHHik..........",
   "......khhhHHHik.........",
-  ".....kkhhhhhhhhkk.......",
+  ".....kkmrrrrrrokk.......",
   "...khhhhhhhhhhhhhhik....",
   "....kkkkkfFFFFkkkk......",
   "........kfFFFkFk........",
   "........kxxFFFFFxk......",
 ];
+
+/** Cambia alcuni pixel di uno sprite: [colonna, riga, chiave]. */
+function patchRows(rows: readonly string[], patches: ReadonlyArray<readonly [number, number, string]>): string[] {
+  const grid = rows.map((row) => [...row]);
+  for (const [x, y, key] of patches) {
+    setPixel(grid, x, y, key, true);
+  }
+  return grid.map((row) => row.join(""));
+}
+
+/**
+ * Busto del Mago (Classi Fase 6A): quello del cavaliere (veste viola, fascia blu, mantello al posto dello scudo)
+ * con la barba bianca che scende sul petto al posto del colletto d'oro e il mantello senza lo stemma dello scudo.
+ */
+const MAGE_TORSO_ROWS = patchRows(BODY_ROWS.slice(HEAD_ROW_COUNT), [
+  [9, 0, "x"], [10, 0, "x"], [11, 0, "X"], [12, 0, "x"], [13, 0, "x"], [14, 0, "X"], [15, 0, "x"],
+  [10, 1, "x"], [11, 1, "x"], [12, 1, "X"], [13, 1, "x"], [14, 1, "x"],
+  [10, 2, "k"], [11, 2, "x"], [12, 2, "X"], [13, 2, "x"], [14, 2, "k"],
+  [11, 3, "k"], [12, 3, "x"], [13, 3, "k"],
+  // il mantello al posto dello scudo: niente stemma d'oro, una piega scura al centro
+  [5, 5, "N"], [4, 6, "B"], [5, 6, "N"], [6, 6, "B"], [5, 7, "N"], [5, 4, "L"], [5, 8, "N"],
+]);
+
+/**
+ * Veste lunga del Mago (Classi Fase 6A) al posto delle gambe: una gonna che si allarga verso l'orlo (bordo blu, m) con
+ * le pieghe e la luce da sinistra (t chiaro, P pieno, p ombra) e le punte delle scarpe sotto l'orlo (chiavi g e s,
+ * che diventano quelle degli stivali). La veste si disegna con chiavi proprie: un'armatura sul busto non la ricolora.
+ * top/bottom = colonne del bordo sinistro e destro in cima e all'orlo; skirtRows = righe della gonna (orlo compreso);
+ * shoes = colonne della punta di ogni scarpa nella riga sotto l'orlo; folds = colonne delle pieghe.
+ */
+function composeRobeLegs(rowCount: number, skirtRows: number, top: readonly [number, number], bottom: readonly [number, number], shoes: readonly number[], folds: readonly number[]): string[] {
+  const grid = createGrid(KNIGHT_WIDTH, rowCount);
+  for (let row = 0; row < skirtRows; row++) {
+    const progress = skirtRows === 1 ? 1 : row / (skirtRows - 1);
+    const left = Math.round(top[0] + (bottom[0] - top[0]) * progress);
+    const right = Math.round(top[1] + (bottom[1] - top[1]) * progress);
+    const isHem = row === skirtRows - 1;
+    for (let x = left; x <= right; x++) {
+      let key = "P";
+      if (x === left || x === right) key = "k";
+      else if (isHem) key = "m";
+      else if (x === left + 1) key = "t";
+      else if (x === right - 1 || (row >= 1 && folds.includes(x))) key = "p";
+      setPixel(grid, x, row, key, true);
+    }
+  }
+  const shoeRow = skirtRows;
+  if (shoeRow < rowCount) {
+    const hemLeft = bottom[0];
+    const hemRight = bottom[1];
+    for (let x = hemLeft; x <= hemRight; x++) setPixel(grid, x, shoeRow, "k", true);
+    for (const shoeX of shoes) {
+      setPixel(grid, shoeX, shoeRow, "g", true);
+      setPixel(grid, shoeX + 1, shoeRow, "s", true);
+      setPixel(grid, shoeX - 1, shoeRow, "k", true);
+      setPixel(grid, shoeX + 2, shoeRow, "k", true);
+    }
+  }
+  return grid.map((row) => row.join(""));
+}
+
+const MAGE_LEGS: LegSet = {
+  stand: composeRobeLegs(7, 6, [9, 17], [7, 19], [10, 15], [13]),
+  // l'orlo ondeggia in avanti nel passo; il passo con l'altra gamba è lo specchio
+  stride: composeRobeLegs(7, 6, [9, 17], [7, 21], [8, 18], [12, 16]),
+  passing: composeRobeLegs(7, 6, [9, 17], [8, 18], [12], [13]),
+  // in salto la veste si accorcia e si apre, in caduta si gonfia verso l'alto
+  jump: composeRobeLegs(7, 4, [9, 17], [6, 20], [9, 16], [13]),
+  fall: composeRobeLegs(7, 5, [8, 18], [5, 21], [9, 16], [11, 15]),
+  crouch: composeRobeLegs(4, 3, [7, 18], [5, 20], [8, 16], [12]),
+};
 
 const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
   knight: { colors: {} },
@@ -586,10 +691,16 @@ const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
       F: PALETTE.skin,
       x: PALETTE.white,
       X: PALETTE.lightGray,
+      // veste lunga (Classi Fase 6A)
+      p: PALETTE.violetDark,
+      P: PALETTE.violet,
+      t: PALETTE.amethyst,
     },
     headRows: MAGE_HEAD_ROWS,
     // con un elmo, il cappello prende i toni del materiale
     helmetKeyMap: { h: "2", H: "3", i: "4" },
+    torsoRows: MAGE_TORSO_ROWS,
+    legs: MAGE_LEGS,
   },
 };
 
@@ -599,7 +710,7 @@ const CHARACTER_VISUALS: Record<CharacterId, CharacterVisual> = {
  */
 function characterBodyRows(visual: CharacterVisual): string[] {
   const headRows = visual.headRows ?? BODY_ROWS.slice(0, HEAD_ROW_COUNT);
-  return [...remapSpriteKeys(headRows, visual.helmetKeyMap ?? DEFAULT_HELMET_KEY_MAP), ...BODY_ROWS.slice(HEAD_ROW_COUNT)];
+  return [...remapSpriteKeys(headRows, visual.helmetKeyMap ?? DEFAULT_HELMET_KEY_MAP), ...(visual.torsoRows ?? BODY_ROWS.slice(HEAD_ROW_COUNT))];
 }
 
 /**
@@ -636,7 +747,9 @@ export function registerCharacterPreviews(spriteManager: SpriteManager): void {
     const colors = characterColors(characterVisual);
     activeVisual = WEAPON_VISUALS[weaponId];
     activeBodyRows = characterBodyRows(characterVisual);
-    const frames = [composeKnightFrame(LEGS_STAND, 0), composeKnightFrame(LEGS_STAND, 1)];
+    activeLegs = characterVisual.legs ?? KNIGHT_LEGS;
+    const frames = [composeKnightFrame(activeLegs.stand, 0), composeKnightFrame(activeLegs.stand, 1)];
+    activeLegs = KNIGHT_LEGS;
     activeVisual = null;
     activeBodyRows = BODY_ROWS;
     frames.forEach((pixelRows, index) => {
@@ -660,9 +773,11 @@ export function registerKnightSprites(spriteManager: SpriteManager, characterId:
     const weapon = WEAPON_CONFIG[weaponId];
     activeVisual = visual;
     activeBodyRows = characterBodyRows(characterVisual);
+    activeLegs = characterVisual.legs ?? KNIGHT_LEGS;
     const frames = composeKnightFrames(visual.attackPoses);
     activeVisual = null;
     activeBodyRows = BODY_ROWS;
+    activeLegs = KNIGHT_LEGS;
     for (const [spriteId, pixelRows] of Object.entries(frames)) {
       const weaponSpriteId = `${spriteId}${weapon.spriteSuffix}${character.spriteSuffix}`;
       spriteManager.registerSprite(weaponSpriteId, pixelRows, colors, KNIGHT_ANCHOR_X);
@@ -675,22 +790,22 @@ export function registerKnightSprites(spriteManager: SpriteManager, characterId:
 /** Tutti i frame del cavaliere con l'arma attiva (activeVisual). */
 function composeKnightFrames(attackPoses: Record<string, SwordPose>): Record<string, string[]> {
   const frames: Record<string, string[]> = {
-    knightIdle1: composeKnightFrame(LEGS_STAND, 0),
-    knightIdle2: composeKnightFrame(LEGS_STAND, 1),
-    knightWalk1: composeKnightFrame(LEGS_STRIDE, 1),
-    knightWalk2: composeKnightFrame(LEGS_PASSING, 0),
-    knightWalk3: composeKnightFrame(LEGS_STRIDE.map((row) => [...row].reverse().join("")), 1),
-    knightJump: composeKnightFrame(LEGS_JUMP, 0),
-    knightFall: composeKnightFrame(LEGS_FALL, 0),
+    knightIdle1: composeKnightFrame(activeLegs.stand, 0),
+    knightIdle2: composeKnightFrame(activeLegs.stand, 1),
+    knightWalk1: composeKnightFrame(activeLegs.stride, 1),
+    knightWalk2: composeKnightFrame(activeLegs.passing, 0),
+    knightWalk3: composeKnightFrame(activeLegs.stride.map((row) => [...row].reverse().join("")), 1),
+    knightJump: composeKnightFrame(activeLegs.jump, 0),
+    knightFall: composeKnightFrame(activeLegs.fall, 0),
     knightCrouch: composeCrouchFrame(),
     knightHurt: composeHurtFrame(),
     knightDodge1: composeDodgeFrame(0),
     knightDodge2: composeDodgeFrame(1),
-    knightDeadFall: composeKnightFrame(LEGS_FALL, 2, false),
+    knightDeadFall: composeKnightFrame(activeLegs.fall, 2, false),
     knightDeadLie: composeLyingFrame(),
   };
   for (const [spriteId, pose] of Object.entries(ABILITY_POSES)) {
-    frames[spriteId] = composeAttackFrame(pose);
+    frames[spriteId] = composeAttackFrame(pose, pose.crouched === true);
   }
   for (const [spriteId, pose] of Object.entries(attackPoses)) {
     frames[spriteId] = composeAttackFrame(pose);

@@ -1,7 +1,7 @@
 /** Configurazione generale del gioco. */
 export const GAME_CONFIG = {
   title: "IRON & SHADOW",
-  version: "2.5.1",
+  version: "2.6.0",
   /**
    * Risoluzione interna (stile 16 bit, come le console di quarta generazione in modalità 320x240).
    * L'altezza è la stessa della versione 1.0, quindi la geometria dei livelli non cambia:

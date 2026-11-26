@@ -84,6 +84,55 @@ const PLAYER_ARROW_ROWS = [
   "Bb.......g..",
 ];
 
+/**
+ * Classi Fase 6A: dardo di fuoco del Mago, una cometa con la coda che tremola (3 frame, 16x7).
+ */
+const FIREBOLT_ROWS = [
+  [
+    "..........Efff..",
+    "......E.ffooooff",
+    "..E.fffoooyyyyof",
+    "Efffooooyyccccyo",
+    "..E.fffoooyyyyof",
+    "......E.ffooooff",
+    "..........Efff..",
+  ],
+  [
+    ".........E.fff..",
+    "...E..E.fffooof.",
+    ".E..ffffooyyyyof",
+    "E.ffoooyyycccyyo",
+    ".E..ffffooyyyyof",
+    "...E..E.fffooof.",
+    ".........E.fff..",
+  ],
+  [
+    "...........fff..",
+    "E....E..ffoooff.",
+    "...E.ffffooyyyof",
+    ".E.ffoooyyycccyo",
+    "...E.ffffooyyyof",
+    "E....E..ffoooff.",
+    "...........fff..",
+  ],
+];
+
+/**
+ * Classi Fase 6A: frecce elementali del Ranger (16x3, 2 frame): impennaggio e scia dell'elemento (X scuro, Y chiaro),
+ * punta luminosa (Z).
+ */
+const ELEMENT_ARROW_ROWS = [
+  ["X...YX..........", ".Y.XXYleeeeeelYZ", "X...YX.......X.."],
+  [".X..YX..........", "Y..XXYleeeeeelYZ", "..X.YX.......X.."],
+];
+
+/** Colori delle frecce elementali, per suffisso dello sprite. */
+const ELEMENT_ARROW_COLORS: Record<string, { X: string; Y: string; Z: string }> = {
+  Fire: { X: PALETTE.flame, Y: PALETTE.orange, Z: PALETTE.yellow },
+  Frost: { X: PALETTE.blue, Y: PALETTE.cyan, Z: PALETTE.iceWhite },
+  Poison: { X: PALETTE.green, Y: PALETTE.lightGreen, Z: PALETTE.paleGreen },
+};
+
 /** Dardo di balestra: corto e spesso, punta larga. */
 const CROSSBOW_BOLT_ROWS = [
   ".........gs.",
@@ -126,4 +175,10 @@ export function registerProjectileSprites(spriteManager: SpriteManager): void {
   spriteManager.registerSprite("projectileBolt2", BOLT_ROWS_2, PROJECTILE_COLORS);
   spriteManager.registerSprite("projectileFire1", FIRE_ROWS_1, PROJECTILE_COLORS);
   spriteManager.registerSprite("projectileFire2", FIRE_ROWS_2, PROJECTILE_COLORS);
+  FIREBOLT_ROWS.forEach((rows, frameIndex) => spriteManager.registerSprite(`projectileFirebolt${frameIndex + 1}`, rows, PROJECTILE_COLORS));
+  for (const [element, colors] of Object.entries(ELEMENT_ARROW_COLORS)) {
+    ELEMENT_ARROW_ROWS.forEach((rows, frameIndex) =>
+      spriteManager.registerSprite(`projectileArrow${element}${frameIndex + 1}`, rows, { ...PROJECTILE_COLORS, ...colors })
+    );
+  }
 }

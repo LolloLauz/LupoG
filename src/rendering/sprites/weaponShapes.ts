@@ -56,7 +56,7 @@ export const drawSpear: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
 
 /**
  * Bastone del Mago (Classi Fase 2): asta di legno che sporge un poco dietro la mano e una gemma in cima (chiavi "c" e "v",
- * come le scie: con il power-up del fuoco la gemma si accende).
+ * come le scie: con il power-up del fuoco o la tinta di una mossa la gemma si accende), stretta da punte d'oro (Fase 6A).
  */
 export const drawStaff: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
   const direction = getDirection(handX, handY, tipX, tipY);
@@ -67,6 +67,12 @@ export const drawStaff: WeaponDrawer = (grid, handX, handY, tipX, tipY) => {
   const side = { x: -direction.unitY, y: direction.unitX };
   const gemX = Math.round(tipX - direction.unitX);
   const gemY = Math.round(tipY - direction.unitY);
+  // Classi Fase 6A: due punte d'oro che stringono la gemma, e un anello d'oro sotto
+  const collarX = Math.round(tipX - direction.unitX * 3);
+  const collarY = Math.round(tipY - direction.unitY * 3);
+  setPixel(grid, collarX, collarY, "y", true);
+  setPixel(grid, Math.round(gemX + side.x * 2), Math.round(gemY + side.y * 2), "y", true);
+  setPixel(grid, Math.round(gemX - side.x * 2), Math.round(gemY - side.y * 2), "y", true);
   setPixel(grid, gemX, gemY, "c", true);
   setPixel(grid, Math.round(gemX + side.x), Math.round(gemY + side.y), "c", true);
   setPixel(grid, Math.round(gemX - side.x), Math.round(gemY - side.y), "c", true);

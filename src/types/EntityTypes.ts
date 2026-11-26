@@ -204,7 +204,7 @@ export type EnemyTypeId =
   | "vulture";
 
 /** Identificatori dei tipi di proiettile (vedi projectileConfig.ts). */
-export type ProjectileTypeId = "arrow" | "magicBolt" | "fireball" | "playerArrow" | "crossbowBolt" | "throwingKnife" | "javelin" | "hatchet" | "arcaneFireball";
+export type ProjectileTypeId = "arrow" | "magicBolt" | "fireball" | "playerArrow" | "crossbowBolt" | "throwingKnife" | "javelin" | "hatchet" | "arcaneFireball" | "fireArrow" | "frostArrow" | "poisonArrow";
 
 /** Attacco a distanza di un nemico: alla fine della preparazione lancia un proiettile invece di colpire davanti a sé. */
 export interface RangedAttackDefinition {

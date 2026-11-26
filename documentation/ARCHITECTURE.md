@@ -1,6 +1,6 @@
 # Architettura
 
-Versione descritta: **2.5.1**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
+Versione descritta: **2.6.0**. Questo documento spiega **come è pensato** il gioco e **perché**. Per l'elenco dei file e delle
 funzioni vedere `CODE_MANUAL.md`.
 
 ---
@@ -157,7 +157,7 @@ Per cambiare i tasti basta modificare `CONTROLS_CONFIG`.
 - **Animazioni.** `AnimationPlayer` riproduce un'animazione definita da `frameIds` e durate (uguali per tutti i frame o per ciascuno). Le animazioni di
   attacco derivano la durata dei frame dalla durata dell'attacco, così non si disallineano se si ritocca il bilanciamento.
 - **Camera.** `Camera.follow` centra il bersaglio e limita ai bordi della mappa; coordinate intere.
-- **Ordine di disegno** (`GameEngine.render`): sfondo con parallasse → porta/terreno → oggetti → nemici → boss → giocatore → effetti → HUD → messaggi → schermata
+- **Ordine di disegno** (`GameEngine.render`): sfondo con parallasse → porta/terreno → oggetti → nemici → boss → sagome degli scatti → giocatore → proiettili → effetti a sprite delle mosse → primo piano → particelle e scritte → HUD → messaggi → schermata
   dello stato (pausa, ecc.).
 - **Tremolio dello schermo:** si sposta temporaneamente la camera di pochi pixel interi solo per il disegno del mondo (non dell'HUD).
 - **Sfondi (2.0).** `BackgroundRenderer` compone per ogni ambientazione 4-6 livelli di parallasse più alcuni elementi animati. Come sulle console
@@ -271,6 +271,33 @@ in `startNewGame`.
 - **Calcolo del danno.** Una sola funzione, `CombatSystem.calculateDamage(base, moltiplicatore)`, è il punto dove in futuro passeranno moltiplicatori e riduzioni.
 - **Passivi (Classi Fase 5).** Sono campi facoltativi di `CharacterDefinition`, letti da `Player`. `staminaPerWeaponHit` sta in `registerHit`, che chiama solo il combattimento corpo a corpo e che ignora mosse e forzieri. `lowHealthPower` è un fattore di `getDamageMultiplier`. `manaPerKill` sta in `registerKill`, chiamato da `CombatSystem` e da `ProjectileSystem` quando un colpo diretto uccide un bersaglio che non è scena.
 - **Sinergie elementali (Classi Fase 5).** Sono dati (`ELEMENT_SYNERGIES`). `Enemy.receiveHit` e `Boss.receiveHit` chiamano `StatusEffects.consumeSynergy(hit)` **prima** di applicare gli elementi del colpo: vale la prima voce dell'elenco con l'effetto attivo e un innesco valido (elemento a cui il bersaglio non è immune, oppure colpo che rompe la guardia o schiaccia le corazze), mai se il colpo porta lo stesso elemento dell'effetto. L'effetto si consuma e il danno si moltiplica (per i nemici dopo la corazza). La sinergia resta in attesa e il motore la preleva con `drainSynergy` (`showStatusDamage`) per nome e scintille. Il moltiplicatore si applica dentro il bersaglio: il danno restituito da `CombatSystem` (furto di vita, hit-stop) resta quello senza bonus.
+
+### Grafica delle mosse (Classi Fase 6A)
+
+La grafica delle mosse è **solo dati e disegno**: non cambia danni, tempi o hitbox, e `npm run balance` resta identico al baseline.
+
+```
+ ABILITY_VISUAL_CONFIG[abilityId]            (src/config/abilityVisualConfig.ts)
+   cues: { atMs, offsetX, offsetY, effectId } | { atMs, afterimage }
+        │
+        ▼  Player.update: l'istante atMs è passato? ─► pendingAbilityEffects
+ Player.drainAbilityEffects()  ─────────────►  GameEngine.showAbilityEffects
+                                                   │                    │
+                          ABILITY_EFFECT_CONFIG[effectId]         sagoma del frame attuale
+                                                   ▼                    ▼
+                                  EffectsManager.spawnSpriteEffect   EffectsManager.spawnAfterimage
+                                                   │                    │
+              renderSpriteEffects (dopo i proiettili)      renderAfterimages (prima del giocatore)
+```
+
+- **Una voce per mossa.** `ABILITY_VISUAL_CONFIG` ha una voce per ogni `AbilityId` (il tipo `Record` obbliga a non dimenticarne): icona 8×8, tinta facoltativa della lama (`weaponTint`), `cues` e, per le guardie, `guardFrameIds`. `ABILITY_EFFECT_CONFIG` descrive i 17 effetti a sprite (frame, durata del frame, allineamento `center` o `bottom`).
+- **Stesso schema delle altre segnalazioni.** Come per l'onda d'urto, `Player` non disegna: accumula gli effetti dovuti (`pendingAbilityEffects`) e il motore li preleva con `drainAbilityEffects` ogni frame (`showAbilityEffects`). L'offset orizzontale segue lo sguardo; quello verticale parte dal bordo superiore dell'hitbox.
+- **Sagome.** Un effetto `afterimage` copia il frame attuale del giocatore in tinta unita (`drawSpriteAligned` con colore) e lo lascia dietro per un attimo, con un lampeggio finale. Si disegna **prima** del giocatore; gli sprite d'effetto **dopo** i proiettili.
+- **Lama tinta.** Con `weaponTint` il giocatore sceglie una variante di colore (`getWeaponTintVariant`, con `WEAPON_TINT_COLORS`) che sostituisce solo le chiavi dell'arma e si compone con quella delle armature indossate. Nessuno sprite in più.
+- **Barriere.** La guardia (scudo, barriera) si disegna come sprite a due frame davanti al personaggio; nella finestra della parata perfetta è una sagoma bianca.
+- **Pose.** Le otto pose delle mosse (`ABILITY_POSES`) sono generate per ogni arma e classe come gli altri frame. Le gambe dipendono dal personaggio (`LegSet`, `activeLegs`), così il Mago ha la veste lunga e il suo orlo ondeggia nel passo.
+- **HUD.** `HUDData.abilities[].iconSpriteId` porta l'icona; il riquadro la disegna (sagoma grigia senza requisito) e il retino scuro mostra la ricarica.
+- **Palette.** Nessun colore nuovo: gli effetti usano quattro toni per elemento presi dalle rampe esistenti.
 
 ### Il boss
 
@@ -412,7 +439,7 @@ I **divieti** sono applicati in tre punti: `Player.equipWeapon` restituisce `boo
 |---|---|
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
-| `npm test` | 1480 controlli unitari in Node (meno di 1 secondo) |
+| `npm test` | 1511 controlli unitari in Node (meno di 1 secondo) |
 | `npm run test:browser` | 180 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica); `-- --build` solo le build di attributi (Classi Fase 4) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |

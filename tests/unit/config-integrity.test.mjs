@@ -19,6 +19,7 @@ export default async function (t, load) {
   const itemSprites = await load("rendering/sprites/itemSprites");
   const uiSprites = await load("rendering/sprites/uiSprites");
   const projectileSprites = await load("rendering/sprites/projectileSprites");
+  const abilitySprites = await load("rendering/sprites/abilitySprites");
   const { PROJECTILE_CONFIG } = await load("config/projectileConfig");
   const { LevelManager } = await load("systems/LevelManager");
 
@@ -40,6 +41,7 @@ export default async function (t, load) {
     itemSprites.registerItemSprites(sprites);
     uiSprites.registerUiSprites(sprites);
     projectileSprites.registerProjectileSprites(sprites);
+    abilitySprites.registerAbilitySprites(sprites);
   } catch (error) {
     registrationError = String(error);
   }

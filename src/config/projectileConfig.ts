@@ -5,6 +5,24 @@ import type { ProjectileDefinition, ProjectileTypeId } from "../types/EntityType
  * velocità, traiettoria, durata, dimensioni e aspetto. Gli sprite sono in projectileSprites.ts.
  * Per aggiungerne uno: nuovo id in ProjectileTypeId (EntityTypes.ts), voce qui e sprite.
  */
+/**
+ * Classi Fase 6A: freccia di una mossa del Ranger, con i valori della freccia del giocatore e uno sprite proprio
+ * ("projectileArrow" + elemento, a due frame per la scia).
+ */
+function elementArrow(id: ProjectileTypeId, name: string, spriteElement: string): ProjectileDefinition {
+  return {
+    id,
+    name,
+    speed: 220,
+    gravityScale: 0.12,
+    lifetimeMs: 1600,
+    hitbox: { width: 10, height: 3 },
+    isDeflectable: false,
+    frameIds: [`projectileArrow${spriteElement}1`, `projectileArrow${spriteElement}2`],
+    frameDurationMs: 80,
+  };
+}
+
 export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> = {
   arrow: {
     id: "arrow",
@@ -88,7 +106,7 @@ export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> =
     frameDurationMs: 50,
     recoveredAsAmmoOf: "throwingKnives",
   },
-  // Classi Fase 2: dardo di fuoco del Mago (riusa gli sprite della palla di fuoco; la bruciatura la dà l'incantesimo)
+  // Classi Fase 2: dardo di fuoco del Mago (la bruciatura la dà l'incantesimo); sprite propri dalla Classi Fase 6A
   arcaneFireball: {
     id: "arcaneFireball",
     name: "Dardo di fuoco",
@@ -97,9 +115,13 @@ export const PROJECTILE_CONFIG: Record<ProjectileTypeId, ProjectileDefinition> =
     lifetimeMs: 1500,
     hitbox: { width: 8, height: 8 },
     isDeflectable: false,
-    frameIds: ["projectileFire1", "projectileFire2"],
-    frameDurationMs: 80,
+    frameIds: ["projectileFirebolt1", "projectileFirebolt2", "projectileFirebolt3"],
+    frameDurationMs: 70,
   },
+  // Classi Fase 6A: frecce delle mosse del Ranger, come la freccia del giocatore con la punta dell'elemento
+  fireArrow: elementArrow("fireArrow", "Freccia di fuoco", "Fire"),
+  frostArrow: elementArrow("frostArrow", "Freccia gelida", "Frost"),
+  poisonArrow: elementArrow("poisonArrow", "Freccia velenosa", "Poison"),
   javelin: {
     id: "javelin",
     name: "Giavellotto",
