@@ -18,7 +18,7 @@ Solo grafica: danni, costi, tempi e hitbox restano quelli di prima, `npm run bal
 - Documenti: GAME_MANUAL (HUD, mosse, Mago), ARCHITECTURE (grafica delle mosse), CODE_MANUAL (file nuovi, Esempio 11 con `activeLegs.stand`, guida "Dare grafica a una mossa nuova"), TESTING, FEATURES.
 - Versione portata a 2.6.0 (`package.json`, `GAME_CONFIG.version` e documenti).
 ### Verificato
-- Gate verde: `npm run typecheck`, `npm test` (1511 controlli in 36 file), `npm run test:browser` (180 controlli), `npm run verify-docs`; `npm run balance` identico al baseline (solo grafica).
+- Gate verde: `npm run typecheck`, `npm test` (1512 controlli in 36 file), `npm run test:browser` (180 controlli), `npm run verify-docs`; `npm run balance` identico al baseline (solo grafica).
 
 ## 2.5.1 – Veleno e bruciatura uccidono, bottino a terra (2026-11-26)
 ### Corretto

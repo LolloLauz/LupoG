@@ -26,7 +26,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 1511 controlli) | Implementata | |
+| Test unitari inclusi (`npm test`, 1512 controlli) | Implementata | |
 | Test nel browser (`npm run test:browser`, 180 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176; 2.2.0: 177/177; 2.4.0: 180/180 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |

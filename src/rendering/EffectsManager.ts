@@ -1,5 +1,5 @@
 import { measureTextWidth } from "./BitmapFont";
-import type { AbilityEffectDefinition } from "../config/abilityVisualConfig";
+import { AFTERIMAGE_CONFIG, type AbilityEffectDefinition } from "../config/abilityVisualConfig";
 import { PALETTE } from "../config/gameConfig";
 import type { Renderer } from "./Renderer";
 import type { SpriteManager } from "./SpriteManager";
@@ -46,8 +46,7 @@ interface Afterimage {
 
 const MAX_PARTICLES = 200;
 const MAX_SPRITE_EFFECTS = 24;
-/** Durata di una sagoma: lampeggia nell'ultima metà. */
-export const AFTERIMAGE_DURATION_MS = 180;
+
 const POPUP_DURATION_MS = 700;
 const POPUP_RISE_PIXELS = 14;
 
@@ -108,7 +107,7 @@ export class EffectsManager {
     if (this.afterimages.length >= MAX_SPRITE_EFFECTS) {
       return;
     }
-    this.afterimages.push({ spriteId, hitboxX: Math.round(hitboxX), hitboxBottom: Math.round(hitboxBottom), hitboxWidth, isFlipped, color, remainingMs: AFTERIMAGE_DURATION_MS });
+    this.afterimages.push({ spriteId, hitboxX: Math.round(hitboxX), hitboxBottom: Math.round(hitboxBottom), hitboxWidth, isFlipped, color, remainingMs: AFTERIMAGE_CONFIG.durationMs });
   }
 
   /** Scintille di un colpo: partono nella direzione dell'attacco (1 = destra, -1 = sinistra). */
@@ -277,7 +276,7 @@ export class EffectsManager {
   /** Sagome dei personaggi: si disegnano prima del giocatore, così restano dietro. */
   public renderAfterimages(renderer: Renderer, spriteManager: SpriteManager, cameraX: number, cameraY: number): void {
     for (const afterimage of this.afterimages) {
-      if (afterimage.remainingMs < AFTERIMAGE_DURATION_MS / 2 && Math.floor(afterimage.remainingMs / 40) % 2 === 0) {
+      if (afterimage.remainingMs < AFTERIMAGE_CONFIG.durationMs / 2 && Math.floor(afterimage.remainingMs / AFTERIMAGE_CONFIG.blinkMs) % 2 === 0) {
         continue;
       }
       spriteManager.drawSpriteAligned(
@@ -300,7 +299,7 @@ export class EffectsManager {
       const frameId = frameIds[frameIndex]!;
       const size = spriteManager.getSpriteSize(frameId);
       const drawX = effect.x - Math.floor(size.width / 2) - cameraX;
-      const drawY = (align === "bottom" ? effect.y - size.height + 1 : effect.y - Math.floor(size.height / 2)) - cameraY;
+      const drawY = (align === "bottom" ? effect.y - size.height : effect.y - Math.floor(size.height / 2)) - cameraY;
       spriteManager.drawSprite(renderer, frameId, Math.round(drawX), Math.round(drawY), effect.isFlipped);
     }
   }

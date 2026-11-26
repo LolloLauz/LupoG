@@ -6,7 +6,7 @@ import { ResourcePool } from "../combat/ResourcePool";
 import { KNIGHT_CROUCH_SUFFIX, KNIGHT_FIRE_SUFFIX } from "../rendering/sprites/knightSprites";
 import { buildEquipmentVariant } from "../rendering/sprites/equipmentVisuals";
 import { WEAPON_TINT_COLORS } from "../rendering/sprites/abilitySprites";
-import { ABILITY_VISUAL_CONFIG, type AbilityEffectCue } from "../config/abilityVisualConfig";
+import { ABILITY_VISUAL_CONFIG, GUARD_FRAME_DURATION_MS, type AbilityEffectCue } from "../config/abilityVisualConfig";
 import type { SpriteColorVariant } from "../rendering/SpriteManager";
 import {
   NO_STRENGTH_PENALTIES,
@@ -622,6 +622,18 @@ export class Player extends GameObject {
     return this.attackElapsedMs >= dash.startMs && this.attackElapsedMs < dash.endMs ? dash : null;
   }
 
+  /**
+   * Mossa a cui appartiene l'attacco in corso (null se non è una mossa), qualunque sia lo slot scelto adesso: cambiare
+   * slot durante la mossa non ne interrompe gli effetti né la tinta della lama (Classi Fase 6A).
+   */
+  private get runningAbility(): AbilityDefinition | null {
+    const attack = this.currentAttack;
+    if (attack === null) {
+      return null;
+    }
+    return this.abilities.find((ability) => ability.kind === "attack" && ability.attack === attack) ?? null;
+  }
+
   /** Vero se l'attacco in corso è l'abilità del personaggio. */
   private get isAbilityAttackActive(): boolean {
     const ability = this.ability;
@@ -1134,12 +1146,18 @@ export class Player extends GameObject {
       const ability = this.ability;
       const isPerfectWindow = ability.kind === "guard" && this.guardElapsedMs <= ability.perfectWindowMs;
       const guardFrameIds = ABILITY_VISUAL_CONFIG[ability.id].guardFrameIds;
-      if (guardFrameIds !== undefined) {
-        const frameId = guardFrameIds[Math.floor(this.guardElapsedMs / 120) % 2]!;
+      const glowColor = ability.kind === "guard" && ability.resource === "mana" ? PALETTE.lilac : PALETTE.cyan;
+      if (guardFrameIds === undefined) {
+        // guardia senza barriera disegnata: la barra di luce di prima (bianca nella finestra della parata perfetta)
+        const barColor = isPerfectWindow ? PALETTE.white : glowColor;
+        const barX = (this.facingDirection === "right" ? this.positionX + this.width + 3 : this.positionX - 5) - cameraX;
+        renderer.fillGlow(barX + 1, this.positionY + this.height / 2 - cameraY, 9, barColor, 2, 4);
+        renderer.fillRect(barX, this.positionY + 1 - cameraY, 2, this.height - 2, barColor);
+      } else {
+        const frameId = guardFrameIds[Math.floor(this.guardElapsedMs / GUARD_FRAME_DURATION_MS) % 2]!;
         const size = spriteManager.getSpriteSize(frameId);
         const barrierX = (this.facingDirection === "right" ? this.positionX + this.width + 1 : this.positionX - 1 - size.width) - cameraX;
         const barrierY = this.positionY + this.height / 2 - size.height / 2 - cameraY;
-        const glowColor = ability.kind === "guard" && ability.resource === "mana" ? PALETTE.lilac : PALETTE.cyan;
         renderer.fillGlow(barrierX + size.width / 2, barrierY + size.height / 2, 9, isPerfectWindow ? PALETTE.white : glowColor, 2, 4);
         if (isPerfectWindow) {
           spriteManager.drawSpriteSilhouette(renderer, frameId, Math.round(barrierX), Math.round(barrierY), this.facingDirection === "left", PALETTE.white);
@@ -1161,10 +1179,11 @@ export class Player extends GameObject {
    * indossate; null altrimenti.
    */
   private getWeaponTintVariant(): SpriteColorVariant | null {
-    if (!this.isAbilityAttackActive) {
+    const running = this.runningAbility;
+    if (running === null) {
       return null;
     }
-    const element = ABILITY_VISUAL_CONFIG[this.ability.id].weaponTint;
+    const element = ABILITY_VISUAL_CONFIG[running.id].weaponTint;
     if (element === undefined) {
       return null;
     }
@@ -1255,8 +1274,9 @@ export class Player extends GameObject {
       ) {
         this.hasPendingAbilityImpact = true;
       }
-      if (this.isAbilityAttackActive) {
-        for (const cue of ABILITY_VISUAL_CONFIG[ability.id].cues) {
+      const running = this.runningAbility;
+      if (running !== null) {
+        for (const cue of ABILITY_VISUAL_CONFIG[running.id].cues) {
           if (elapsedBefore <= cue.atMs && cue.atMs < this.attackElapsedMs) {
             this.pendingAbilityEffects.push(cue);
           }

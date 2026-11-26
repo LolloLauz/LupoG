@@ -30,7 +30,7 @@ export type AbilityEffectId =
 
 /**
  * Come si allinea uno sprite d'effetto al suo punto: "center" = centrato, "bottom" = centrato in orizzontale e
- * appoggiato con l'ultima riga sul punto (effetti a terra).
+ * appoggiato sul punto come un personaggio sul bordo inferiore dell'hitbox (l'ultima riga sta subito sopra).
  */
 export type EffectAlignment = "center" | "bottom";
 
@@ -67,6 +67,12 @@ export interface AbilityVisual {
   guardFrameIds?: readonly [string, string];
 }
 
+/** Barriere delle guardie: durata di ognuno dei due frame che si alternano. */
+export const GUARD_FRAME_DURATION_MS = 120;
+
+/** Sagome lasciate negli scatti: quanto restano e ogni quanto lampeggiano nell'ultima metà. */
+export const AFTERIMAGE_CONFIG = { durationMs: 180, blinkMs: 40 } as const;
+
 /** Frame "effect<Nome><n>" per n = 1..count. */
 function frames(name: string, count: number): string[] {
   return Array.from({ length: count }, (_, index) => `effect${name}${index + 1}`);
@@ -102,7 +108,7 @@ function afterimages(color: string, ...times: number[]): AbilityEffectCue[] {
   return times.map((atMs) => ({ kind: "afterimage", atMs, color }));
 }
 
-/** Altezza dei piedi rispetto al bordo superiore dell'hitbox. */
+/** Altezza dei piedi rispetto al bordo superiore dell'hitbox (il bordo inferiore: gli effetti "bottom" poggiano lì sopra). */
 const FEET = 24;
 /** Altezza della mano (dove partono i proiettili). */
 const HAND = 9;

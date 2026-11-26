@@ -15,7 +15,8 @@ export default async function (t, load) {
   const { PALETTE } = await load("config/gameConfig");
   const { Player } = await load("entities/Player");
   const { CollisionSystem } = await load("systems/CollisionSystem");
-  const { EffectsManager, AFTERIMAGE_DURATION_MS } = await load("rendering/EffectsManager");
+  const { EffectsManager } = await load("rendering/EffectsManager");
+  const { AFTERIMAGE_CONFIG } = await load("config/abilityVisualConfig");
   const { HUDManager, ABILITY_BOX_GEOMETRY, ABILITY_KEY_LABEL_Y } = await load("ui/HUDManager");
   const abilitySprites = await load("rendering/sprites/abilitySprites");
   const knightSprites = await load("rendering/sprites/knightSprites");
@@ -155,6 +156,19 @@ export default async function (t, load) {
     t("finita la mossa la lama torna normale", after.calls.aligned[0]?.variant === null);
   }
   {
+    // cambiare slot durante la mossa non ne interrompe effetti e lama tinta
+    const knight = grounded("knight");
+    knight.drainAbilityEffects();
+    step(knight, [], ["ability4"]); // lama ardente
+    step(knight, [], ["ability1"]); // si sceglie un altro slot mentre la mossa è in corso
+    const seen = [...knight.drainAbilityEffects()];
+    const recorder = recordingSprites();
+    knight.render(renderer, recorder, 0, 0);
+    for (let i = 0; i < 40; i++) { step(knight); seen.push(...knight.drainAbilityEffects()); }
+    t("cambiando slot a metà mossa la lama resta tinta e tutti gli effetti arrivano",
+      recorder.calls.aligned[0]?.variant?.colors.b === abilitySprites.WEAPON_TINT_COLORS.fire.b && JSON.stringify(seen) === JSON.stringify(ABILITY_VISUAL_CONFIG.flameBlade.cues));
+  }
+  {
     const mage = grounded("mage");
     step(mage, ["ability4"], ["ability4"]); // barriera
     const recorder = recordingSprites();
@@ -175,7 +189,7 @@ export default async function (t, load) {
     effects.renderSpriteEffects(renderer, recorder, 0, 0);
     const first = recorder.calls.sprites[0];
     const size = sprites.getSpriteSize(ring.frameIds[0]);
-    t("un anello a terra poggia sul punto con l'ultima riga ed è centrato", first?.spriteId === ring.frameIds[0] && first.y === 200 - size.height + 1 && first.x === 100 - Math.floor(size.width / 2));
+    t("un anello a terra poggia sul punto come un personaggio sul fondo dell'hitbox (ultima riga subito sopra) ed è centrato", first?.spriteId === ring.frameIds[0] && first.y === 200 - size.height && first.x === 100 - Math.floor(size.width / 2));
     effects.update((ring.frameDurationMs * 1.5) / 1000);
     const second = recordingSprites();
     effects.renderSpriteEffects(renderer, second, 0, 0);
@@ -186,7 +200,7 @@ export default async function (t, load) {
     const ghost = recordingSprites();
     effects.renderAfterimages(renderer, ghost, 0, 0);
     t("la sagoma si disegna a tinta unita nel suo colore", ghost.calls.aligned[0]?.flash === PALETTE.lilac);
-    effects.update(AFTERIMAGE_DURATION_MS / 1000 + 0.01);
+    effects.update(AFTERIMAGE_CONFIG.durationMs / 1000 + 0.01);
     t("la sagoma sparisce dopo la sua durata; clear svuota tutto", effects.afterimageCount === 0 && (effects.spawnSpriteEffect(ring, 0, 0, false), effects.clear(), effects.spriteEffectCount === 0));
   }
 

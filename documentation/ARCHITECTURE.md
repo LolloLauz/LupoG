@@ -439,7 +439,7 @@ I **divieti** sono applicati in tre punti: `Player.equipWeapon` restituisce `boo
 |---|---|
 | `npm run typecheck` | controllo dei tipi (strict) |
 | `npm run build` | controllo dei tipi + build distribuibile in `dist/` |
-| `npm test` | 1511 controlli unitari in Node (meno di 1 secondo) |
+| `npm test` | 1512 controlli unitari in Node (meno di 1 secondo) |
 | `npm run test:browser` | 180 controlli nel browser: build reale con `file://`, dimensioni di schermo, bot che gioca tutto il gioco con eventi di tastiera, tasti a caso, velocità sotto carico (richiede Playwright) |
 | `npm run balance` | simulatore di bilanciamento con un bot (usa le classi reali, senza grafica); `-- --build` solo le build di attributi (Classi Fase 4) |
 | `npm run verify-docs` | applica gli esempi del `CODE_MANUAL.md` a una copia del progetto e ne verifica compilazione e comportamento |
