@@ -18,6 +18,8 @@ import type { SpriteColorVariant } from "../rendering/SpriteManager";
 import { SHOP_ROOM_CONFIG, SHOP_ROOM_LEVEL } from "../config/shopRoomConfig";
 import { CHARACTER_CONFIG, CHARACTER_ORDER } from "../config/characterConfig";
 import { ELEMENT_CONFIG } from "../config/elementConfig";
+import { ABILITY_UNLOCK_CONFIG } from "../config/abilityConfig";
+import { ABILITY_SLOT_KEY_LABELS } from "../config/controlsConfig";
 import { ALWAYS_DISCOVERED_WEAPONS, ECONOMY_CONFIG, type ShopOfferId } from "../config/progressionConfig";
 import { Shop, type PurchaseOutcome } from "../systems/Shop";
 import { registerUiSprites } from "../rendering/sprites/uiSprites";
@@ -141,6 +143,12 @@ export class GameEngine {
   /** Punti attributo della partita (Classi Fase 4) e il loro stato a inizio livello (come la borsa). */
   private readonly attributePoints = new AttributePoints();
   private levelStartAttributePoints: AttributePointsSnapshot = this.attributePoints.snapshot();
+  /** Mosse note a inizio livello (Classi Fase 5): ricominciando il livello si torna a queste. */
+  private levelStartAbilityCount = 0;
+  /** Mossa data dal boss del livello, per il riquadro di fine livello (null = nessuna). */
+  private bossAbilityMessage: string | null = null;
+  /** Nemici e boss già premiati: due proiettili nello stesso frame non danno la ricompensa due volte. */
+  private readonly rewardedTargets = new WeakSet<Damageable>();
   /** Punti guadagnati con l'ultimo livello completato (riquadro di fine livello). */
   private lastAwardedAttributePoints = 0;
   /** Pentagono degli attributi: "spend" dall'altare della bottega, "view" dall'equipaggiamento (solo lettura). */
@@ -518,6 +526,8 @@ export class GameEngine {
     this.levelStartScore = this.scoreManager.currentScore;
     this.levelStartInventory = this.inventory.snapshot();
     this.levelStartAttributePoints = this.attributePoints.snapshot();
+    this.levelStartAbilityCount = this.player.knownAbilityCount;
+    this.bossAbilityMessage = null;
     this.levelStartCoins = this.scoreManager.coins;
     this.updateCamera();
   }
@@ -562,6 +572,7 @@ export class GameEngine {
     this.inventory.restore(this.levelStartInventory);
     this.attributePoints.restore(this.levelStartAttributePoints);
     this.player.setSpentAttributes(this.attributePoints.spent);
+    this.player.setKnownAbilityCount(this.levelStartAbilityCount);
     this.equipFromInventory();
     // dopo l'equipaggiamento: la salute torna piena contando i bonus delle armature di inizio livello
     this.player.revive();
@@ -609,7 +620,8 @@ export class GameEngine {
     this.showStatusDamage();
     this.itemManager.update(deltaTimeSeconds);
     this.collectItemsWithEffects();
-    this.updatePlayerDamageEffects(healthBeforeUpdate);
+    // la salute pagata per una mossa (colpo di sangue) non è un colpo subito
+    this.updatePlayerDamageEffects(healthBeforeUpdate - this.player.drainPaidHealth());
     this.effects.update(deltaTimeSeconds);
 
     if (this.player.isReadyToRespawn) {
@@ -751,6 +763,12 @@ export class GameEngine {
     }
     // furto di vita (modificatore dell'arma)
     this.player.registerDamageDealt(damage);
+    if (this.rewardedTargets.has(target)) {
+      return;
+    }
+    if (!target.isAlive) {
+      this.rewardedTargets.add(target);
+    }
     if (target === this.boss && this.boss !== null) {
       if (!this.boss.isAlive) {
         const reward = this.boss.definition.weaponReward;
@@ -766,6 +784,8 @@ export class GameEngine {
           this.awardFinalBossReward();
         }
         this.dropManaPotionIfRolled("boss", centerX, targetBounds.y + targetBounds.height);
+        // Classi Fase 5: ogni boss dà di sicuro la prossima mossa mancante
+        this.bossAbilityMessage = this.learnNextAbility(centerX, targetBounds.y - 12);
         this.scoreManager.addScore(this.boss.scoreReward);
         this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerBoss);
         this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.red, PALETTE.orange, PALETTE.yellow], 50);
@@ -817,6 +837,21 @@ export class GameEngine {
     this.finalBossRewardName = getItemName(rollFinalBossReward(this.getLootContext("finalBoss"), this.lootRandom));
   }
 
+  /**
+   * Classi Fase 5: il personaggio impara la prossima mossa (se ne manca una), con scintille e avviso. Restituisce il
+   * testo dell'avviso, oppure null se le conosce già tutte.
+   */
+  private learnNextAbility(centerX: number, y: number): string | null {
+    const learned = this.player.learnNextAbility();
+    if (learned === null) {
+      return null;
+    }
+    const message = `NUOVA MOSSA: ${learned.ability.name} (${ABILITY_SLOT_KEY_LABELS[learned.slotIndex]})`;
+    this.effects.spawnBurst(centerX, y, [PALETTE.goldLight, PALETTE.white], 16);
+    this.effects.addPopup(message, centerX, y, PALETTE.goldLight);
+    return message;
+  }
+
   /** Forziere aperto: compare l'arma sopra il coperchio. */
   private openChest(chest: Chest): void {
     const weaponId = chest.drainOpenedWeapon();
@@ -829,6 +864,10 @@ export class GameEngine {
         this.dropWeapon(rollLootArmor(context, this.lootRandom), centerX + 18, chest.positionY + chest.height);
       }
       this.dropManaPotionIfRolled("chest", centerX - 18, chest.positionY + chest.height);
+      // Classi Fase 5: a volte il forziere insegna in anticipo la prossima mossa
+      if (this.player.knownAbilityCount < this.player.abilities.length && this.lootRandom() < ABILITY_UNLOCK_CONFIG.chestChance) {
+        this.learnNextAbility(centerX, chest.positionY - 32); // sopra il nome dell'arma
+      }
     }
   }
 
@@ -1253,6 +1292,12 @@ export class GameEngine {
   private showStaminaAndAbilityEffects(): void {
     const centerX = this.player.positionX + this.player.width / 2;
     const popupY = this.player.positionY - 8;
+    if (this.player.drainUnknownAbility()) {
+      this.effects.addPopup("MOSSA NON ANCORA IMPARATA", centerX, popupY, PALETTE.lightGray);
+    }
+    if (this.player.drainLowHealth()) {
+      this.effects.addPopup("SALUTE INSUFFICIENTE", centerX, popupY, PALETTE.red);
+    }
     const abilityName = this.player.drainStartedAbilityName();
     if (abilityName !== null) {
       this.effects.addPopup(abilityName, centerX, popupY, PALETTE.cyan);
@@ -1293,6 +1338,11 @@ export class GameEngine {
   private showStatusDamage(): void {
     const sufferers: Array<Enemy | Boss> = this.boss === null ? this.enemies : [...this.enemies, this.boss];
     for (const sufferer of sufferers) {
+      const synergy = sufferer.drainSynergy();
+      if (synergy !== null) {
+        this.effects.addPopup(synergy.name, sufferer.positionX + sufferer.width / 2, sufferer.positionY - 14, synergy.color);
+        this.effects.spawnBurst(sufferer.positionX + sufferer.width / 2, sufferer.positionY + sufferer.height / 2, [synergy.color, PALETTE.white], 10);
+      }
       for (const tick of sufferer.drainStatusTicks()) {
         this.effects.addPopup(`-${tick.damage}`, sufferer.positionX + sufferer.width / 2, sufferer.positionY - 4, ELEMENT_CONFIG[tick.element].color);
       }
@@ -1449,6 +1499,7 @@ export class GameEngine {
         isSelected: slot.isSelected,
         isActive: slot.isActive,
         meetsRequirement: slot.meetsRequirement,
+        isKnown: slot.isKnown,
       })),
       unspentAttributePoints: this.attributePoints.unspent,
       lives: this.livesManager.remainingLives,
@@ -1733,6 +1784,9 @@ export class GameEngine {
       const lines = [`BONUS ${GAME_CONFIG.levelCompleteBonus}`];
       if (this.lastAwardedAttributePoints > 0) {
         lines.push(`+${this.lastAwardedAttributePoints} PUNTI ATTRIBUTO`);
+      }
+      if (this.bossAbilityMessage !== null) {
+        lines.push(this.bossAbilityMessage);
       }
       for (const name of this.newlyUnlockedCharacterNames) {
         lines.push(`SBLOCCATO: ${name}`);

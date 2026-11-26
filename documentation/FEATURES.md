@@ -1,6 +1,6 @@
 # Funzionalità
 
-Versione: **2.4.0**.
+Versione: **2.5.0**.
 
 **Stati usati:**
 
@@ -26,7 +26,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Modalità sviluppatore (`dev`, `build`, `preview`, `typecheck`) | Implementata | `preview` richiede un server locale (lo avvia Vite) |
 | Configurazione centralizzata in `src/config/` | Implementata | |
 | Archivio ZIP completo con la versione compilata (`dist/`) | Implementata | più un archivio solo per giocare |
-| Test unitari inclusi (`npm test`, 1338 controlli) | Implementata | |
+| Test unitari inclusi (`npm test`, 1467 controlli) | Implementata | |
 | Test nel browser (`npm run test:browser`, 180 controlli) | Implementata | richiede Playwright, non incluso; eseguiti per la 2.0.0: 165/165; dopo la Fase 6 del piano espansioni: 174/174; dopo il piano dell'equipaggiamento: 175/175; 2.1.0: 176/176; 2.2.0: 177/177; 2.4.0: 180/180 |
 | Verifica con più dimensioni di schermo e scale di sistema | Implementata | 17 combinazioni (2.0: scala scelta tra quelle rappresentabili esattamente dal browser) |
 | Scala intera in pixel fisici (schermi 125%-300%) | Implementata | |
@@ -101,10 +101,12 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Personaggi con classi (`CharacterDefinition`, `CHARACTER_CONFIG`): **Cavaliere** (equilibrato, spada), **Ranger** (veloce, 75 HP, arco, schivata lunga e frequente), **Berserker** (130 HP, danno ×1,3, ascia, schivata corta e ogni 1,6 s), **Paladino** (lento, 110 HP, danno subito ×0,75, mazza, si cura di 1 HP/s dopo 4 s senza colpi) | Implementata | Fase 4 del piano espansioni; sprite ricolorati dal cavaliere con testa propria (cappuccio, elmo con corna, pennacchio bianco); non provato da persone; il bot di bilanciamento usa solo la spada |
 | Scelta del personaggio dal menu del titolo (schermata con statistiche in tacche, arma iniziale e tratto), salvata nei progressi | Implementata | Fase 4; la scelta vale dalla partita successiva, che parte con la sola arma iniziale; durante la partita la classe non cambia |
 | Stamina (barra nell'HUD): la consumano schivata, attacchi pesanti (15) e abilità; recupero dopo 0,6 s; "STANCO" quando non basta | Implementata | Fase 5 del piano espansioni; valori per personaggio in `CHARACTER_CONFIG` |
-| Abilità speciali (tasti 7, 8, 9, 0, L = 7; una per le prime quattro classi, sul 7, quattro per il Mago; costo in stamina o in mana e ricarica): onda d'urto (Cavaliere), tiro in ritirata (Ranger), carica furiosa (Berserker), scudo (Paladino) | Implementata | Fase 5; `ABILITY_CONFIG`; gli scatti si fermano sul bordo degli abissi; non provato da persone |
+| Mosse speciali (tasti 7, 8, 9, 0, L = 7): **quattro per classe** (20 in tutto), con costo in stamina, mana o salute e ricarica; mosse di partenza di ogni classe: onda d'urto, tiro in ritirata, carica furiosa, scudo, dardo di fuoco | Implementata | Fase 5 del piano espansioni e Classi Fase 5 (2.5.0); `ABILITY_CONFIG`; animazioni provvisorie con pose comuni; gli scatti si fermano sul bordo degli abissi; valori da bilanciare (Classi Fase 6); non provate da persone |
+| Mosse imparate durante la partita: si parte con 2, la 3ª e la 4ª in ordine da un forziere (25%) o da un boss (sempre); lucchetto nell'HUD; valgono per la sola partita e stanno nello snapshot di inizio livello | Implementata | Classi Fase 5; `ABILITY_UNLOCK_CONFIG`, `Player.learnNextAbility`; il simulatore non conta i forzieri |
+| Passivi: Cavaliere (+4 stamina per bersaglio colpito con l'arma corpo a corpo), Berserker (+25% di danno sotto il 40% di salute), Mago (+10 mana per nemico o boss sconfitto) | Implementata | Classi Fase 5; `staminaPerWeaponHit`, `lowHealthPower`, `manaPerKill`; Ranger e Paladino con i passivi precedenti; valori da bilanciare |
 | Passiva del Ranger: le frecce dell'arco si ricaricano, una ogni 3 s, con l'arco in mano o in borsa (non nello zaino; i quadrelli della balestra no) | Implementata | 2.1.1; `CharacterDefinition.ammoRegeneration`, `AmmoRegeneration`; valore da bilanciare (Classi Fase 6); non provata da persone |
 | **Mago** (70 HP, velocità 84, stamina 80, **mana 100** con recupero 6/s dopo 600 ms, bastone; si sblocca sconfiggendo la Strega della Palude) | Implementata | Classi Fase 2 (2.2.0); `CHARACTER_CONFIG.mage`, `usesSpellFocus`; sprite provvisori (cappello a punta, veste viola); valori da bilanciare nella Fase 6; non provato da persone |
-| Incantesimi del Mago sui tasti 7-0: dardo di fuoco (15 mana, bruciatura), nova di gelo (30, area con gelo), balzo arcano (20, scatto invulnerabile), barriera (guardia tenuta sul tasto 0, costa mana) | Implementata | Classi Fase 2; `ABILITY_CONFIG`, `AttackDefinition.elements`, guardia con `resource` e `costPerBlockedDamage`; con più mosse il bordo dorato segna lo slot attivo |
+| Incantesimi del Mago sui tasti 7-0: dardo di fuoco (15 mana, bruciatura), nova di gelo (30, area con gelo), balzo arcano (20, scatto invulnerabile), barriera (guardia tenuta sul tasto 0, costa mana) | Implementata | Classi Fase 2; dalla 2.5.0 parte con i primi due, gli altri si imparano; `ABILITY_CONFIG`, `AttackDefinition.elements`, guardia con `resource` e `costPerBlockedDamage`; il bordo dorato segna lo slot attivo |
 | Bastone (catalizzatore): colpi 8/8/14 (MULINELLO), SPAZZATA ARCANA, incantesimi più forti (×1,2) e meno cari (×0,85), 5 mana per bersaglio colpito; Leggendario BASTONE DELLE STELLE | Implementata | Classi Fase 2; `WeaponDefinition.spellFocus`, `Player.activeSpellFocus`; vale solo per chi ha `usesSpellFocus` |
 | Tabella di compatibilità classe × arma (11 armi × 5 classi): arma iniziale e ✓ normali, ★ preferite (danno +15%, munizioni +50%), ▼ penalizzate (danno -15%, recupero +15%), ✗ vietate; il Mago impugna anche spada e pugnale | Implementata | Classi Fase 3 (2.3.0); `WEAPON_AFFINITY_CONFIG` per arma, `WeaponAffinity.ts`; valori da bilanciare |
 | Divieti e filtro del bottino: un'arma vietata non si impugna né si raccoglie ("NON PUOI USARLA") e non compare mai a terra: forzieri, élite, trofei, ricompensa finale e bottega la sostituiscono (`lootSubstituteId`) | Implementata | Classi Fase 3; `Player.equipWeapon`, `Inventory.equipFromBackpack`, `resolveLootWeaponId` |
@@ -146,6 +148,7 @@ Una funzionalità **solo progettata non è mai indicata come implementata.**
 | Combo personalizzabili dal giocatore | Non prevista | |
 | Magie | Pianificata | le abilità della Fase 5 coprono gli attacchi speciali |
 | Elementi ed effetti di stato: bruciatura (Fuoco), veleno, gelo (rallenta), shock (stordisce; i boss subiscono danno); power-up Veleno, Gelo, Fulmine; effetti anche da proiettili e abilità | Implementata | Fase 7 del piano espansioni; il danno nel tempo non uccide mai; aloni e numeri colorati sui nemici |
+| Sinergie elementali: Frantumare (gelo + rompe la guardia o schiaccia le corazze), shock termico (gelo + fuoco), sovraccarico (bruciatura + fulmine), detonazione (veleno + fuoco); +50% di danno e l'effetto si consuma; una per colpo | Implementata | Classi Fase 5; `ELEMENT_SYNERGIES`, `StatusEffects.consumeSynergy`; nemici e boss; valori da bilanciare |
 | Resistenze e debolezze agli elementi per nemico e boss (`elementModifiers`) | Implementata | Fase 7; immune = 0, resiste = 0,5, debole = 1,5-2 |
 
 ## Nemici e boss

@@ -41,6 +41,9 @@ export class CombatSystem {
         const damage = CombatSystem.calculateDamage(attack.damage + player.getBonusDamage(), player.getDamageMultiplierFor(attack));
         player.registerHit(target);
         target.receiveHit(damage, player.facingDirection, player.getHitProperties(attack));
+        if (!target.isAlive && target.isScenery !== true) {
+          player.registerKill();
+        }
         hits.push({ target, damage });
       }
     }

@@ -1,5 +1,5 @@
-import { ELEMENT_CONFIG, ELEMENT_ORDER } from "../config/elementConfig";
-import type { ElementId, ElementModifiers } from "../types/EntityTypes";
+import { ELEMENT_CONFIG, ELEMENT_ORDER, ELEMENT_SYNERGIES } from "../config/elementConfig";
+import type { ElementId, ElementModifiers, HitProperties, SynergyDefinition } from "../types/EntityTypes";
 
 /** Un colpo del danno nel tempo (per i numeri sullo schermo). */
 export interface StatusTick {
@@ -56,6 +56,28 @@ export class StatusEffects {
       this.stunImmunityRemainingMs = definition.stunImmunityMs;
     }
     return { isApplied: true, stunMs };
+  }
+
+  /**
+   * Sinergia innescata da un colpo (Classi Fase 5): la prima di ELEMENT_SYNERGIES il cui effetto è attivo e che il colpo
+   * innesca. L'effetto viene consumato. Va chiamata prima di applicare gli elementi del colpo. null = nessuna.
+   */
+  public consumeSynergy(hit: HitProperties): SynergyDefinition | null {
+    const elements = hit.elements ?? [];
+    const isHeavyImpact = hit.breaksGuard === true || hit.crushesArmor === true;
+    const synergy = ELEMENT_SYNERGIES.find((candidate) => {
+      if (!this.active.has(candidate.status) || elements.includes(candidate.status)) {
+        return false;
+      }
+      const hasElement =
+        candidate.triggerElement !== undefined && elements.includes(candidate.triggerElement) && this.getMultiplier(candidate.triggerElement) > 0;
+      return hasElement || (candidate.triggersOnHeavyImpact === true && isHeavyImpact);
+    });
+    if (synergy === undefined) {
+      return null;
+    }
+    this.active.delete(synergy.status);
+    return synergy;
   }
 
   /** Avanza il tempo: restituisce i colpi del danno nel tempo avvenuti in questo intervallo. */

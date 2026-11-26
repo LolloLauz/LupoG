@@ -153,14 +153,21 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 **Obiettivo:** tutte le classi hanno le loro mosse, un passivo e le sinergie elementali, ancora come dati e con animazioni riusate.
 
-- [ ] **Mosse extra:** altre 3 mosse per Cavaliere, Ranger, Berserker e Paladino (4 per classe in tutto), ognuna come voce di `ABILITY_CONFIG` con il suo costo in mana, stamina o salute.
-- [ ] **Come si ottengono:** da decidere tra mosse note dall'inizio o trovate (pergamene, boss); l'INT del Mago e la Tempra delle altre classi possono fissare i requisiti.
-- [ ] **Passivi:** uno per classe (il Paladino ha già la cura lenta, il Ranger la ricarica delle frecce); nuovi campi in `CharacterDefinition` letti da `Player`.
-- [ ] **Sinergie elementali:** regole in `ELEMENT_CONFIG` (ad esempio gelo e mazza, bruciatura e fulmine), solo dati e un caso in `StatusEffects` dove serve.
-- [ ] **Animazioni:** riuso delle pose comuni (`ABILITY_POSES`); nessuna arte nuova qui.
-- [ ] **Test e documentazione:** una prova per ogni mossa (costo, ricarica, effetto) e per ogni sinergia; tabelle del manuale aggiornate.
+**Decisioni (26 nov 2026):** tutti i numeri sono provvisori, la messa a punto è della Fase 6B.
 
-**Criterio di chiusura:** ogni classe ha 4 mosse funzionanti, un passivo e almeno una sinergia sfruttabile.
+- **Come si ottengono:** ogni classe parte con 2 mosse (tasti 7 e 8); la 3ª e la 4ª (9 e 0) si imparano in quest'ordine. Un forziere aperto dà la prossima mossa mancante con il 25% di probabilità, ogni boss sconfitto la dà di sicuro. Vale anche per il Mago (parte con dardo di fuoco e nova di gelo). Le mosse imparate valgono per la sola partita e stanno nello snapshot di inizio livello. Nessun requisito: tutte di grado 1.
+- **Mosse** (7 / 8 / 9 / 0): Cavaliere onda d'urto, affondo, colpo di scudo (fulmine), lama ardente (fuoco); Ranger tiro in ritirata, freccia velenosa, freccia gelida, freccia di fuoco (senza munizioni); Berserker carica furiosa, ascia rovente (fuoco), terremoto (fulmine), colpo di sangue (costa salute); Paladino scudo, martello sacro (fulmine), consacrazione (fuoco), giudizio gelido (gelo).
+- **Passivi:** Cavaliere +4 stamina per bersaglio colpito con l'arma (corpo a corpo); Berserker +25% di danno sotto il 40% di salute; Mago +10 mana per ogni nemico sconfitto. Paladino e Ranger invariati.
+- **Sinergie:** un colpo su un bersaglio che ha già un effetto fa +50% di danno e consuma l'effetto. Frantumare (gelo + colpo che rompe la guardia o schiaccia le corazze), shock termico (gelo + fuoco), sovraccarico (bruciatura + fulmine), detonazione (veleno + fuoco). Un colpo che porta lo stesso elemento dell'effetto non lo innesca.
+
+- [x] **Mosse extra:** altre 3 mosse per Cavaliere, Ranger, Berserker e Paladino (4 per classe in tutto), ognuna come voce di `ABILITY_CONFIG` con il suo costo in mana, stamina o salute. *Fatto: 12 mosse con costo in stamina (il colpo di sangue in salute).*
+- [x] **Come si ottengono:** *deciso: 2 note dall'inizio, la 3ª e la 4ª da forzieri (25%) e boss (di sicuro), per la sola partita; nessun requisito (`ABILITY_UNLOCK_CONFIG`, `Player.learnNextAbility`).*
+- [x] **Passivi:** uno per classe (il Paladino ha già la cura lenta, il Ranger la ricarica delle frecce); nuovi campi in `CharacterDefinition` letti da `Player`. *Fatto: `staminaPerWeaponHit`, `lowHealthPower`, `manaPerKill`.*
+- [x] **Sinergie elementali:** regole in `ELEMENT_CONFIG` (ad esempio gelo e mazza, bruciatura e fulmine), solo dati e un caso in `StatusEffects` dove serve. *Fatto: `ELEMENT_SYNERGIES` e `StatusEffects.consumeSynergy`, su nemici e boss.*
+- [x] **Animazioni:** riuso delle pose comuni (`ABILITY_POSES`); nessuna arte nuova qui. *Fatto: anche i proiettili riusano la freccia del giocatore.*
+- [x] **Test e documentazione:** una prova per ogni mossa (costo, ricarica, effetto) e per ogni sinergia; tabelle del manuale aggiornate. *Fatto (2.5.0): `classes-phase5.test.mjs`; baseline aggiornato (cambiano soprattutto le righe del Mago, più forte con il passivo e lo shock termico: da riequilibrare nella 6B).*
+
+**Criterio di chiusura:** ogni classe ha 4 mosse funzionanti, un passivo e almeno una sinergia sfruttabile. *Con le sole mosse di partenza solo il Mago innesca una sinergia; le altre classi la ottengono con la 3ª o la 4ª mossa (o con armi, modificatori e power-up).*
 
 ---
 
@@ -176,7 +183,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 
 ### Sessione B, bilanciamento
 
-- [ ] Estendere il simulatore con un bot per ciascuna classe e per le build di statistiche.
+- [ ] Estendere il simulatore con un bot per ciascuna classe e per le build di statistiche (oggi i bot diversi dal Mago usano solo la mossa sul tasto 7: le 12 mosse nuove non sono misurate).
 - [ ] Ritoccare costi, ricariche, danni, valori della tabella di compatibilità, prezzo delle gemme e punti statistica.
 - [ ] Verificare i boss (HP, fasi) e il tasso di sopravvivenza per classe e per difficoltà.
 - [ ] Aggiornare BALANCE.md e il manuale con i valori finali.
@@ -192,7 +199,7 @@ Il lavoro si divide in sette fasi, da una fondazione senza cambiamenti visibili 
 **Decisioni ancora da prendere:**
 
 - [x] Quanti punti statistica si guadagnano per livello e per boss. *Deciso: 3 per livello e 2 per boss (vedi Fase 4).*
-- [ ] Come si ottengono le mosse extra delle classi (note dall'inizio o trovate).
+- [x] Come si ottengono le mosse extra delle classi. *Deciso: vedi Fase 5.*
 - [ ] Valore in monete della gemma (proposta: 30).
 
 ---

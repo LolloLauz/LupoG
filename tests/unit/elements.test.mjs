@@ -168,5 +168,5 @@ export default async function (t, load) {
     for (let i = 0; i < 20; i++) { archer.update(frame, input(), collision, ground, 3000); launches = launches.concat(archer.drainProjectileLaunches()); }
     t("anche le frecce portano gli elementi", launches.length === 1 && launches[0].hit.elements.join() === "shock");
   }
-  t("motore: numeri del danno nel tempo dopo l'aggiornamento dei nemici", /this\.updateCombatAndEnemies\(deltaTimeSeconds\);\s*this\.showStaminaAndAbilityEffects\(\);\s*this\.showStatusDamage\(\);/.test(engineSource) && /private showStatusDamage[\s\S]{0,300}drainStatusTicks\(\)/.test(engineSource));
+  t("motore: numeri del danno nel tempo dopo l'aggiornamento dei nemici", /this\.updateCombatAndEnemies\(deltaTimeSeconds\);\s*this\.showStaminaAndAbilityEffects\(\);\s*this\.showStatusDamage\(\);/.test(engineSource) && /private showStatusDamage[\s\S]{0,700}drainStatusTicks\(\)/.test(engineSource));
 }

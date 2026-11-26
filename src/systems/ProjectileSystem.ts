@@ -59,7 +59,7 @@ export class ProjectileSystem {
       projectile.update(deltaTimeSeconds);
       const bounds = projectile.getBounds();
       if (projectile.owner === "player") {
-        this.updatePlayerProjectile(projectile, targets, platforms, mapWidth, mapHeight, events);
+        this.updatePlayerProjectile(projectile, player, targets, platforms, mapWidth, mapHeight, events);
         continue;
       }
       if (projectile.definition.isDeflectable && swordHitbox !== null && CollisionSystem.intersects(swordHitbox, bounds)) {
@@ -99,6 +99,7 @@ export class ProjectileSystem {
   /** Proiettile del giocatore: bersagli, muri, fine corsa (e recupero del coltello). */
   private updatePlayerProjectile(
     projectile: Projectile,
+    player: Player,
     targets: Damageable[],
     platforms: PlatformDefinition[],
     mapWidth: number,
@@ -113,6 +114,9 @@ export class ProjectileSystem {
       }
       projectile.targetsHit.add(target);
       target.receiveHit(projectile.damage, directionX < 0 ? "left" : "right", projectile.hit);
+      if (!target.isAlive && target.isScenery !== true) {
+        player.registerKill();
+      }
       events.push({ kind: "hitTarget", x: projectile.centerX, y: projectile.centerY, target, damage: projectile.damage, directionX });
       if (projectile.definition.isPiercing !== true) {
         this.finishPlayerProjectile(projectile, events);

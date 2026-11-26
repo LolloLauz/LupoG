@@ -80,12 +80,12 @@ export default async function (t, load) {
   }
 
   // --- abilità come elenco ---
-  t("ogni classe ha un elenco di abilità (una, quattro il Mago) e nessun vecchio abilityId",
-    CHARACTER_ORDER.every((id) => Array.isArray(CHARACTER_CONFIG[id].abilityIds) && CHARACTER_CONFIG[id].abilityIds.length === (id === "mage" ? 4 : 1) && CHARACTER_CONFIG[id].abilityId === undefined));
+  t("ogni classe ha un elenco di quattro abilità e nessun vecchio abilityId",
+    CHARACTER_ORDER.every((id) => Array.isArray(CHARACTER_CONFIG[id].abilityIds) && CHARACTER_CONFIG[id].abilityIds.length === 4 && CHARACTER_CONFIG[id].abilityId === undefined));
   {
     const p = grounded("knight");
-    t("slot: abilities e slot attivo 0", p.abilities.length === 1 && p.abilities[0].id === "shockwave" && p.activeAbilitySlotIndex === 0 && p.ability.id === "shockwave");
-    t("slot: uno slot inesistente è rifiutato", !p.selectAbilitySlot(1) && !p.selectAbilitySlot(-1) && !p.selectAbilitySlot(0.5) && p.activeAbilitySlotIndex === 0);
+    t("slot: abilities e slot attivo 0", p.abilities.length === 4 && p.abilities[0].id === "shockwave" && p.activeAbilitySlotIndex === 0 && p.ability.id === "shockwave");
+    t("slot: uno slot inesistente o non imparato è rifiutato", !p.selectAbilitySlot(2) && !p.selectAbilitySlot(4) && !p.selectAbilitySlot(-1) && !p.selectAbilitySlot(0.5) && p.activeAbilitySlotIndex === 0);
     t("slot: lo slot esistente si sceglie", p.selectAbilitySlot(0));
     step(p, [], ["ability1"]);
     t("slot: l'abilità dello slot attivo paga il costo e parte la ricarica", p.stamina === 60 && p.abilityCooldownFraction === 1 && !p.isAbilityReady);

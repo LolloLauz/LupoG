@@ -162,6 +162,31 @@ Raccogliendo tutto e sconfiggendo tutti i nemici del livello si guadagnano da 74
 una pozione costa 40. Il valore della gemma è provvisorio. Prezzi in `progressionConfig.ts`, gemma in `itemConfig.ts`; vanno provati con persone, soprattutto
 perché il gioco sembrava già facile per il bot.
 
+## Classi Fase 5: mosse, passivi e sinergie (2.5.0)
+
+Tutti i valori sono provvisori, da mettere a punto nella Classi Fase 6B.
+
+**Come misura il simulatore.** Nelle partite complete si parte con 2 mosse e se ne impara una per ogni boss sconfitto; i forzieri non si
+contano. Duelli, boss da soli e livelli singoli hanno tutte e quattro le mosse (`knownAbilities` di `playLevel`). Solo il bot del Mago usa
+più mosse (balzo e barriera solo quando li ha imparati); gli altri usano la mossa sul 7, quindi **le dodici mosse nuove non sono misurate**.
+
+**Cambia quasi solo il Mago** (baseline `tools/balance-baseline.txt` aggiornato). Lo rafforzano il passivo del mana (+10 per nemico
+sconfitto) e lo shock termico, che nova e dardo innescano fin dall'inizio.
+
+| Mago, partite complete (60) | Vinte prima | Vinte dopo | Morti medie dopo |
+|---|---|---|---|
+| rusher senza bottino | 13% | **95%** | 0,47 |
+| medio senza bottino | 93% | **100%** | 0,08 |
+| rusher con il bottino | 83% | **90%** | 0,30 |
+| medio con il bottino | 88% | **93%** | 0,22 |
+
+Contro i boss da soli il Mago vince sempre, come prima, e perde poco meno salute (rusher 22-38 HP, medio 13-29 HP).
+Nella sezione BUILD il Cavaliere cambia di pochissimo (rusher con Intelligenza: vite rimaste da 2,43 a 2,48, HP persi da 719 a 710;
+medio con Forza e Intelligenza: 1 HP perso in meno). Le altre sezioni sono identiche.
+
+**Da rivedere nella 6B:** il Mago rusher, che era il caso più difficile, ora è vicino al medio. Le leve sono `manaPerKill`
+(`characterConfig.ts`), `damageMultiplier` dello shock termico (`ELEMENT_SYNERGIES`) e costi o ricariche di nova e dardo.
+
 ## Classi Fase 4: attributi, requisiti e build (2.4.0)
 
 Gli attributi non cambiano le classi che non spendono punti (le basi sono neutre: contano solo i punti sopra la base). Le differenze
@@ -298,7 +323,10 @@ boss conviene rilanciare `npm run balance` e guardare più valori vicini.
 | Boss e fasi | `src/config/enemyConfig.ts` | `BOSS_CONFIG` |
 | Ricarica delle frecce del Ranger (2.1.1: una ogni 3 s; non misurata, il bot usa solo la spada; valore da rivedere nella Classi Fase 6) | `src/config/characterConfig.ts` | `ammoRegeneration.intervalMs` |
 | Mago: salute, mana e recupero (2.2.0) | `src/config/characterConfig.ts` | `CHARACTER_CONFIG.mage` |
-| Incantesimi: costi, ricariche, danni, elementi | `src/config/abilityConfig.ts` | `ABILITY_CONFIG` (firebolt, frostNova, arcaneLeap, arcaneBarrier) |
+| Mosse e incantesimi di tutte le classi: costi, ricariche, danni, elementi | `src/config/abilityConfig.ts` | `ABILITY_CONFIG` |
+| Mosse di partenza e probabilità dal forziere (2.5.0) | `src/config/abilityConfig.ts` | `ABILITY_UNLOCK_CONFIG` |
+| Passivi di classe (2.5.0) | `src/config/characterConfig.ts` | `staminaPerWeaponHit`, `lowHealthPower`, `manaPerKill` |
+| Sinergie elementali (2.5.0) | `src/config/elementConfig.ts` | `ELEMENT_SYNERGIES` |
 | Bastone e catalizzatore | `src/config/weaponConfig.ts` | `WEAPON_CONFIG.staff`, `spellFocus` |
 | Attributi: basi per classe | `src/config/characterConfig.ts` | `CHARACTER_CONFIG[..].baseAttributes` |
 | Attributi: effetti per punto, massimo e punti per livello (2.4.0) | `src/config/attributeConfig.ts` | `ATTRIBUTE_CONFIG`, `ATTRIBUTE_MAX_VALUE`, `ATTRIBUTE_POINTS_CONFIG` |

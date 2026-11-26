@@ -1,7 +1,7 @@
-import type { AbilityDefinition, AbilityId, AttackDefinition } from "../types/EntityTypes";
+import type { AbilityDefinition, AbilityId, AttackDefinition, ElementId, ResourceCost } from "../types/EntityTypes";
 
 /**
- * Abilità speciali dei personaggi (Fase 5, tasti 7-0). Ognuna ha un costo (stamina, mana o salute: Classi Fase 0)
+ * Abilità speciali dei personaggi (Fase 5, tasti 7-0; quattro per classe dalla Classi Fase 5, valori da bilanciare). Ognuna ha un costo (stamina, mana o salute: Classi Fase 0)
  * e un tempo di ricarica.
  * Le abilità d'attacco sono attacchi come quelli delle armi (area d'urto, durata, animazione con lo stesso id),
  * più eventuali scatti (dash) e proiettili; l'arma in mano cambia solo l'aspetto.
@@ -92,6 +92,43 @@ const ARCANE_LEAP_ATTACK: AttackDefinition = {
   animation: "abilityArcaneLeap",
   dash: { speed: -300, startMs: 0, endMs: 240, invulnerable: true },
 };
+
+/** Classi Fase 5: colpo ravvicinato (stesse fasi per tutti), con area, elementi e scatto indicati. */
+function strike(id: string, damage: number, hitbox: AttackDefinition["hitbox"], extra: Partial<AttackDefinition> = {}): AttackDefinition {
+  return { id, damage, durationMs: 460, hitStartMs: 200, hitEndMs: 300, cooldownMs: 150, hitbox, animation: id, ...extra };
+}
+
+/** Classi Fase 5: area intorno al personaggio, davanti e dietro (come l'onda d'urto). */
+const AROUND_HITBOX = { x: -40, y: 0, width: 92, height: 24 };
+
+/** Classi Fase 5: freccia speciale del Ranger, con un elemento e senza consumare munizioni. */
+function elementArrow(id: string, damage: number, element: ElementId): AttackDefinition {
+  return {
+    id,
+    damage,
+    durationMs: 360,
+    hitStartMs: 0,
+    hitEndMs: 0,
+    cooldownMs: 150,
+    hitbox: NO_HITBOX,
+    animation: id,
+    projectile: { projectileId: "playerArrow", launchAtMs: 180, originX: 20, originY: 9, aimY: 0, usesAmmo: false },
+    elements: [element],
+  };
+}
+
+/** Classi Fase 5: una mossa d'attacco delle classi, di grado 1 e senza modificatori. */
+function attackAbility(
+  id: AbilityId,
+  name: string,
+  description: string,
+  cost: ResourceCost,
+  cooldownMs: number,
+  attack: AttackDefinition,
+  impactEffect?: "shockwave"
+): AbilityDefinition {
+  return { id, kind: "attack", name, description, cost, cooldownMs, modifiers: [], grade: 1, attack, ...(impactEffect === undefined ? {} : { impactEffect }) };
+}
 
 export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
   shockwave: {
@@ -192,7 +229,45 @@ export const ABILITY_CONFIG: Record<AbilityId, AbilityDefinition> = {
     costPerBlockedDamage: 1,
     parryStunMs: 1000,
   },
+
+  // --- Classi Fase 5: Cavaliere ---
+  lunge: attackAbility("lunge", "AFFONDO", "Scatto e stoccata", { stamina: 25 }, 3500,
+    strike("abilityLunge", 22, { x: 6, y: 6, width: 30, height: 12 }, { durationMs: 400, hitStartMs: 100, hitEndMs: 280, dash: { speed: 200, startMs: 80, endMs: 260 } })),
+  shieldBash: attackAbility("shieldBash", "COLPO DI SCUDO", "Colpo che stordisce", { stamina: 25 }, 6000,
+    strike("abilityShieldBash", 14, { x: 6, y: 2, width: 18, height: 20 }, { durationMs: 380, hitStartMs: 140, hitEndMs: 240, elements: ["shock"] })),
+  flameBlade: attackAbility("flameBlade", "LAMA ARDENTE", "Fendente di fuoco", { stamina: 35 }, 6000,
+    strike("abilityFlameBlade", 28, { x: 6, y: 2, width: 30, height: 22 }, { elements: ["fire"] })),
+
+  // --- Classi Fase 5: Ranger ---
+  poisonArrow: attackAbility("poisonArrow", "FRECCIA VELENOSA", "Freccia che avvelena", { stamina: 25 }, 4000,
+    elementArrow("abilityPoisonArrow", 14, "poison")),
+  frostArrow: attackAbility("frostArrow", "FRECCIA GELIDA", "Freccia che gela", { stamina: 25 }, 5000,
+    elementArrow("abilityFrostArrow", 14, "frost")),
+  fireArrow: attackAbility("fireArrow", "FRECCIA DI FUOCO", "Freccia che brucia", { stamina: 30 }, 5000,
+    elementArrow("abilityFireArrow", 18, "fire")),
+
+  // --- Classi Fase 5: Berserker ---
+  hotAxe: attackAbility("hotAxe", "ASCIA ROVENTE", "Fendente di fuoco", { stamina: 30 }, 4500,
+    strike("abilityHotAxe", 30, { x: 6, y: 2, width: 26, height: 22 }, { elements: ["fire"] })),
+  earthquake: attackAbility("earthquake", "TERREMOTO", "Scuote tutti intorno", { stamina: 40 }, 7000,
+    strike("abilityEarthquake", 20, AROUND_HITBOX, { elements: ["shock"] }), "shockwave"),
+  bloodStrike: attackAbility("bloodStrike", "COLPO DI SANGUE", "Paghi con la salute", { health: 15 }, 6000,
+    strike("abilityBloodStrike", 55, { x: 4, y: 0, width: 30, height: 24 }, { durationMs: 620, hitStartMs: 300, hitEndMs: 440, breaksGuard: true })),
+
+  // --- Classi Fase 5: Paladino ---
+  holyHammer: attackAbility("holyHammer", "MARTELLO SACRO", "Colpo che stordisce", { stamina: 30 }, 5000,
+    strike("abilityHolyHammer", 24, { x: 6, y: 2, width: 24, height: 22 }, { elements: ["shock"], breaksGuard: true })),
+  consecration: attackAbility("consecration", "CONSACRAZIONE", "Fuoco tutto intorno", { stamina: 40 }, 7000,
+    strike("abilityConsecration", 18, AROUND_HITBOX, { elements: ["fire"] }), "shockwave"),
+  frozenJudgement: attackAbility("frozenJudgement", "GIUDIZIO GELIDO", "Gela tutti intorno", { stamina: 40 }, 7000,
+    strike("abilityFrozenJudgement", 18, AROUND_HITBOX, { elements: ["frost"] }), "shockwave"),
 };
+
+/** Mosse imparate durante la partita (Classi Fase 5): quante se ne conoscono all'inizio e la probabilità dal forziere. */
+export const ABILITY_UNLOCK_CONFIG = {
+  startingCount: 2,
+  chestChance: 0.25,
+} as const;
 
 /** Gli attacchi delle abilità, per id (servono alle animazioni). */
 export function getAbilityAttacks(): Record<string, AttackDefinition> {

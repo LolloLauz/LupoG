@@ -17,6 +17,7 @@ import type {
   Damageable,
   ProjectileLaunch,
   SummonRequest,
+  SynergyDefinition,
 } from "../types/EntityTypes";
 import type { FacingDirection, Rectangle } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
@@ -72,6 +73,7 @@ export class Boss extends GameObject implements Damageable {
   public arenaMinX: number | null = null;
   /** Effetti di stato (Fase 7): come per i nemici, ma il boss non si stordisce (lo shock lo ferisce subito). */
   private readonly statusEffects: StatusEffects;
+  private pendingSynergy: SynergyDefinition | null = null;
   private pendingStatusTicks: StatusTick[] = [];
 
   constructor(
@@ -187,6 +189,13 @@ export class Boss extends GameObject implements Damageable {
     return summons;
   }
 
+  /** Sinergia innescata dall'ultimo colpo (una volta sola, il motore ne mostra il nome), oppure null. */
+  public drainSynergy(): SynergyDefinition | null {
+    const synergy = this.pendingSynergy;
+    this.pendingSynergy = null;
+    return synergy;
+  }
+
   public receiveHit(damage: number, _hitDirection: FacingDirection, hit: HitProperties = {}): void {
     if (!this.isAlive) {
       return;
@@ -195,6 +204,12 @@ export class Boss extends GameObject implements Damageable {
     if (this.baseState === "dormant") {
       this.wakeUp();
     }
+    // sinergia (Classi Fase 5): danno in più sull'effetto già presente, prima di applicare quelli del colpo
+    const synergy = this.statusEffects.consumeSynergy(hit);
+    if (synergy !== null) {
+      this.pendingSynergy = synergy;
+    }
+    const hitDamage = synergy === null ? damage : Math.round(damage * synergy.damageMultiplier);
     // elementi (Fase 7): lo shock non stordisce un boss, ma lo ferisce subito
     let shockDamage = 0;
     for (const element of hit.elements ?? []) {
@@ -202,7 +217,7 @@ export class Boss extends GameObject implements Damageable {
         shockDamage = Math.round(ELEMENT_CONFIG.shock.bossInstantDamage * this.statusEffects.getMultiplier("shock"));
       }
     }
-    this.currentHealth = Math.max(0, this.currentHealth - damage - shockDamage);
+    this.currentHealth = Math.max(0, this.currentHealth - hitDamage - shockDamage);
     this.hitFlashRemainingMs = this.definition.hitFlashMs;
     if (!this.isAlive) {
       this.deathElapsedMs = 0;

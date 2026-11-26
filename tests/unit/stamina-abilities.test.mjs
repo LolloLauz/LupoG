@@ -38,7 +38,7 @@ export default async function (t, load) {
   // le classi con stamina come unica risorsa delle mosse (il Mago, con il mana, è in mage-phase2.test.mjs)
   const STAMINA_CLASSES = CHARACTER_ORDER.filter((id) => CHARACTER_CONFIG[id].maxMana === 0);
   t("ogni personaggio ha stamina, recupero, costo della schivata e abilità esistenti", CHARACTER_ORDER.every((id) => { const c = CHARACTER_CONFIG[id]; return c.maxStamina > 0 && c.staminaRegenPerSecond > 0 && c.dodgeStaminaCost > 0 && c.dodgeStaminaCost < c.maxStamina && c.abilityIds.length >= 1 && c.abilityIds.every((abilityId) => ABILITY_CONFIG[abilityId]?.id === abilityId); }));
-  t("abilità diverse per ogni personaggio (onda d'urto, tiro in ritirata, carica furiosa, scudo)", STAMINA_CLASSES.map((id) => CHARACTER_CONFIG[id].abilityIds.join("+")).join() === "shockwave,backstepShot,furiousCharge,shieldGuard");
+  t("abilità diverse per ogni personaggio (onda d'urto, tiro in ritirata, carica furiosa, scudo)", STAMINA_CLASSES.map((id) => CHARACTER_CONFIG[id].abilityIds[0]).join() === "shockwave,backstepShot,furiousCharge,shieldGuard");
   t("ogni abilità delle classi senza mana costa stamina (meno del massimo di chi la usa)", STAMINA_CLASSES.every((id) => { const a = ABILITY_CONFIG[CHARACTER_CONFIG[id].abilityIds[0]]; return a.cost.stamina > 0 && a.cost.stamina <= CHARACTER_CONFIG[id].maxStamina && a.cooldownMs >= 0 && a.name.length > 0; }));
   t("tasto 7 (o L) per la prima abilità, solo in gioco; riga nella schermata dei controlli", CONTROLS_CONFIG.ability1.includes("Digit7") && CONTROLS_CONFIG.ability1.includes("KeyL") && INPUT_CONTEXT_ACTIONS.gameplay.includes("ability1") && !INPUT_CONTEXT_ACTIONS.menu.includes("ability1") && CONTROLS_ROWS.some((r) => r.keyGroups.flat().includes("L")));
   {
@@ -220,7 +220,7 @@ export default async function (t, load) {
       fillVerticalGradient() {}, fillDitheredOverlay() {}, fillGlow() {},
     };
     const sm = { drawSprite() {} };
-    new HUDManager().render(renderer, sm, { health: 100, maxHealth: 100, stamina: 50, maxStamina: 100, mana: 0, maxMana: 0, abilities: [{ cooldownFraction: 0.5, isReady: false, isAffordable: true, isSelected: true, isActive: false }], lives: 3, score: 0, coins: 0, levelNumber: 1, bag: [], powerUps: [], boss: null }, 0);
+    new HUDManager().render(renderer, sm, { health: 100, maxHealth: 100, stamina: 50, maxStamina: 100, mana: 0, maxMana: 0, abilities: [{ cooldownFraction: 0.5, isReady: false, isAffordable: true, isSelected: true, isActive: false, meetsRequirement: true, isKnown: true }], lives: 3, score: 0, coins: 0, levelNumber: 1, bag: [], powerUps: [], boss: null }, 0);
     const bar = STAMINA_BAR_GEOMETRY;
     const staminaFill = fills.find((f) => f.x === bar.x && f.y === bar.y && f.c === PALETTE.green);
     t("HUD: barra della stamina piena a metà", staminaFill !== undefined && staminaFill.w === bar.width / 2);

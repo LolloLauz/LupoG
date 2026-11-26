@@ -40,6 +40,25 @@ export type PowerUpId = "berserk" | "speed" | "shield" | "fire" | "regeneration"
  */
 export type ElementId = "fire" | "poison" | "frost" | "shock";
 
+/** Sinergie elementali (Classi Fase 5, vedi ELEMENT_SYNERGIES). */
+export type SynergyId = "shatter" | "thermalShock" | "overload" | "detonation";
+
+/**
+ * Una sinergia: un colpo su un bersaglio che ha già l'effetto "status" fa danno × damageMultiplier e consuma l'effetto.
+ * Il colpo la innesca se porta l'elemento triggerElement, oppure (triggersOnHeavyImpact) se rompe la guardia o schiaccia
+ * le corazze. Un colpo che porta lo stesso elemento di "status" non la innesca.
+ */
+export interface SynergyDefinition {
+  id: SynergyId;
+  /** Nome mostrato al giocatore. */
+  name: string;
+  status: ElementId;
+  triggerElement?: ElementId;
+  triggersOnHeavyImpact?: boolean;
+  damageMultiplier: number;
+  color: string;
+}
+
 /**
  * Resistenze e debolezze di un nemico o di un boss: moltiplicatore per elemento (1 se omesso).
  * 0 = immune (l'effetto non si applica); meno di 1 = resiste (effetto più debole o più breve); più di 1 = debole.
@@ -448,9 +467,21 @@ export interface WeaponDefinition {
   };
 }
 
-/** Abilità speciali dei personaggi (Fase 5); gli incantesimi del Mago (Classi Fase 2). */
+/** Abilità speciali dei personaggi (Fase 5); gli incantesimi del Mago (Classi Fase 2); le mosse extra (Classi Fase 5). */
 export type AbilityId =
   | "shockwave"
+  | "lunge"
+  | "shieldBash"
+  | "flameBlade"
+  | "poisonArrow"
+  | "frostArrow"
+  | "fireArrow"
+  | "hotAxe"
+  | "earthquake"
+  | "bloodStrike"
+  | "holyHammer"
+  | "consecration"
+  | "frozenJudgement"
   | "backstepShot"
   | "furiousCharge"
   | "shieldGuard"
@@ -577,8 +608,17 @@ export interface CharacterDefinition {
    * questi valori, così un personaggio senza punti spesi gioca come nella 2.3.
    */
   baseAttributes: Readonly<Attributes>;
-  /** Abilità speciali, una per slot (Classi Fase 0: una sola, tasto 7 o L). Player ne tiene attivo uno. */
+  /**
+   * Abilità speciali, una per slot (tasti 7-0). Player ne tiene attivo uno. A inizio partita sono note solo le prime
+   * ABILITY_UNLOCK_CONFIG.startingCount; le altre si imparano in quest'ordine (Classi Fase 5).
+   */
   abilityIds: readonly AbilityId[];
+  /** Passivo (Classi Fase 5): stamina ridata da ogni bersaglio colpito con l'arma corpo a corpo. */
+  staminaPerWeaponHit?: number;
+  /** Passivo: sotto healthFraction della salute massima il danno inflitto si moltiplica per damageMultiplier. */
+  lowHealthPower?: { healthFraction: number; damageMultiplier: number };
+  /** Passivo: mana ridato da ogni nemico o boss sconfitto. */
+  manaPerKill?: number;
   /**
    * Sblocco (Fase 6): il personaggio si sceglie solo dopo aver raggiunto questo livello (1 = subito disponibile).
    * unlockText descrive l'obiettivo nella schermata di scelta.

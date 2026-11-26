@@ -69,6 +69,7 @@ const { createArmorItem, createWeaponItem } = await loadModule("systems/ItemFact
 const { ARMOR_CONFIG } = await loadModule("config/armorConfig");
 const { RARITY_ORDER } = await loadModule("config/rarityConfig");
 const { AttributePoints } = await loadModule("systems/AttributePoints");
+const { ABILITY_UNLOCK_CONFIG } = await loadModule("config/abilityConfig");
 
 const collisionSystem = new CollisionSystem();
 const combatSystem = new CombatSystem();
@@ -101,7 +102,7 @@ function playLevel(levelId, options = {}) {
   // armor, weaponItem: equipaggiamento (piano E1-E6): armature indossate e l'arma con la sua rarità
   // il Mago (Classi Fase 2) ha un bot suo: bastone e incantesimi (7 dardo, 8 nova, 9 balzo, 0 barriera)
   // spentAttributes (Classi Fase 4): punti attributo spesi sopra la base della classe (null = nessuno)
-  const { character = CHARACTER_CONFIG.knight, useAbility = false, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, maxSeconds = 240, enemyOverride = null, stopWhenClear = false, armor = EMPTY_ARMOR, weaponItem = null, spentAttributes = null } = options;
+  const { character = CHARACTER_CONFIG.knight, useAbility = false, dodgeSkill = 0, seed = 1, startHealth = character.maxHealth, startPotions = 0, knownAbilities = 4, maxSeconds = 240, enemyOverride = null, stopWhenClear = false, armor = EMPTY_ARMOR, weaponItem = null, spentAttributes = null } = options;
   const level = LEVEL_CONFIG.find((candidate) => candidate.id === levelId);
   const random = createRandom(seed);
   // come nel gioco: piattaforme (anche mobili e cancello dell'arena), pericoli, proiettili
@@ -111,6 +112,7 @@ function playLevel(levelId, options = {}) {
   const projectileSystem = new ProjectileSystem();
   let platforms = levelManager.platforms;
   const player = new Player(level.playerStart.x, level.playerStart.y, character);
+  player.setKnownAbilityCount(knownAbilities);
   player.setArmor(armor);
   if (spentAttributes !== null) player.setSpentAttributes(spentAttributes);
   const isMage = character.id === "mage";
@@ -378,15 +380,18 @@ function playFullRun(dodgeSkill, seed, character = CHARACTER_CONFIG.knight, useA
   const deathsPerLevel = LEVEL_CONFIG.map(() => 0);
   // build (Classi Fase 4): a fine livello i punti attributo vanno tutti nell'attributo indicato (fino al massimo)
   const attributePoints = new AttributePoints();
+  // mosse (Classi Fase 5): si parte con quelle iniziali e ogni boss insegna la successiva (i forzieri non si contano)
+  let knownAbilities = ABILITY_UNLOCK_CONFIG.startingCount;
   let totalTime = 0;
   let totalHealthLost = 0;
   for (const level of LEVEL_CONFIG) {
     for (;;) {
-      const result = playLevel(level.id, { character, useAbility, dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions, armor: gear.armor, weaponItem: gear.weaponItem, spentAttributes: build === null ? null : attributePoints.spent });
+      const result = playLevel(level.id, { character, useAbility, dodgeSkill, seed: seed * 10 + level.id + deathsPerLevel[level.id - 1] * 100, startHealth: health, startPotions: potions, knownAbilities, armor: gear.armor, weaponItem: gear.weaponItem, spentAttributes: build === null ? null : attributePoints.spent });
       totalTime += result.time;
       totalHealthLost += result.healthLost;
       if (result.outcome === "win") {
         potions = result.potions;
+        if (level.hasBoss) knownAbilities++;
         const hasNextLevel = LEVEL_CONFIG.some((other) => other.id === level.id + 1);
         if (gearMode === "loot") collectLoot(level, gear, lootRandom, botWeaponId);
         if (build !== null && hasNextLevel) {

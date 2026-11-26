@@ -241,7 +241,7 @@ export default async function (t, load) {
     const texts = [];
     const fills = [];
     const renderer = { width: 320, height: 240, fillRect: (x, y, w, h, color) => fills.push(color), drawText: (text) => texts.push(text), fillVerticalGradient() {}, fillDithered() {}, fillGlow() {}, strokeRect() {}, fillDitheredOverlay() {} };
-    const abilities = [{ cooldownFraction: 0, isReady: false, isAffordable: true, isSelected: true, isActive: false, meetsRequirement: false }];
+    const abilities = [{ cooldownFraction: 0, isReady: false, isAffordable: true, isSelected: true, isActive: false, meetsRequirement: false, isKnown: true }];
     new HUDManager().render(renderer, { drawSprite() {} }, { health: 100, maxHealth: 100, stamina: 100, maxStamina: 100, mana: 0, maxMana: 0, abilities, lives: 3, score: 0, coins: 0, levelNumber: 2, bag: [], powerUps: [], boss: null, unspentAttributePoints: 3 }, 0);
     t("HUD: con punti da spendere compare +N PUNTI", texts.includes("+3 PUNTI"));
     t("HUD: una mossa oltre il grado ha il riquadro grigio scuro", fills.includes(PALETTE.stoneDark));
