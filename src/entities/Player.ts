@@ -21,7 +21,7 @@ import { EMPTY_ARMOR, NO_EQUIPMENT_BONUSES, computeEquipmentBonuses } from "../s
 import { createWeaponItem } from "../systems/ItemFactory";
 import { GAME_CONFIG, PALETTE } from "../config/gameConfig";
 import { PLAYER_ANIMATIONS } from "../config/animationConfig";
-import { ABILITY_CONFIG } from "../config/abilityConfig";
+import { ABILITY_CONFIG, ABILITY_UNLOCK_CONFIG } from "../config/abilityConfig";
 import { AFFIX_CONFIG } from "../config/affixConfig";
 import { ARMOR_CONFIG, ARMOR_SLOTS } from "../config/armorConfig";
 import { ATTRIBUTE_ORDER, ZERO_ATTRIBUTES } from "../config/attributeConfig";
@@ -63,6 +63,8 @@ export interface AbilitySlotStatus {
   isReady: boolean;
   /** Slot attivo (l'ultimo scelto con 7-0). */
   isSelected: boolean;
+  /** La mossa è stata imparata (Classi Fase 5); altrimenti lo slot è chiuso. */
+  isKnown: boolean;
   /** Il grado della mossa è alla portata dell'Intelligenza (Classi Fase 4: requisito rigido). */
   meetsRequirement: boolean;
   /** In uso: guardia alzata. */
@@ -129,6 +131,8 @@ export class Player extends GameObject {
   );
   /** Slot dell'abilità attiva (indice in character.abilityIds) e ricarica che manca a ogni slot (ms). */
   private activeAbilitySlot = 0;
+  /** Mosse imparate (Classi Fase 5): sono note le prime knownAbilities di character.abilityIds. */
+  private knownAbilities: number = ABILITY_UNLOCK_CONFIG.startingCount;
   private abilityCooldownsMs: number[] = this.character.abilityIds.map(() => 0);
   /** Scudo alzato (abilità del Paladino) e da quanto tempo (per la parata perfetta). */
   private isGuardUp = false;
@@ -142,6 +146,12 @@ export class Player extends GameObject {
   private hasPendingNoMana = false;
   /** Vero dopo una mossa rifiutata per il grado troppo alto (il motore mostra "INTELLIGENZA INSUFFICIENTE"). */
   private hasPendingLowIntelligence = false;
+  /** Vero dopo aver premuto il tasto di una mossa non ancora imparata. */
+  private hasPendingUnknownAbility = false;
+  /** Salute pagata per le mosse e non ancora prelevata dal motore (non è un colpo subito). */
+  private pendingHealthPaid = 0;
+  /** Vero dopo una mossa rifiutata perché la salute non basta a pagarla. */
+  private hasPendingLowHealth = false;
   private pendingAbilityName: string | null = null;
   private hasPendingAbilityImpact = false;
 
@@ -325,17 +335,50 @@ export class Player extends GameObject {
     return this.character.abilityIds.map((abilityId) => ABILITY_CONFIG[abilityId]);
   }
 
+  /** Quante mosse conosce il personaggio (le prime di abilities, Classi Fase 5). */
+  public get knownAbilityCount(): number {
+    return this.knownAbilities;
+  }
+
+  /**
+   * Imposta quante mosse sono note (inizio livello, test): tra quelle di partenza e quelle della classe. Se lo slot
+   * attivo resta chiuso si torna al primo.
+   */
+  public setKnownAbilityCount(count: number): void {
+    const total = this.character.abilityIds.length;
+    this.knownAbilities = Math.max(Math.min(ABILITY_UNLOCK_CONFIG.startingCount, total), Math.min(total, Math.floor(count)));
+    if (this.activeAbilitySlot >= this.knownAbilities) {
+      this.lowerGuard();
+      this.activeAbilitySlot = 0;
+    }
+  }
+
+  /** Impara la prossima mossa (forziere o boss): la restituisce, oppure null se le conosce già tutte. */
+  public learnNextAbility(): { ability: AbilityDefinition; slotIndex: number } | null {
+    const slotIndex = this.knownAbilities;
+    const abilityId = this.character.abilityIds[slotIndex];
+    if (abilityId === undefined) {
+      return null;
+    }
+    this.knownAbilities++;
+    return { ability: ABILITY_CONFIG[abilityId], slotIndex };
+  }
+
   /** Indice dello slot attivo in abilities. */
   public get activeAbilitySlotIndex(): number {
     return this.activeAbilitySlot;
   }
 
   /**
-   * Sceglie lo slot attivo (Classi Fase 0). Uno slot che non esiste viene rifiutato (false).
+   * Sceglie lo slot attivo (Classi Fase 0). Uno slot che non esiste o non ancora imparato viene rifiutato (false).
    * Cambiando slot con lo scudo alzato, lo scudo si abbassa (e parte la sua ricarica).
    */
   public selectAbilitySlot(slotIndex: number): boolean {
     if (!Number.isInteger(slotIndex) || slotIndex < 0 || slotIndex >= this.character.abilityIds.length) {
+      return false;
+    }
+    if (slotIndex >= this.knownAbilities) {
+      this.hasPendingUnknownAbility = true;
       return false;
     }
     if (slotIndex !== this.activeAbilitySlot) {
@@ -367,11 +410,13 @@ export class Player extends GameObject {
       const isAffordable = this.canAfford(this.getAbilityCost(ability));
       const isSelected = slotIndex === this.activeAbilitySlot;
       const meetsRequirement = this.meetsAbilityGrade(ability);
+      const isKnown = slotIndex < this.knownAbilities;
       return {
         ability,
         cooldownFraction,
         isAffordable,
-        isReady: cooldownFraction === 0 && isAffordable && meetsRequirement,
+        isReady: isKnown && cooldownFraction === 0 && isAffordable && meetsRequirement,
+        isKnown,
         isSelected,
         meetsRequirement,
         isActive: isSelected && this.isGuardUp,
@@ -480,6 +525,27 @@ export class Player extends GameObject {
     return isLow;
   }
 
+  /** Salute pagata per le mosse dall'ultima chiamata: il motore non la mostra come un colpo subito. */
+  public drainPaidHealth(): number {
+    const paid = this.pendingHealthPaid;
+    this.pendingHealthPaid = 0;
+    return paid;
+  }
+
+  /** Vero una volta sola dopo una mossa rifiutata perché la salute non basta. */
+  public drainLowHealth(): boolean {
+    const isLow = this.hasPendingLowHealth;
+    this.hasPendingLowHealth = false;
+    return isLow;
+  }
+
+  /** Vero una volta sola dopo il tasto di una mossa non ancora imparata. */
+  public drainUnknownAbility(): boolean {
+    const isUnknown = this.hasPendingUnknownAbility;
+    this.hasPendingUnknownAbility = false;
+    return isUnknown;
+  }
+
   /** Nome dell'abilità appena usata (una volta sola), oppure null. */
   public drainStartedAbilityName(): string | null {
     const name = this.pendingAbilityName;
@@ -505,6 +571,7 @@ export class Player extends GameObject {
   public setCharacter(character: CharacterDefinition): void {
     this.character = character;
     this.activeAbilitySlot = 0;
+    this.knownAbilities = Math.min(ABILITY_UNLOCK_CONFIG.startingCount, character.abilityIds.length);
     this.abilityCooldownsMs = character.abilityIds.map(() => 0);
     // nuova classe: nessun punto speso (li reimposta chi gestisce la partita, vedi AttributePoints)
     this.spentAttributeValues = ZERO_ATTRIBUTES;
@@ -735,7 +802,21 @@ export class Player extends GameObject {
    * l'arma vale solo per gli attacchi dell'arma: vedi getDamageMultiplierFor.
    */
   public getDamageMultiplier(): number {
-    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.equipment.damageMultiplier;
+    return this.modifiers.getValue("damageMultiplier") * this.character.damageMultiplier * this.equipment.damageMultiplier * this.getLowHealthMultiplier();
+  }
+
+  /** Passivo del Berserker (Classi Fase 5): più danno sotto la soglia di salute (esattamente 1 altrimenti). */
+  private getLowHealthMultiplier(): number {
+    const power = this.character.lowHealthPower;
+    return power !== undefined && this.currentHealth < this.maxHealth * power.healthFraction ? power.damageMultiplier : 1;
+  }
+
+  /** Un nemico o un boss è stato sconfitto da un colpo del giocatore: passivo del Mago (mana). */
+  public registerKill(): void {
+    const mana = this.character.manaPerKill ?? 0;
+    if (mana > 0) {
+      this.restoreMana(mana);
+    }
   }
 
   /**
@@ -933,17 +1014,21 @@ export class Player extends GameObject {
   }
 
   /**
-   * Il colpo in corso ha preso target. Con un attacco dell'arma (non di un'abilità) e un catalizzatore attivo, il
-   * bastone ridà manaPerHit mana (Classi Fase 2).
+   * Il colpo in corso ha preso target. Con un attacco dell'arma (non di un'abilità): con un catalizzatore attivo il
+   * bastone ridà manaPerHit mana (Classi Fase 2) e il passivo del Cavaliere ridà stamina (Classi Fase 5).
    */
   public registerHit(target: Damageable): void {
     this.targetsHitByCurrentAttack.add(target);
     const focus = this.activeSpellFocus;
     const attack = this.currentAttack;
-    // i forzieri sono scena: colpirli non ridà mana
-    if (focus !== null && attack !== null && target.isScenery !== true && this.weapon.attacks[attack.id] === attack) {
+    // i forzieri sono scena: colpirli non ridà niente
+    if (attack === null || target.isScenery === true || this.weapon.attacks[attack.id] !== attack) {
+      return;
+    }
+    if (focus !== null) {
       this.manaPool.restore(focus.manaPerHit);
     }
+    this.staminaPool.restore(this.character.staminaPerWeaponHit ?? 0);
   }
 
   /** Un frame di gioco: timer, input, gravità, collisioni, stato e animazione. */
@@ -1428,6 +1513,9 @@ export class Player extends GameObject {
       if (!this.manaPool.canSpend(cost.mana ?? 0)) {
         this.hasPendingNoMana = true;
       }
+      if ((cost.health ?? 0) > 0 && this.currentHealth - (cost.health ?? 0) < 1) {
+        this.hasPendingLowHealth = true;
+      }
       return false;
     }
     if ((cost.stamina ?? 0) > 0) {
@@ -1438,6 +1526,7 @@ export class Player extends GameObject {
     }
     if ((cost.health ?? 0) > 0) {
       this.currentHealth -= cost.health ?? 0;
+      this.pendingHealthPaid += cost.health ?? 0;
     }
     return true;
   }

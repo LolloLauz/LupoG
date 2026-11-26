@@ -19,7 +19,7 @@ export interface HUDData {
    * finita e risorse sufficienti), risorse sufficienti, slot attivo (l'ultimo scelto), in uso (scudo alzato), grado alla
    * portata dell'Intelligenza (Classi Fase 4: se no il riquadro è grigio scuro con la cifra grigia).
    */
-  abilities: Array<{ cooldownFraction: number; isReady: boolean; isAffordable: boolean; isSelected: boolean; isActive: boolean; meetsRequirement: boolean }>;
+  abilities: Array<{ cooldownFraction: number; isReady: boolean; isAffordable: boolean; isSelected: boolean; isActive: boolean; meetsRequirement: boolean; isKnown: boolean }>;
   /** Punti attributo non spesi (Classi Fase 4): se ce ne sono, un indicatore sotto il pannello, a sinistra. */
   unspentAttributePoints: number;
   lives: number;
@@ -177,7 +177,7 @@ export class HUDManager {
 
   /**
    * Stamina: barra verde con il contorno (gialla quando è sotto un terzo); con il mana, sotto c'è la barra blu del mana.
-   * Mosse: un riquadro per slot con il numero del suo tasto, dorato quando è pronta, grigio con il riempimento che
+   * Mosse: uno slot non ancora imparato mostra un lucchetto. Un riquadro per slot con il numero del suo tasto, dorato quando è pronta, grigio con il riempimento che
    * scende durante la ricarica, azzurro con lo scudo alzato; numero rosso se le risorse non bastano. Lo slot attivo ha
    * il bordo dorato quando la classe ha più di una mossa.
    */
@@ -203,6 +203,14 @@ export class HUDManager {
       const frameColor = hasSeveralSlots && ability.isSelected ? PALETTE.goldLight : PALETTE.black;
       renderer.fillRect(boxX, abilityBox.y, abilityBox.size, abilityBox.size, frameColor);
       const innerSize = abilityBox.size - 2;
+      if (!ability.isKnown) {
+        // mossa non ancora imparata (Classi Fase 5): riquadro scuro con un lucchetto
+        renderer.fillRect(boxX + 1, abilityBox.y + 1, innerSize, innerSize, PALETTE.darkBlue);
+        const lockX = boxX + Math.floor(abilityBox.size / 2) - 2;
+        renderer.strokeRect(lockX + 1, abilityBox.y + 3, 3, 3, PALETTE.slate);
+        renderer.fillRect(lockX, abilityBox.y + 5, 5, 4, PALETTE.slate);
+        return;
+      }
       const background = !ability.meetsRequirement ? PALETTE.stoneDark : ability.isActive ? PALETTE.blue : ability.isReady ? PALETTE.bronze : PALETTE.slate;
       renderer.fillRect(boxX + 1, abilityBox.y + 1, innerSize, innerSize, background);
       if (ability.cooldownFraction > 0) {

@@ -1,3 +1,5 @@
+
+
 === DUELLI (un gruppo di nemici su terreno piano, giocatore a 100 HP) ===
 scheletro         rusher (non schiva)      HP persi  10.0   tempo 3.0s
 goblin            rusher (non schiva)      HP persi   8.0   tempo 2.4s
@@ -72,29 +74,29 @@ PALADINO   medio (schiva a volte)   senza abilità partite vinte  95%   vite rim
 PALADINO   medio (schiva a volte)   con abilità   partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00
 
 === MAGO (Classi Fase 2): BASTONE E INCANTESIMI (7 dardo, 8 nova, 9 balzo, 0 barriera contro i boss) ===
-MAGO contro CAVALIERE NERO       rusher (non schiva)      vittorie 100%   HP persi 22   tempo 20s
-MAGO contro CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   HP persi 17   tempo 21s
+MAGO contro CAVALIERE NERO       rusher (non schiva)      vittorie 100%   HP persi 22   tempo 19s
+MAGO contro CAVALIERE NERO       medio (schiva a volte)   vittorie 100%   HP persi 13   tempo 20s
 MAGO contro STREGA DELLA PALUDE  rusher (non schiva)      vittorie 100%   HP persi 33   tempo 32s
-MAGO contro STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   HP persi 26   tempo 33s
-MAGO contro RE DEI LUPI          rusher (non schiva)      vittorie 100%   HP persi 25   tempo 28s
-MAGO contro RE DEI LUPI          medio (schiva a volte)   vittorie 100%   HP persi 23   tempo 30s
-MAGO contro SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   HP persi 47   tempo 33s
-MAGO contro SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   HP persi 32   tempo 36s
-MAGO contro SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   HP persi 35   tempo 34s
-MAGO contro SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   HP persi 27   tempo 37s
-MAGO rusher (non schiva)      senza    partite vinte  13%   vite rimaste (se vinta) 1.25   morti medie 2.83 (0.00 / 0.00 / 0.60 / 0.00 / 0.03 / 1.80 / 0.40)
-MAGO rusher (non schiva)      bottino  partite vinte  83%   vite rimaste (se vinta) 3.00   morti medie 0.50 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.45)
-MAGO medio (schiva a volte)   senza    partite vinte  93%   vite rimaste (se vinta) 2.48   morti medie 0.68 (0.00 / 0.00 / 0.03 / 0.00 / 0.03 / 0.20 / 0.42)
-MAGO medio (schiva a volte)   bottino  partite vinte  88%   vite rimaste (se vinta) 2.77   morti medie 0.55 (0.00 / 0.00 / 0.20 / 0.00 / 0.00 / 0.05 / 0.30)
+MAGO contro STREGA DELLA PALUDE  medio (schiva a volte)   vittorie 100%   HP persi 25   tempo 33s
+MAGO contro RE DEI LUPI          rusher (non schiva)      vittorie 100%   HP persi 24   tempo 28s
+MAGO contro RE DEI LUPI          medio (schiva a volte)   vittorie 100%   HP persi 20   tempo 30s
+MAGO contro SIGNORE DELLE LANDE  rusher (non schiva)      vittorie 100%   HP persi 38   tempo 32s
+MAGO contro SIGNORE DELLE LANDE  medio (schiva a volte)   vittorie 100%   HP persi 29   tempo 35s
+MAGO contro SIGNORE DELL'OMBRA   rusher (non schiva)      vittorie 100%   HP persi 33   tempo 34s
+MAGO contro SIGNORE DELL'OMBRA   medio (schiva a volte)   vittorie 100%   HP persi 26   tempo 36s
+MAGO rusher (non schiva)      senza    partite vinte  95%   vite rimaste (se vinta) 2.67   morti medie 0.47 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.45)
+MAGO rusher (non schiva)      bottino  partite vinte  90%   vite rimaste (se vinta) 3.00   morti medie 0.30 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.25)
+MAGO medio (schiva a volte)   senza    partite vinte 100%   vite rimaste (se vinta) 2.92   morti medie 0.08 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.02 / 0.07)
+MAGO medio (schiva a volte)   bottino  partite vinte  93%   vite rimaste (se vinta) 2.98   morti medie 0.22 (0.00 / 0.00 / 0.00 / 0.00 / 0.00 / 0.05 / 0.17)
 
 === BUILD (Classi Fase 4): PARTITE COMPLETE DEL CAVALIERE CON L'ONDA D'URTO, TUTTI I PUNTI IN UN ATTRIBUTO ===
 rusher (non schiva)      nessuna       partite vinte 100%   vite rimaste (se vinta) 2.15   morti medie 0.85   tempo 378s   HP persi 798
 rusher (non schiva)      forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 311s   HP persi 551
-rusher (non schiva)      intelligenza  partite vinte 100%   vite rimaste (se vinta) 2.43   morti medie 0.57   tempo 356s   HP persi 719
+rusher (non schiva)      intelligenza  partite vinte 100%   vite rimaste (se vinta) 2.48   morti medie 0.52   tempo 353s   HP persi 710
 rusher (non schiva)      vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 331s   HP persi 731
 medio (schiva a volte)   nessuna       partite vinte 100%   vite rimaste (se vinta) 2.97   morti medie 0.03   tempo 332s   HP persi 448
-medio (schiva a volte)   forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 311s   HP persi 396
-medio (schiva a volte)   intelligenza  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 324s   HP persi 425
+medio (schiva a volte)   forza         partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 311s   HP persi 395
+medio (schiva a volte)   intelligenza  partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 324s   HP persi 424
 medio (schiva a volte)   vitalità      partite vinte 100%   vite rimaste (se vinta) 3.00   morti medie 0.00   tempo 330s   HP persi 455
 
 (rusher = attacca sempre; il risultato indica la direzione, non il valore esatto per una persona.)

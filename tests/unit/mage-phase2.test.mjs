@@ -39,6 +39,7 @@ export default async function (t, load) {
   const grounded = (id = "mage", weaponId = CHARACTER_CONFIG[id].startingWeaponId) => {
     const p = new Player(300, 176, CHARACTER_CONFIG[id]);
     p.equipWeapon(WEAPON_CONFIG[weaponId]);
+    p.setKnownAbilityCount(4); // Classi Fase 5: qui si provano tutti e quattro gli incantesimi
     step(p, [], [], 5);
     return p;
   };
@@ -289,7 +290,7 @@ export default async function (t, load) {
       fillRect: (x, y, w, h, c) => fills.push({ x, y, w, h, c }), strokeRect() {}, drawText: (text, x, y, c) => texts.push({ text, x, y, c }),
       fillVerticalGradient() {}, fillDitheredOverlay() {}, fillGlow() {},
     };
-    const abilities = [0, 1, 2, 3].map((index) => ({ cooldownFraction: index === 1 ? 0.5 : 0, isReady: index !== 1 && index !== 2, isAffordable: index !== 2, isSelected: index === 0, isActive: false, meetsRequirement: true }));
+    const abilities = [0, 1, 2, 3].map((index) => ({ cooldownFraction: index === 1 ? 0.5 : 0, isReady: index !== 1 && index !== 2, isAffordable: index !== 2, isSelected: index === 0, isActive: false, meetsRequirement: true, isKnown: true }));
     new HUDManager().render(renderer, { drawSprite() {} }, { health: 65, maxHealth: 65, stamina: 80, maxStamina: 80, mana: 50, maxMana: 100, abilities, lives: 3, score: 0, coins: 0, levelNumber: 5, bag: [], powerUps: [], boss: null, unspentAttributePoints: 0 }, 0);
     const manaFill = fills.find((f) => f.x === MANA_BAR_GEOMETRY.x && f.y === MANA_BAR_GEOMETRY.y && f.c === PALETTE.blue);
     t("HUD: barra del mana (blu) piena a metà, sotto la stamina", manaFill !== undefined && manaFill.w === MANA_BAR_GEOMETRY.width / 2 && MANA_BAR_GEOMETRY.y > STAMINA_BAR_WITH_MANA_GEOMETRY.y + STAMINA_BAR_WITH_MANA_GEOMETRY.height);

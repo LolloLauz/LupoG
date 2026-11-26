@@ -7,7 +7,7 @@ import { renderStatusAuras, renderStatusPips } from "../rendering/StatusRenderer
 import type { Renderer } from "../rendering/Renderer";
 import type { SpriteManager } from "../rendering/SpriteManager";
 import type { CollisionSystem } from "../systems/CollisionSystem";
-import type { Damageable, ElementId, EnemyDefinition, EnemyState, HitProperties, ProjectileLaunch, SummonRequest, WeaponId } from "../types/EntityTypes";
+import type { Damageable, ElementId, EnemyDefinition, EnemyState, HitProperties, ProjectileLaunch, SummonRequest, SynergyDefinition, WeaponId } from "../types/EntityTypes";
 import type { FacingDirection, Rectangle, Vector2 } from "../types/GameTypes";
 import type { PlatformDefinition } from "../types/LevelTypes";
 import { GameObject } from "./GameObject";
@@ -75,6 +75,7 @@ export class Enemy extends GameObject implements Damageable {
   /** Effetti di stato (Fase 7): bruciatura, veleno, gelo, shock, con le resistenze del nemico. */
   private readonly statusEffects: StatusEffects;
   private pendingStatusTicks: StatusTick[] = [];
+  private pendingSynergy: SynergyDefinition | null = null;
 
   constructor(
     public readonly definition: EnemyDefinition,
@@ -108,6 +109,13 @@ export class Enemy extends GameObject implements Damageable {
     const ticks = this.pendingStatusTicks;
     this.pendingStatusTicks = [];
     return ticks;
+  }
+
+  /** Sinergia innescata dall'ultimo colpo (una volta sola, il motore ne mostra il nome), oppure null. */
+  public drainSynergy(): SynergyDefinition | null {
+    const synergy = this.pendingSynergy;
+    this.pendingSynergy = null;
+    return synergy;
   }
 
   /**
@@ -296,10 +304,16 @@ export class Enemy extends GameObject implements Damageable {
     if (!this.isAlive) {
       return;
     }
+    // sinergia (Classi Fase 5): danno in più sull'effetto già presente, prima di applicare quelli del colpo
+    const synergy = this.statusEffects.consumeSynergy(hit);
+    if (synergy !== null) {
+      this.pendingSynergy = synergy;
+    }
     const armor = this.definition.armor;
     const isArmorCrushed = armor !== undefined && hit.crushesArmor === true;
-    const effectiveDamage =
+    const armoredDamage =
       armor !== undefined && !isArmorCrushed && damage < armor.breakDamage ? Math.max(1, Math.round(damage * armor.damageMultiplier)) : damage;
+    const effectiveDamage = synergy === null ? armoredDamage : Math.round(armoredDamage * synergy.damageMultiplier);
     this.lastDamageTaken = effectiveDamage;
     this.currentHealth = Math.max(0, this.currentHealth - effectiveDamage);
     this.hitFlashRemainingMs = HIT_FLASH_MS;

@@ -9,6 +9,7 @@ import { PLAYER_CONFIG } from "./playerConfig";
  * Fase 6: i personaggi si sbloccano raggiungendo un livello (unlockLevel); il cavaliere è sempre disponibile.
  * Classi Fase 0: mana (0 per le classi senza incantesimi), attributi di partenza (a zero) e abilità come elenco.
  * Classi Fase 2: il Mago, con mana, bastone e quattro incantesimi (tasti 7-0).
+ * Classi Fase 5: quattro mosse per classe (le prime due note da subito) e un passivo per ciascuna.
  * Classi Fase 4: attributi di partenza (somma 25, massimo ATTRIBUTE_MAX_VALUE): pentagono e requisiti, gli effetti
  * contano solo i punti spesi sopra questi valori.
  */
@@ -17,7 +18,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     id: "knight",
     name: "CAVALIERE",
     description: "Equilibrato: spada e scudo.",
-    trait: "NESSUN PUNTO DEBOLE",
+    trait: "PASSIVA: I COLPI RIDANNO STAMINA",
     spriteSuffix: "",
     startingWeaponId: "sword",
     maxHealth: PLAYER_CONFIG.maxHealth,
@@ -33,7 +34,8 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxMana: 0,
     manaRegenPerSecond: 0,
     baseAttributes: { strength: 6, dexterity: 5, intelligence: 2, vitality: 6, endurance: 6 },
-    abilityIds: ["shockwave"],
+    abilityIds: ["shockwave", "lunge", "shieldBash", "flameBlade"],
+    staminaPerWeaponHit: 4,
     unlockLevel: 1,
     unlockText: "SEMPRE DISPONIBILE",
   },
@@ -59,7 +61,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxMana: 0,
     manaRegenPerSecond: 0,
     baseAttributes: { strength: 3, dexterity: 9, intelligence: 3, vitality: 4, endurance: 6 },
-    abilityIds: ["backstepShot"],
+    abilityIds: ["backstepShot", "poisonArrow", "frostArrow", "fireArrow"],
     unlockLevel: 3,
     unlockText: "COMPLETA IL LIVELLO 2",
   },
@@ -67,7 +69,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     id: "berserker",
     name: "BERSERKER",
     description: "Colpi pesanti, pelle dura.",
-    trait: "SCHIVATA CORTA E FATICOSA",
+    trait: "PASSIVA: PIÙ FORTE SOTTO IL 40% HP",
     spriteSuffix: "Berserker",
     startingWeaponId: "axe",
     maxHealth: 130,
@@ -83,7 +85,8 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxMana: 0,
     manaRegenPerSecond: 0,
     baseAttributes: { strength: 9, dexterity: 4, intelligence: 1, vitality: 8, endurance: 3 },
-    abilityIds: ["furiousCharge"],
+    abilityIds: ["furiousCharge", "hotAxe", "earthquake", "bloodStrike"],
+    lowHealthPower: { healthFraction: 0.4, damageMultiplier: 1.25 },
     unlockLevel: 4,
     unlockText: "SCONFIGGI IL CAVALIERE NERO",
   },
@@ -108,7 +111,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     maxMana: 0,
     manaRegenPerSecond: 0,
     baseAttributes: { strength: 6, dexterity: 2, intelligence: 4, vitality: 7, endurance: 6 },
-    abilityIds: ["shieldGuard"],
+    abilityIds: ["shieldGuard", "holyHammer", "consecration", "frozenJudgement"],
     unlockLevel: 6,
     unlockText: "SCONFIGGI IL RE DEI LUPI",
   },
@@ -116,7 +119,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     id: "mage",
     name: "MAGO",
     description: "Fragile, colpisce con la magia.",
-    trait: "INCANTESIMI A MANA SUI TASTI 7-0",
+    trait: "PASSIVA: MANA DAI NEMICI VINTI",
     spriteSuffix: "Mage",
     startingWeaponId: "staff",
     maxHealth: 70,
@@ -135,6 +138,7 @@ export const CHARACTER_CONFIG: Record<CharacterId, CharacterDefinition> = {
     usesSpellFocus: true,
     baseAttributes: { strength: 2, dexterity: 4, intelligence: 10, vitality: 4, endurance: 5 },
     abilityIds: ["firebolt", "frostNova", "arcaneLeap", "arcaneBarrier"],
+    manaPerKill: 10,
     unlockLevel: 5,
     unlockText: "SCONFIGGI LA STREGA DELLA PALUDE",
   },

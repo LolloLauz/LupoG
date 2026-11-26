@@ -1,4 +1,4 @@
-import type { ElementId } from "../types/EntityTypes";
+import type { ElementId, SynergyDefinition } from "../types/EntityTypes";
 import { PALETTE } from "./gameConfig";
 
 /** Un effetto di stato: quanto dura e cosa fa (Fase 7). */
@@ -30,3 +30,14 @@ export const ELEMENT_CONFIG: Record<ElementId, ElementDefinition> = {
 };
 
 export const ELEMENT_ORDER: readonly ElementId[] = ["fire", "poison", "frost", "shock"];
+
+/**
+ * Sinergie elementali (Classi Fase 5). Per ogni colpo ne scatta al massimo una: la prima di questo elenco che vale.
+ * Valori da bilanciare nella Fase 6.
+ */
+export const ELEMENT_SYNERGIES: readonly SynergyDefinition[] = [
+  { id: "shatter", name: "FRANTUMATO!", status: "frost", triggersOnHeavyImpact: true, damageMultiplier: 1.5, color: PALETTE.iceWhite },
+  { id: "thermalShock", name: "SHOCK TERMICO!", status: "frost", triggerElement: "fire", damageMultiplier: 1.5, color: PALETTE.orange },
+  { id: "overload", name: "SOVRACCARICO!", status: "fire", triggerElement: "shock", damageMultiplier: 1.5, color: PALETTE.yellow },
+  { id: "detonation", name: "DETONAZIONE!", status: "poison", triggerElement: "fire", damageMultiplier: 1.5, color: PALETTE.lightGreen },
+];

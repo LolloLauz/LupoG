@@ -1,6 +1,6 @@
 # Test e verifiche
 
-Versione descritta: **2.4.0**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
+Versione descritta: **2.5.0**. Questo documento dice **cosa è stato verificato, come ripetere le verifiche e quali sono i limiti**.
 Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima esecuzione prima della consegna.
 
 ---
@@ -10,7 +10,7 @@ Non dichiara nulla che non sia stato eseguito: i numeri sono quelli dell'ultima 
 | Comando | Cosa fa | Richiede | Durata |
 |---|---|---|---|
 | `npm run typecheck` | controllo dei tipi TypeScript (strict) | `npm install` | pochi secondi |
-| `npm test` | **test unitari**: 1338 controlli in 33 file, eseguiti in Node | `npm install` | meno di 1 secondo |
+| `npm test` | **test unitari**: 1467 controlli in 34 file, eseguiti in Node | `npm install` | meno di 1 secondo |
 | `npm run test:browser` | **test nel browser**: 180 controlli sulla build reale e sul motore reale | Playwright (sotto) | circa 1 minuto (`-- --quick`: 40 s) |
 | `npm run verify-docs` | applica i 11 esempi del `CODE_MANUAL.md` a una copia del progetto | `npm install` | circa 15 secondi |
 | `npm run balance` | simulatore di bilanciamento con un bot (non è un test: produce misure); `-- --characters` misura solo i personaggi; `-- --mage` solo il Mago (Classi Fase 2); `-- --build` solo le build di attributi (Classi Fase 4) | `npm install` | circa 1 minuto |
@@ -33,7 +33,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 
 ## 2. Che cosa verificano
 
-### 2.1 Test unitari (`tests/unit/`, 1338 controlli)
+### 2.1 Test unitari (`tests/unit/`, 1467 controlli)
 
 | File | Controlli | Che cosa copre |
 |---|---|---|
@@ -66,6 +66,7 @@ Un file di test si può eseguire da solo con una parte del nome: `npm test -- co
 | `mage-phase2.test.mjs` | 65 | Classi Fase 2, il Mago: configurazione (statistiche, mana, sblocco, ordine dei personaggi, quattro incantesimi sui tasti 7-0, bastone con `spellFocus`, tabella di compatibilità), costo e danno degli incantesimi con il bastone in mano, recupero del mana (colpi, pozione, attesa), dardo di fuoco (bruciatura, niente munizioni), nova di gelo, balzo arcano, barriera (mana, parata perfetta, guardia rotta), "SENZA MANA", `abilitySlots`, pozioni per tipo (`Inventory`), filtro del bottino e pozione di mana nel bottino, bottega del Mago (bastone, pozione di mana, "NON SERVE"), HUD (due barre, riquadri, numero rosso, bordo dorato), sprite e animazioni |
 | `classes-phase3.test.mjs` | 99 | Classi Fase 3: una prova per ognuna delle 55 celle della tabella classe × arma, sostituti del bottino, nessun drop dei livelli inutilizzabile per nessuna classe e mai senza arma, divieti (`equipWeapon`, `equipFromBackpack`, raccolta), munizioni per classe (`getWeaponMaxAmmo`, `Inventory.getMaxAmmo`), munizioni nello zaino (`BackpackEntry`, scambio, bottega a borsa piena), riga di classe (`describeWeaponAffinity`), peso delle armature |
 | `classes-phase4.test.mjs` | 78 | Classi Fase 4: basi per classe (somma 25, massimo 20), effetti per punto speso e solo sopra la base (le classi senza mana saltano quelli del mana), tetti condivisi con l'equipaggiamento (difesa, resistenze, recupero), scaling del danno delle armi (principale e secondario, solo sugli attacchi dell'arma), requisiti di Forza di armi e armature e carico, gradi delle mosse (INT 12 e 16, slot grigio e messaggio), bonus di attributo dei power-up, punti (3 + 2 con il boss, solo con un livello successivo, nello snapshot, azzerati a nuova partita), altare e pentagono (stati, comandi P e J, geometria), "+N PUNTI" nell'HUD |
+| `classes-phase5.test.mjs` | 129 | Classi Fase 5: quattro mosse per classe nell'ordine dei tasti, costo, ricarica ed effetto di ogni mossa (proiettili senza munizioni, aree, scatti, guardia), sblocco (due mosse di partenza, ordine, slot chiuso, avviso, nuova partita, snapshot del motore, boss e forziere), lucchetto nell'HUD, costo in salute, passivi (Cavaliere, Berserker, Mago), sinergie (innesco, consumo, stesso elemento, immunità, una per colpo, nemici e boss, almeno una per classe) |
 | `elements.test.mjs` | 33 | Fase 7: configurazione (quattro elementi, power-up e oggetti con sprite, presenza nei livelli, resistenze valide per ogni nemico e boss), `StatusEffects` (veleno, debolezza, immunità, bruciatura, durata che riparte, gelo e resistenza, shock con il tempo senza stordimento, più effetti), nemici (danno nel tempo che non uccide, immunità, morto senza effetti, gelo a metà velocità, shock che interrompe un attacco), boss (shock come danno, resistenze, danno nel tempo che non uccide), giocatore (elementi dai power-up, con le proprietà dell'arma, nei colpi di spada e nelle frecce), collegamenti nel motore |
 | `equipment.test.mjs` | 61 | piano dell'equipaggiamento E1-E2: rarità (ordine, colori consueti, modificatori per rarità, pesi e estrazioni su 20000 prove, Mitico mai a caso), estrazione ripetibile con il seme, modificatori (intervalli entro il tetto, numero per rarità, niente doppioni, uno di stile negli Epici e mai sotto, l'ascia senza "rompe la guardia"), oggetti fissi (un Leggendario per arma, Mitici, valori entro i tetti), nomi, prezzi, uguaglianza e copia, borsa con oggetti (stesso tipo diverso, identico, zaino, indossare, scambiare, togliere, zaino pieno, ripristino), armature (dodici pezzi, toni della palette, corazza e materiali, rarità), set, tetti, giocatore (salute, difesa, minimo 1 danno, resistenze, danno ed elementi dell'arma, rompe la guardia, furto di vita), aspetto (chiavi di elmo e gambe, colori di partenza, cappuccio del ranger, icone, varianti, solo colori della palette) |
 | `equipment-phases.test.mjs` | 38 | E3-E6: spadone (statistiche, animazioni sincronizzate, combo eseguibili anche in aria, un frame per ogni posa anche accovacciata, icona, presenza nei livelli e Leggendario), fonti (pesi validi, Mitici solo dal boss finale, crescita con livello e difficoltà, niente Mitici dai forzieri su 3000 prove, ricompensa del boss finale, materiali per livello, tutti i posti), bottega (offerta ripetibile con il seme, prezzi per rarità, prezzo che sale dopo un acquisto, consumabili che non rincarano, armatura comprata indossata, niente rivendita), schermata dell'equipaggiamento (stati, tasto I e Q nei menu, tabella dei controlli, cursore tra armature, borsa e zaino, comandi, voce della pausa), stanza del negozio (attiva con il ripiego, niente nemici, pavimento e uscita, piedistalli, ambientazione e colori del mercante), collegamenti nel motore |

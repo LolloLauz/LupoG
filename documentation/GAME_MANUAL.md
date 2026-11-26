@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.4.0.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.5.0.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -51,7 +51,7 @@ e armi sporgono solo per bellezza. Il cavaliere viene colpito sul corpo, non sul
 | Attacco leggero | **J** |
 | Attacco pesante | **K** |
 | Schivata | **Shift sinistro** (costa stamina) |
-| Mosse speciali | **7**, **8**, **9**, **0** (sopra le lettere o sul tastierino numerico); **L** vale come il **7**. Quattro personaggi hanno una sola mossa, sul **7** (lo scudo del Paladino si tiene premuto); il **Mago** ne ha quattro, una per tasto (vedi "Mosse speciali") |
+| Mosse speciali | **7**, **8**, **9**, **0** (sopra le lettere o sul tastierino numerico); **L** vale come il **7**. Ogni personaggio ha quattro mosse, una per tasto: parte con quelle sul **7** e sull'**8**, le altre due si imparano giocando (vedi "Mosse speciali"). Lo scudo del Paladino (7) e la barriera del Mago (0) si tengono premuti |
 | Accovacciarsi | **S** oppure **↓** (solo a terra: non ci si muove e non ci si rialza sotto un soffitto; si può attaccare restando accovacciati, con un colpo più basso) |
 | Prendere un'arma, un'armatura o una pozione | **E** stando sopra (vedi "La borsa" ed "Equipaggiamento"); nella bottega, **E** vicino a un piedistallo compra |
 | Lasciare a terra | **Q** (l'arma in mano) oppure **Q** + **1**-**4** (quel posto della borsa); nella schermata dell'equipaggiamento, **Q** sull'oggetto scelto |
@@ -86,6 +86,7 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
   una partita e l'altra" nella sezione 11b).
 - La salute **non si rigenera** (tranne per il Paladino, vedi *Personaggi*): si recupera con le **pozioni** e con la **cura di fine livello**
   (+30 HP, tranne dopo il boss).
+- Con **forzieri** e **boss** impari nuove mosse (vedi "Mosse speciali"). Se perdi una vita tornano quelle che avevi a inizio livello.
 - La salute si porta da un livello all'altro. Quando ricominci un livello dopo una morte riparti con la salute piena.
 - Nei livelli 1 e 2 si finisce **raggiungendo la porta** in fondo. Dal livello 3 al 7 si finisce **sconfiggendo il boss**.
 - Cadere in un **abisso** costa **15 HP** e ti riporta all'ultimo punto sicuro (se muori cadendo, perdi una vita).
@@ -111,22 +112,31 @@ Per averlo più grande usa il **pieno schermo del browser (F11)**. Funziona anch
 ### Personaggi
 
 Il personaggio si sceglie dal titolo (*Personaggio*) e resta salvato. Durante una partita non si può cambiare. Tutti hanno gli stessi tasti, lo stesso salto e la stessa hitbox;
-cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale e abilità (vedi *Stamina* e *Mosse speciali* più sotto).
+cambiano salute, velocità, danno, difesa, stamina, schivata, arma iniziale, passivo e mosse (vedi *Stamina* e *Mosse speciali* più sotto).
 
-| Personaggio | Salute | Velocità | Danno | Danno subito | Stamina (recupero/s) | Schivata (stamina, attesa) | Arma iniziale | Mossa (tasto 7) |
+| Personaggio | Salute | Velocità | Danno | Danno subito | Stamina (recupero/s) | Schivata (stamina, attesa) | Arma iniziale | Mosse di partenza (7, 8) |
 |---|---|---|---|---|---|---|---|---|
-| **Cavaliere** | 100 | 80 | ×1 | ×1 | 100 (30) | 25, 0,7 s | spada | **Onda d'urto** |
-| **Ranger** | 75 | 96 | ×1 | ×1 | 100 (40) | 20, 0,45 s (più lunga) | arco | **Tiro in ritirata** |
-| **Berserker** | 130 | 80 | ×1,3 | ×1 | 100 (25) | 40, 1 s (più corta) | ascia | **Carica furiosa** |
-| **Mago** | 70 | 84 | ×1 | ×1 | 80 (30), più 100 di mana | 25, 0,7 s | bastone | **Dardo di fuoco**, **Nova di gelo**, **Balzo arcano**, **Barriera** (tasti 7-0) |
-| **Paladino** | 110 | 72 | ×1 | ×0,75 | 120 (25) | 30, 0,8 s | mazza | **Scudo** (e cura lenta: 1 HP/s dopo 4 s senza colpi) |
+| **Cavaliere** | 100 | 80 | ×1 | ×1 | 100 (30) | 25, 0,7 s | spada | **Onda d'urto**, **Affondo** |
+| **Ranger** | 75 | 96 | ×1 | ×1 | 100 (40) | 20, 0,45 s (più lunga) | arco | **Tiro in ritirata**, **Freccia velenosa** |
+| **Berserker** | 130 | 80 | ×1,3 | ×1 | 100 (25) | 40, 1 s (più corta) | ascia | **Carica furiosa**, **Ascia rovente** |
+| **Mago** | 70 | 84 | ×1 | ×1 | 80 (30), più 100 di mana | 25, 0,7 s | bastone | **Dardo di fuoco**, **Nova di gelo** |
+| **Paladino** | 110 | 72 | ×1 | ×0,75 | 120 (25) | 30, 0,8 s | mazza | **Scudo**, **Martello sacro** (e cura lenta: 1 HP/s dopo 4 s senza colpi) |
 
 - Ogni nuova partita inizia con la **sola arma iniziale** del personaggio scelto. Durante la partita puoi cambiare arma: il personaggio non limita
   le armi, cambia solo le statistiche; ogni classe ha però armi preferite, penalizzate o vietate (vedi "Compatibilità classe-arma" nelle armi). Il **Mago** è l'eccezione più forte: usa il **bastone**, che è solo suo, oltre a **spada e pugnale**.
 - Velocità: la velocità dell'arma in mano si moltiplica con quella del personaggio (es. Paladino con l'ascia: 72 × 0,85).
 - I power-up si sommano ai tratti: la Furia moltiplica anche il danno del Berserker, lo Scudo anche la difesa del Paladino.
-- **Passiva del Ranger:** le frecce dell'**arco** si ricaricano da sole, **una ogni 3 secondi** (vedi "Le armi"). Nella scheda del
-  personaggio compare "PASSIVA: LE FRECCE SI RICARICANO". La sua schivata resta più lunga e più frequente.
+- **Passiva del Ranger:** le frecce dell'**arco** si ricaricano da sole, **una ogni 3 secondi** (vedi "Le armi"). La sua schivata resta più lunga e più frequente.
+
+**Passivi.** Ogni personaggio ha un tratto sempre attivo. Quello scritto nella scheda è nella terza colonna.
+
+| Personaggio | Effetto | Scritta nella scheda |
+|---|---|---|
+| **Cavaliere** | ogni bersaglio colpito con l'arma **corpo a corpo** ridà **4 di stamina** (non con le mosse, non con i proiettili, non con i forzieri) | "PASSIVA: I COLPI RIDANNO STAMINA" |
+| **Ranger** | le frecce dell'arco si ricaricano, una ogni 3 s | "PASSIVA: LE FRECCE SI RICARICANO" |
+| **Berserker** | con la salute **sotto il 40%** il danno è **×1,25** (armi e mosse). La sua schivata resta corta e faticosa | "PASSIVA: PIÙ FORTE SOTTO IL 40% HP" |
+| **Mago** | ogni **nemico o boss sconfitto** da un suo colpo diretto (arma o incantesimo) ridà **10 di mana** | "PASSIVA: MANA DAI NEMICI VINTI" |
+| **Paladino** | si cura di **1 HP al secondo** dopo 4 s senza colpi | "SI CURA PIANO FUORI DAI COLPI" |
 
 - **Mago:** fragile, ma gli incantesimi colpiscono da lontano e a mana. Ha **100 di mana** (barra blu sotto la stamina; scheda del personaggio: "100 MANA"). Il mana si recupera piano, **6 al secondo** dopo 0,6 secondi senza spese, e **5 per ogni bersaglio colpito con il bastone**. Si sblocca sconfiggendo la **Strega della Palude** (livello 4). Sprite provvisori: cappello a punta e veste viola.
 
@@ -184,33 +194,55 @@ La **barra verde** sotto la salute è la **stamina** (diventa gialla sotto un te
 
 - la **schivata** (Shift sinistro): da 20 a 40 secondo il personaggio (il Berserker è quello che fa più fatica);
 - ogni **attacco pesante** (K), compresi il tiro caricato dell'arco e il colpo in picchiata: **15**;
-- la **mossa speciale** (tasto 7 o L) e lo scudo alzato.
+- le **mosse speciali** che costano stamina (tutte quelle delle classi senza mana, tranne il Colpo di sangue, che costa salute) e lo scudo alzato.
 
-Gli attacchi leggeri (J), il salto e la corsa non costano niente. La stamina si ricarica da sola **0,6 secondi** dopo l'ultimo consumo.
+Gli attacchi leggeri (J), il salto e la corsa non costano niente. La stamina si ricarica da sola **0,6 secondi** dopo l'ultimo consumo;
+il Cavaliere ne recupera anche colpendo (vedi *Passivi*).
 Se non basta l'azione non parte e compare "STANCO".
 
 ### Mosse speciali (tasti 7, 8, 9, 0)
 
-Ogni personaggio ha un'abilità propria. I tasti **7**, **8**, **9** e **0** sono i quattro posti delle mosse; quattro personaggi usano solo il primo (tasto **7**, o **L**), il Mago li usa tutti.
-Un posto vuoto non fa niente. Durante un attacco o una schivata la mossa attiva non cambia. L'abilità costa stamina e poi va ricaricata:
-nel riquadro accanto alla barra della stamina c'è il **numero del tasto**; la parte scura scende mentre si ricarica; il numero è dorato
-quando l'abilità è pronta (ricaricata e con abbastanza stamina).
-Quando un personaggio ha più mosse, il riquadro dell'ultima scelta ha il **bordo dorato**; il numero diventa **rosso** se stamina o mana non bastano.
-Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma cambia solo l'aspetto).
+Ogni personaggio ha **quattro mosse** proprie, una per ciascuno dei tasti **7**, **8**, **9** e **0** (**L** vale come il **7**).
+Durante un attacco o una schivata la mossa attiva non cambia. Una mossa ha un costo (stamina, mana o salute) e poi va ricaricata:
+accanto alla barra della stamina ogni mossa ha un riquadro con il **numero del tasto**; la parte scura scende mentre si ricarica; il numero è dorato
+quando la mossa è pronta (ricaricata e con abbastanza risorse). Il riquadro dell'ultima mossa scelta ha il **bordo dorato**; il numero diventa **rosso** se la risorsa non basta.
+Le mosse si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma cambia solo l'aspetto).
 
-| Abilità | Personaggio | Costo | Ricarica | Effetto |
+**Come si imparano.** Si parte con **due mosse** (7 e 8). La terza (9) e la quarta (0) si imparano **in quest'ordine**:
+
+- aprendo un **forziere** hai il **25%** di probabilità di imparare la prossima;
+- ogni **boss** sconfitto te la insegna **di sicuro** (compare anche nel riquadro di fine livello).
+
+Compare "NUOVA MOSSA: nome (tasto)". Finché non è imparata, il riquadro mostra un **lucchetto** e il tasto fa comparire "MOSSA NON ANCORA IMPARATA".
+Le mosse imparate valgono **solo per la partita in corso** (anche partendo da **Scegli livello** si inizia con due). Se perdi una vita e ricominci il livello, tornano quelle che avevi all'inizio.
+
+| Mossa | Classe (tasto) | Costo | Ricarica | Effetto |
 |---|---|---|---|---|
-| **Onda d'urto** | Cavaliere | 40 | 6 s | colpo a terra da **25** che investe tutti fino a **40 px davanti e dietro**; rompe la guardia; tremolio e polvere |
-| **Tiro in ritirata** | Ranger | 30 | 4 s | **balzo all'indietro** (circa 55 px, invulnerabile) e una **freccia da 20** in avanti che non consuma munizioni |
-| **Carica furiosa** | Berserker | 40 | 5 s | **scatto in avanti** di circa 70 px che **travolge** e attraversa i nemici (35 danni, rompe la guardia); non rende invulnerabili |
-| **Dardo di fuoco** | Mago (7) | 15 mana | 0,9 s | proiettile da **22** che **brucia** il bersaglio; non consuma munizioni |
+| **Onda d'urto** | Cavaliere (7) | 40 stamina | 6 s | colpo a terra da **25** che investe tutti fino a **40 px davanti e dietro**; rompe la guardia; tremolio e polvere |
+| **Affondo** | Cavaliere (8) | 25 stamina | 3,5 s | **scatto in avanti** di circa 36 px con una stoccata da **22**, stretta e lunga; non rende invulnerabili |
+| **Colpo di scudo** | Cavaliere (9) | 25 stamina | 6 s | colpo ravvicinato da **14** con **shock** (stordisce) |
+| **Lama ardente** | Cavaliere (0) | 35 stamina | 6 s | fendente da **28** che **brucia** |
+| **Tiro in ritirata** | Ranger (7) | 30 stamina | 4 s | **balzo all'indietro** (circa 55 px, invulnerabile) e una **freccia da 20** in avanti |
+| **Freccia velenosa** | Ranger (8) | 25 stamina | 4 s | freccia da **14** che **avvelena** |
+| **Freccia gelida** | Ranger (9) | 25 stamina | 5 s | freccia da **14** che **gela** |
+| **Freccia di fuoco** | Ranger (0) | 30 stamina | 5 s | freccia da **18** che **brucia** |
+| **Carica furiosa** | Berserker (7) | 40 stamina | 5 s | **scatto in avanti** di circa 70 px che **travolge** e attraversa i nemici (35 danni, rompe la guardia); non rende invulnerabili |
+| **Ascia rovente** | Berserker (8) | 30 stamina | 4,5 s | fendente da **30** che **brucia** |
+| **Terremoto** | Berserker (9) | 40 stamina | 7 s | colpo tutt'intorno da **20** con **shock**; tremolio e polvere |
+| **Colpo di sangue** | Berserker (0) | **15 di salute** | 6 s | colpo lento da **55** che rompe la guardia; non parte se non ti resterebbe almeno 1 HP ("SALUTE INSUFFICIENTE") |
+| **Scudo** | Paladino (7) | 10 stamina per alzarlo | 0,3 s | **tieni premuto 7** (o L): lo scudo para i colpi **da davanti** (anche le frecce); non ti muovi ma puoi girarti; consuma 12 di stamina al secondo |
+| **Martello sacro** | Paladino (8) | 30 stamina | 5 s | colpo da **24** con **shock** che rompe la guardia |
+| **Consacrazione** | Paladino (9) | 40 stamina | 7 s | fuoco tutt'intorno: **18** e **bruciatura**; tremolio e polvere |
+| **Giudizio gelido** | Paladino (0) | 40 stamina | 7 s | colpo tutt'intorno da **18** che **gela**; tremolio e polvere |
+| **Dardo di fuoco** | Mago (7) | 15 mana | 0,9 s | proiettile da **22** che **brucia** il bersaglio |
 | **Nova di gelo** | Mago (8) | 30 mana | 5 s | colpo tutt'intorno da **18** che **gela** chi colpisce (velocità dimezzata per 3 s); tremolio e polvere |
 | **Balzo arcano** | Mago (9) | 20 mana | 3 s | **balzo all'indietro** invulnerabile, per allontanarsi (non fa danno) |
 | **Barriera** | Mago (0) | 10 mana per alzarla | 0,3 s | **tieni premuto 0**: come lo scudo, para i colpi **da davanti**; consuma 10 mana al secondo e **1 mana per ogni punto di danno parato**; parata perfetta come lo scudo |
-| **Scudo** | Paladino | 10 per alzarlo | 0,3 s | **tieni premuto 7** (o L): lo scudo para i colpi **da davanti** (anche le frecce); non ti muovi ma puoi girarti; consuma 12 di stamina al secondo |
+
+Le mosse "tutt'intorno" arrivano fino a **40 px davanti e dietro**. Le frecce e il dardo non consumano munizioni. Le animazioni delle mosse sono provvisorie (riusano pose comuni).
 
 - Gli incantesimi del Mago (tutti quelli che costano mana) con il **bastone in mano** fanno **il 20% di danno in più** e costano **il 15% di mana in meno** (arrotondato). Se il mana non basta l'incantesimo non parte e compare "SENZA MANA". Con la guardia rotta (mana finito) la barriera cade come lo scudo.
-- Gli scatti (balzo del Ranger, carica del Berserker) **si fermano sul bordo** di un abisso.
+- Gli scatti delle mosse (affondo, tiro in ritirata, carica furiosa, balzo arcano) **si fermano sul bordo** di un abisso.
 - **Parata perfetta**: se lo scudo è alzato da **meno di 0,25 secondi** quando arriva il colpo (la barriera davanti al Paladino è
   **bianca**, poi diventa azzurra), il colpo non costa niente e chi ha attaccato resta **stordito per 1 secondo** ("PARATA!"). I boss non vengono storditi.
 - **Parata normale**: costa 1,5 di stamina per ogni punto di danno (la Barriera: 1 mana). Se la stamina (o il mana) non basta la **guardia si rompe** ("GUARDIA ROTTA") e il colpo passa.
@@ -222,7 +254,7 @@ Le abilità si usano solo a terra e in piedi, con qualsiasi arma in mano (l'arma
 |---|---|
 | cuore + 10 segmenti rossi | salute; lampeggia sotto il 30% |
 | barra verde sotto la salute | stamina (gialla sotto un terzo); per chi ha mana (Mago) le barre sono due, più sottili: stamina sopra, **mana blu** sotto |
-| riquadri con il numero del tasto (**7**; per il Mago **7**, **8**, **9**, **0**, uno ogni 11 px) | mosse speciali: dorate quando sono pronte, scure mentre si ricaricano, azzurre con lo scudo o la barriera alzati; numero rosso se la risorsa non basta; riquadro **grigio scuro** con la cifra grigia se la mossa richiede più Intelligenza di quella che hai; bordo dorato sulla mossa scelta (solo con più mosse) |
+| riquadri con il numero del tasto (**7**, **8**, **9**, **0**, uno ogni 11 px) | mosse speciali: **lucchetto** su riquadro scuro se non ancora imparata; dorate quando sono pronte, scure mentre si ricaricano, azzurre con lo scudo o la barriera alzati; numero rosso se la risorsa non basta; riquadro **grigio scuro** con la cifra grigia se la mossa richiede più Intelligenza di quella che hai; bordo dorato sulla mossa scelta |
 | icone sotto la barra | power-up attivi, ognuno con la barra del tempo che resta (lampeggia quando sta per finire) |
 | **+N PUNTI** sotto il pannello, a sinistra (dopo le icone dei power-up) | punti attributo ancora da spendere; lampeggia piano; sparisce quando sono finiti |
 | icona dell'elmo **x3** | vite rimaste |
@@ -351,7 +383,7 @@ I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno
 
 **Dove si trovano**
 
-- **Forzieri**: colpiscili con qualsiasi arma per aprirli; l'arma compare sopra il coperchio.
+- **Forzieri**: colpiscili con qualsiasi arma per aprirli; l'arma compare sopra il coperchio. A volte (25%) insegnano anche una mossa (vedi "Mosse speciali").
 - **Nemici d'élite**: hanno un **alone dorato**, il doppio della salute, il 30% di danno in più e valgono il triplo dei punti. Sconfitti, lasciano la loro arma.
 - **Trofei dei boss**: ogni boss tranne quello finale lascia un'arma (di rarità alta) e un pezzo d'armatura, che trovi poco dopo la partenza del livello successivo. Il riquadro di fine livello li annuncia ("TROFEO").
 
@@ -511,6 +543,9 @@ mai dall'arena: se si sveglia mentre sei ancora fuori, ti aspetta al cancello (e
 colpisci (lampeggia soltanto). Prima di ogni attacco c'è una **preparazione** ben visibile: è il momento di schivare o di allontanarsi. La barra in basso
 mostra la salute e una tacca per ogni cambio di fase.
 
+Ogni boss sconfitto insegna la **prossima mossa** che ti manca, se ne manca una (vedi "Mosse speciali"). Anche contro i boss valgono le
+**sinergie elementali** (vedi "Elementi ed effetti di stato").
+
 ### Il Cavaliere Nero (livello 3)
 
 Aspetta nel fondo del dungeon. **Quando entri nell'arena un cancello si chiude alle tue spalle**: non si può tornare indietro finché
@@ -606,7 +641,7 @@ Ogni livello ha **abissi**, **piattaforme sospese** (si attraversano dal basso e
 I livelli 4-7 hanno anche **pericoli** (vasche d'acqua, ghiaccio, spuntoni) e **piattaforme mobili**. La telecamera segue il cavaliere.
 Dopo il Signore dell'Ombra compare la schermata di vittoria.
 
-A inizio livello compare il nome; a fine livello un riquadro mostra bonus, personaggi sbloccati, salute recuperata e l'eventuale trofeo del boss.
+A inizio livello compare il nome; a fine livello un riquadro mostra bonus, personaggi sbloccati, salute recuperata, l'eventuale mossa insegnata dal boss e il suo trofeo.
 Alcuni livelli hanno **forzieri** e **nemici d'élite** con un'arma (vedi "Le armi").
 
 ---
@@ -647,9 +682,10 @@ Furia e Fuoco si sommano: (15 + 8) × 1,5 = 35 danni con l'attacco leggero.
 
 ### Elementi ed effetti di stato
 
-Con Fuoco, Veleno, Gelo o Fulmine attivi, ogni colpo (spada e altre armi, frecce e altri proiettili, abilità) lascia sul bersaglio un
+Con Fuoco, Veleno, Gelo o Fulmine attivi, ogni colpo (spada e altre armi, frecce e altri proiettili, mosse) lascia sul bersaglio un
 **effetto di stato**. Il nemico si circonda di un alone del colore dell'elemento e sopra la sua barra della salute compare un quadratino
 colorato; il danno nel tempo appare come numeri colorati. Con più power-up insieme i colpi lasciano tutti gli effetti.
+Molte mosse e alcune armi hanno un elemento proprio, anche senza power-up.
 
 | Effetto | Elemento | Cosa fa | Durata |
 |---|---|---|---|
@@ -660,6 +696,22 @@ colorato; il danno nel tempo appare come numeri colorati. Con più power-up insi
 
 - Il danno nel tempo **non uccide mai**: lascia almeno 1 HP, il colpo finale va dato.
 - Colpire di nuovo fa ripartire la durata.
+
+**Sinergie.** Un colpo su un bersaglio che ha **già** un effetto può innescare una sinergia: fa **+50% di danno** e **consuma** l'effetto.
+Sopra il bersaglio compare il nome, con scintille.
+
+| Sinergia | Effetto già presente | Colpo che la innesca | Scritta |
+|---|---|---|---|
+| **Frantumare** | Gelo | un colpo che **rompe la guardia** o **schiaccia le corazze** (arma, mossa o modificatore) | "FRANTUMATO!" |
+| **Shock termico** | Gelo | un colpo di **fuoco** | "SHOCK TERMICO!" |
+| **Sovraccarico** | Bruciatura | un colpo di **fulmine** | "SOVRACCARICO!" |
+| **Detonazione** | Veleno | un colpo di **fuoco** | "DETONAZIONE!" |
+
+- Un colpo che porta **lo stesso elemento** dell'effetto non lo innesca (per esempio un colpo di gelo e che rompe la guardia non frantuma).
+- Scatta al massimo **una** sinergia per colpo: la prima della tabella che vale.
+- L'effetto si consuma, poi il colpo applica i suoi elementi.
+- Chi è immune all'elemento che innesca non subisce la sinergia.
+- Il +50% vale sul danno del colpo, non sui 6 danni immediati dello shock ai boss. Il danno nel tempo non innesca niente.
 - **Resistenze e debolezze**: ogni nemico reagisce in modo diverso (tabella sotto). *Immune* = l'effetto non si applica;
   *debole* = danno nel tempo, rallentamento o stordimento più forti (×1,5 o ×2); *resiste* = più deboli (×0,5).
 
@@ -750,6 +802,7 @@ sagome con il lucchetto e l'obiettivo. Gli sblocchi dipendono dal livello più a
 | difficoltà | pozioni |
 | personaggio scelto | monete e punteggio |
 |  | punti attributo (spesi e da spendere) |
+|  | mosse imparate (si riparte con due) |
 
 Chi aveva un salvataggio della versione 2.0 tiene livelli raggiunti, difficoltà e personaggio; il resto del vecchio salvataggio viene
 cancellato al primo avvio. Il record è salvato a parte e resta. *Cancella dati* azzera tutto, record e sblocchi compresi.
@@ -769,3 +822,4 @@ posizione da cui apri il gioco: cambiando browser o cartella ripartirà da zero.
 5. **Occhio agli abissi:** il salto si può accorciare rilasciando il tasto, ma anche allungare tenendolo premuto fino all'apice.
 6. **Conserva le pozioni.** Si prendono con **E** e restano nella borsa (massimo 2): bevile quando servono, per esempio contro un boss.
 7. **Contro il boss** concentrati sulla carica: è l'unico momento in cui resta fermo e scoperto.
+8. **Combina le mosse.** Prima lascia un effetto (gelo, bruciatura, veleno), poi colpisci con ciò che lo innesca: la sinergia fa +50% di danno.

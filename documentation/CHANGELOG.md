@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.5.0 – Classi, Fase 5: contenuto per classe, mosse da imparare, passivi e sinergie (2026-11-26)
+Quattro mosse per ogni classe, un passivo e le sinergie elementali. Tutti i numeri sono provvisori (Classi Fase 6B).
+### Aggiunto
+- **Dodici mosse** (`ABILITY_CONFIG`), tutte di grado 1, con le animazioni delle pose comuni. In ordine di tasto (7/8/9/0): Cavaliere onda d'urto, affondo, colpo di scudo (fulmine), lama ardente (fuoco); Ranger tiro in ritirata, freccia velenosa, freccia gelida, freccia di fuoco (senza munizioni); Berserker carica furiosa, ascia rovente (fuoco), terremoto (fulmine), colpo di sangue (costa 15 di salute); Paladino scudo, martello sacro (fulmine), consacrazione (fuoco), giudizio gelido (gelo).
+- **Mosse da imparare** (`ABILITY_UNLOCK_CONFIG`): si parte con 2; la 3ª e la 4ª si imparano in ordine da un forziere (25%) o da un boss (sempre). Popup "NUOVA MOSSA: ..." e riga nel riquadro di fine livello. Valgono per la sola partita e stanno nello snapshot di inizio livello. Slot chiuso: lucchetto nell'HUD e popup "MOSSA NON ANCORA IMPARATA".
+- **Costo in salute**: popup "SALUTE INSUFFICIENTE" se non resterebbe almeno 1 HP.
+- **Passivi** (`CharacterDefinition`): Cavaliere `staminaPerWeaponHit` 4 (corpo a corpo), Berserker `lowHealthPower` (+25% di danno sotto il 40% di salute), Mago `manaPerKill` 10 (`Player.registerKill`, da `CombatSystem` e `ProjectileSystem`). Paladino e Ranger invariati.
+- **Sinergie elementali** (`ELEMENT_SYNERGIES`, `StatusEffects.consumeSynergy`, nemici e boss): Frantumare (gelo + colpo che rompe la guardia o schiaccia le corazze), shock termico (gelo + fuoco), sovraccarico (bruciatura + fulmine), detonazione (veleno + fuoco). +50% di danno, l'effetto si consuma, una per colpo; un colpo con lo stesso elemento dell'effetto non la innesca.
+- Test: `tests/unit/classes-phase5.test.mjs` (129 controlli).
+### Modificato
+- **Il Mago parte con due incantesimi** (dardo di fuoco e nova di gelo); balzo arcano e barriera si imparano.
+- La scritta del tratto nella scheda del Cavaliere, del Berserker e del Mago descrive il passivo.
+- L'HUD mostra quattro riquadri per ogni classe.
+- **Simulatore**: nuova opzione `knownAbilities` di `playLevel`; nelle partite complete si parte con 2 mosse e se ne impara una per boss (i forzieri non si contano); duelli, boss e livelli singoli le hanno tutte. Baseline `tools/balance-baseline.txt` aggiornato. Cambia quasi solo il Mago, più forte per il passivo del mana e lo shock termico (nova e dardo): senza bottino il rusher passa da 13% a 95% di partite vinte e il medio da 93% a 100%; con il bottino 83% → 90% e 88% → 93%. Le build del Cavaliere cambiano di pochissimo, le altre sezioni sono identiche. Da bilanciare nella Fase 6B (vedi `BALANCE.md`).
+- Test adattati: classes-phase0, classes-phase4, elements, mage-phase2, stamina-abilities.
+- Versione portata a 2.5.0 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Verificato
+- `npm test` (1467 controlli in 34 file), `npm run test:browser` (180 controlli), `npm run balance`, `npm run typecheck`, `npm run verify-docs`.
+
 ## 2.4.0 – Classi, Fase 4: attributi, requisiti di Forza, punti e pentagono (2026-11-26)
 Cinque attributi con effetti veri, punti da spendere all'altare della bottega e una schermata a pentagono.
 ### Aggiunto
