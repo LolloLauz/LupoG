@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.5.1 – Veleno e bruciatura uccidono, bottino a terra (2026-11-26)
+### Corretto
+- Il danno nel tempo (veleno, bruciatura) non si ferma più a 1 HP: nemici e boss muoiono. La morte vale come un colpo del giocatore: punti, monete, oggetti lasciati, trofeo e mossa del boss, mana del Mago (`GameEngine.handleStatusKill` e `rewardDefeat`; prima la regola "lascia almeno 1 HP" era voluta, perché le ricompense partivano solo da un colpo).
+- Il bottino di nemici e boss non resta più sospeso in aria (nemici uccisi in volo) né sopra gli abissi: si posa sul terreno sottostante, oppure sull'ultimo terreno fermo del giocatore (nuovo `src/systems/DropPlacement.ts`; vale anche per l'armatura laterale dei forzieri e le pozioni di mana).
+- Test: `tests/unit/drop-placement.test.mjs` (11 controlli).
+### Modificato
+- Simulatore: anche le morti da danno nel tempo chiamano `Player.registerKill`; baseline aggiornato (cambiano poco le righe con elementi: bottino del Cavaliere, Ranger e Mago).
+- Versione portata a 2.5.1 (`package.json`, `GAME_CONFIG.version` e documenti).
+### Verificato
+- `npm test` (1480 controlli in 35 file), `npm run test:browser`, `npm run balance`, `npm run typecheck`, `npm run verify-docs`.
+
 ## 2.5.0 – Classi, Fase 5: contenuto per classe, mosse da imparare, passivi e sinergie (2026-11-26)
 Quattro mosse per ogni classe, un passivo e le sinergie elementali. Tutti i numeri sono provvisori (Classi Fase 6B).
 ### Aggiunto

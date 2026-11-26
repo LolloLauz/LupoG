@@ -349,10 +349,15 @@ export class Enemy extends GameObject implements Damageable {
         : this.definition.hurtDurationMs;
       this.animationPlayer.restart("hurt");
     } else {
-      this.hurtRemainingMs = 0;
-      this.deathElapsedMs = 0;
-      this.animationPlayer.restart("dead");
+      this.startDying();
     }
+  }
+
+  /** Comincia l'animazione di morte. */
+  private startDying(): void {
+    this.hurtRemainingMs = 0;
+    this.deathElapsedMs = 0;
+    this.animationPlayer.restart("dead");
   }
 
   /**
@@ -444,14 +449,19 @@ export class Enemy extends GameObject implements Damageable {
 
   private updateTimers(deltaTimeMs: number): void {
     this.eliteGlowElapsedMs += deltaTimeMs;
-    // effetti di stato: il danno nel tempo non uccide mai (lascia almeno 1 HP); da morto spariscono
+    // effetti di stato: il danno nel tempo può uccidere (il motore dà le ricompense); da morto spariscono
     if (this.isAlive) {
       for (const tick of this.statusEffects.update(deltaTimeMs)) {
-        const damage = Math.min(tick.damage, this.currentHealth - 1);
+        const damage = Math.min(tick.damage, this.currentHealth);
         if (damage > 0) {
           this.currentHealth -= damage;
           this.pendingStatusTicks.push({ element: tick.element, damage });
         }
+      }
+      if (!this.isAlive) {
+        this.isAttackInProgress = false;
+        this.velocityX = 0;
+        this.startDying();
       }
     } else {
       this.statusEffects.clear();

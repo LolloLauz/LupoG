@@ -90,7 +90,10 @@ export default async function (t, load) {
     const weakGoblin = new Enemy(ENEMY_CONFIG.goblin, 100, 184);
     weakGoblin.receiveHit(weakGoblin.currentHealth - 2, "right", { elements: ["poison"] });
     for (let i = 0; i < 60 * 5; i++) weakGoblin.update(frame, collision, ground, 3000);
-    t("il danno nel tempo non uccide mai (resta 1 HP)", weakGoblin.isAlive && weakGoblin.currentHealth === 1);
+    const lastTick = weakGoblin.drainStatusTicks();
+    t("il danno nel tempo uccide: salute a 0, animazione di morte, poi il nemico si toglie",
+      !weakGoblin.isAlive && weakGoblin.currentHealth === 0 && weakGoblin.currentAnimationName === "dead" && weakGoblin.isRemovable && weakGoblin.activeStatusElements.length === 0);
+    t("l'ultimo numero mostra solo la salute che restava", lastTick.length === 1 && lastTick[0].damage === 2);
     const skeleton = new Enemy(ENEMY_CONFIG.skeleton, 100, 176);
     skeleton.receiveHit(1, "right", { elements: ["poison"] });
     t("scheletro: il veleno non attecchisce", skeleton.activeStatusElements.length === 0);
@@ -140,8 +143,13 @@ export default async function (t, load) {
     const weak = new Boss(BOSS_CONFIG, 400, 160, () => 0.5);
     weak.receiveHit(weak.currentHealth - 2, "right", { elements: ["poison"] });
     for (let i = 0; i < 60 * 6; i++) weak.update(frame, player, collision, ground, 3000, 0);
-    t("boss: il danno nel tempo non lo uccide", weak.isAlive && weak.currentHealth >= 1);
+    t("boss: il danno nel tempo lo uccide, con la sua morte", !weak.isAlive && weak.currentHealth === 0 && weak.currentState === "dead" && weak.isDefeated);
   }
+
+  t("motore: una morte da danno nel tempo premia come un colpo (nemici e boss) e ridà il mana al Mago",
+    /enemy\.update\([^;]*\);\s*if \(wasAlive && !enemy\.isAlive\) \{\s*this\.handleStatusKill\(enemy\);/.test(engineSource) &&
+      /this\.boss\.update\([^;]*\);\s*if \(wasBossAlive && !this\.boss\.isAlive\) \{\s*this\.handleStatusKill\(this\.boss\);/.test(engineSource) &&
+      /private handleStatusKill[\s\S]{0,200}this\.player\.registerKill\(\);\s*this\.rewardDefeat\(target\);/.test(engineSource));
 
   // --- giocatore ---
   {

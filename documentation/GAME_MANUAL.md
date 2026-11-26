@@ -1,6 +1,6 @@
 # IRON & SHADOW – Manuale di gioco
 
-*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.5.0.
+*Medieval Action Arcade in pixel art a 16 bit.* Versione 2.5.1.
 
 Questo manuale è per chi gioca. Per modificare il gioco leggere `CODE_MANUAL.md`; per avviarlo, `INSTALLATION.md`.
 I numeri indicati (salute, danni, tempi) sono quelli del gioco così com'è: si possono cambiare in `src/config/`.
@@ -384,7 +384,7 @@ I power-up valgono anche per i proiettili (per esempio la Furia aumenta il danno
 **Dove si trovano**
 
 - **Forzieri**: colpiscili con qualsiasi arma per aprirli; l'arma compare sopra il coperchio. A volte (25%) insegnano anche una mossa (vedi "Mosse speciali").
-- **Nemici d'élite**: hanno un **alone dorato**, il doppio della salute, il 30% di danno in più e valgono il triplo dei punti. Sconfitti, lasciano la loro arma.
+- **Nemici d'élite**: hanno un **alone dorato**, il doppio della salute, il 30% di danno in più e valgono il triplo dei punti. Sconfitti, lasciano la loro arma. Il bottino di un nemico ucciso in volo **cade a terra**; sopra un abisso compare sull'ultimo terreno fermo su cui sei passato.
 - **Trofei dei boss**: ogni boss tranne quello finale lascia un'arma (di rarità alta) e un pezzo d'armatura, che trovi poco dopo la partenza del livello successivo. Il riquadro di fine livello li annuncia ("TROFEO").
 
 Ogni arma trovata ha una **rarità** (vedi "Equipaggiamento"): la stessa arma può essere Comune o, con fortuna, Epica.
@@ -694,7 +694,7 @@ Molte mosse e alcune armi hanno un elemento proprio, anche senza power-up.
 | **Gelo** | Gelo | il nemico si muove a **metà velocità** (anche il boss) | 3 s |
 | **Shock** | Fulmine | **stordisce** per 0,5 s, anche chi sta già attaccando; poi per 2 s non si può stordire di nuovo. I boss non si stordiscono: lo shock li ferisce subito (6 danni) | – |
 
-- Il danno nel tempo **non uccide mai**: lascia almeno 1 HP, il colpo finale va dato.
+- Il danno nel tempo **può uccidere**, anche un boss: vale come un tuo colpo (punti, monete, oggetti lasciati, mosse del boss e mana del Mago).
 - Colpire di nuovo fa ripartire la durata.
 
 **Sinergie.** Un colpo su un bersaglio che ha **già** un effetto può innescare una sinergia: fa **+50% di danno** e **consuma** l'effetto.

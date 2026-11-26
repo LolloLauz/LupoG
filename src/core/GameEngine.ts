@@ -20,6 +20,7 @@ import { CHARACTER_CONFIG, CHARACTER_ORDER } from "../config/characterConfig";
 import { ELEMENT_CONFIG } from "../config/elementConfig";
 import { ABILITY_UNLOCK_CONFIG } from "../config/abilityConfig";
 import { ABILITY_SLOT_KEY_LABELS } from "../config/controlsConfig";
+import { findDropPoint, type DropPoint } from "../systems/DropPlacement";
 import { ALWAYS_DISCOVERED_WEAPONS, ECONOMY_CONFIG, type ShopOfferId } from "../config/progressionConfig";
 import { Shop, type PurchaseOutcome } from "../systems/Shop";
 import { registerUiSprites } from "../rendering/sprites/uiSprites";
@@ -166,6 +167,8 @@ export class GameEngine {
   private bannerRemainingMs = 0;
   private levelElapsedSeconds = 0;
   private lastSafePosition: Vector2;
+  /** Ultimo terreno fermo su cui è passato il giocatore: ci finisce il bottino che non ha dove posarsi (abissi). */
+  private lastDropGround: DropPoint = { centerX: 0, bottomY: 0 };
   /** Punteggio all'inizio del livello, per ripristinarlo se si ricomincia. */
   private levelStartScore = 0;
   /** Fase 6: monete a inizio livello (ricominciando tornano queste), bottega aperta tra un livello e l'altro. */
@@ -447,6 +450,7 @@ export class GameEngine {
     const start = SHOP_ROOM_LEVEL.playerStart;
     this.player.respawnAt(start);
     this.lastSafePosition = { ...start };
+    this.resetDropGround(start);
     this.levelPhase = "playing";
     this.bannerRemainingMs = GAME_CONFIG.levelBannerDurationMs;
     this.levelElapsedSeconds = 0;
@@ -515,6 +519,7 @@ export class GameEngine {
     const playerStart = this.levelManager.level.playerStart;
     this.player.respawnAt(playerStart);
     this.lastSafePosition = { ...playerStart };
+    this.resetDropGround(playerStart);
     this.effects.clear();
     this.projectileSystem.clear();
     this.ammoRegeneration.reset();
@@ -651,7 +656,21 @@ export class GameEngine {
       );
     if (isSupported(this.player.positionX + 1) && isSupported(this.player.positionX + this.player.width - 1)) {
       this.lastSafePosition = { x: this.player.positionX, y: this.player.positionY };
+      // per il bottino il punto deve anche essere fermo e senza spuntoni (altrimenti resta quello di prima)
+      this.lastDropGround = this.getDropPoint(this.player.positionX + this.player.width / 2, feetY);
     }
+  }
+
+  /** Ripiego del bottino a inizio livello: il terreno sotto la partenza. */
+  private resetDropGround(playerStart: Vector2): void {
+    const centerX = playerStart.x + PLAYER_CONFIG.hitboxWidth / 2;
+    this.lastDropGround = { centerX, bottomY: playerStart.y + PLAYER_CONFIG.hitboxHeight };
+    this.lastDropGround = this.getDropPoint(centerX, playerStart.y);
+  }
+
+  /** Dove posare un oggetto uscito in quel punto (vedi findDropPoint). */
+  private getDropPoint(centerX: number, bottomY: number): DropPoint {
+    return findDropPoint(centerX, bottomY, this.levelManager.platforms, this.levelManager.hazards, this.lastDropGround);
   }
 
   /** Caduta in un abisso: danno e ripartenza dall'ultimo punto sicuro. */
@@ -692,7 +711,11 @@ export class GameEngine {
     this.enemyAISystem.update(this.enemies, this.player, platforms, this.levelManager.hazards, this.levelElapsedSeconds * 1000);
     const splitChildren: Enemy[] = [];
     for (const enemy of this.enemies) {
+      const wasAlive = enemy.isAlive;
       enemy.update(deltaTimeSeconds, this.collisionSystem, platforms, mapWidth);
+      if (wasAlive && !enemy.isAlive) {
+        this.handleStatusKill(enemy); // morto di veleno o bruciatura
+      }
       enemy.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
       // le melme si dividono quando muoiono
       for (const split of enemy.drainSplitRequests()) {
@@ -705,7 +728,11 @@ export class GameEngine {
     this.combatSystem.processEnemyAttacks(this.enemies, this.player);
     if (this.boss !== null) {
       const aliveMinionCount = this.enemies.filter((enemy) => enemy.isSummoned && enemy.isAlive).length;
+      const wasBossAlive = this.boss.isAlive;
       this.boss.update(deltaTimeSeconds, this.player, this.collisionSystem, platforms, mapWidth, aliveMinionCount);
+      if (wasBossAlive && !this.boss.isAlive) {
+        this.handleStatusKill(this.boss);
+      }
       this.separatePlayerFromBodies();
       this.combatSystem.processBossAttack(this.boss, this.player);
       this.boss.drainProjectileLaunches().forEach((launch) => this.projectileSystem.spawn(launch));
@@ -763,39 +790,52 @@ export class GameEngine {
     }
     // furto di vita (modificatore dell'arma)
     this.player.registerDamageDealt(damage);
-    if (this.rewardedTargets.has(target)) {
+    this.rewardDefeat(target);
+  }
+
+  /**
+   * Un nemico o un boss è morto per il danno nel tempo (veleno, bruciatura): conta come sconfitto dal giocatore
+   * (passivo del Mago e stesse ricompense di un colpo).
+   */
+  private handleStatusKill(target: Enemy | Boss): void {
+    this.player.registerKill();
+    this.rewardDefeat(target);
+  }
+
+  /** Ricompense di un nemico o di un boss sconfitto (una volta sola): punti, monete, bottino, esplosione. */
+  private rewardDefeat(target: Damageable): void {
+    if (target.isAlive || this.rewardedTargets.has(target)) {
       return;
     }
-    if (!target.isAlive) {
-      this.rewardedTargets.add(target);
-    }
+    this.rewardedTargets.add(target);
+    const targetBounds = target.getBounds();
+    const centerX = targetBounds.x + targetBounds.width / 2;
+    const centerY = targetBounds.y + targetBounds.height / 2;
     if (target === this.boss && this.boss !== null) {
-      if (!this.boss.isAlive) {
-        const reward = this.boss.definition.weaponReward;
-        if (reward !== undefined && this.levelManager.hasLevel(this.currentLevelId + 1)) {
-          // trofeo: l'arma del boss con una rarità alta e un pezzo d'armatura (fonte "boss")
-          const context = this.getLootContext("boss");
-          const items: ItemInstance[] = [rollLootWeapon(this.resolveLootWeapon(reward), context, this.lootRandom)];
-          if (rollArmorDrop("boss", this.lootRandom)) {
-            items.push(rollLootArmor(context, this.lootRandom));
-          }
-          this.weaponReward = { levelId: this.currentLevelId + 1, items };
-        } else if (!this.levelManager.hasLevel(this.currentLevelId + 1)) {
-          this.awardFinalBossReward();
+      const reward = this.boss.definition.weaponReward;
+      if (reward !== undefined && this.levelManager.hasLevel(this.currentLevelId + 1)) {
+        // trofeo: l'arma del boss con una rarità alta e un pezzo d'armatura (fonte "boss")
+        const context = this.getLootContext("boss");
+        const items: ItemInstance[] = [rollLootWeapon(this.resolveLootWeapon(reward), context, this.lootRandom)];
+        if (rollArmorDrop("boss", this.lootRandom)) {
+          items.push(rollLootArmor(context, this.lootRandom));
         }
-        this.dropManaPotionIfRolled("boss", centerX, targetBounds.y + targetBounds.height);
-        // Classi Fase 5: ogni boss dà di sicuro la prossima mossa mancante
-        this.bossAbilityMessage = this.learnNextAbility(centerX, targetBounds.y - 12);
-        this.scoreManager.addScore(this.boss.scoreReward);
-        this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerBoss);
-        this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.red, PALETTE.orange, PALETTE.yellow], 50);
-        this.effects.addPopup(`+${this.boss.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
-        this.effects.triggerShake(EFFECT_CONFIG.bossDeathShakePixels, EFFECT_CONFIG.bossDeathShakeMs);
+        this.weaponReward = { levelId: this.currentLevelId + 1, items };
+      } else if (!this.levelManager.hasLevel(this.currentLevelId + 1)) {
+        this.awardFinalBossReward();
       }
+      this.dropManaPotionIfRolled("boss", centerX, targetBounds.y + targetBounds.height);
+      // Classi Fase 5: ogni boss dà di sicuro la prossima mossa mancante
+      this.bossAbilityMessage = this.learnNextAbility(centerX, targetBounds.y - 12);
+      this.scoreManager.addScore(this.boss.scoreReward);
+      this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerBoss);
+      this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.red, PALETTE.orange, PALETTE.yellow], 50);
+      this.effects.addPopup(`+${this.boss.scoreReward}`, centerX, targetBounds.y, PALETTE.yellow);
+      this.effects.triggerShake(EFFECT_CONFIG.bossDeathShakePixels, EFFECT_CONFIG.bossDeathShakeMs);
       return;
     }
     const enemy = this.enemies.find((candidate) => candidate === target);
-    if (enemy !== undefined && !enemy.isAlive) {
+    if (enemy !== undefined) {
       this.scoreManager.addScore(enemy.scoreReward);
       this.scoreManager.addCoins(ECONOMY_CONFIG.coinsPerEnemy * (enemy.isElite ? ECONOMY_CONFIG.eliteCoinMultiplier : 1));
       this.effects.spawnBurst(centerX, centerY, [PALETTE.white, PALETTE.lightGray, PALETTE.red], 14);
@@ -803,11 +843,11 @@ export class GameEngine {
       this.effects.triggerShake(EFFECT_CONFIG.enemyDeathShakePixels, EFFECT_CONFIG.enemyDeathShakeMs);
       const source: LootSourceId = enemy.isElite ? "elite" : "enemy";
       if (enemy.weaponDrop !== null) {
-        this.dropWeapon(rollLootWeapon(this.resolveLootWeapon(enemy.weaponDrop), this.getLootContext("elite"), this.lootRandom), centerX, targetBounds.y + targetBounds.height);
+        this.dropOnGround(rollLootWeapon(this.resolveLootWeapon(enemy.weaponDrop), this.getLootContext("elite"), this.lootRandom), centerX, targetBounds.y + targetBounds.height);
       }
       // i nemici possono lasciare un pezzo d'armatura (le élite più spesso)
       if (rollArmorDrop(source, this.lootRandom)) {
-        this.dropWeapon(rollLootArmor(this.getLootContext(source), this.lootRandom), centerX + 10, targetBounds.y + targetBounds.height);
+        this.dropOnGround(rollLootArmor(this.getLootContext(source), this.lootRandom), centerX + 10, targetBounds.y + targetBounds.height);
       }
       this.dropManaPotionIfRolled(source, centerX - 10, targetBounds.y + targetBounds.height);
     }
@@ -823,8 +863,9 @@ export class GameEngine {
     if (!rollManaPotionDrop(source, this.player.characterDefinition.id, this.lootRandom)) {
       return;
     }
-    this.itemManager.addItem("manaPotion", Math.round(centerX - ITEM_SIZE / 2), Math.round(bottomY - ITEM_SIZE));
-    this.effects.addPopup(ITEM_CONFIG.manaPotion.name.toUpperCase(), centerX, bottomY - ITEM_SIZE - 6, PALETTE.lightBlue);
+    const point = this.getDropPoint(centerX, bottomY);
+    this.itemManager.addItem("manaPotion", Math.round(point.centerX - ITEM_SIZE / 2), Math.round(point.bottomY - ITEM_SIZE));
+    this.effects.addPopup(ITEM_CONFIG.manaPotion.name.toUpperCase(), point.centerX, point.bottomY - ITEM_SIZE - 6, PALETTE.lightBlue);
   }
 
   /** Fonte, livello e difficoltà di un bottino. */
@@ -861,7 +902,7 @@ export class GameEngine {
       const centerX = chest.positionX + chest.width / 2;
       this.dropWeapon(rollLootWeapon(this.resolveLootWeapon(weaponId), context, this.lootRandom), centerX, chest.positionY);
       if (rollArmorDrop("chest", this.lootRandom)) {
-        this.dropWeapon(rollLootArmor(context, this.lootRandom), centerX + 18, chest.positionY + chest.height);
+        this.dropOnGround(rollLootArmor(context, this.lootRandom), centerX + 18, chest.positionY + chest.height);
       }
       this.dropManaPotionIfRolled("chest", centerX - 18, chest.positionY + chest.height);
       // Classi Fase 5: a volte il forziere insegna in anticipo la prossima mossa
@@ -869,6 +910,12 @@ export class GameEngine {
         this.learnNextAbility(centerX, chest.positionY - 32); // sopra il nome dell'arma
       }
     }
+  }
+
+  /** Bottino che può uscire in aria (nemici in volo, bordi di un abisso): si posa sul terreno. */
+  private dropOnGround(item: ItemInstance, centerX: number, bottomY: number): void {
+    const point = this.getDropPoint(centerX, bottomY);
+    this.dropWeapon(item, point.centerX, point.bottomY);
   }
 
   /** Un oggetto compare a terra (forziere, nemico) con scintille e il suo nome, nel colore della rarità. */

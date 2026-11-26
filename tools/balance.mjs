@@ -247,7 +247,9 @@ function playLevel(levelId, options = {}) {
     enemyAISystem.update(enemies, player, platforms, hazards, time * 1000);
     const children = [];
     for (const enemy of enemies) {
+      const wasAlive = enemy.isAlive;
       enemy.update(FRAME, collisionSystem, platforms, level.width);
+      if (wasAlive && !enemy.isAlive) player.registerKill();
       enemy.drainProjectileLaunches().forEach((launch) => projectileSystem.spawn(launch));
       for (const split of enemy.drainSplitRequests()) children.push(new Enemy(ENEMY_CONFIG[split.enemyType], split.position.x, split.position.y));
     }
@@ -263,7 +265,9 @@ function playLevel(levelId, options = {}) {
     combatSystem.processEnemyAttacks(enemies, player);
     if (boss !== null) {
       const minions = enemies.filter((enemy) => enemy.isSummoned && enemy.isAlive).length;
+      const wasBossAlive = boss.isAlive;
       boss.update(FRAME, player, collisionSystem, platforms, level.width, minions);
+      if (wasBossAlive && !boss.isAlive) player.registerKill();
       separateBodies();
       combatSystem.processBossAttack(boss, player);
       boss.drainProjectileLaunches().forEach((launch) => projectileSystem.spawn(launch));

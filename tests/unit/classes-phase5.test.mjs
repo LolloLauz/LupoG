@@ -159,7 +159,7 @@ export default async function (t, load) {
     t("la salute pagata per una mossa si segnala una volta sola (il motore non la mostra come un colpo)", p.drainPaidHealth() === ABILITY_CONFIG.bloodStrike.cost.health && p.drainPaidHealth() === 0);
   }
   t("motore: niente effetti da colpo subito per la salute pagata, e ogni bersaglio premiato una volta sola",
-    /updatePlayerDamageEffects\(healthBeforeUpdate - this\.player\.drainPaidHealth\(\)\)/.test(engineSource) && /if \(this\.rewardedTargets\.has\(target\)\) \{\s*return;/.test(engineSource));
+    /updatePlayerDamageEffects\(healthBeforeUpdate - this\.player\.drainPaidHealth\(\)\)/.test(engineSource) && /if \(target\.isAlive \|\| this\.rewardedTargets\.has\(target\)\) \{\s*return;/.test(engineSource));
 
   // --- passivi ---
   t("ogni passivo sta nella sua classe",
